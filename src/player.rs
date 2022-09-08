@@ -1,10 +1,9 @@
 use futures_util::{future::FusedFuture, Future};
-use log::{error, trace, warn};
+use log::{error, trace};
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
     fs::File,
-    mem,
     path::Path,
     pin::Pin,
     process::exit,
@@ -12,19 +11,14 @@ use std::{
     task::{Context, Poll},
     thread,
 };
-use symphonia::core::{
-    codecs::{DecoderOptions, CODEC_TYPE_NULL},
-    errors::Error,
-    formats::FormatOptions,
-    io::MediaSourceStream,
-    meta::MetadataOptions,
-    probe::Hint,
-};
+use symphonia::core::{errors::Error, io::MediaSourceStream, probe::Hint};
 use tokio::sync::mpsc;
 
 use crate::{
     audio_backend::Sink,
+    convert::Converter,
     decoder::{symphonia_decoder::SymphoniaDecoder, AudioDecoder},
+    dither::{mk_ditherer, TriangularDitherer},
     metadata::audio::AudioFileFormat,
 };
 
@@ -51,7 +45,6 @@ impl Player {
                 load_handles: Arc::new(Mutex::new(HashMap::new())),
                 sink: sink_builder(),
                 state: PlayerState::Stopped,
-                preload: PlayerPreload::None,
                 sink_status: SinkStatus::Closed,
                 sink_event_callback: None,
                 event_senders: [event_sender].to_vec(),
@@ -135,7 +128,6 @@ struct PlayerInternal {
     load_handles: Arc<Mutex<HashMap<thread::ThreadId, thread::JoinHandle<()>>>>,
 
     state: PlayerState,
-    preload: PlayerPreload,
     sink: Box<dyn Sink>,
     sink_status: SinkStatus,
     sink_event_callback: Option<SinkEventCallback>,
@@ -163,6 +155,45 @@ impl Future for PlayerInternal {
                 if let Err(e) = self.handle_command(cmd) {
                     // error!("Error handling command: {}", e);
                 }
+            }
+
+            if let PlayerState::Playing {
+                ref mut decoder,
+                track_id: _,
+            } = self.state
+            {
+                match decoder.next_packet() {
+                    Ok(result) => {
+                        if let Some((ref _packet_position, packet, channels, sample_rate)) = result
+                        {
+                            match packet.samples() {
+                                Ok(_) => {
+                                    let mut converter =
+                                        Converter::new(Some(mk_ditherer::<TriangularDitherer>));
+                                    if let Err(e) = self.sink.write(
+                                        packet,
+                                        channels,
+                                        sample_rate,
+                                        &mut converter,
+                                    ) {
+                                        error!("Error writing to sink: {}", e);
+                                        exit(1)
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to decode packet: {}", e);
+                                }
+                            }
+                        } else {
+                            // end of track
+                            self.state = PlayerState::Stopped;
+                            self.send_event(PlayerEvent::EndOfTrack);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to decode packet: {}", e);
+                    }
+                };
             }
         }
     }
@@ -238,15 +269,12 @@ impl PlayerInternal {
             PlayerCommand::Seek(position_ms) => {
                 self.handle_command_seek();
             }
-            PlayerCommand::SetSinkEventCallback => {
-                self.sink_event_callback = None;
-            }
             PlayerCommand::AddEventSender(sender) => self.event_senders.push(sender),
         }
         Ok(())
     }
 
-    async fn load_track(&self, song: &str) -> Option<PlayerLoadedTrackData> {
+    fn load_track(&self, song: &str) -> Option<PlayerLoadedTrackData> {
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
 
@@ -274,7 +302,7 @@ impl PlayerInternal {
 
         let decoder_type = symphonia_decoder(mss, hint);
 
-        let mut decoder = match decoder_type {
+        let decoder = match decoder_type {
             Ok(decoder) => decoder,
             Err(e) => {
                 panic!("Failed to create decoder: {}", e);
@@ -308,10 +336,18 @@ impl PlayerInternal {
 
     fn handle_command_load(&mut self, track_id: &str) {
         println!("load track {}", track_id);
-        self.load_track(track_id);
-
-        //
-        //
+        let loaded_track = self.load_track(track_id);
+        match loaded_track {
+            Some(loaded_track) => {
+                self.start_playback(track_id, loaded_track);
+            }
+            None => {
+                self.send_event(PlayerEvent::Error {
+                    track_id: track_id.to_string(),
+                    error: "Failed to load track".to_string(),
+                });
+            }
+        }
     }
 
     fn handle_command_preload(&self) {
@@ -322,8 +358,8 @@ impl PlayerInternal {
         todo!()
     }
 
-    fn handle_player_stop(&self) {
-        todo!()
+    fn handle_player_stop(&mut self) {
+        self.ensure_sink_stopped(false);
     }
 
     fn handle_pause(&self) {
@@ -341,17 +377,6 @@ struct PlayerLoadedTrackData {
     duration_ms: u32,
     stream_position_ms: u32,
     is_explicit: bool,
-}
-
-enum PlayerPreload {
-    None,
-    Loading {
-        loader: Pin<Box<dyn FusedFuture<Output = Result<PlayerLoadedTrackData, ()>> + Send>>,
-        track_id: String,
-    },
-    Ready {
-        loaded_track: Box<PlayerLoadedTrackData>,
-    },
 }
 
 type Decoder = Box<dyn AudioDecoder + Send>;
@@ -450,7 +475,6 @@ enum PlayerCommand {
     Stop,
     Seek(u32),
     AddEventSender(mpsc::UnboundedSender<PlayerEvent>),
-    SetSinkEventCallback,
 }
 
 #[derive(Debug, Clone)]
@@ -464,6 +488,7 @@ pub enum PlayerEvent {
     TimeToPreloadNextTrack,
     EndOfTrack,
     VolumeSet { volume: u16 },
+    Error { track_id: String, error: String },
 }
 
 pub type PlayerEventChannel = mpsc::UnboundedReceiver<PlayerEvent>;

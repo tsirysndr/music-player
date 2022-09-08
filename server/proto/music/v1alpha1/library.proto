@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message ScanRequest {}
+
+message ScanResponse { repeated string artists = 1; }
+
+message SearchRequest { string query = 1; }
+
+message SearchResponse {}
+
+message GetAlbumsRequest {}
+
+message GetAlbumsResponse {}
+
+message GetArtistsRequest {}
+
+message GetArtistsResponse {}
+
+message GetTracksRequest {}
+
+message GetTracksResponse {}
+
+message GetAlbumDetailsRequest {}
+
+message GetAlbumDetailsResponse {}
+
+message GetArtistDetailsRequest {}
+
+message GetArtistDetailsResponse {}
+
+message GetTrackDetailsRequest {}
+
+message GetTrackDetailsResponse {}
+
+service LibraryService {
+  rpc Scan(ScanRequest) returns (ScanResponse) {}
+  rpc Search(SearchRequest) returns (SearchResponse) {}
+  rpc GetAlbums(GetAlbumsRequest) returns (GetAlbumsResponse) {}
+  rpc GetTracks(GetTracksRequest) returns (GetTracksResponse) {}
+  rpc GetArtists(GetArtistsRequest) returns (GetArtistsResponse) {}
+}

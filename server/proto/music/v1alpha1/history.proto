@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message GetHistoryRequest {}
+
+message GetHistoryResponse {}
+
+service HistoryService {
+  rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse) {}
+}

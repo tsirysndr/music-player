@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message AddTrackRequest {}
+
+message AddTrackResponse {}
+
+message ClearTracklistRequest {}
+
+message ClearTracklistResponse {}
+
+message FilterTracklistRequest {}
+
+message FilterTracklistResponse {}
+
+message GetRandomResponse {}
+
+message GetRepeatResponse {}
+
+message GetSingleResponse {}
+
+message GetNextTrackResponse {}
+
+message GetPreviousTrackResponse {}
+
+message RemoveTrackRequest {}
+
+message RemoveTrackResponse {}
+
+message SetRepeatRequest {}
+
+message SetRepeatResponse {}
+
+message ShuffleResponse {}
+
+message GetTracklistTracksResponse {}
+
+message GetRandomRequest {}
+
+message GetRepeatRequest {}
+
+message GetSingleRequest {}
+
+message GetNextTrackRequest {}
+
+message GetPreviousTrackRequest {}
+
+message ShuffleRequest {}
+
+message GetTracklistTracksRequest {}
+
+service TracklistService {
+  rpc AddTrack(AddTrackRequest) returns (AddTrackResponse) {}
+  rpc ClearTracklist(ClearTracklistRequest) returns (ClearTracklistResponse) {}
+  rpc FilterTracklist(FilterTracklistRequest)
+      returns (FilterTracklistResponse) {}
+  rpc GetRandom(GetRandomRequest) returns (GetRandomResponse) {}
+  rpc GetRepeat(GetRepeatRequest) returns (GetRepeatResponse) {}
+  rpc GetSingle(GetSingleRequest) returns (GetSingleResponse) {}
+  rpc GetNextTrack(GetNextTrackRequest) returns (GetNextTrackResponse) {}
+  rpc GetPreviousTrack(GetPreviousTrackRequest) returns (GetPreviousTrackResponse) {}
+  rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
+  rpc Shuffle(ShuffleRequest) returns (ShuffleResponse) {}
+  rpc SetRepeat(SetRepeatRequest) returns (SetRepeatResponse) {}
+  rpc GetTracklistTracks(GetTracklistTracksRequest) returns (GetTracklistTracksResponse) {}
+}
+

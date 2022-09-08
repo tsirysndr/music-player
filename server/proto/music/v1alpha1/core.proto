@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message GetVersionRequest {}
+
+message GetVersionResponse { string version = 1; }
+
+service CoreService {
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse) {}
+}

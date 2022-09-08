@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message GetCurrentlyPlayingSongRequest {}
+
+message GetCurrentlyPlayingSongResponse {}
+
+message GetPlaybackStateRequest {}
+
+message GetPlaybackStateResponse {}
+
+message GetTimePositionRequest {}
+
+message GetTimePositionResponse {}
+
+message NextRequest {}
+
+message NextResponse {}
+
+message PauseRequest {}
+
+message PauseResponse {}
+
+message PlayRequest {}
+
+message PlayResponse {}
+
+message PreviousRequest {}
+
+message PreviousResponse {}
+
+message SeekRequest {}
+
+message SeekResponse {}
+
+message StopRequest {}
+
+message StopResponse {}
+
+service PlaybackService {
+  rpc GetCurrentlyPlayingSong(GetCurrentlyPlayingSongRequest)
+      returns (GetCurrentlyPlayingSongResponse) {}
+  rpc GetPlaybackState(GetPlaybackStateRequest)
+      returns (GetPlaybackStateResponse) {}
+  rpc GetTimePosition(GetTimePositionRequest)
+      returns (GetTimePositionResponse) {}
+  rpc Next(NextRequest) returns (NextResponse) {}
+  rpc Pause(PauseRequest) returns (PauseResponse) {}
+  rpc Play(PlayRequest) returns (PlayResponse) {}
+  rpc Previous(PreviousRequest) returns (PreviousResponse) {}
+  rpc Seek(SeekRequest) returns (SeekResponse) {}
+  rpc Stop(StopRequest) returns (StopResponse) {}
+}

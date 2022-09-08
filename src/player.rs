@@ -69,13 +69,13 @@ impl Player {
         }
     }
 
-    pub fn load(&mut self, track_id: &str, start_playing: bool, position_ms: u32) {
+    pub fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32) {
         self.command(PlayerCommand::Load {
             track_id: track_id.to_string(),
         });
     }
 
-    pub fn preload(&self, track_id: &str) {
+    pub fn preload(&self, _track_id: &str) {
         self.command(PlayerCommand::Preload);
     }
 

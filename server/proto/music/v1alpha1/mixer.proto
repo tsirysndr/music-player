@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message GetMuteRequest {}
+
+message GetMuteResponse {}
+
+message SetMuteRequest {}
+
+message SetMuteResponse {}
+
+message GetVolumeRequest {}
+
+message GetVolumeResponse {}
+
+message SetVolumeRequest {}
+
+message SetVolumeResponse {}
+
+service MixerService {
+  rpc GetMute(GetMuteRequest) returns (GetMuteResponse) {}
+  rpc SetMute(SetMuteRequest) returns (SetMuteResponse) {}
+  rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {}
+  rpc SetVolume(SetVolumeRequest) returns (SetVolumeResponse) {}
+}

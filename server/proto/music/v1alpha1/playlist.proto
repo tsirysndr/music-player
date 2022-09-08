@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+message CreateRequest {}
+
+message CreateResponse {}
+
+message DeleteRequest {}
+
+message DeleteResponse {}
+
+message GetItemsRequest {}
+
+message GetItemsResponse {}
+
+message SaveRequest {}
+
+message SaveResponse {}
+
+service PlaylistService {
+  rpc Create(CreateRequest) returns (CreateResponse) {}
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+  rpc GetItems(GetItemsRequest) returns (GetItemsResponse) {}
+  rpc Save(SaveRequest) returns (SaveResponse) {}
+}

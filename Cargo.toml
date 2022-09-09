@@ -11,6 +11,19 @@ keywords = ["tokio", "music", "cli", "daemon", "streaming", "player"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+
+[lib]
+name = "music_player"
+path = "src/lib.rs"
+
+[[bin]]
+name = "music-player"
+path = "src/main.rs"
+
+[dependencies.music-player-server]
+path = "server"
+
 [dependencies]
 clap = "3.2.20"
 cpal = "0.13.0"

@@ -12,7 +12,17 @@ fn cli() -> Command<'static> {
     Command::new("music-player")
         .version(VERSION)
         .author("Tsiry Sandratraina <tsiry.sndr@aol.com>")
-        .about("A simple music player written in Rust")
+        .about(
+            r#"
+     __  ___           _      ____  __                     
+    /  |/  /_  _______(_)____/ __ \/ /___ ___  _____  _____
+   / /|_/ / / / / ___/ / ___/ /_/ / / __ `/ / / / _ \/ ___/
+  / /  / / /_/ (__  ) / /__/ ____/ / /_/ / /_/ /  __/ /    
+ /_/  /_/\__,_/____/_/\___/_/   /_/\__,_/\__, /\___/_/     
+                                        /____/             
+ 
+A simple music player written in Rust"#,
+        )
         .subcommand(
             Command::new("play")
                 .about("Play a song")

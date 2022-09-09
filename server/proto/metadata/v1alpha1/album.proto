@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package metadata.v1alpha1;
+
+import "metadata/v1alpha1/artist.proto";
+
+message Song {
+  string id = 1;
+  string name = 2;
+  repeated metadata.v1alpha1.Artist artists = 4;
+  int32 duration = 5;
+  int32 disc_number = 6;
+}
+
+message Album {
+  string id = 1;
+  string title = 2;
+  string cover = 3;
+  string release_date = 4;
+  repeated string genres = 5;
+  repeated metadata.v1alpha1.Artist artists = 6;
+  repeated Song tracks = 7;
+}

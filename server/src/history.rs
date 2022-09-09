@@ -1,4 +1,6 @@
-use music_player_server::api::{self, history_service_server::HistoryService};
+use music_player_server::api::v1alpha1::{
+    history_service_server::HistoryService, GetHistoryRequest, GetHistoryResponse,
+};
 
 #[derive(Debug, Default)]
 pub struct History {}
@@ -7,9 +9,9 @@ pub struct History {}
 impl HistoryService for History {
     async fn get_history(
         &self,
-        _request: tonic::Request<api::GetHistoryRequest>,
-    ) -> Result<tonic::Response<api::GetHistoryResponse>, tonic::Status> {
-        let response = api::GetHistoryResponse {};
+        _request: tonic::Request<GetHistoryRequest>,
+    ) -> Result<tonic::Response<GetHistoryResponse>, tonic::Status> {
+        let response = GetHistoryResponse {};
         Ok(tonic::Response::new(response))
     }
 }

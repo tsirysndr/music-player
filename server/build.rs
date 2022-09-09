@@ -1,6 +1,14 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure().compile(
         &[
+            "proto/metadata/v1alpha1/artist.proto",
+            "proto/metadata/v1alpha1/album.proto",
+            "proto/metadata/v1alpha1/lyrics.proto",
+            "proto/metadata/v1alpha1/track.proto",
+            "proto/objects/v1alpha1/addon.proto",
+            "proto/objects/v1alpha1/playlist.proto",
+            "proto/objects/v1alpha1/tracklist.proto",
+            "proto/music/v1alpha1/addons.proto",
             "proto/music/v1alpha1/core.proto",
             "proto/music/v1alpha1/history.proto",
             "proto/music/v1alpha1/library.proto",

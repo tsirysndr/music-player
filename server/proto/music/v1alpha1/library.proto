@@ -2,9 +2,13 @@ syntax = "proto3";
 
 package music.v1alpha1;
 
+import "metadata/v1alpha1/artist.proto";
+import "metadata/v1alpha1/album.proto";
+import "metadata/v1alpha1/track.proto";
+
 message ScanRequest {}
 
-message ScanResponse { repeated string artists = 1; }
+message ScanResponse {}
 
 message SearchRequest { string query = 1; }
 
@@ -12,32 +16,38 @@ message SearchResponse {}
 
 message GetAlbumsRequest {}
 
-message GetAlbumsResponse {}
+message GetAlbumsResponse { repeated metadata.v1alpha1.Album albums = 1; }
 
 message GetArtistsRequest {}
 
-message GetArtistsResponse {}
+message GetArtistsResponse { repeated metadata.v1alpha1.Artist artists = 1; }
 
 message GetTracksRequest {}
 
-message GetTracksResponse {}
+message GetTracksResponse { repeated metadata.v1alpha1.Track tracks = 1; }
 
 message GetAlbumDetailsRequest {}
 
-message GetAlbumDetailsResponse {}
+message GetAlbumDetailsResponse { metadata.v1alpha1.Album album = 1; }
 
 message GetArtistDetailsRequest {}
 
-message GetArtistDetailsResponse {}
+message GetArtistDetailsResponse { metadata.v1alpha1.Artist artist = 1; }
 
 message GetTrackDetailsRequest {}
 
-message GetTrackDetailsResponse {}
+message GetTrackDetailsResponse { metadata.v1alpha1.Track track = 1; }
 
 service LibraryService {
   rpc Scan(ScanRequest) returns (ScanResponse) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}
   rpc GetAlbums(GetAlbumsRequest) returns (GetAlbumsResponse) {}
+  rpc GetAlbumDetails(GetAlbumDetailsRequest)
+      returns (GetAlbumDetailsResponse) {}
   rpc GetTracks(GetTracksRequest) returns (GetTracksResponse) {}
+  rpc GetTrackDetails(GetTrackDetailsRequest)
+      returns (GetTrackDetailsResponse) {}
   rpc GetArtists(GetArtistsRequest) returns (GetArtistsResponse) {}
+  rpc GetArtistDetails(GetArtistDetailsRequest)
+      returns (GetArtistDetailsResponse) {}
 }

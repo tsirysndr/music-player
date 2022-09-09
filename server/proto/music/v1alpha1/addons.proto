@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+import "objects/v1alpha1/addon.proto";
+
+message GetAddonsRequest {}
+
+message GetAddonsResponse { repeated objects.v1alpha1.Addon addons = 1; }
+
+message GetAddonDetailsRequest {}
+
+message GetAddonDetailsResponse { objects.v1alpha1.Addon addon = 1; }
+
+message SetAddonEnabledRequest {}
+
+message SetAddonEnabledResponse {}
+
+service AddonsService {
+  rpc GetAddons(GetAddonsRequest) returns (GetAddonsResponse) {}
+  rpc GetAddonDetails(GetAddonDetailsRequest)
+      returns (GetAddonDetailsResponse) {}
+  rpc SetAddonEnabled(SetAddonEnabledRequest)
+      returns (SetAddonEnabledResponse) {}
+}

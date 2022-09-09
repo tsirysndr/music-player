@@ -18,9 +18,24 @@ message SaveRequest {}
 
 message SaveResponse {}
 
+message RenameRequest {}
+
+message RenameResponse {}
+
+message RemoveItemRequest {}
+
+message RemoveItemResponse {}
+
+message AddItemRequest {}
+
+message AddItemResponse {}
+
 service PlaylistService {
   rpc Create(CreateRequest) returns (CreateResponse) {}
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
   rpc GetItems(GetItemsRequest) returns (GetItemsResponse) {}
   rpc Save(SaveRequest) returns (SaveResponse) {}
+  rpc Rename(RenameRequest) returns (RenameResponse) {}
+  rpc RemoveItem(RemoveItemRequest) returns (RemoveItemResponse) {}
+  rpc AddItem(AddItemRequest) returns (AddItemResponse) {}
 }

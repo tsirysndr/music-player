@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package music.v1alpha1.metadata.v1alpha1;
-
-message Track {
-  
-}

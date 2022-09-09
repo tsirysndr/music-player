@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package metadata.v1alpha1;
+
+message Artist {
+  string id = 1;
+  string name = 2;
+  string picture = 3;
+  string bio = 4;
+  string website = 5;
+  repeated string genres = 6;
+  repeated string images = 7;
+}

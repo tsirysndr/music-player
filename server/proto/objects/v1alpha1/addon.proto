@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package objects.v1alpha1;
+
+message Addon {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string icon = 4;
+  string url = 5;
+  string version = 6;
+  string author = 7;
+  bool enabled = 8;
+}

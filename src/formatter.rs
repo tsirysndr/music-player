@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 
+use owo_colors::OwoColorize;
 use symphonia::core::formats::{Cue, FormatOptions, Track};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::{ColorMode, MetadataOptions, MetadataRevision, Tag, Value, Visual};
@@ -284,7 +285,7 @@ fn print_tag_item(idx: usize, key: &str, value: &Value, indent: usize) -> String
             .take_while(|s| !s.is_empty())
             .collect::<Vec<_>>();
 
-        out.push_str(&split.join(&line_wrap_prefix));
+        out.push_str(&split.join(&line_wrap_prefix).magenta().to_string());
     }
 
     out

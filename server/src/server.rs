@@ -1,3 +1,6 @@
+use std::net::SocketAddr;
+
+use owo_colors::OwoColorize;
 use tonic::transport::Server;
 
 use crate::{
@@ -13,10 +16,20 @@ use crate::api::v1alpha1::{
     tracklist_service_server::TracklistServiceServer,
 };
 
-pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse().unwrap();
+const BANNER: &str = r#"
+    __  ___           _      ____  __                     
+   /  |/  /_  _______(_)____/ __ \/ /___ ___  _____  _____
+  / /|_/ / / / / ___/ / ___/ /_/ / / __ `/ / / / _ \/ ___/
+ / /  / / /_/ (__  ) / /__/ ____/ / /_/ / /_/ /  __/ /    
+/_/  /_/\__,_/____/_/\___/_/   /_/\__,_/\__, /\___/_/     
+                                       /____/             
+"#;
 
-    println!("Server listening on {}", addr);
+pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
+    let addr: SocketAddr = "[::1]:50051".parse().unwrap();
+
+    println!("{}", BANNER.magenta());
+    println!("Server listening on {}", addr.cyan());
 
     Server::builder()
         .accept_http1(true)

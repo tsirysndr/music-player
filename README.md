@@ -4,6 +4,9 @@
   <a href="LICENSE" target="_blank">
     <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" />
   </a>
+  <a href="https://buf.build/tsiry/musicserverapis/docs/main:music.v1alpha1">
+    <img src="https://img.shields.io/badge/apidocs-yes-cyan.svg" />
+  </a>
   <a href="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml" target="_blank">
     <img alt="rust-clippy" src="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml/badge.svg?branch=master" />
   </a>

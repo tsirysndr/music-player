@@ -1,9 +1,10 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
     GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
+use crate::metadata::v1alpha1::{Album, Artist, Track};
 
 #[derive(Debug, Default)]
 pub struct Library {}
@@ -49,21 +50,27 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetTrackDetailsRequest>,
     ) -> Result<tonic::Response<GetTrackDetailsResponse>, tonic::Status> {
-        let response = GetTrackDetailsResponse { track: None };
+        let response = GetTrackDetailsResponse {
+            track: Some(Track::default()),
+        };
         Ok(tonic::Response::new(response))
     }
     async fn get_album_details(
         &self,
         _request: tonic::Request<GetAlbumDetailsRequest>,
     ) -> Result<tonic::Response<GetAlbumDetailsResponse>, tonic::Status> {
-        let response = GetAlbumDetailsResponse { album: None };
+        let response = GetAlbumDetailsResponse {
+            album: Some(Album::default()),
+        };
         Ok(tonic::Response::new(response))
     }
     async fn get_artist_details(
         &self,
         _request: tonic::Request<GetArtistDetailsRequest>,
     ) -> Result<tonic::Response<GetArtistDetailsResponse>, tonic::Status> {
-        let response = GetArtistDetailsResponse { artist: None };
+        let response = GetArtistDetailsResponse {
+            artist: Some(Artist::default()),
+        };
         Ok(tonic::Response::new(response))
     }
 }

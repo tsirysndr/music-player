@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
     ClearTracklistRequest, ClearTracklistResponse, FilterTracklistRequest, FilterTracklistResponse,
     GetNextTrackRequest, GetNextTrackResponse, GetPreviousTrackRequest, GetPreviousTrackResponse,

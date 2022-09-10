@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     playlist_service_server::PlaylistService, AddItemRequest, AddItemResponse, CreateRequest,
     CreateResponse, DeleteRequest, DeleteResponse, GetItemsRequest, GetItemsResponse,
     RemoveItemRequest, RemoveItemResponse, RenameRequest, RenameResponse, SaveRequest,

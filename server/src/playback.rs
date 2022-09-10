@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
     GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
     GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,

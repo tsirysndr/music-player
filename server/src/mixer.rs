@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     mixer_service_server::MixerService, GetMuteRequest, GetMuteResponse, GetVolumeRequest,
     GetVolumeResponse, SetMuteRequest, SetMuteResponse, SetVolumeRequest, SetVolumeResponse,
 };

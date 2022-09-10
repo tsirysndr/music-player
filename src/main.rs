@@ -4,6 +4,7 @@ use music_player::{
     config::AudioFormat,
     player::Player,
 };
+use music_player_server::server::start_server;
 
 mod formatter;
 
@@ -31,7 +32,7 @@ A simple music player written in Rust"#,
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = cli().get_matches();
 
     if let Some(matches) = matches.subcommand_matches("play") {
@@ -46,5 +47,7 @@ async fn main() {
         player.load(song, true, 0);
 
         player.await_end_of_track().await;
+        return Ok(());
     }
+    start_server().await
 }

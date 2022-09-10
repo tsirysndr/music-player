@@ -1,7 +1,8 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     addons_service_server::AddonsService, GetAddonDetailsRequest, GetAddonDetailsResponse,
     GetAddonsRequest, GetAddonsResponse, SetAddonEnabledRequest, SetAddonEnabledResponse,
 };
+use crate::objects::v1alpha1::Addon;
 
 #[derive(Debug, Default)]
 pub struct Addons {}
@@ -19,7 +20,9 @@ impl AddonsService for Addons {
         &self,
         _request: tonic::Request<GetAddonDetailsRequest>,
     ) -> Result<tonic::Response<GetAddonDetailsResponse>, tonic::Status> {
-        let response = GetAddonDetailsResponse { addon: None };
+        let response = GetAddonDetailsResponse {
+            addon: Some(Addon::default()),
+        };
         Ok(tonic::Response::new(response))
     }
     async fn set_addon_enabled(

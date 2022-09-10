@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     history_service_server::HistoryService, GetHistoryRequest, GetHistoryResponse,
 };
 

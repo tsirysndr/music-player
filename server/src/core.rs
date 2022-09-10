@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::{
+use crate::api::v1alpha1::{
     core_service_server::CoreService, GetVersionRequest, GetVersionResponse,
 };
 

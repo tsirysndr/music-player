@@ -1,30 +1,14 @@
 [package]
-name = "music-player"
+name = "music-player-playback"
 version = "0.1.0"
 edition = "2021"
-readme = "README.md"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
-categories = ["command-line-utilities"]
-keywords = ["tokio", "music", "cli", "daemon", "streaming", "player"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[workspace]
-
-[[bin]]
-name = "music-player"
-path = "src/main.rs"
-
-[dependencies.music-player-server]
-path = "server"
-
-[dependencies.music-player-playback]
-path = "playback"
-
 [dependencies]
-clap = "3.2.20"
 cpal = "0.13.0"
 futures-util = "0.3.24"
 lazy_static = "1.4.0"

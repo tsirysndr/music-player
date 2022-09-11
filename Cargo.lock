@@ -819,7 +819,29 @@ dependencies = [
  "lazy_static",
  "librespot-protocol",
  "log",
+ "music-player-playback",
  "music-player-server",
+ "owo-colors",
+ "parking_lot 0.12.1",
+ "rand",
+ "rand_distr",
+ "rb",
+ "rodio",
+ "symphonia",
+ "thiserror",
+ "tokio",
+ "zerocopy",
+]
+
+[[package]]
+name = "music-player-playback"
+version = "0.1.0"
+dependencies = [
+ "cpal",
+ "futures-util",
+ "lazy_static",
+ "librespot-protocol",
+ "log",
  "owo-colors",
  "parking_lot 0.12.1",
  "rand",
@@ -836,6 +858,7 @@ dependencies = [
 name = "music-player-server"
 version = "0.1.0"
 dependencies = [
+ "music-player-playback",
  "owo-colors",
  "prost",
  "tokio",

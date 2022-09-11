@@ -26,6 +26,15 @@ const PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
 
 pub type PlayerResult = Result<(), Error>;
 
+pub trait PlayerEngine {
+    fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32);
+    fn preload(&self, _track_id: &str);
+    fn play(&self);
+    fn pause(&self);
+    fn stop(&self);
+    fn seek(&self, position_ms: u32);
+}
+
 pub struct Player {
     commands: Option<mpsc::UnboundedSender<PlayerCommand>>,
     thread_handle: Option<thread::JoinHandle<()>>,
@@ -69,32 +78,6 @@ impl Player {
         }
     }
 
-    pub fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32) {
-        self.command(PlayerCommand::Load {
-            track_id: track_id.to_string(),
-        });
-    }
-
-    pub fn preload(&self, _track_id: &str) {
-        self.command(PlayerCommand::Preload);
-    }
-
-    pub fn play(&self) {
-        self.command(PlayerCommand::Play)
-    }
-
-    pub fn pause(&self) {
-        self.command(PlayerCommand::Pause)
-    }
-
-    pub fn stop(&self) {
-        self.command(PlayerCommand::Stop)
-    }
-
-    pub fn seek(&self, position_ms: u32) {
-        self.command(PlayerCommand::Seek(position_ms));
-    }
-
     pub fn get_player_event_channel(&self) -> PlayerEventChannel {
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
         self.command(PlayerCommand::AddEventSender(event_sender));
@@ -111,6 +94,34 @@ impl Player {
                 return;
             }
         }
+    }
+}
+
+impl PlayerEngine for Player {
+    fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32) {
+        self.command(PlayerCommand::Load {
+            track_id: track_id.to_string(),
+        });
+    }
+
+    fn preload(&self, _track_id: &str) {
+        self.command(PlayerCommand::Preload);
+    }
+
+    fn play(&self) {
+        self.command(PlayerCommand::Play)
+    }
+
+    fn pause(&self) {
+        self.command(PlayerCommand::Pause)
+    }
+
+    fn stop(&self) {
+        self.command(PlayerCommand::Stop)
+    }
+
+    fn seek(&self, position_ms: u32) {
+        self.command(PlayerCommand::Seek(position_ms));
     }
 }
 

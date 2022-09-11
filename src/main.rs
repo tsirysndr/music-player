@@ -1,12 +1,11 @@
 use clap::Command;
-use music_player::{
+use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
-    player::Player,
+    formatter,
+    player::{Player, PlayerEngine},
 };
-use music_player_server::server::start_server;
-
-mod formatter;
+use music_player_server::server::MusicPlayerServer;
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -35,19 +34,21 @@ A simple music player written in Rust"#,
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = cli().get_matches();
 
+    let audio_format = AudioFormat::default();
+    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+
+    let (mut player, _) = Player::new(move || backend(None, audio_format));
+
     if let Some(matches) = matches.subcommand_matches("play") {
         let song = matches.value_of("song").unwrap();
 
         formatter::print_format(song);
 
-        let audio_format = AudioFormat::default();
-        let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
-
-        let (mut player, _) = Player::new(move || backend(None, audio_format));
         player.load(song, true, 0);
 
         player.await_end_of_track().await;
         return Ok(());
     }
-    start_server().await
+
+    MusicPlayerServer::new(Box::new(player)).start().await
 }

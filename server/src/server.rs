@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use music_player_playback::player::{Player, PlayerEngine};
 use owo_colors::OwoColorize;
 use tonic::transport::Server;
 
@@ -25,35 +26,44 @@ const BANNER: &str = r#"
                                        /____/             
 "#;
 
-pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
-    let addr: SocketAddr = "[::1]:50051".parse().unwrap();
+pub struct MusicPlayerServer {
+    player: Box<dyn PlayerEngine>,
+}
 
-    println!("{}", BANNER.magenta());
-    println!("Server listening on {}", addr.cyan());
+impl MusicPlayerServer {
+    pub fn new(player: Box<dyn PlayerEngine>) -> Self {
+        Self { player }
+    }
+    pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let addr: SocketAddr = "[::1]:50051".parse().unwrap();
 
-    Server::builder()
-        .accept_http1(true)
-        .add_service(tonic_web::enable(AddonsServiceServer::new(
-            Addons::default(),
-        )))
-        .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
-        .add_service(tonic_web::enable(HistoryServiceServer::new(
-            History::default(),
-        )))
-        .add_service(tonic_web::enable(LibraryServiceServer::new(
-            Library::default(),
-        )))
-        .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
-        .add_service(tonic_web::enable(PlaybackServiceServer::new(
-            Playback::default(),
-        )))
-        .add_service(tonic_web::enable(PlaylistServiceServer::new(
-            Playlist::default(),
-        )))
-        .add_service(tonic_web::enable(TracklistServiceServer::new(
-            Tracklist::default(),
-        )))
-        .serve(addr)
-        .await?;
-    Ok(())
+        println!("{}", BANNER.magenta());
+        println!("Server listening on {}", addr.cyan());
+
+        Server::builder()
+            .accept_http1(true)
+            .add_service(tonic_web::enable(AddonsServiceServer::new(
+                Addons::default(),
+            )))
+            .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
+            .add_service(tonic_web::enable(HistoryServiceServer::new(
+                History::default(),
+            )))
+            .add_service(tonic_web::enable(LibraryServiceServer::new(
+                Library::default(),
+            )))
+            .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
+            .add_service(tonic_web::enable(PlaybackServiceServer::new(
+                Playback::default(),
+            )))
+            .add_service(tonic_web::enable(PlaylistServiceServer::new(
+                Playlist::default(),
+            )))
+            .add_service(tonic_web::enable(TracklistServiceServer::new(
+                Tracklist::default(),
+            )))
+            .serve(addr)
+            .await?;
+        Ok(())
+    }
 }

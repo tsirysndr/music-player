@@ -1,21 +1,38 @@
+use std::sync::Arc;
+
+use music_player_playback::player::{Player, PlayerEngine};
+use tokio::sync::Mutex;
+
 use crate::api::v1alpha1::{
     tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
     ClearTracklistRequest, ClearTracklistResponse, FilterTracklistRequest, FilterTracklistResponse,
     GetNextTrackRequest, GetNextTrackResponse, GetPreviousTrackRequest, GetPreviousTrackResponse,
     GetRandomRequest, GetRandomResponse, GetRepeatRequest, GetRepeatResponse, GetSingleRequest,
-    GetSingleResponse, GetTracklistTracksRequest, GetTracklistTracksResponse, RemoveTrackRequest,
-    RemoveTrackResponse, SetRepeatRequest, SetRepeatResponse, ShuffleRequest, ShuffleResponse,
+    GetSingleResponse, GetTracklistTracksRequest, GetTracklistTracksResponse, PlayNextRequest,
+    PlayNextResponse, RemoveTrackRequest, RemoveTrackResponse, SetRepeatRequest, SetRepeatResponse,
+    ShuffleRequest, ShuffleResponse,
 };
 
-#[derive(Debug, Default)]
-pub struct Tracklist {}
+pub struct Tracklist {
+    player: Arc<Mutex<Player>>,
+}
+
+impl Tracklist {
+    pub fn new(player: Arc<Mutex<Player>>) -> Self {
+        Self { player }
+    }
+}
 
 #[tonic::async_trait]
 impl TracklistService for Tracklist {
     async fn add_track(
         &self,
-        _request: tonic::Request<AddTrackRequest>,
+        request: tonic::Request<AddTrackRequest>,
     ) -> Result<tonic::Response<AddTrackResponse>, tonic::Status> {
+        self.player
+            .lock()
+            .await
+            .load(request.get_ref().uri.as_str(), true, 0);
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -94,6 +111,13 @@ impl TracklistService for Tracklist {
         _request: tonic::Request<GetTracklistTracksRequest>,
     ) -> Result<tonic::Response<GetTracklistTracksResponse>, tonic::Status> {
         let response = GetTracklistTracksResponse {};
+        Ok(tonic::Response::new(response))
+    }
+    async fn play_next(
+        &self,
+        _request: tonic::Request<PlayNextRequest>,
+    ) -> Result<tonic::Response<PlayNextResponse>, tonic::Status> {
+        let response = PlayNextResponse {};
         Ok(tonic::Response::new(response))
     }
 }

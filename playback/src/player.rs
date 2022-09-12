@@ -4,6 +4,7 @@ use parking_lot::Mutex;
 use std::{
     collections::HashMap,
     fs::File,
+    mem,
     path::Path,
     pin::Pin,
     process::exit,
@@ -19,6 +20,7 @@ use crate::{
     convert::Converter,
     decoder::{symphonia_decoder::SymphoniaDecoder, AudioDecoder},
     dither::{mk_ditherer, TriangularDitherer},
+    formatter,
     metadata::audio::AudioFileFormat,
 };
 
@@ -26,7 +28,7 @@ const PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
 
 pub type PlayerResult = Result<(), Error>;
 
-pub trait PlayerEngine {
+pub trait PlayerEngine: Send + Sync {
     fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32);
     fn preload(&self, _track_id: &str);
     fn play(&self);
@@ -35,9 +37,9 @@ pub trait PlayerEngine {
     fn seek(&self, position_ms: u32);
 }
 
+#[derive(Clone)]
 pub struct Player {
     commands: Option<mpsc::UnboundedSender<PlayerCommand>>,
-    thread_handle: Option<thread::JoinHandle<()>>,
 }
 
 impl Player {
@@ -48,7 +50,7 @@ impl Player {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
 
-        let handle = thread::spawn(move || {
+        thread::spawn(move || {
             let internal = PlayerInternal {
                 commands: cmd_rx,
                 load_handles: Arc::new(Mutex::new(HashMap::new())),
@@ -64,7 +66,6 @@ impl Player {
         (
             Player {
                 commands: Some(cmd_tx),
-                thread_handle: Some(handle),
             },
             event_receiver,
         )
@@ -168,11 +169,7 @@ impl Future for PlayerInternal {
                 }
             }
 
-            if let PlayerState::Playing {
-                ref mut decoder,
-                track_id: _,
-            } = self.state
-            {
+            if let PlayerState::Playing { ref mut decoder } = self.state {
                 match decoder.next_packet() {
                     Ok(result) => {
                         if let Some((ref _packet_position, packet, channels, sample_rate)) = result
@@ -262,24 +259,12 @@ impl PlayerInternal {
 
     fn handle_command(&mut self, cmd: PlayerCommand) -> PlayerResult {
         match cmd {
-            PlayerCommand::Load { track_id } => {
-                self.handle_command_load(&track_id);
-            }
-            PlayerCommand::Preload => {
-                self.handle_command_preload();
-            }
-            PlayerCommand::Play => {
-                self.handle_play();
-            }
-            PlayerCommand::Pause => {
-                self.handle_pause();
-            }
-            PlayerCommand::Stop => {
-                self.handle_player_stop();
-            }
-            PlayerCommand::Seek(position_ms) => {
-                self.handle_command_seek();
-            }
+            PlayerCommand::Load { track_id } => self.handle_command_load(&track_id),
+            PlayerCommand::Preload => self.handle_command_preload(),
+            PlayerCommand::Play => self.handle_play(),
+            PlayerCommand::Pause => self.handle_pause(),
+            PlayerCommand::Stop => self.handle_player_stop(),
+            PlayerCommand::Seek(position_ms) => self.handle_command_seek(),
             PlayerCommand::AddEventSender(sender) => self.event_senders.push(sender),
         }
         Ok(())
@@ -330,12 +315,9 @@ impl PlayerInternal {
 
     fn start_playback(&mut self, track_id: &str, loaded_track: PlayerLoadedTrackData) {
         self.ensure_sink_running();
-        self.send_event(PlayerEvent::Playing {
-            track_id: track_id.to_string(),
-        });
+        self.send_event(PlayerEvent::Playing {});
 
         self.state = PlayerState::Playing {
-            track_id: track_id.to_string(),
             decoder: loaded_track.decoder,
         };
     }
@@ -346,7 +328,7 @@ impl PlayerInternal {
     }
 
     fn handle_command_load(&mut self, track_id: &str) {
-        println!("load track {}", track_id);
+        formatter::print_format(track_id);
         let loaded_track = self.load_track(track_id);
         match loaded_track {
             Some(loaded_track) => {
@@ -365,16 +347,28 @@ impl PlayerInternal {
         todo!()
     }
 
-    fn handle_play(&self) {
-        todo!()
+    fn handle_play(&mut self) {
+        if let PlayerState::Paused { .. } = self.state {
+            self.state.paused_to_playing();
+            self.send_event(PlayerEvent::Playing);
+            self.ensure_sink_running();
+        } else {
+            error!("Player::play called from invalid state");
+        }
     }
 
     fn handle_player_stop(&mut self) {
         self.ensure_sink_stopped(false);
+        self.state = PlayerState::Stopped;
     }
 
-    fn handle_pause(&self) {
-        todo!()
+    fn handle_pause(&mut self) {
+        if let PlayerState::Playing { .. } = self.state {
+            self.state.playing_to_paused();
+            self.send_event(PlayerEvent::Paused);
+        } else {
+            error!("Player::pause called from invalid state");
+        }
     }
 
     fn handle_command_seek(&self) {
@@ -395,7 +389,6 @@ type Decoder = Box<dyn AudioDecoder + Send>;
 enum PlayerState {
     Stopped,
     Loading {
-        track_id: String,
         loader: Pin<Box<dyn FusedFuture<Output = Result<PlayerLoadedTrackData, ()>> + Send>>,
     },
     Paused {
@@ -403,7 +396,6 @@ enum PlayerState {
     },
     Playing {
         decoder: Decoder,
-        track_id: String,
     },
     EndOfTrack {
         loaded_track: PlayerLoadedTrackData,
@@ -452,6 +444,34 @@ impl PlayerState {
             }
         }
     }
+
+    fn playing_to_paused(&mut self) {
+        use self::PlayerState::*;
+        let new_state = mem::replace(self, Invalid);
+        match new_state {
+            Playing { decoder } => {
+                *self = Paused { decoder };
+            }
+            _ => {
+                error!("PlayerState::playing_to_paused in invalid state");
+                exit(1);
+            }
+        }
+    }
+
+    fn paused_to_playing(&mut self) {
+        use self::PlayerState::*;
+        let new_state = mem::replace(self, Invalid);
+        match new_state {
+            Paused { decoder } => {
+                *self = Playing { decoder };
+            }
+            _ => {
+                error!("PlayerState::paused_to_playing in invalid state");
+                exit(1);
+            }
+        }
+    }
 }
 
 pub struct PlayerTrackLoader {}
@@ -492,9 +512,9 @@ enum PlayerCommand {
 pub enum PlayerEvent {
     Stopped,
     Started,
-    Loading { track_id: String },
+    Loading,
     Preloading,
-    Playing { track_id: String },
+    Playing,
     Paused,
     TimeToPreloadNextTrack,
     EndOfTrack,

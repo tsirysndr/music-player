@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package music.v1alpha1;
 
-message AddTrackRequest {}
+message AddTrackRequest { string uri = 1; }
 
 message AddTrackResponse {}
 
@@ -50,6 +50,10 @@ message ShuffleRequest {}
 
 message GetTracklistTracksRequest {}
 
+message PlayNextRequest {}
+
+message PlayNextResponse {}
+
 service TracklistService {
   rpc AddTrack(AddTrackRequest) returns (AddTrackResponse) {}
   rpc ClearTracklist(ClearTracklistRequest) returns (ClearTracklistResponse) {}
@@ -59,10 +63,12 @@ service TracklistService {
   rpc GetRepeat(GetRepeatRequest) returns (GetRepeatResponse) {}
   rpc GetSingle(GetSingleRequest) returns (GetSingleResponse) {}
   rpc GetNextTrack(GetNextTrackRequest) returns (GetNextTrackResponse) {}
-  rpc GetPreviousTrack(GetPreviousTrackRequest) returns (GetPreviousTrackResponse) {}
+  rpc GetPreviousTrack(GetPreviousTrackRequest)
+      returns (GetPreviousTrackResponse) {}
   rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
   rpc Shuffle(ShuffleRequest) returns (ShuffleResponse) {}
   rpc SetRepeat(SetRepeatRequest) returns (SetRepeatResponse) {}
-  rpc GetTracklistTracks(GetTracklistTracksRequest) returns (GetTracklistTracksResponse) {}
+  rpc GetTracklistTracks(GetTracklistTracksRequest)
+      returns (GetTracklistTracksResponse) {}
+  rpc PlayNext(PlayNextRequest) returns (PlayNextResponse) {}
 }
-

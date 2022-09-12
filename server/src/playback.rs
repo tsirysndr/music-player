@@ -1,3 +1,8 @@
+use std::sync::Arc;
+
+use music_player_playback::player::{Player, PlayerEngine};
+use tokio::sync::Mutex;
+
 use crate::api::v1alpha1::{
     playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
     GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
@@ -6,8 +11,15 @@ use crate::api::v1alpha1::{
     SeekResponse, StopRequest, StopResponse,
 };
 
-#[derive(Debug, Default)]
-pub struct Playback {}
+pub struct Playback {
+    player: Arc<Mutex<Player>>,
+}
+
+impl Playback {
+    pub fn new(player: Arc<Mutex<Player>>) -> Self {
+        Self { player }
+    }
+}
 
 #[tonic::async_trait]
 impl PlaybackService for Playback {
@@ -36,6 +48,8 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<NextRequest>,
     ) -> Result<tonic::Response<NextResponse>, tonic::Status> {
+        self.player.lock().await.stop();
+        self.player.lock().await.load("", true, 0);
         let response = NextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -43,6 +57,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PreviousRequest>,
     ) -> Result<tonic::Response<PreviousResponse>, tonic::Status> {
+        self.player.lock().await.stop();
         let response = PreviousResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -50,6 +65,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PlayRequest>,
     ) -> Result<tonic::Response<PlayResponse>, tonic::Status> {
+        self.player.lock().await.play();
         let response = PlayResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -57,6 +73,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PauseRequest>,
     ) -> Result<tonic::Response<PauseResponse>, tonic::Status> {
+        self.player.lock().await.pause();
         let response = PauseResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -64,6 +81,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<StopRequest>,
     ) -> Result<tonic::Response<StopResponse>, tonic::Status> {
+        self.player.lock().await.stop();
         let response = StopResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -71,6 +89,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<SeekRequest>,
     ) -> Result<tonic::Response<SeekResponse>, tonic::Status> {
+        self.player.lock().await.seek(12);
         let response = SeekResponse {};
         Ok(tonic::Response::new(response))
     }

@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
 use clap::Command;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
-    formatter,
     player::{Player, PlayerEngine},
 };
 use music_player_server::server::MusicPlayerServer;
+use tokio::sync::Mutex;
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -42,13 +44,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(matches) = matches.subcommand_matches("play") {
         let song = matches.value_of("song").unwrap();
 
-        formatter::print_format(song);
-
         player.load(song, true, 0);
 
         player.await_end_of_track().await;
         return Ok(());
     }
 
-    MusicPlayerServer::new(Box::new(player)).start().await
+    MusicPlayerServer::new(Arc::new(Mutex::new(player)))
+        .start()
+        .await
 }

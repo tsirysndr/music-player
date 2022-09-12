@@ -1,7 +1,9 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 
-use music_player_playback::player::{Player, PlayerEngine};
+use music_player_playback::player::Player;
 use owo_colors::OwoColorize;
+use tokio::sync::Mutex;
 use tonic::transport::Server;
 
 use crate::{
@@ -27,11 +29,11 @@ const BANNER: &str = r#"
 "#;
 
 pub struct MusicPlayerServer {
-    player: Box<dyn PlayerEngine>,
+    player: Arc<Mutex<Player>>,
 }
 
 impl MusicPlayerServer {
-    pub fn new(player: Box<dyn PlayerEngine>) -> Self {
+    pub fn new(player: Arc<Mutex<Player>>) -> Self {
         Self { player }
     }
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -54,13 +56,13 @@ impl MusicPlayerServer {
             )))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::default(),
+                Playback::new(Arc::clone(&self.player)),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
                 Playlist::default(),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::default(),
+                Tracklist::new(Arc::clone(&self.player)),
             )))
             .serve(addr)
             .await?;

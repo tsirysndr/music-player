@@ -25,7 +25,7 @@ pub async fn run() {
 
     let database_path = std::env::var("DATABASE_URL")
         .unwrap()
-        .replace("sqlite:/", "/");
+        .replace("sqlite:", "");
 
     if !Path::new(&database_path).exists() {
         File::create(database_path).expect("Failed to create database file");

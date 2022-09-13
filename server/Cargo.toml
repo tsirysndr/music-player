@@ -14,6 +14,9 @@ keywords = ["tokio", "music", "cli", "daemon", "streaming", "player"]
 [dependencies.music-player-playback]
 path = "../playback"
 
+[dependencies.music-player-scanner]
+path = "../scanner"
+
 [dependencies]
 owo-colors = "3.5.0"
 prost = "0.11.0"

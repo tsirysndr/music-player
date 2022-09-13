@@ -1,3 +1,5 @@
+use music_player_scanner::scan_directory;
+
 use crate::api::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
@@ -15,6 +17,7 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<ScanRequest>,
     ) -> Result<tonic::Response<ScanResponse>, tonic::Status> {
+        scan_directory(|song| {});
         let response = ScanResponse {};
         Ok(tonic::Response::new(response))
     }

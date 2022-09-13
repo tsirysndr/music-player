@@ -23,6 +23,15 @@ path = "server"
 [dependencies.music-player-playback]
 path = "playback"
 
+[dependencies.music-player-scanner]
+path = "scanner"
+
+[dependencies.music-player-entity]
+path = "entity"
+
+[dependencies.music-player-migration]
+path = "migration"
+
 [dependencies]
 clap = "3.2.20"
 cpal = "0.13.0"

@@ -50,6 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    migration::run().await;
+
     MusicPlayerServer::new(Arc::new(Mutex::new(player)))
         .start()
         .await

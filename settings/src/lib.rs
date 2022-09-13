@@ -23,7 +23,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     fs::create_dir_all(&path).unwrap();
 
     let default_settings = Settings {
-        database_url: format!("sqlite:/{}/music-player.sqlite3", path),
+        database_url: format!("sqlite:{}/music-player.sqlite3", path),
         port: 50051,
         addons: None,
         music_directory: dirs::audio_dir().unwrap().to_str().unwrap().to_string(),

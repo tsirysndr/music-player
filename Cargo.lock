@@ -1533,6 +1533,7 @@ dependencies = [
  "rand_distr",
  "rb",
  "rodio",
+ "sea-orm-migration",
  "serde",
  "symphonia",
  "thiserror",
@@ -1553,6 +1554,7 @@ name = "music-player-migration"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "music-player-settings",
  "sea-orm-migration",
  "tokio",
 ]

@@ -17,6 +17,9 @@ path = "../playback"
 [dependencies.music-player-scanner]
 path = "../scanner"
 
+[dependencies.music-player-settings]
+path = "../settings"
+
 [dependencies]
 owo-colors = "3.5.0"
 prost = "0.11.0"

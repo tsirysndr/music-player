@@ -47,6 +47,50 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Playlist::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(Playlist::Id)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(Playlist::Name).string().not_null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Tracklist::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(Tracklist::Id)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Addon::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(Addon::Id).string().not_null().primary_key())
+                    .col(ColumnDef::new(Addon::Name).string().not_null())
+                    .col(ColumnDef::new(Addon::Description).string().not_null())
+                    .col(ColumnDef::new(Addon::Version).string().not_null())
+                    .col(ColumnDef::new(Addon::Author).string().not_null())
+                    .col(ColumnDef::new(Addon::Url).string().not_null())
+                    .col(ColumnDef::new(Addon::Enabled).boolean().not_null())
+                    .to_owned(),
+            )
+            .await?;
         Ok(())
     }
 
@@ -59,6 +103,15 @@ impl MigrationTrait for Migration {
             .await?;
         manager
             .drop_table(Table::drop().table(Track::Table).if_exists().to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Playlist::Table).if_exists().to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Tracklist::Table).if_exists().to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Addon::Table).if_exists().to_owned())
             .await?;
         Ok(())
     }
@@ -94,4 +147,29 @@ enum Track {
     BitDepth,
     Channels,
     Duration,
+}
+
+#[derive(Iden)]
+enum Playlist {
+    Table,
+    Id,
+    Name,
+}
+
+#[derive(Iden)]
+enum Tracklist {
+    Table,
+    Id,
+}
+
+#[derive(Iden)]
+enum Addon {
+    Table,
+    Id,
+    Name,
+    Description,
+    Version,
+    Author,
+    Url,
+    Enabled,
 }

@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use lofty::{Accessor, AudioFile, LoftyError, Probe};
+use music_player_settings::read_settings;
 use types::Song;
 use walkdir::WalkDir;
 
@@ -8,8 +11,14 @@ pub fn scan_directory<F>(save: F) -> Result<Vec<Song>, LoftyError>
 where
     F: Fn(&Song),
 {
+    let settings = read_settings().unwrap();
+    let settings = settings
+        .try_deserialize::<HashMap<String, String>>()
+        .unwrap();
+    let music_directory = settings.get("music_directory").unwrap();
+
     let mut songs: Vec<Song> = Vec::new();
-    for entry in WalkDir::new(dirs::audio_dir().unwrap())
+    for entry in WalkDir::new(music_directory)
         .follow_links(true)
         .into_iter()
         .filter_map(|e| e.ok())

@@ -32,6 +32,9 @@ path = "entity"
 [dependencies.music-player-migration]
 path = "migration"
 
+[dependencies.music-player-settings]
+path = "settings"
+
 [dependencies]
 clap = "3.2.20"
 cpal = "0.13.0"
@@ -49,3 +52,7 @@ thiserror = "1.0.34"
 tokio = { version = "1.21.0", features = ["full"] }
 zerocopy = "0.6.1"
 owo-colors = "3.5.0"
+config = "0.13.2"
+dirs = "4.0.0"
+toml = "0.5.9"
+serde = "1.0.144"

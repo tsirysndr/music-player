@@ -8,10 +8,11 @@ import "metadata/v1alpha1/lyrics.proto";
 
 message Track {
   string id = 1;
-  string name = 2;
+  string title = 2;
   metadata.v1alpha1.Album album = 3;
   repeated metadata.v1alpha1.Artist artists = 4;
-  int32 duration = 5;
+  float duration = 5;
   int32 disc_number = 6;
   metadata.v1alpha1.Lyrics lyrics = 7;
+  string uri = 8;
 }

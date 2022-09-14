@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package metadata.v1alpha1;
 
+import "metadata/v1alpha1/album.proto";
+
 message Artist {
   string id = 1;
   string name = 2;
@@ -10,4 +12,5 @@ message Artist {
   string website = 5;
   repeated string genres = 6;
   repeated string images = 7;
+  repeated metadata.v1alpha1.Album albums = 8;
 }

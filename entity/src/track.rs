@@ -15,8 +15,8 @@ pub struct Model {
     pub sample_rate: Option<u32>,
     pub bit_depth: Option<u8>,
     pub channels: Option<u8>,
-    pub duration: Option<u64>,
-    pub uri: Option<String>,
+    pub duration: Option<f32>,
+    pub uri: String,
     pub album_id: Option<String>,
     pub tracklist_id: Option<String>,
 }

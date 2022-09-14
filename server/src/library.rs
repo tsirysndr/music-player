@@ -71,8 +71,8 @@ impl LibraryService for Library {
                     sample_rate: ActiveValue::Set(song.sample_rate),
                     bit_depth: ActiveValue::Set(song.bit_depth),
                     channels: ActiveValue::Set(song.channels),
-                    duration: ActiveValue::Set(Some(song.duration.as_secs())),
-                    uri: ActiveValue::Set(song.uri.clone()),
+                    duration: ActiveValue::Set(Some(song.duration.as_secs_f32())),
+                    uri: ActiveValue::Set(song.uri.clone().unwrap_or_default()),
                     album_id: ActiveValue::Set(Some(format!(
                         "{:x}",
                         md5::compute(format!("{}{}", song.album, song.artist))
@@ -106,11 +106,20 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetArtistsRequest>,
     ) -> Result<tonic::Response<GetArtistsResponse>, tonic::Status> {
-        artist::Entity::find()
+        let results = artist::Entity::find()
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let response = GetArtistsResponse { artists: vec![] };
+        let response = GetArtistsResponse {
+            artists: results
+                .into_iter()
+                .map(|artist| Artist {
+                    id: artist.id,
+                    name: artist.name,
+                    ..Default::default()
+                })
+                .collect(),
+        };
         Ok(tonic::Response::new(response))
     }
 
@@ -118,11 +127,20 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetAlbumsRequest>,
     ) -> Result<tonic::Response<GetAlbumsResponse>, tonic::Status> {
-        album::Entity::find()
+        let results = album::Entity::find()
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let response = GetAlbumsResponse { albums: vec![] };
+        let response = GetAlbumsResponse {
+            albums: results
+                .into_iter()
+                .map(|album| Album {
+                    id: album.id,
+                    title: album.title,
+                    ..Default::default()
+                })
+                .collect(),
+        };
         Ok(tonic::Response::new(response))
     }
 
@@ -130,11 +148,32 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetTracksRequest>,
     ) -> Result<tonic::Response<GetTracksResponse>, tonic::Status> {
-        track::Entity::find()
+        let results = track::Entity::find()
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let response = GetTracksResponse { tracks: vec![] };
+        let response = GetTracksResponse {
+            tracks: results
+                .into_iter()
+                .map(|track| Track {
+                    id: track.id,
+                    title: track.title,
+                    uri: track.uri,
+                    disc_number: format!("{}", track.track.unwrap_or(0)).parse().unwrap(),
+                    artists: vec![Artist {
+                        name: track.artist,
+                        ..Default::default()
+                    }],
+                    album: Some(Album {
+                        id: track.album_id.unwrap(),
+                        title: track.album,
+                        year: format!("{}", track.year.unwrap_or(0)).parse().unwrap(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .collect(),
+        };
         Ok(tonic::Response::new(response))
     }
 

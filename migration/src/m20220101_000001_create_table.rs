@@ -53,7 +53,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Track::SampleRate).integer())
                     .col(ColumnDef::new(Track::BitDepth).integer())
                     .col(ColumnDef::new(Track::Channels).integer())
-                    .col(ColumnDef::new(Track::Duration).integer())
+                    .col(ColumnDef::new(Track::Duration).float())
                     .col(ColumnDef::new(Track::Uri).string())
                     .col(ColumnDef::new(Track::AlbumId).string())
                     .col(ColumnDef::new(Track::TracklistId).string())

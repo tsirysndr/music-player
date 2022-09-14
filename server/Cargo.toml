@@ -13,18 +13,23 @@ keywords = ["tokio", "music", "cli", "daemon", "streaming", "player"]
 
 [dependencies.music-player-playback]
 path = "../playback"
+version = "0.1.0"
 
 [dependencies.music-player-scanner]
 path = "../scanner"
+version = "0.1.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
+version = "0.1.0"
 
 [dependencies.music-player-storage]
 path = "../storage"
+version = "0.1.0"
 
 [dependencies.music-player-entity]
 path = "../entity"
+version = "0.1.0"
 
 [dependencies]
 owo-colors = "3.5.0"

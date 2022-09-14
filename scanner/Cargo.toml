@@ -10,12 +10,15 @@ authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
 
 [dependencies.music-player-settings]
 path = "../settings"
+version = "0.1.0"
 
 [dependencies.music-player-entity]
 path = "../entity"
+version = "0.1.0"
 
 [dependencies.music-player-storage]
 path = "../storage"
+version = "0.1.0"
 
 [dependencies]
 dirs = "4.0.0"

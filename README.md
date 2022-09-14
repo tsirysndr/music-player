@@ -54,7 +54,7 @@ SUBCOMMANDS:
 
 ### Features
 
-- [x] Play music from secified path
+- [x] Play music from specified path
 - [x] Configuration file support
 - [x] [gRPC API](https://buf.build/tsiry/musicserverapis/docs/main:music.v1alpha1) for controlling the player
 - [x] Scan music library

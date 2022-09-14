@@ -52,6 +52,27 @@ impl LibraryService for Library {
                     Ok(_) => (),
                     Err(_) => (),
                 }
+
+                let id = format!("{:x}", md5::compute(song.artist.to_string()));
+                let item = artist::ActiveModel {
+                    id: ActiveValue::set(id),
+                    name: ActiveValue::Set(song.artist.clone()),
+                };
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
+
+                let id = format!("{:x}", md5::compute(song.album.to_string()));
+                let item = album::ActiveModel {
+                    id: ActiveValue::set(id),
+                    title: ActiveValue::Set(song.album.clone()),
+                    artist: ActiveValue::Set(song.artist.clone()),
+                };
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
             }
             .boxed()
         })

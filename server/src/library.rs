@@ -31,6 +31,33 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<ScanResponse>, tonic::Status> {
         scan_directory(move |song, db| {
             async move {
+                let id = format!("{:x}", md5::compute(song.artist.to_string()));
+                let item = artist::ActiveModel {
+                    id: ActiveValue::set(id),
+                    name: ActiveValue::Set(song.artist.clone()),
+                };
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
+
+                let id = format!(
+                    "{:x}",
+                    md5::compute(format!("{}{}", song.album, song.artist))
+                );
+                let item = album::ActiveModel {
+                    id: ActiveValue::set(id),
+                    title: ActiveValue::Set(song.album.clone()),
+                    artist: ActiveValue::Set(song.artist.clone()),
+                    artist_id: ActiveValue::Set(Some(format!(
+                        "{:x}",
+                        md5::compute(song.artist.to_string())
+                    ))),
+                };
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
                 let id = format!("{:x}", md5::compute(song.uri.as_ref().unwrap()));
                 let item = track::ActiveModel {
                     id: ActiveValue::set(id),
@@ -46,29 +73,13 @@ impl LibraryService for Library {
                     channels: ActiveValue::Set(song.channels),
                     duration: ActiveValue::Set(Some(song.duration.as_secs())),
                     uri: ActiveValue::Set(song.uri.clone()),
+                    album_id: ActiveValue::Set(Some(format!(
+                        "{:x}",
+                        md5::compute(format!("{}{}", song.album, song.artist))
+                    ))),
+                    tracklist_id: ActiveValue::Set(None),
                 };
 
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let id = format!("{:x}", md5::compute(song.artist.to_string()));
-                let item = artist::ActiveModel {
-                    id: ActiveValue::set(id),
-                    name: ActiveValue::Set(song.artist.clone()),
-                };
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let id = format!("{:x}", md5::compute(song.album.to_string()));
-                let item = album::ActiveModel {
-                    id: ActiveValue::set(id),
-                    title: ActiveValue::Set(song.album.clone()),
-                    artist: ActiveValue::Set(song.artist.clone()),
-                };
                 match item.insert(db.get_connection()).await {
                     Ok(_) => (),
                     Err(_) => (),

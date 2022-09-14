@@ -11,4 +11,14 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 
+impl Related<super::track::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::playlist_tracks::Relation::Track.def()
+    }
+
+    fn via() -> Option<RelationDef> {
+        Some(super::playlist_tracks::Relation::Playlist.def().rev())
+    }
+}
+
 impl ActiveModelBehavior for ActiveModel {}

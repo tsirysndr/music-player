@@ -2,7 +2,10 @@
 name = "music-player-migration"
 version = "0.1.0"
 edition = "2021"
-publish = false
+repository = "https://github.com/tsirysndr/music-player"
+license = "MIT"
+authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+description = "The migrations for the music player"
 
 [lib]
 name = "migration"

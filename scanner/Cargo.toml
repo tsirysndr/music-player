@@ -5,6 +5,7 @@ edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+description = "The music library scanner for the music player"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

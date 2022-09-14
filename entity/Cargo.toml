@@ -2,10 +2,10 @@
 name = "music-player-entity"
 version = "0.1.0"
 edition = "2021"
-readme = "README.md"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+description = "Entities for the music player"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -30,6 +30,14 @@ message AddItemRequest {}
 
 message AddItemResponse {}
 
+message FindAllRequest {}
+
+message FindAllResponse {}
+
+message GetPlaylistDetailsRequest {}
+
+message GetPlaylistDetailsResponse {}
+
 service PlaylistService {
   rpc Create(CreateRequest) returns (CreateResponse) {}
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
@@ -38,4 +46,7 @@ service PlaylistService {
   rpc Rename(RenameRequest) returns (RenameResponse) {}
   rpc RemoveItem(RemoveItemRequest) returns (RemoveItemResponse) {}
   rpc AddItem(AddItemRequest) returns (AddItemResponse) {}
+  rpc FindAll(FindAllRequest) returns (FindAllResponse) {}
+  rpc GetPlaylistDetails(GetPlaylistDetailsRequest)
+      returns (GetPlaylistDetailsResponse) {}
 }

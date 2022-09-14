@@ -1,11 +1,22 @@
+use std::sync::Arc;
+
+use music_player_storage::Database;
+
 use crate::api::v1alpha1::{
     addons_service_server::AddonsService, GetAddonDetailsRequest, GetAddonDetailsResponse,
     GetAddonsRequest, GetAddonsResponse, SetAddonEnabledRequest, SetAddonEnabledResponse,
 };
 use crate::objects::v1alpha1::Addon;
 
-#[derive(Debug, Default)]
-pub struct Addons {}
+pub struct Addons {
+    db: Arc<Database>,
+}
+
+impl Addons {
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
+    }
+}
 
 #[tonic::async_trait]
 impl AddonsService for Addons {

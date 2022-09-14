@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use music_player_playback::player::Player;
 use music_player_settings::read_settings;
+use music_player_storage::Database;
 use owo_colors::OwoColorize;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
@@ -49,27 +50,29 @@ impl MusicPlayerServer {
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());
 
+        let db = Database::new().await;
+
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(AddonsServiceServer::new(
-                Addons::default(),
-            )))
+            .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
+                Arc::new(db.clone()),
+            ))))
             .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
-            .add_service(tonic_web::enable(HistoryServiceServer::new(
-                History::default(),
-            )))
-            .add_service(tonic_web::enable(LibraryServiceServer::new(
-                Library::default(),
-            )))
+            .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
+                Arc::new(db.clone()),
+            ))))
+            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
+                Arc::new(db.clone()),
+            ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
                 Playback::new(Arc::clone(&self.player)),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::default(),
+                Playlist::new(Arc::new(db.clone())),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&self.player)),
+                Tracklist::new(Arc::clone(&self.player), Arc::new(db.clone())),
             )))
             .serve(addr)
             .await?;

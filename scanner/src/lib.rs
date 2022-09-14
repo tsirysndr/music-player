@@ -1,3 +1,5 @@
+use futures::future::BoxFuture;
+use music_player_storage::Database;
 use std::collections::HashMap;
 
 use lofty::{Accessor, AudioFile, LoftyError, Probe};
@@ -7,10 +9,10 @@ use walkdir::WalkDir;
 
 pub mod types;
 
-pub fn scan_directory<F>(save: F) -> Result<Vec<Song>, LoftyError>
-where
-    F: Fn(&Song),
-{
+pub async fn scan_directory(
+    save: impl for<'a> Fn(&'a Song, &'a Database) -> BoxFuture<'a, ()> + 'static,
+) -> Result<Vec<Song>, LoftyError> {
+    let db = Database::new().await;
     let settings = read_settings().unwrap();
     let settings = settings
         .try_deserialize::<HashMap<String, String>>()
@@ -55,8 +57,9 @@ where
                         bit_depth: properties.bit_depth(),
                         channels: properties.channels(),
                         duration: properties.duration(),
+                        uri: Some(path),
                     };
-                    save(&song);
+                    save(&song, &db).await;
                     songs.push(song);
                 }
                 Err(e) => println!("ERROR: {}", e),

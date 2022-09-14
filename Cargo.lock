@@ -670,6 +670,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cuid"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2a2891c056384f8461606f2579208164d67475fb17a0f442ac8d5981d3c2807"
+dependencies = [
+ "hostname",
+ "lazy_static",
+ "rand",
+]
+
+[[package]]
 name = "darling"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1069,6 +1080,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hostname"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c731c3e10504cc8ed35cfe2f1db4c9274c3d35fa486e3b31df46f068ef3e867"
+dependencies = [
+ "libc",
+ "match_cfg",
+ "winapi",
+]
+
+[[package]]
 name = "hound"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1402,6 +1424,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "match_cfg"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
+
+[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1424,6 +1452,12 @@ checksum = "66b48670c893079d3c2ed79114e3644b7004df1c361a4e0ad52e2e6940d07c3d"
 dependencies = [
  "digest",
 ]
+
+[[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"
@@ -1527,6 +1561,7 @@ dependencies = [
  "music-player-scanner",
  "music-player-server",
  "music-player-settings",
+ "music-player-storage",
  "owo-colors",
  "parking_lot 0.12.1",
  "rand",
@@ -1585,9 +1620,14 @@ name = "music-player-scanner"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "futures",
  "lofty",
+ "md5",
  "mime_guess",
+ "music-player-entity",
  "music-player-settings",
+ "music-player-storage",
+ "sea-orm",
  "walkdir",
 ]
 
@@ -1595,11 +1635,17 @@ dependencies = [
 name = "music-player-server"
 version = "0.1.0"
 dependencies = [
+ "cuid",
+ "futures",
+ "md5",
+ "music-player-entity",
  "music-player-playback",
  "music-player-scanner",
  "music-player-settings",
+ "music-player-storage",
  "owo-colors",
  "prost",
+ "sea-orm",
  "tokio",
  "tonic",
  "tonic-build",
@@ -1614,6 +1660,14 @@ dependencies = [
  "dirs",
  "serde",
  "toml",
+]
+
+[[package]]
+name = "music-player-storage"
+version = "0.1.0"
+dependencies = [
+ "music-player-settings",
+ "sea-orm",
 ]
 
 [[package]]

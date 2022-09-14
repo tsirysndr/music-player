@@ -35,6 +35,8 @@ path = "migration"
 [dependencies.music-player-settings]
 path = "settings"
 
+[dependencies.music-player-storage]
+path = "storage"
 
 [dependencies.sea-orm-migration]
 version = "^0.9.0"

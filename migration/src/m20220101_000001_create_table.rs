@@ -44,6 +44,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Track::BitDepth).integer())
                     .col(ColumnDef::new(Track::Channels).integer())
                     .col(ColumnDef::new(Track::Duration).integer())
+                    .col(ColumnDef::new(Track::Uri).string())
                     .to_owned(),
             )
             .await?;
@@ -147,6 +148,7 @@ enum Track {
     BitDepth,
     Channels,
     Duration,
+    Uri,
 }
 
 #[derive(Iden)]

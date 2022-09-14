@@ -13,4 +13,5 @@ pub struct Song {
     pub bit_depth: Option<u8>,
     pub channels: Option<u8>,
     pub duration: Duration,
+    pub uri: Option<String>,
 }

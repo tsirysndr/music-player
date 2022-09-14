@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
+use music_player_entity::tracklist;
 use music_player_playback::player::{Player, PlayerEngine};
+use music_player_storage::Database;
+use sea_orm::EntityTrait;
 use tokio::sync::Mutex;
 
 use crate::api::v1alpha1::{
@@ -15,11 +18,12 @@ use crate::api::v1alpha1::{
 
 pub struct Tracklist {
     player: Arc<Mutex<Player>>,
+    db: Arc<Database>,
 }
 
 impl Tracklist {
-    pub fn new(player: Arc<Mutex<Player>>) -> Self {
-        Self { player }
+    pub fn new(player: Arc<Mutex<Player>>, db: Arc<Database>) -> Self {
+        Self { player, db }
     }
 }
 
@@ -36,6 +40,7 @@ impl TracklistService for Tracklist {
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn clear_tracklist(
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
@@ -43,6 +48,7 @@ impl TracklistService for Tracklist {
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn filter_tracklist(
         &self,
         _request: tonic::Request<FilterTracklistRequest>,
@@ -50,6 +56,7 @@ impl TracklistService for Tracklist {
         let response = FilterTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn get_random(
         &self,
         _request: tonic::Request<GetRandomRequest>,
@@ -57,6 +64,7 @@ impl TracklistService for Tracklist {
         let response = GetRandomResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn get_repeat(
         &self,
         _request: tonic::Request<GetRepeatRequest>,
@@ -64,6 +72,7 @@ impl TracklistService for Tracklist {
         let response = GetRepeatResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn get_single(
         &self,
         _request: tonic::Request<GetSingleRequest>,
@@ -71,6 +80,7 @@ impl TracklistService for Tracklist {
         let response = GetSingleResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn get_next_track(
         &self,
         _request: tonic::Request<GetNextTrackRequest>,
@@ -78,6 +88,7 @@ impl TracklistService for Tracklist {
         let response = GetNextTrackResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn get_previous_track(
         &self,
         _request: tonic::Request<GetPreviousTrackRequest>,
@@ -85,6 +96,7 @@ impl TracklistService for Tracklist {
         let response = GetPreviousTrackResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn remove_track(
         &self,
         _request: tonic::Request<RemoveTrackRequest>,
@@ -92,6 +104,7 @@ impl TracklistService for Tracklist {
         let response = RemoveTrackResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn shuffle(
         &self,
         _request: tonic::Request<ShuffleRequest>,
@@ -99,6 +112,7 @@ impl TracklistService for Tracklist {
         let response = ShuffleResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn set_repeat(
         &self,
         _request: tonic::Request<SetRepeatRequest>,
@@ -106,13 +120,20 @@ impl TracklistService for Tracklist {
         let response = SetRepeatResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn get_tracklist_tracks(
         &self,
         _request: tonic::Request<GetTracklistTracksRequest>,
     ) -> Result<tonic::Response<GetTracklistTracksResponse>, tonic::Status> {
+        tracklist::Entity::find()
+            .all(self.db.get_connection())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let response = GetTracklistTracksResponse {};
         Ok(tonic::Response::new(response))
     }
+
     async fn play_next(
         &self,
         _request: tonic::Request<PlayNextRequest>,

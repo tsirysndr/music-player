@@ -9,13 +9,14 @@ pub struct Model {
     pub artist: String,
     pub album: String,
     pub genre: String,
-    pub year: Option<i32>,
-    pub track: Option<i32>,
-    pub bitrate: Option<i32>,
-    pub sample_rate: Option<i32>,
-    pub bit_depth: Option<i32>,
-    pub channels: Option<i32>,
-    pub duration: Option<i32>,
+    pub year: Option<u32>,
+    pub track: Option<u32>,
+    pub bitrate: Option<u32>,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u8>,
+    pub channels: Option<u8>,
+    pub duration: Option<u64>,
+    pub uri: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

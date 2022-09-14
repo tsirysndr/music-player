@@ -1,5 +1,9 @@
 fn main() {
+    /*
     music_player_scanner::scan_directory(|song| {
-        println!("{:?}", song);
+        Box::new(tokio::spawn(async move {
+            println!("{:?}", song);
+        }))
     });
+    */
 }

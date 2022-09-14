@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use music_player_playback::player::Player;
-use music_player_settings::read_settings;
+use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use owo_colors::OwoColorize;
 use tokio::sync::Mutex;
@@ -40,12 +39,9 @@ impl MusicPlayerServer {
         Self { player }
     }
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let settings = read_settings().unwrap();
-        let settings = settings
-            .try_deserialize::<HashMap<String, String>>()
-            .unwrap();
-        let port: u16 = settings.get("port").unwrap().parse().unwrap();
-        let addr: SocketAddr = format!("[::1]:{}", port).parse().unwrap();
+        let config = read_settings().unwrap();
+        let settings = config.try_deserialize::<Settings>().unwrap();
+        let addr: SocketAddr = format!("[::1]:{}", settings.port).parse().unwrap();
 
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());

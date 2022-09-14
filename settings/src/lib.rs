@@ -25,7 +25,16 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     let default_settings = Settings {
         database_url: format!("sqlite:{}/music-player.sqlite3", path),
         port: 50051,
-        addons: None,
+        addons: Some(vec![
+            "deezer".to_string(),
+            "datpiff".to_string(),
+            "genius".to_string(),
+            "local".to_string(),
+            "myvazo".to_string(),
+            "tononkira".to_string(),
+            "musicbrainz".to_string(),
+            "lastfm".to_string(),
+        ]),
         music_directory: dirs::audio_dir().unwrap().to_str().unwrap().to_string(),
     };
 

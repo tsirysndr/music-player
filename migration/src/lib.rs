@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fs::File, path::Path};
+use std::{fs::File, path::Path};
 
-use music_player_settings::read_settings;
+use music_player_settings::{read_settings, Settings};
 pub use sea_orm_migration::prelude::*;
 
 mod m20220101_000001_create_table;
@@ -15,13 +15,10 @@ impl MigratorTrait for Migrator {
 }
 
 pub async fn run() {
-    let settings = read_settings().unwrap();
-    let settings = settings
-        .try_deserialize::<HashMap<String, String>>()
-        .unwrap();
-    let database_url = settings.get("database_url").unwrap();
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
 
-    std::env::set_var("DATABASE_URL", database_url);
+    std::env::set_var("DATABASE_URL", settings.database_url);
 
     let database_path = std::env::var("DATABASE_URL")
         .unwrap()

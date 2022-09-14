@@ -1,7 +1,53 @@
 use super::{Addon, StreamingAddon};
 
-pub struct DatPiff {}
+pub struct DatPiff {
+    name: String,
+    version: String,
+    author: String,
+    description: String,
+    enabled: bool,
+}
 
-impl Addon for DatPiff {}
+impl DatPiff {
+    pub fn new() -> Self {
+        Self {
+            name: "DatPiff".to_string(),
+            version: "0.1.0".to_string(),
+            author: "Tsiry Sandratraina".to_string(),
+            description: "DatPiff addon".to_string(),
+            enabled: true,
+        }
+    }
+}
 
-impl StreamingAddon for DatPiff {}
+impl Addon for DatPiff {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> &str {
+        &self.version
+    }
+
+    fn author(&self) -> &str {
+        &self.author
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+}
+
+impl StreamingAddon for DatPiff {
+    fn stream(&self, url: &str) -> Result<(), Box<dyn std::error::Error>> {
+        todo!("Implement DatPiff::stream");
+    }
+}

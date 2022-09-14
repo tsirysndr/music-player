@@ -1,9 +1,8 @@
 use futures::future::BoxFuture;
 use music_player_storage::Database;
-use std::collections::HashMap;
 
 use lofty::{Accessor, AudioFile, LoftyError, Probe};
-use music_player_settings::read_settings;
+use music_player_settings::{read_settings, Settings};
 use types::Song;
 use walkdir::WalkDir;
 
@@ -13,14 +12,11 @@ pub async fn scan_directory(
     save: impl for<'a> Fn(&'a Song, &'a Database) -> BoxFuture<'a, ()> + 'static,
 ) -> Result<Vec<Song>, LoftyError> {
     let db = Database::new().await;
-    let settings = read_settings().unwrap();
-    let settings = settings
-        .try_deserialize::<HashMap<String, String>>()
-        .unwrap();
-    let music_directory = settings.get("music_directory").unwrap();
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
 
     let mut songs: Vec<Song> = Vec::new();
-    for entry in WalkDir::new(music_directory)
+    for entry in WalkDir::new(settings.music_directory)
         .follow_links(true)
         .into_iter()
         .filter_map(|e| e.ok())

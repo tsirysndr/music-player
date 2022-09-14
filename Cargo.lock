@@ -1555,6 +1555,7 @@ dependencies = [
  "lazy_static",
  "librespot-protocol",
  "log",
+ "music-player-addons",
  "music-player-entity",
  "music-player-migration",
  "music-player-playback",
@@ -1576,6 +1577,10 @@ dependencies = [
  "toml",
  "zerocopy",
 ]
+
+[[package]]
+name = "music-player-addons"
+version = "0.1.0"
 
 [[package]]
 name = "music-player-entity"

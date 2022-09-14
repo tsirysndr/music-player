@@ -38,6 +38,9 @@ path = "settings"
 [dependencies.music-player-storage]
 path = "storage"
 
+[dependencies.music-player-addons]
+path = "addons"
+
 [dependencies.sea-orm-migration]
 version = "^0.9.0"
 features = [

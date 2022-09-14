@@ -1,4 +1,3 @@
-pub mod addon;
 pub mod audio_backend;
 pub mod config;
 pub mod convert;

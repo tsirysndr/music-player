@@ -10,9 +10,6 @@
   <a href="https://crates.io/crates/music-player" target="_blank">
     <img src="https://img.shields.io/crates/v/music-player.svg" />
   </a>
-  <a href="https://docs.rs/music-player" target="_blank">
-    <img src="https://docs.rs/music-player/badge.svg" />
-  </a>
    <a href="https://crates.io/crates/music-player" target="_blank">
     <img src="https://img.shields.io/crates/dr/music-player" />
   </a>

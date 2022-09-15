@@ -1,0 +1,42 @@
+on:
+  release:
+    types: [created]
+
+jobs:
+  release:
+    name: release ${{ matrix.target }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            archive: tar.gz tar.xz
+
+    steps:
+      - uses: actions/checkout@master
+      - uses: Swatinem/rust-cache@v2
+      - name: Installing needed dependencies
+        run: brew install protobuf
+      - name: Running cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          toolchain: stable
+          args: --release --target ${{ matrix.target }}"
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Packaging final binary
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czvf music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
+          shasum -a 256 music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
+      - name: Releasing assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz
+            target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

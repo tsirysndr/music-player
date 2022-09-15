@@ -37,6 +37,16 @@ cd music-player
 cargo install --path .
 ```
 
+Note: Don't forget to add `~/.cargo/bin` to your `PATH` environment variable.
+
+### macOS/Linux
+
+```bash
+$ brew install tsirysndr/tap/musicplayer
+```
+
+Or download the latest release for your platform [here](https://github.com/tsirysndr/music-player/releases).
+
 ## Usage
 
 ```

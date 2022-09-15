@@ -1,0 +1,59 @@
+on:
+  release:
+    types: [created]
+
+jobs:
+  release:
+    name: release ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-gnu
+            archive: zip
+          - target: x86_64-unknown-linux-musl
+            archive: tar.gz tar.xz
+    steps:
+      - uses: actions/checkout@master
+      - name: Compile and release
+        uses: rust-build/rust-build.action@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          RUSTTARGET: ${{ matrix.target }}
+          ARCHIVE_TYPES: ${{ matrix.archive }}
+      - name: Clean up
+        run: sudo rm -rf target
+      - name: Installing Rust toolchain
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          override: true
+      - name: Running cargo build
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          toolchain: stable
+          args: --locked --release --target x86_64-unknown-linux-gnu"
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Packaging final binary
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        shell: bash
+        run: |
+          cd target/x86_64-unknown-linux-gnu/release
+          tar czvf music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz music-player
+          shasum -a 512 music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz > music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz.sha512
+      - name: Releasing assets
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/x86_64-unknown-linux-gnu/release/music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz
+            target/x86_64-unknown-linux-gnu/release/music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz.sha512
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

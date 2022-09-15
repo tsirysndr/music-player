@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
-      - name: Installing needed Ubuntu arm dependencies
+      - name: Installing needed dependencies
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get install -y libasound2-dev  pkg-config build-essential
       - name: Compile and release

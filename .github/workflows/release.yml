@@ -10,54 +10,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-pc-windows-gnu
-            archive: zip
-          - target: x86_64-unknown-linux-musl
+          - target: x86_64-unknown-linux-gnu
             archive: tar.gz tar.xz
 
     steps:
       - uses: actions/checkout@master
       - name: Installing needed dependencies
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get install -y libasound2-dev libasound2
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.3.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          RUSTTARGET: ${{ matrix.target }}
-          ARCHIVE_TYPES: ${{ matrix.archive }}
-      - name: Clean up
-        run: sudo rm -rf target
-      - name: Installing Rust toolchain
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: x86_64-unknown-linux-gnu
-          override: true
+        run: sudo apt-get install -y libasound2-dev
       - name: Running cargo build
-        if: matrix.target == 'x86_64-unknown-linux-musl'
         uses: actions-rs/cargo@v1
         with:
           command: build
           toolchain: stable
-          args: --locked --release --target x86_64-unknown-linux-gnu"
+          args: --release --target ${{ matrix.target }}"
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Packaging final binary
-        if: matrix.target == 'x86_64-unknown-linux-musl'
         shell: bash
         run: |
-          cd target/x86_64-unknown-linux-gnu/release
-          tar czvf music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz music-player
-          shasum -a 512 music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz > music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz.sha512
+          cd target/${{ matrix.target }}/release
+          tar czvf music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
+          shasum -a 256 music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
       - name: Releasing assets
-        if: matrix.target == 'x86_64-unknown-linux-musl'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/x86_64-unknown-linux-gnu/release/music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz
-            target/x86_64-unknown-linux-gnu/release/music-player_${{ env.RELEASE_VERSION }}_x86_64-unknown-linux-gnu.tar.gz.sha512
+            target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz
+            target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

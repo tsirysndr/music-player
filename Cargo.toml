@@ -64,22 +64,4 @@ features = [
 
 [dependencies]
 clap = "3.2.20"
-cpal = "0.13.0"
-futures-util = "0.3.24"
-lazy_static = "1.4.0"
-librespot-protocol = "0.4.2"
-log = "0.4.17"
-parking_lot = "0.12.1"
-rand = { version = "0.8.5", features = ["small_rng"] }
-rand_distr = "0.4.3"
-rb = "0.4.1"
-rodio  = { version = "0.15" }
-symphonia = { version = "0.5.1", features = ["aac", "alac", "mp3"] }
-thiserror = "1.0.34"
 tokio = { version = "1.21.0", features = ["full"] }
-zerocopy = "0.6.1"
-owo-colors = "3.5.0"
-config = "0.13.2"
-dirs = "4.0.0"
-toml = "0.5.9"
-serde = "1.0.144"

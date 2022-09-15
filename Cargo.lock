@@ -1548,13 +1548,6 @@ name = "music-player"
 version = "0.1.0"
 dependencies = [
  "clap",
- "config",
- "cpal",
- "dirs",
- "futures-util",
- "lazy_static",
- "librespot-protocol",
- "log",
  "music-player-addons",
  "music-player-entity",
  "music-player-migration",
@@ -1563,19 +1556,8 @@ dependencies = [
  "music-player-server",
  "music-player-settings",
  "music-player-storage",
- "owo-colors",
- "parking_lot 0.12.1",
- "rand",
- "rand_distr",
- "rb",
- "rodio",
  "sea-orm-migration",
- "serde",
- "symphonia",
- "thiserror",
  "tokio",
- "toml",
- "zerocopy",
 ]
 
 [[package]]

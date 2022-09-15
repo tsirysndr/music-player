@@ -15,6 +15,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
+      - uses: Swatinem/rust-cache@v2
       - name: Installing needed dependencies
         run: sudo apt-get install -y libasound2-dev protobuf-compiler
       - name: Running cargo build

@@ -80,8 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 thread::sleep(time::Duration::from_secs(3));
             }
         } else {
-            let song = matches.value_of("song").unwrap();
-
+            
             player.load(song, true, 0);
     
             player.await_end_of_track().await;

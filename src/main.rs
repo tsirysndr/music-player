@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use clap::Command;
+use clap::{Arg, Command};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -8,6 +8,7 @@ use music_player_playback::{
 };
 use music_player_server::server::MusicPlayerServer;
 use tokio::sync::Mutex;
+use std::{thread, time};
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -28,7 +29,32 @@ A simple music player written in Rust"#,
         .subcommand(
             Command::new("play")
                 .about("Play a song")
-                .arg_from_usage("<song> 'The path to the song'"),
+                .arg_from_usage("<song> 'The path to the song'")
+                .arg(
+                    Arg::new("loop")
+                    .short('l')
+                    .long("loop")
+                    .takes_value(false)
+                    .help("Play loop a song")
+                ),
+        )
+        .subcommand(
+            Command::new("playlists")
+                .about("Add playlists")
+                .arg(
+                    Arg::with_name("paths")
+                    .required(true)
+                    .multiple(true)
+                    .min_values(2)
+                    .help("The songs path lists"),
+                )
+                .arg(
+                    Arg::new("loop")
+                    .short('l')
+                    .long("loop")
+                    .takes_value(false)
+                    .help("Play loop the playlists")
+                ),
         )
 }
 
@@ -42,11 +68,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (mut player, _) = Player::new(move || backend(None, audio_format));
 
     if let Some(matches) = matches.subcommand_matches("play") {
+        let is_loop: bool = matches.contains_id("loop");
         let song = matches.value_of("song").unwrap();
 
-        player.load(song, true, 0);
+        if is_loop {
+            loop {
+                player.load(song, true, 0);
+    
+                player.await_end_of_track().await;
+    
+                thread::sleep(time::Duration::from_secs(3));
+            }
+        } else {
+            let song = matches.value_of("song").unwrap();
 
-        player.await_end_of_track().await;
+            player.load(song, true, 0);
+    
+            player.await_end_of_track().await;
+        }
+
+        return Ok(());
+    }
+
+    if let Some(matches) = matches.subcommand_matches("playlists") {
+        let is_loop: bool = matches.contains_id("loop");
+        let playlists: Vec<_> = matches.values_of("paths").unwrap().collect();
+
+        if is_loop {
+            loop {
+                for path in &playlists {
+                    player.load(path, true, 0);
+        
+                    player.await_end_of_track().await;
+        
+                    thread::sleep(time::Duration::from_secs(3));
+                }
+            }
+        } else {
+            for path in playlists {
+                player.load(path, true, 0);
+    
+                player.await_end_of_track().await;
+    
+                thread::sleep(time::Duration::from_secs(3));
+            }
+        }
         return Ok(());
     }
 

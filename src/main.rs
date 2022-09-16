@@ -8,7 +8,12 @@ use music_player_playback::{
 };
 use music_player_server::server::MusicPlayerServer;
 use tokio::sync::Mutex;
-use std::{thread, time};
+use std::{
+    fs::File,
+    thread,
+    time
+};
+use pls;
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -40,14 +45,7 @@ A simple music player written in Rust"#,
         )
         .subcommand(
             Command::new("playlists")
-                .about("Add playlists")
-                .arg(
-                    Arg::with_name("paths")
-                    .required(true)
-                    .multiple(true)
-                    .min_values(2)
-                    .help("The songs path lists"),
-                )
+                .about("Play media from playlists")
                 .arg(
                     Arg::new("loop")
                     .short('l')
@@ -91,27 +89,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(matches) = matches.subcommand_matches("playlists") {
         let is_loop: bool = matches.contains_id("loop");
-        let playlists: Vec<_> = matches.values_of("paths").unwrap().collect();
+
+        let mut f = File::open("playlists.pls")?;
+        let elements = pls::parse(&mut f).unwrap();
 
         if is_loop {
             loop {
-                for path in &playlists {
-                    player.load(path, true, 0);
-        
+
+                for element in &elements {
+                    player.load(&element.path, true, 0);
+                
                     player.await_end_of_track().await;
         
                     thread::sleep(time::Duration::from_secs(3));
-                }
+                }           
             }
         } else {
-            for path in playlists {
-                player.load(path, true, 0);
-    
+            for element in elements {
+                player.load(&element.path, true, 0);
+            
                 player.await_end_of_track().await;
     
                 thread::sleep(time::Duration::from_secs(3));
             }
         }
+        
         return Ok(());
     }
 

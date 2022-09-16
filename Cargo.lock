@@ -539,7 +539,7 @@ dependencies = [
  "nom",
  "pathdiff",
  "ron",
- "rust-ini",
+ "rust-ini 0.18.0",
  "serde",
  "serde_json",
  "toml",
@@ -1556,6 +1556,7 @@ dependencies = [
  "music-player-server",
  "music-player-settings",
  "music-player-storage",
+ "pls",
  "sea-orm-migration",
  "tokio",
 ]
@@ -2081,6 +2082,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1df8c4ec4b0627e53bdf214615ad287367e482558cf84b109250b37464dc03ae"
 
 [[package]]
+name = "pls"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fa4b7fc7e288a7e43658f494dda9b9ee01cbcfc4a99931e90191cccbc5f2b45"
+dependencies = [
+ "rust-ini 0.10.3",
+]
+
+[[package]]
 name = "polling"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2414,6 +2424,12 @@ dependencies = [
  "bitflags",
  "serde",
 ]
+
+[[package]]
+name = "rust-ini"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a654c5bda722c699be6b0fe4c0d90de218928da5b724c3e467fc48865c37263"
 
 [[package]]
 name = "rust-ini"

@@ -65,3 +65,4 @@ features = [
 [dependencies]
 clap = "3.2.20"
 tokio = { version = "1.21.0", features = ["full"] }
+pls = "0.2.0"

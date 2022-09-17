@@ -69,7 +69,7 @@ SUBCOMMANDS:
 - [x] [gRPC API](https://buf.build/tsiry/musicserverapis/docs/main:music.v1alpha1) for controlling the player
 - [x] Scan music library
 - [x] Play/Pause/Stop music
-- [ ] Next/Previous track
+- [x] Next/Previous track
 - [ ] Create/Delete playlists
 - [ ] Terminal UI (using [tui-rs](https://github.com/fdehau/tui-rs))
 - [ ] Web UI

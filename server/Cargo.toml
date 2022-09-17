@@ -1,6 +1,6 @@
 [package]
 name = "music-player-server"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -13,11 +13,11 @@ description = "The server API for the music player"
 
 [dependencies.music-player-playback]
 path = "../playback"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-scanner]
 path = "../scanner"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-settings]
 path = "../settings"

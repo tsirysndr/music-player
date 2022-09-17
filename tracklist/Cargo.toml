@@ -1,13 +1,18 @@
 [package]
-name = "music-player-entity"
-version = "0.1.1"
+name = "music-player-tracklist"
+version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
+readme = "README.md"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
-description = "Entities for the music player"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies.music-player-entity]
+path = "../entity"
+version = "0.1.1"
+
 [dependencies]
-sea-orm = { version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+atlist-rs = "0.2.1"
+rand = "0.8.5"

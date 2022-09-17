@@ -2,7 +2,9 @@ syntax = "proto3";
 
 package music.v1alpha1;
 
-message AddTrackRequest { string uri = 1; }
+import "metadata/v1alpha1/track.proto";
+
+message AddTrackRequest { metadata.v1alpha1.Track track = 1; }
 
 message AddTrackResponse {}
 

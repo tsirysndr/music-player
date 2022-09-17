@@ -1,6 +1,6 @@
 [package]
 name = "music-player-playback"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -8,6 +8,14 @@ authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
 description = "The playback logic for music player"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.music-player-tracklist]
+path = "../tracklist"
+version = "0.1.0"
+
+[dependencies.music-player-entity]
+path = "../entity"
+version = "0.1.1"
 
 [dependencies]
 cpal = "0.13.0"

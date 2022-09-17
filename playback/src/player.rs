@@ -1,5 +1,7 @@
 use futures_util::{future::FusedFuture, Future};
 use log::{error, trace};
+use music_player_entity::track::Model as Track;
+use music_player_tracklist::Tracklist;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
@@ -30,11 +32,14 @@ pub type PlayerResult = Result<(), Error>;
 
 pub trait PlayerEngine: Send + Sync {
     fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32);
+    fn load_tracklist(&mut self, tracks: Vec<Track>);
     fn preload(&self, _track_id: &str);
     fn play(&self);
     fn pause(&self);
     fn stop(&self);
     fn seek(&self, position_ms: u32);
+    fn next(&self);
+    fn previous(&self);
 }
 
 #[derive(Clone)]
@@ -59,6 +64,7 @@ impl Player {
                 sink_status: SinkStatus::Closed,
                 sink_event_callback: None,
                 event_senders: [event_sender].to_vec(),
+                tracklist: Tracklist::new_empty(),
             };
             let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             runtime.block_on(internal);
@@ -96,6 +102,17 @@ impl Player {
             }
         }
     }
+
+    pub async fn await_end_of_tracklist(&self) {
+        let mut channel = self.get_player_event_channel();
+        while let Some(event) = channel.recv().await {
+            if matches!(event, PlayerEvent::EndOfTrack { .. })
+                && event.get_is_last_track().unwrap_or(false)
+            {
+                return;
+            }
+        }
+    }
 }
 
 impl PlayerEngine for Player {
@@ -103,6 +120,10 @@ impl PlayerEngine for Player {
         self.command(PlayerCommand::Load {
             track_id: track_id.to_string(),
         });
+    }
+
+    fn load_tracklist(&mut self, tracks: Vec<Track>) {
+        self.command(PlayerCommand::LoadTracklist { tracks });
     }
 
     fn preload(&self, _track_id: &str) {
@@ -124,6 +145,14 @@ impl PlayerEngine for Player {
     fn seek(&self, position_ms: u32) {
         self.command(PlayerCommand::Seek(position_ms));
     }
+
+    fn next(&self) {
+        self.command(PlayerCommand::Next);
+    }
+
+    fn previous(&self) {
+        self.command(PlayerCommand::Previous);
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -144,6 +173,7 @@ struct PlayerInternal {
     sink_status: SinkStatus,
     sink_event_callback: Option<SinkEventCallback>,
     event_senders: Vec<mpsc::UnboundedSender<PlayerEvent>>,
+    tracklist: Tracklist,
 }
 
 impl Future for PlayerInternal {
@@ -195,7 +225,11 @@ impl Future for PlayerInternal {
                         } else {
                             // end of track
                             self.state = PlayerState::Stopped;
-                            self.send_event(PlayerEvent::EndOfTrack);
+                            let tracklist = self.tracklist.clone();
+                            self.send_event(PlayerEvent::EndOfTrack {
+                                is_last_track: tracklist.is_empty(),
+                            });
+                            self.handle_next();
                         }
                     }
                     Err(e) => {
@@ -260,12 +294,15 @@ impl PlayerInternal {
     fn handle_command(&mut self, cmd: PlayerCommand) -> PlayerResult {
         match cmd {
             PlayerCommand::Load { track_id } => self.handle_command_load(&track_id),
+            PlayerCommand::LoadTracklist { tracks } => self.handle_command_load_tracklist(tracks),
             PlayerCommand::Preload => self.handle_command_preload(),
             PlayerCommand::Play => self.handle_play(),
             PlayerCommand::Pause => self.handle_pause(),
             PlayerCommand::Stop => self.handle_player_stop(),
             PlayerCommand::Seek(position_ms) => self.handle_command_seek(),
             PlayerCommand::AddEventSender(sender) => self.event_senders.push(sender),
+            PlayerCommand::Next => self.handle_next(),
+            PlayerCommand::Previous => self.handle_previous(),
         }
         Ok(())
     }
@@ -343,6 +380,13 @@ impl PlayerInternal {
         }
     }
 
+    fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
+        self.tracklist.queue(tracks);
+        if self.tracklist.current_track().is_none() {
+            self.handle_next();
+        }
+    }
+
     fn handle_command_preload(&self) {
         todo!()
     }
@@ -373,6 +417,18 @@ impl PlayerInternal {
 
     fn handle_command_seek(&self) {
         todo!()
+    }
+
+    fn handle_next(&mut self) {
+        if self.tracklist.next_track().is_some() {
+            self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
+        }
+    }
+
+    fn handle_previous(&mut self) {
+        if self.tracklist.previous_track().is_some() {
+            self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
+        }
     }
 }
 
@@ -500,11 +556,14 @@ impl PlayerTrackLoader {
 
 enum PlayerCommand {
     Load { track_id: String },
+    LoadTracklist { tracks: Vec<Track> },
     Preload,
     Play,
     Pause,
     Stop,
     Seek(u32),
+    Next,
+    Previous,
     AddEventSender(mpsc::UnboundedSender<PlayerEvent>),
 }
 
@@ -517,9 +576,19 @@ pub enum PlayerEvent {
     Playing,
     Paused,
     TimeToPreloadNextTrack,
-    EndOfTrack,
+    EndOfTrack { is_last_track: bool },
     VolumeSet { volume: u16 },
     Error { track_id: String, error: String },
+}
+
+impl PlayerEvent {
+    pub fn get_is_last_track(&self) -> Option<bool> {
+        use PlayerEvent::*;
+        match self {
+            EndOfTrack { is_last_track, .. } => Some(*is_last_track),
+            _ => None,
+        }
+    }
 }
 
 pub type PlayerEventChannel = mpsc::UnboundedReceiver<PlayerEvent>;

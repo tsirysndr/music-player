@@ -48,8 +48,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<NextRequest>,
     ) -> Result<tonic::Response<NextResponse>, tonic::Status> {
-        self.player.lock().await.stop();
-        self.player.lock().await.load("", true, 0);
+        self.player.lock().await.next();
         let response = NextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -57,7 +56,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PreviousRequest>,
     ) -> Result<tonic::Response<PreviousResponse>, tonic::Status> {
-        self.player.lock().await.stop();
+        self.player.lock().await.previous();
         let response = PreviousResponse {};
         Ok(tonic::Response::new(response))
     }

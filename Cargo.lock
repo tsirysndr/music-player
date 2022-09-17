@@ -238,6 +238,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "atlist-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbe02730d2eb61810111bfedbc5c194014803f11cbccdc80df42c3d3466d5275"
+
+[[package]]
 name = "atoi"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1545,7 +1551,7 @@ checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
 name = "music-player"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "music-player-addons",
@@ -1556,6 +1562,7 @@ dependencies = [
  "music-player-server",
  "music-player-settings",
  "music-player-storage",
+ "music-player-tracklist",
  "sea-orm-migration",
  "tokio",
 ]
@@ -1566,7 +1573,7 @@ version = "0.1.0"
 
 [[package]]
 name = "music-player-entity"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sea-orm",
 ]
@@ -1583,13 +1590,15 @@ dependencies = [
 
 [[package]]
 name = "music-player-playback"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cpal",
  "futures-util",
  "lazy_static",
  "librespot-protocol",
  "log",
+ "music-player-entity",
+ "music-player-tracklist",
  "owo-colors",
  "parking_lot 0.12.1",
  "rand",
@@ -1604,7 +1613,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-scanner"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dirs",
  "futures",
@@ -1620,7 +1629,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cuid",
  "futures",
@@ -1655,6 +1664,15 @@ version = "0.1.0"
 dependencies = [
  "music-player-settings",
  "sea-orm",
+]
+
+[[package]]
+name = "music-player-tracklist"
+version = "0.1.0"
+dependencies = [
+ "atlist-rs",
+ "music-player-entity",
+ "rand",
 ]
 
 [[package]]

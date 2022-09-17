@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "addon")]
 pub struct Model {
     #[sea_orm(primary_key)]

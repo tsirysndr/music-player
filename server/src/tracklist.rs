@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use music_player_entity::tracklist;
+use music_player_entity::{track, tracklist};
 use music_player_playback::player::{Player, PlayerEngine};
 use music_player_storage::Database;
 use sea_orm::EntityTrait;
@@ -33,10 +33,11 @@ impl TracklistService for Tracklist {
         &self,
         request: tonic::Request<AddTrackRequest>,
     ) -> Result<tonic::Response<AddTrackResponse>, tonic::Status> {
-        self.player
-            .lock()
-            .await
-            .load(request.get_ref().uri.as_str(), true, 0);
+        let song = request.get_ref().track.as_ref().unwrap();
+        self.player.lock().await.load_tracklist(vec![track::Model {
+            uri: song.uri.clone(),
+            ..Default::default()
+        }]);
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }

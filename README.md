@@ -29,6 +29,10 @@ Note: This is a work in progress.
 
 This is a simple music player that I made for my own use. It is written in Rust and uses [rodio](https://github.com/RustAudio/rodio), [symphonia](https://github.com/pdeljanov/Symphonia), and [gRPC](https://grpc.io/) libraries.
 
+<p style="margin-top: 20px; margin-bottom: 20px;">
+  <img src="./preview.svg" width="800" />
+</p>
+
 ## Installation
 
 ```bash

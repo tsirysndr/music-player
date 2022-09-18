@@ -1551,9 +1551,12 @@ checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
 name = "music-player"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "clap",
+ "futures",
+ "lofty",
+ "md5",
  "music-player-addons",
  "music-player-entity",
  "music-player-migration",
@@ -1563,6 +1566,8 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "owo-colors",
+ "sea-orm",
  "sea-orm-migration",
  "tokio",
 ]

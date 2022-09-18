@@ -70,6 +70,7 @@ OPTIONS:
 SUBCOMMANDS:
     help    Print this message or the help of the given subcommand(s)
     play    Play a song
+    scan    Scan music library: $HOME/Music
 ```
 
 ### Features

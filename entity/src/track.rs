@@ -18,7 +18,6 @@ pub struct Model {
     pub duration: Option<f32>,
     pub uri: String,
     pub album_id: Option<String>,
-    pub tracklist_id: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -29,23 +28,11 @@ pub enum Relation {
         to = "super::album::Column::Id"
     )]
     Album,
-    #[sea_orm(
-        belongs_to = "super::tracklist::Entity",
-        from = "Column::TracklistId",
-        to = "super::tracklist::Column::Id"
-    )]
-    Tracklist,
 }
 
 impl Related<super::album::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Album.def()
-    }
-}
-
-impl Related<super::tracklist::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Tracklist.def()
     }
 }
 

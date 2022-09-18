@@ -77,7 +77,6 @@ impl LibraryService for Library {
                         "{:x}",
                         md5::compute(format!("{}{}", song.album, song.artist))
                     ))),
-                    tracklist_id: ActiveValue::Set(None),
                 };
 
                 match item.insert(db.get_connection()).await {

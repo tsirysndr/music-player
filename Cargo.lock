@@ -1573,14 +1573,14 @@ version = "0.1.0"
 
 [[package]]
 name = "music-player-entity"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "sea-orm",
 ]
 
 [[package]]
 name = "music-player-migration"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dotenv",
  "music-player-settings",

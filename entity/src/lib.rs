@@ -4,4 +4,3 @@ pub mod artist;
 pub mod playlist;
 pub mod playlist_tracks;
 pub mod track;
-pub mod tracklist;

@@ -56,7 +56,6 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Track::Duration).float())
                     .col(ColumnDef::new(Track::Uri).string())
                     .col(ColumnDef::new(Track::AlbumId).string())
-                    .col(ColumnDef::new(Track::TracklistId).string())
                     .foreign_key(
                         ForeignKeyCreateStatement::new()
                             .name("track_album_id_fkey")
@@ -64,15 +63,6 @@ impl MigrationTrait for Migration {
                             .from_col(Track::AlbumId)
                             .to_tbl(Album::Table)
                             .to_col(Album::Id)
-                            .on_delete(ForeignKeyAction::Cascade),
-                    )
-                    .foreign_key(
-                        ForeignKeyCreateStatement::new()
-                            .name("track_tracklist_id_fkey")
-                            .from_tbl(Track::Table)
-                            .from_col(Track::TracklistId)
-                            .to_tbl(Tracklist::Table)
-                            .to_col(Tracklist::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
@@ -90,20 +80,6 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Playlist::Name).string().not_null())
-                    .to_owned(),
-            )
-            .await?;
-        manager
-            .create_table(
-                Table::create()
-                    .table(Tracklist::Table)
-                    .if_not_exists()
-                    .col(
-                        ColumnDef::new(Tracklist::Id)
-                            .string()
-                            .not_null()
-                            .primary_key(),
-                    )
                     .to_owned(),
             )
             .await?;
@@ -177,9 +153,6 @@ impl MigrationTrait for Migration {
             .drop_table(Table::drop().table(Playlist::Table).if_exists().to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(Tracklist::Table).if_exists().to_owned())
-            .await?;
-        manager
             .drop_table(Table::drop().table(Addon::Table).if_exists().to_owned())
             .await?;
         manager
@@ -235,12 +208,6 @@ enum Playlist {
     Table,
     Id,
     Name,
-}
-
-#[derive(Iden)]
-enum Tracklist {
-    Table,
-    Id,
 }
 
 #[derive(Iden)]

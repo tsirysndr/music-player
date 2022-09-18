@@ -36,7 +36,10 @@ message SetRepeatResponse {}
 
 message ShuffleResponse {}
 
-message GetTracklistTracksResponse {}
+message GetTracklistTracksResponse {
+  repeated metadata.v1alpha1.Track next_tracks = 1;
+  repeated metadata.v1alpha1.Track previous_tracks = 2;
+}
 
 message GetRandomRequest {}
 

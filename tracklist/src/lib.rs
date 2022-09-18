@@ -64,12 +64,8 @@ impl Tracklist {
         self.current_track.clone()
     }
 
-    pub fn tracks(&self) -> Vec<Track> {
-        self.played
-            .iter()
-            .chain(self.tracks.iter())
-            .cloned()
-            .collect()
+    pub fn tracks(&self) -> (Vec<Track>, Vec<Track>) {
+        (self.played.clone(), self.tracks.clone())
     }
 
     pub fn is_empty(&self) -> bool {
@@ -82,6 +78,7 @@ impl Tracklist {
 
     pub fn clear(&mut self) {
         self.tracks.clear();
+        self.played.clear();
     }
 
     pub fn remove_track(&mut self, track: Track) {

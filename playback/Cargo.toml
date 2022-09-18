@@ -1,6 +1,6 @@
 [package]
 name = "music-player-playback"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -33,3 +33,4 @@ thiserror = "1.0.34"
 tokio = { version = "1.21.0", features = ["full"] }
 zerocopy = "0.6.1"
 owo-colors = "3.5.0"
+async-trait = "0.1.57"

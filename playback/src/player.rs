@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use futures_util::{future::FusedFuture, Future};
 use log::{error, trace};
 use music_player_entity::track::Model as Track;
@@ -15,7 +16,10 @@ use std::{
     thread,
 };
 use symphonia::core::{errors::Error, io::MediaSourceStream, probe::Hint};
-use tokio::sync::mpsc;
+use tokio::{
+    runtime::Runtime,
+    sync::mpsc::{self, UnboundedReceiver},
+};
 
 use crate::{
     audio_backend::Sink,
@@ -30,6 +34,7 @@ const PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
 
 pub type PlayerResult = Result<(), Error>;
 
+#[async_trait]
 pub trait PlayerEngine: Send + Sync {
     fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32);
     fn load_tracklist(&mut self, tracks: Vec<Track>);
@@ -40,6 +45,11 @@ pub trait PlayerEngine: Send + Sync {
     fn seek(&self, position_ms: u32);
     fn next(&self);
     fn previous(&self);
+    fn clear(&self);
+    async fn get_tracks(&self) -> (Vec<Track>, Vec<Track>);
+    async fn wait_for_tracklist(
+        mut event: UnboundedReceiver<PlayerEvent>,
+    ) -> (Vec<Track>, Vec<Track>);
 }
 
 #[derive(Clone)]
@@ -115,6 +125,7 @@ impl Player {
     }
 }
 
+#[async_trait]
 impl PlayerEngine for Player {
     fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32) {
         self.command(PlayerCommand::Load {
@@ -152,6 +163,32 @@ impl PlayerEngine for Player {
 
     fn previous(&self) {
         self.command(PlayerCommand::Previous);
+    }
+
+    fn clear(&self) {
+        self.command(PlayerCommand::Clear);
+    }
+
+    async fn get_tracks(&self) -> (Vec<Track>, Vec<Track>) {
+        let channel = self.get_player_event_channel();
+        let handle = thread::spawn(move || {
+            Runtime::new()
+                .unwrap()
+                .block_on(Self::wait_for_tracklist(channel))
+        });
+        self.command(PlayerCommand::GetTracks);
+        handle.join().unwrap()
+    }
+
+    async fn wait_for_tracklist(
+        mut channel: UnboundedReceiver<PlayerEvent>,
+    ) -> (Vec<Track>, Vec<Track>) {
+        while let Some(event) = channel.recv().await {
+            if matches!(event, PlayerEvent::TracklistUpdated { .. }) {
+                return event.get_tracks().unwrap();
+            }
+        }
+        (vec![], vec![])
     }
 }
 
@@ -303,6 +340,8 @@ impl PlayerInternal {
             PlayerCommand::AddEventSender(sender) => self.event_senders.push(sender),
             PlayerCommand::Next => self.handle_next(),
             PlayerCommand::Previous => self.handle_previous(),
+            PlayerCommand::Clear => self.handle_clear(),
+            PlayerCommand::GetTracks => self.handle_get_tracks(),
         }
         Ok(())
     }
@@ -429,6 +468,15 @@ impl PlayerInternal {
         if self.tracklist.previous_track().is_some() {
             self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
         }
+    }
+
+    fn handle_clear(&mut self) {
+        self.tracklist.clear();
+    }
+
+    fn handle_get_tracks(&mut self) {
+        let tracks = self.tracklist.tracks();
+        self.send_event(PlayerEvent::TracklistUpdated { tracks });
     }
 }
 
@@ -565,6 +613,8 @@ enum PlayerCommand {
     Next,
     Previous,
     AddEventSender(mpsc::UnboundedSender<PlayerEvent>),
+    Clear,
+    GetTracks,
 }
 
 #[derive(Debug, Clone)]
@@ -579,6 +629,7 @@ pub enum PlayerEvent {
     EndOfTrack { is_last_track: bool },
     VolumeSet { volume: u16 },
     Error { track_id: String, error: String },
+    TracklistUpdated { tracks: (Vec<Track>, Vec<Track>) },
 }
 
 impl PlayerEvent {
@@ -586,6 +637,14 @@ impl PlayerEvent {
         use PlayerEvent::*;
         match self {
             EndOfTrack { is_last_track, .. } => Some(*is_last_track),
+            _ => None,
+        }
+    }
+
+    pub fn get_tracks(&self) -> Option<(Vec<Track>, Vec<Track>)> {
+        use PlayerEvent::*;
+        match self {
+            TracklistUpdated { tracks, .. } => Some(tracks.clone()),
             _ => None,
         }
     }

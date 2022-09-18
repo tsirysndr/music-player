@@ -1,19 +1,22 @@
 use std::sync::Arc;
 
-use music_player_entity::{track, tracklist};
+use music_player_entity::track;
 use music_player_playback::player::{Player, PlayerEngine};
 use music_player_storage::Database;
-use sea_orm::EntityTrait;
 use tokio::sync::Mutex;
 
-use crate::api::v1alpha1::{
-    tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
-    ClearTracklistRequest, ClearTracklistResponse, FilterTracklistRequest, FilterTracklistResponse,
-    GetNextTrackRequest, GetNextTrackResponse, GetPreviousTrackRequest, GetPreviousTrackResponse,
-    GetRandomRequest, GetRandomResponse, GetRepeatRequest, GetRepeatResponse, GetSingleRequest,
-    GetSingleResponse, GetTracklistTracksRequest, GetTracklistTracksResponse, PlayNextRequest,
-    PlayNextResponse, RemoveTrackRequest, RemoveTrackResponse, SetRepeatRequest, SetRepeatResponse,
-    ShuffleRequest, ShuffleResponse,
+use crate::{
+    api::v1alpha1::{
+        tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
+        ClearTracklistRequest, ClearTracklistResponse, FilterTracklistRequest,
+        FilterTracklistResponse, GetNextTrackRequest, GetNextTrackResponse,
+        GetPreviousTrackRequest, GetPreviousTrackResponse, GetRandomRequest, GetRandomResponse,
+        GetRepeatRequest, GetRepeatResponse, GetSingleRequest, GetSingleResponse,
+        GetTracklistTracksRequest, GetTracklistTracksResponse, PlayNextRequest, PlayNextResponse,
+        RemoveTrackRequest, RemoveTrackResponse, SetRepeatRequest, SetRepeatResponse,
+        ShuffleRequest, ShuffleResponse,
+    },
+    metadata::v1alpha1::{Album, Artist, Track},
 };
 
 pub struct Tracklist {
@@ -34,8 +37,16 @@ impl TracklistService for Tracklist {
         request: tonic::Request<AddTrackRequest>,
     ) -> Result<tonic::Response<AddTrackResponse>, tonic::Status> {
         let song = request.get_ref().track.as_ref().unwrap();
+        let artist = match song.artists.len() {
+            0 => "Unknown Artist".to_string(),
+            _ => song.artists[0].name.clone(),
+        };
         self.player.lock().await.load_tracklist(vec![track::Model {
+            id: song.id.clone(),
             uri: song.uri.clone(),
+            title: song.title.clone(),
+            album: song.album.clone().unwrap_or_default().title,
+            artist,
             ..Default::default()
         }]);
         let response = AddTrackResponse {};
@@ -46,6 +57,7 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
     ) -> Result<tonic::Response<ClearTracklistResponse>, tonic::Status> {
+        self.player.lock().await.clear();
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -126,12 +138,50 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<GetTracklistTracksRequest>,
     ) -> Result<tonic::Response<GetTracklistTracksResponse>, tonic::Status> {
-        tracklist::Entity::find()
-            .all(self.db.get_connection())
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let (previous_tracks, next_tracks) = self.player.lock().await.get_tracks().await;
 
-        let response = GetTracklistTracksResponse {};
+        let response = GetTracklistTracksResponse {
+            next_tracks: next_tracks
+                .into_iter()
+                .map(|track| Track {
+                    id: track.id,
+                    title: track.title,
+                    uri: track.uri,
+                    disc_number: format!("{}", track.track.unwrap_or(0)).parse().unwrap(),
+                    artists: vec![Artist {
+                        name: track.artist,
+                        ..Default::default()
+                    }],
+                    album: Some(Album {
+                        // id: track.album_id.unwrap(),
+                        title: track.album,
+                        year: format!("{}", track.year.unwrap_or(0)).parse().unwrap(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .collect(),
+            previous_tracks: previous_tracks
+                .into_iter()
+                .map(|track| Track {
+                    id: track.id,
+                    title: track.title,
+                    uri: track.uri,
+                    disc_number: format!("{}", track.track.unwrap_or(0)).parse().unwrap(),
+                    artists: vec![Artist {
+                        name: track.artist,
+                        ..Default::default()
+                    }],
+                    album: Some(Album {
+                        // id: track.album_id.unwrap(),
+                        title: track.album,
+                        year: format!("{}", track.year.unwrap_or(0)).parse().unwrap(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .collect(),
+        };
         Ok(tonic::Response::new(response))
     }
 

@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
-readme = "README.md"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
 keywords = ["tokio", "music", "cli", "daemon", "streaming"]
 description = "The tracklist manager for the music player"

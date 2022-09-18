@@ -1,6 +1,6 @@
 [package]
 name = "music-player"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -20,11 +20,11 @@ path = "src/main.rs"
 
 [dependencies.music-player-server]
 path = "server"
-version = "0.1.0"
+version = "0.1.2"
 
 [dependencies.music-player-playback]
 path = "playback"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies.music-player-scanner]
 path = "scanner"
@@ -52,7 +52,7 @@ version = "0.1.0"
 
 [dependencies.music-player-tracklist]
 path = "tracklist"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.sea-orm-migration]
 version = "^0.9.0"

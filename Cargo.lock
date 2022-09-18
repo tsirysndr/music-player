@@ -1551,7 +1551,7 @@ checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
 name = "music-player"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clap",
  "music-player-addons",
@@ -1590,8 +1590,9 @@ dependencies = [
 
 [[package]]
 name = "music-player-playback"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
+ "async-trait",
  "cpal",
  "futures-util",
  "lazy_static",
@@ -1629,7 +1630,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cuid",
  "futures",
@@ -1668,7 +1669,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-tracklist"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "atlist-rs",
  "music-player-entity",

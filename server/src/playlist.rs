@@ -1,15 +1,19 @@
-use std::sync::Arc;
-
-use music_player_entity::playlist;
+use music_player_entity::{playlist, playlist_tracks, track};
 use music_player_storage::Database;
-use sea_orm::EntityTrait;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
+};
+use std::sync::Arc;
+use uuid::Uuid;
 
-use crate::api::v1alpha1::{
-    playlist_service_server::PlaylistService, AddItemRequest, AddItemResponse, CreateRequest,
-    CreateResponse, DeleteRequest, DeleteResponse, FindAllRequest, FindAllResponse,
-    GetItemsRequest, GetItemsResponse, GetPlaylistDetailsRequest, GetPlaylistDetailsResponse,
-    RemoveItemRequest, RemoveItemResponse, RenameRequest, RenameResponse, SaveRequest,
-    SaveResponse,
+use crate::{
+    api::v1alpha1::{
+        playlist_service_server::PlaylistService, AddItemRequest, AddItemResponse, CreateRequest,
+        CreateResponse, DeleteRequest, DeleteResponse, FindAllRequest, FindAllResponse,
+        GetItemsRequest, GetItemsResponse, GetPlaylistDetailsRequest, GetPlaylistDetailsResponse,
+        RemoveItemRequest, RemoveItemResponse, RenameRequest, RenameResponse,
+    },
+    metadata::v1alpha1::Track,
 };
 
 pub struct Playlist {
@@ -26,53 +30,167 @@ impl Playlist {
 impl PlaylistService for Playlist {
     async fn create(
         &self,
-        _request: tonic::Request<CreateRequest>,
+        request: tonic::Request<CreateRequest>,
     ) -> Result<tonic::Response<CreateResponse>, tonic::Status> {
-        let response = CreateResponse {};
-        Ok(tonic::Response::new(response))
+        let item = playlist::ActiveModel {
+            id: ActiveValue::set(Uuid::new_v4().to_string()),
+            name: ActiveValue::set(request.get_ref().name.clone()),
+        };
+        match item.insert(self.db.get_connection()).await {
+            Ok(saved) => {
+                for track in request.get_ref().tracks.iter() {
+                    let item = playlist_tracks::ActiveModel {
+                        id: ActiveValue::set(Uuid::new_v4().to_string()),
+                        playlist_id: ActiveValue::set(saved.id.clone()),
+                        track_id: ActiveValue::set(track.id.clone()),
+                    };
+                    match item.insert(self.db.get_connection()).await {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
+                }
+                Ok(tonic::Response::new(CreateResponse {
+                    id: saved.id,
+                    name: saved.name,
+                    tracks: request.get_ref().tracks.clone(),
+                    ..Default::default()
+                }))
+            }
+            Err(e) => Err(tonic::Status::internal(e.to_string())),
+        }
     }
+
     async fn delete(
         &self,
-        _request: tonic::Request<DeleteRequest>,
+        request: tonic::Request<DeleteRequest>,
     ) -> Result<tonic::Response<DeleteResponse>, tonic::Status> {
-        let response = DeleteResponse {};
-        Ok(tonic::Response::new(response))
+        playlist::Entity::delete_by_id(request.get_ref().id.clone())
+            .exec(self.db.get_connection())
+            .await
+            .map(|_| {
+                tonic::Response::new(DeleteResponse {
+                    id: request.get_ref().id.clone(),
+                    ..Default::default()
+                })
+            })
+            .map_err(|_| tonic::Status::internal("Failed to delete playlist"))
     }
+
     async fn get_items(
         &self,
-        _request: tonic::Request<GetItemsRequest>,
+        request: tonic::Request<GetItemsRequest>,
     ) -> Result<tonic::Response<GetItemsResponse>, tonic::Status> {
-        let response = GetItemsResponse {};
-        Ok(tonic::Response::new(response))
+        let result = playlist::Entity::find_by_id(request.get_ref().id.clone())
+            .one(self.db.get_connection())
+            .await;
+        match result {
+            Ok(playlist) => {
+                if playlist.is_none() {
+                    return Err(tonic::Status::not_found("Playlist not found"));
+                }
+                playlist
+                    .clone()
+                    .unwrap()
+                    .find_related(track::Entity)
+                    .all(self.db.get_connection())
+                    .await
+                    .map(|tracks| {
+                        tonic::Response::new(GetItemsResponse {
+                            id: playlist.clone().unwrap().id,
+                            name: playlist.clone().unwrap().name,
+                            tracks: tracks
+                                .into_iter()
+                                .map(|track| Track {
+                                    id: track.id,
+                                    title: track.title,
+                                    uri: track.uri,
+                                    duration: track.duration.unwrap_or_default(),
+                                    disc_number: i32::try_from(track.track.unwrap_or_default())
+                                        .unwrap(),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                            ..Default::default()
+                        })
+                    })
+                    .map_err(|_| tonic::Status::internal("Failed to get playlist items"))
+            }
+            Err(_) => return Err(tonic::Status::internal("Failed to get playlist")),
+        }
     }
-    async fn save(
-        &self,
-        _request: tonic::Request<SaveRequest>,
-    ) -> Result<tonic::Response<SaveResponse>, tonic::Status> {
-        let response = SaveResponse {};
-        Ok(tonic::Response::new(response))
-    }
+
     async fn rename(
         &self,
-        _request: tonic::Request<RenameRequest>,
+        request: tonic::Request<RenameRequest>,
     ) -> Result<tonic::Response<RenameResponse>, tonic::Status> {
-        let response = RenameResponse {};
-        Ok(tonic::Response::new(response))
+        let updates = playlist::ActiveModel {
+            name: Set(request.get_ref().name.clone()),
+            ..Default::default()
+        };
+        playlist::Entity::update(updates)
+            .filter(playlist::Column::Id.eq("test"))
+            .exec(self.db.get_connection())
+            .await
+            .map(|updated| {
+                tonic::Response::new(RenameResponse {
+                    id: updated.id,
+                    name: updated.name,
+                    ..Default::default()
+                })
+            })
+            .map_err(|_| tonic::Status::internal("Failed to rename playlist"))
     }
+
     async fn remove_item(
         &self,
-        _request: tonic::Request<RemoveItemRequest>,
+        request: tonic::Request<RemoveItemRequest>,
     ) -> Result<tonic::Response<RemoveItemResponse>, tonic::Status> {
-        let response = RemoveItemResponse {};
-        Ok(tonic::Response::new(response))
+        let item = playlist_tracks::Entity::find()
+            .filter(
+                playlist_tracks::Column::PlaylistId
+                    .eq(request.get_ref().id.clone())
+                    .and(playlist_tracks::Column::TrackId.eq(request.get_ref().track_id.clone())),
+            )
+            .one(self.db.get_connection())
+            .await;
+        if item.is_err() {
+            return Err(tonic::Status::internal(
+                "Failed to remove item from playlist",
+            ));
+        }
+        playlist_tracks::Entity::delete(playlist_tracks::ActiveModel {
+            id: Set(item.unwrap().unwrap().id),
+            ..Default::default()
+        })
+        .exec(self.db.get_connection())
+        .await
+        .map(|_| {
+            tonic::Response::new(RemoveItemResponse {
+                id: request.get_ref().id.clone(),
+                ..Default::default()
+            })
+        })
+        .map_err(|_| tonic::Status::internal("Failed to remove item from playlist"))
     }
+
     async fn add_item(
         &self,
-        _request: tonic::Request<AddItemRequest>,
+        request: tonic::Request<AddItemRequest>,
     ) -> Result<tonic::Response<AddItemResponse>, tonic::Status> {
-        let response = AddItemResponse {};
-        Ok(tonic::Response::new(response))
+        let item = playlist_tracks::ActiveModel {
+            id: ActiveValue::set(Uuid::new_v4().to_string()),
+            playlist_id: ActiveValue::set(request.get_ref().id.clone()),
+            track_id: ActiveValue::set(request.get_ref().track_id.clone()),
+        };
+        match item.insert(self.db.get_connection()).await {
+            Ok(saved) => Ok(tonic::Response::new(AddItemResponse {
+                id: saved.id,
+                ..Default::default()
+            })),
+            Err(e) => Err(tonic::Status::internal(e.to_string())),
+        }
     }
+
     async fn find_all(
         &self,
         _request: tonic::Request<FindAllRequest>,
@@ -80,21 +198,67 @@ impl PlaylistService for Playlist {
         playlist::Entity::find()
             .all(self.db.get_connection())
             .await
+            .map(|playlists| {
+                tonic::Response::new(FindAllResponse {
+                    playlists: playlists
+                        .into_iter()
+                        .map(|playlist| GetPlaylistDetailsResponse {
+                            id: playlist.id,
+                            name: playlist.name,
+                            ..Default::default()
+                        })
+                        .collect(),
+                    ..Default::default()
+                })
+            })
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
-        let response = FindAllResponse {};
+        let response = FindAllResponse {
+            ..Default::default()
+        };
         Ok(tonic::Response::new(response))
     }
+
     async fn get_playlist_details(
         &self,
-        _request: tonic::Request<GetPlaylistDetailsRequest>,
+        request: tonic::Request<GetPlaylistDetailsRequest>,
     ) -> Result<tonic::Response<GetPlaylistDetailsResponse>, tonic::Status> {
-        playlist::Entity::find()
-            .all(self.db.get_connection())
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        let response = GetPlaylistDetailsResponse {};
-        Ok(tonic::Response::new(response))
+        let result = playlist::Entity::find_by_id(request.get_ref().id.clone())
+            .one(self.db.get_connection())
+            .await;
+        match result {
+            Ok(playlist) => {
+                if playlist.is_none() {
+                    return Err(tonic::Status::not_found("Playlist not found"));
+                }
+                playlist
+                    .clone()
+                    .unwrap()
+                    .find_related(track::Entity)
+                    .all(self.db.get_connection())
+                    .await
+                    .map(|tracks| {
+                        tonic::Response::new(GetPlaylistDetailsResponse {
+                            id: playlist.clone().unwrap().id,
+                            name: playlist.clone().unwrap().name,
+                            tracks: tracks
+                                .into_iter()
+                                .map(|track| Track {
+                                    id: track.id,
+                                    title: track.title,
+                                    uri: track.uri,
+                                    duration: track.duration.unwrap_or_default(),
+                                    disc_number: i32::try_from(track.track.unwrap_or_default())
+                                        .unwrap(),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                            ..Default::default()
+                        })
+                    })
+                    .map_err(|_| tonic::Status::internal("Failed to get playlist items"))
+            }
+            Err(_) => return Err(tonic::Status::internal("Failed to get playlist")),
+        }
     }
 }

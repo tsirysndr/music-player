@@ -2,47 +2,83 @@ syntax = "proto3";
 
 package music.v1alpha1;
 
-message CreateRequest {}
+import "metadata/v1alpha1/track.proto";
+import "objects/v1alpha1/playlist.proto";
 
-message CreateResponse {}
+message CreateRequest {
+  string name = 1;
+  repeated metadata.v1alpha1.Track tracks = 2;
+}
 
-message DeleteRequest {}
+message CreateResponse {
+  string id = 1;
+  string name = 2;
+  repeated metadata.v1alpha1.Track tracks = 3;
+}
 
-message DeleteResponse {}
+message DeleteRequest { string id = 1; }
 
-message GetItemsRequest {}
+message DeleteResponse {
+  string id = 1;
+  string name = 2;
+}
 
-message GetItemsResponse {}
+message GetItemsRequest { string id = 1; }
 
-message SaveRequest {}
+message GetItemsResponse {
+  string id = 1;
+  string name = 2;
+  repeated metadata.v1alpha1.Track tracks = 3;
+}
 
-message SaveResponse {}
+message RenameRequest {
+  string id = 1;
+  string name = 2;
+}
 
-message RenameRequest {}
+message RenameResponse {
+  string id = 1;
+  string name = 2;
+}
 
-message RenameResponse {}
+message RemoveItemRequest {
+  string id = 1;
+  string track_id = 2;
+}
 
-message RemoveItemRequest {}
+message RemoveItemResponse {
+  string id = 1;
+  string name = 2;
+  repeated metadata.v1alpha1.Track tracks = 3;
+}
 
-message RemoveItemResponse {}
+message AddItemRequest {
+  string id = 1;
+  string track_id = 2;
+}
 
-message AddItemRequest {}
-
-message AddItemResponse {}
+message AddItemResponse {
+  string id = 1;
+  string name = 2;
+  repeated metadata.v1alpha1.Track tracks = 3;
+}
 
 message FindAllRequest {}
 
-message FindAllResponse {}
+message FindAllResponse { repeated GetPlaylistDetailsResponse playlists = 1; }
 
-message GetPlaylistDetailsRequest {}
+message GetPlaylistDetailsRequest { string id = 1; }
 
-message GetPlaylistDetailsResponse {}
+message GetPlaylistDetailsResponse {
+  string id = 1;
+  string name = 2;
+  repeated metadata.v1alpha1.Track tracks = 3;
+}
 
 service PlaylistService {
   rpc Create(CreateRequest) returns (CreateResponse) {}
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
   rpc GetItems(GetItemsRequest) returns (GetItemsResponse) {}
-  rpc Save(SaveRequest) returns (SaveResponse) {}
   rpc Rename(RenameRequest) returns (RenameResponse) {}
   rpc RemoveItem(RemoveItemRequest) returns (RemoveItemResponse) {}
   rpc AddItem(AddItemRequest) returns (AddItemResponse) {}

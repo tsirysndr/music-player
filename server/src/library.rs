@@ -158,7 +158,8 @@ impl LibraryService for Library {
                     id: track.id,
                     title: track.title,
                     uri: track.uri,
-                    disc_number: format!("{}", track.track.unwrap_or(0)).parse().unwrap(),
+                    duration: track.duration.unwrap_or_default(),
+                    disc_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
                     artists: vec![Artist {
                         name: track.artist,
                         ..Default::default()

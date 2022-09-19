@@ -81,7 +81,8 @@ SUBCOMMANDS:
 - [x] Scan music library
 - [x] Play/Pause/Stop music
 - [x] Next/Previous track
-- [ ] Create/Delete playlists
+- [x] Create/Delete playlists
+- [ ] Music Player client
 - [ ] Terminal UI (using [tui-rs](https://github.com/fdehau/tui-rs))
 - [ ] Web UI
 - [ ] Desktop version (using [gtk-rs](https://gtk-rs.org/))

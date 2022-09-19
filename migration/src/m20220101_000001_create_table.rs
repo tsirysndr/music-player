@@ -105,7 +105,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(
                         ColumnDef::new(PlaylistTrack::Id)
-                            .integer()
+                            .string()
                             .not_null()
                             .primary_key(),
                     )
@@ -199,7 +199,6 @@ enum Track {
     Channels,
     Duration,
     Uri,
-    TracklistId,
     AlbumId,
 }
 

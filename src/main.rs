@@ -1,15 +1,18 @@
 use std::{sync::Arc, thread};
 
+use args::parse_args;
 use clap::Command;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
-    player::{Player, PlayerEngine},
+    player::Player,
 };
 use music_player_server::server::MusicPlayerServer;
-use scan::{auto_scan_music_library, scan_music_library};
+use owo_colors::OwoColorize;
+use scan::auto_scan_music_library;
 use tokio::sync::Mutex;
 
+mod args;
 mod scan;
 
 fn cli() -> Command<'static> {
@@ -34,6 +37,70 @@ A simple music player written in Rust"#,
                 .arg_from_usage("<song> 'The path to the song'"),
         )
         .subcommand(Command::new("scan").about("Scan music library: $HOME/Music"))
+        .subcommand(Command::new("albums").about("List all albums"))
+        .subcommand(Command::new("artists").about("List all artists"))
+        .subcommand(
+            Command::new("playlist")
+                .subcommand(
+                    Command::new("add")
+                        .about("Add a song to the playlist")
+                        .arg_from_usage("<id> 'The track id'"),
+                )
+                .subcommand(Command::new("ls").about("List all playlists"))
+                .subcommand(Command::new("clear").about("Clear the playlist").arg_from_usage(
+                    "[id] 'The playlist id, if not specified, the current playlist will be cleared'",
+                ))
+                .subcommand(
+                    Command::new("play")
+                        .about("Play the playlist")
+                        .arg_from_usage("[id] 'The playlist id'"),
+                )
+                .subcommand(
+                    Command::new("remove")
+                        .about("Remove a song from the playlist")
+                        .arg_from_usage("<id> 'The track id'"),
+                )
+                .subcommand(Command::new("shuffle").about("Shuffle the playlist"))
+                .subcommand(Command::new("all").about("List all songs in the playlist"))
+                .about("Manage playlists")
+                .arg_required_else_help(true),
+        )
+        .subcommand(
+            Command::new("queue")
+                .subcommand(
+                    Command::new("list")
+                        .about("List all songs in the queue")
+                        .arg_from_usage("-a, --all 'List all songs in the queue'"),
+                )
+                .subcommand(
+                    Command::new("add")
+                        .about("Add a song to the queue")
+                        .arg_from_usage("<song> 'The path to the song'"),
+                )
+                .subcommand(
+                    Command::new("remove")
+                        .about("Remove a song from the queue")
+                        .arg_from_usage("<song> 'The path to the song'"),
+                )
+                .subcommand(
+                    Command::new("clear")
+                        .about("Clear the queue")
+                        .arg_from_usage("-a, --all 'Clear the queue'"),
+                )
+                .about("Manage the queue")
+                .arg_required_else_help(true),
+        )
+        .subcommand(Command::new("tracks").about("List all tracks"))
+        .subcommand(
+            Command::new("search")
+                .about("Search for a song, album, artist or playlist")
+                .arg_from_usage("<query> 'The query to search for'"),
+        )
+        .subcommand(Command::new("pause").about("Pause the current song"))
+        .subcommand(Command::new("resume").about("Resume the current song"))
+        .subcommand(Command::new("next").about("Play the next song"))
+        .subcommand(Command::new("prev").about("Play the previous song"))
+        .subcommand(Command::new("stop").about("Stop the current song"))
 }
 
 #[tokio::main]
@@ -43,20 +110,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
 
-    let (mut player, _) = Player::new(move || backend(None, audio_format));
+    let (player, _) = Player::new(move || backend(None, audio_format));
 
-    if let Some(matches) = matches.subcommand_matches("play") {
-        let song = matches.value_of("song").unwrap();
+    let parsed = parse_args(matches.clone()).await;
 
-        player.load(song, true, 0);
-
-        player.await_end_of_track().await;
+    if parsed.is_ok() {
         return Ok(());
     }
 
-    if let Some(_matches) = matches.subcommand_matches("scan") {
-        scan_music_library(true).await.map_err(|e| e.to_string())?;
-        return Ok(());
+    let err = parsed.err().unwrap().to_string();
+    if !err.eq("No subcommand found") {
+        if err.eq("transport error") {
+            println!(
+                "The server is not running, please run {}",
+                "`music-player`".bright_green()
+            );
+        }
+        return Err(err.into());
     }
 
     migration::run().await;

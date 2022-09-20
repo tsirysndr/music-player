@@ -68,9 +68,20 @@ OPTIONS:
     -V, --version    Print version information
 
 SUBCOMMANDS:
-    help    Print this message or the help of the given subcommand(s)
-    play    Play a song
-    scan    Scan music library: $HOME/Music
+    albums      List all albums
+    artists     List all artists
+    help        Print this message or the help of the given subcommand(s)
+    next        Play the next song
+    pause       Pause the current song
+    play        Play a song
+    playlist    Manage playlists
+    prev        Play the previous song
+    queue       Manage the queue
+    resume      Resume the current song
+    scan        Scan music library: $HOME/Music
+    search      Search for a song, album, artist or playlist
+    stop        Stop the current song
+    tracks      List all tracks
 ```
 
 ### Features

@@ -2,10 +2,25 @@ use futures::future::FutureExt;
 use music_player_entity::{album, artist, track};
 use music_player_scanner::scan_directory;
 use music_player_scanner::types::Song;
+use music_player_storage::Database;
 use owo_colors::OwoColorize;
-use sea_orm::{ActiveModelTrait, ActiveValue};
+use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
 
-pub async fn scan_music_library() -> Result<Vec<Song>, lofty::error::LoftyError> {
+pub async fn auto_scan_music_library() {
+    let db = Database::new().await;
+    match track::Entity::find().all(db.get_connection()).await {
+        Ok(result) => {
+            if result.len() == 0 {
+                scan_music_library(false).await.unwrap_or_default();
+            }
+        }
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::error::LoftyError> {
     scan_directory(move |song, db| {
         async move {
             let id = format!("{:x}", md5::compute(song.artist.to_string()));
@@ -56,10 +71,11 @@ pub async fn scan_music_library() -> Result<Vec<Song>, lofty::error::LoftyError>
                 ))),
             };
 
-            let filename = song.uri.as_ref().unwrap().split("/").last().unwrap();
-            let path = song.uri.as_ref().unwrap().replace(filename, "");
-
-            println!("{}{}", path, filename.magenta());
+            if enable_log {
+                let filename = song.uri.as_ref().unwrap().split("/").last().unwrap();
+                let path = song.uri.as_ref().unwrap().replace(filename, "");
+                println!("{}{}", path, filename.magenta());
+            }
 
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),

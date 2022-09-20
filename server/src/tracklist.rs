@@ -8,8 +8,8 @@ use tokio::sync::Mutex;
 use crate::{
     api::v1alpha1::{
         tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
-        ClearTracklistRequest, ClearTracklistResponse, FilterTracklistRequest,
-        FilterTracklistResponse, GetNextTrackRequest, GetNextTrackResponse,
+        AddTracksRequest, AddTracksResponse, ClearTracklistRequest, ClearTracklistResponse,
+        FilterTracklistRequest, FilterTracklistResponse, GetNextTrackRequest, GetNextTrackResponse,
         GetPreviousTrackRequest, GetPreviousTrackResponse, GetRandomRequest, GetRandomResponse,
         GetRepeatRequest, GetRepeatResponse, GetSingleRequest, GetSingleResponse,
         GetTracklistTracksRequest, GetTracklistTracksResponse, PlayNextRequest, PlayNextResponse,
@@ -51,6 +51,13 @@ impl TracklistService for Tracklist {
         }]);
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
+    }
+
+    async fn add_tracks(
+        &self,
+        _req: tonic::Request<AddTracksRequest>,
+    ) -> Result<tonic::Response<AddTracksResponse>, tonic::Status> {
+        unimplemented!()
     }
 
     async fn clear_tracklist(
@@ -98,7 +105,11 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<GetNextTrackRequest>,
     ) -> Result<tonic::Response<GetNextTrackResponse>, tonic::Status> {
-        let response = GetNextTrackResponse {};
+        let response = GetNextTrackResponse {
+            track: Some(Track {
+                ..Default::default()
+            }),
+        };
         Ok(tonic::Response::new(response))
     }
 
@@ -106,7 +117,11 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<GetPreviousTrackRequest>,
     ) -> Result<tonic::Response<GetPreviousTrackResponse>, tonic::Status> {
-        let response = GetPreviousTrackResponse {};
+        let response = GetPreviousTrackResponse {
+            track: Some(Track {
+                ..Default::default()
+            }),
+        };
         Ok(tonic::Response::new(response))
     }
 
@@ -147,7 +162,7 @@ impl TracklistService for Tracklist {
                     id: track.id,
                     title: track.title,
                     uri: track.uri,
-                    disc_number: format!("{}", track.track.unwrap_or(0)).parse().unwrap(),
+                    disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
                     artists: vec![Artist {
                         name: track.artist,
                         ..Default::default()
@@ -155,7 +170,7 @@ impl TracklistService for Tracklist {
                     album: Some(Album {
                         // id: track.album_id.unwrap(),
                         title: track.album,
-                        year: format!("{}", track.year.unwrap_or(0)).parse().unwrap(),
+                        year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -167,7 +182,7 @@ impl TracklistService for Tracklist {
                     id: track.id,
                     title: track.title,
                     uri: track.uri,
-                    disc_number: format!("{}", track.track.unwrap_or(0)).parse().unwrap(),
+                    disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
                     artists: vec![Artist {
                         name: track.artist,
                         ..Default::default()
@@ -175,7 +190,7 @@ impl TracklistService for Tracklist {
                     album: Some(Album {
                         // id: track.album_id.unwrap(),
                         title: track.album,
-                        year: format!("{}", track.year.unwrap_or(0)).parse().unwrap(),
+                        year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
                         ..Default::default()
                     }),
                     ..Default::default()

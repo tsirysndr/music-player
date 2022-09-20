@@ -8,6 +8,10 @@ message AddTrackRequest { metadata.v1alpha1.Track track = 1; }
 
 message AddTrackResponse {}
 
+message AddTracksRequest { repeated metadata.v1alpha1.Track tracks = 1; }
+
+message AddTracksResponse {}
+
 message ClearTracklistRequest {}
 
 message ClearTracklistResponse {}
@@ -22,9 +26,9 @@ message GetRepeatResponse {}
 
 message GetSingleResponse {}
 
-message GetNextTrackResponse {}
+message GetNextTrackResponse { metadata.v1alpha1.Track track = 1; }
 
-message GetPreviousTrackResponse {}
+message GetPreviousTrackResponse { metadata.v1alpha1.Track track = 1; }
 
 message RemoveTrackRequest {}
 
@@ -55,12 +59,13 @@ message ShuffleRequest {}
 
 message GetTracklistTracksRequest {}
 
-message PlayNextRequest {}
+message PlayNextRequest { metadata.v1alpha1.Track track = 1; }
 
 message PlayNextResponse {}
 
 service TracklistService {
   rpc AddTrack(AddTrackRequest) returns (AddTrackResponse) {}
+  rpc AddTracks(AddTracksRequest) returns (AddTracksResponse) {}
   rpc ClearTracklist(ClearTracklistRequest) returns (ClearTracklistResponse) {}
   rpc FilterTracklist(FilterTracklistRequest)
       returns (FilterTracklistResponse) {}

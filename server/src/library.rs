@@ -167,7 +167,7 @@ impl LibraryService for Library {
                     album: Some(Album {
                         id: track.album_id.unwrap(),
                         title: track.album,
-                        year: format!("{}", track.year.unwrap_or(0)).parse().unwrap(),
+                        year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
                         ..Default::default()
                     }),
                     ..Default::default()

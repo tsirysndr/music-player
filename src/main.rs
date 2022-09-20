@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, thread};
 
 use clap::Command;
 use music_player_playback::{
@@ -7,7 +7,7 @@ use music_player_playback::{
     player::{Player, PlayerEngine},
 };
 use music_player_server::server::MusicPlayerServer;
-use scan::scan_music_library;
+use scan::{auto_scan_music_library, scan_music_library};
 use tokio::sync::Mutex;
 
 mod scan;
@@ -55,11 +55,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(_matches) = matches.subcommand_matches("scan") {
-        scan_music_library().await.map_err(|e| e.to_string())?;
+        scan_music_library(true).await.map_err(|e| e.to_string())?;
         return Ok(());
     }
 
     migration::run().await;
+
+    thread::spawn(|| {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(auto_scan_music_library());
+    });
 
     MusicPlayerServer::new(Arc::new(Mutex::new(player)))
         .start()

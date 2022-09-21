@@ -9,6 +9,7 @@ use music_player_playback::{
     player::{Player, PlayerEngine},
 };
 use owo_colors::OwoColorize;
+use tabled::{builder::Builder, Style};
 
 use crate::scan::scan_music_library;
 
@@ -35,18 +36,36 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(_) = matches.subcommand_matches("albums") {
         let mut client = LibraryClient::new().await?;
         let result = client.albums().await?;
-        result
-            .iter()
-            .for_each(|album| println!("{} {}", album.id, album.title.magenta()));
+
+        let mut builder = Builder::default();
+        builder.set_columns(["id", "name"]);
+        result.iter().for_each(|album| {
+            builder.add_record([
+                album.id.as_str(),
+                album.title.as_str(),
+            ]);
+        });
+        let table = builder.build().with(Style::psql());
+        println!("\n{}", table);
+
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("artists") {
         let mut client = LibraryClient::new().await?;
         let result = client.artists().await?;
-        result
-            .iter()
-            .for_each(|artist| println!("{} {}", artist.id, artist.name.magenta()));
+
+        let mut builder = Builder::default();
+        builder.set_columns(["id", "name"]);
+        result.iter().for_each(|artist| {
+            builder.add_record([
+                artist.id.as_str(),
+                artist.name.as_str(),
+            ]);
+        });
+        let table = builder.build().with(Style::psql());
+        println!("\n{}", table);
+
         return Ok(());
     }
 
@@ -121,9 +140,18 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(_matches) = matches.subcommand_matches("tracks") {
         let mut client = LibraryClient::new().await?;
         let result = client.songs().await?;
-        result
-            .iter()
-            .for_each(|song| println!("{} {}", song.id, song.title.magenta()));
+
+        let mut builder = Builder::default();
+        builder.set_columns(["id", "title"]);
+        result.iter().for_each(|song| {
+            builder.add_record([
+                song.id.as_str(),
+                song.title.as_str(),
+            ]);
+        });
+        let table = builder.build().with(Style::psql());
+        println!("\n{}", table);
+
         return Ok(());
     }
 

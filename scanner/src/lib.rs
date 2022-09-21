@@ -25,7 +25,7 @@ pub async fn scan_directory(
         let guess = mime_guess::from_path(&path);
         let mime = guess.first_or_octet_stream();
 
-        if mime == "audio/mpeg" || mime == "audio/mp4" || mime == "audio/ogg" {
+        if mime.to_string().contains("audio") {
             match Probe::open(&path)
                 .expect("ERROR: Bad path provided!")
                 .read(true)

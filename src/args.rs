@@ -42,7 +42,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         result.iter().for_each(|album| {
             builder.add_record([
                 album.id.as_str(),
-                album.title.as_str(),
+                album.title.magenta().to_string().as_str(),
             ]);
         });
         let table = builder.build().with(Style::psql());
@@ -60,7 +60,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         result.iter().for_each(|artist| {
             builder.add_record([
                 artist.id.as_str(),
-                artist.name.as_str(),
+                artist.name.magenta().to_string().as_str(),
             ]);
         });
         let table = builder.build().with(Style::psql());
@@ -146,7 +146,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         result.iter().for_each(|song| {
             builder.add_record([
                 song.id.as_str(),
-                song.title.as_str(),
+                song.title.magenta().to_string().as_str(),
             ]);
         });
         let table = builder.build().with(Style::psql());

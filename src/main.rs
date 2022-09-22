@@ -75,7 +75,7 @@ A simple music player written in Rust"#,
                 .subcommand(
                     Command::new("add")
                         .about("Add a song to the queue")
-                        .arg_from_usage("<song> 'The path to the song'"),
+                        .arg_from_usage("<track_id> 'The track id'"),
                 )
                 .subcommand(
                     Command::new("remove")
@@ -101,6 +101,7 @@ A simple music player written in Rust"#,
         .subcommand(Command::new("next").about("Play the next song"))
         .subcommand(Command::new("prev").about("Play the previous song"))
         .subcommand(Command::new("stop").about("Stop the current song"))
+        .subcommand(Command::new("current").about("Show the current song"))
 }
 
 #[tokio::main]

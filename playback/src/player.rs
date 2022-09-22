@@ -50,6 +50,8 @@ pub trait PlayerEngine: Send + Sync {
     async fn wait_for_tracklist(
         mut event: UnboundedReceiver<PlayerEvent>,
     ) -> (Vec<Track>, Vec<Track>);
+    async fn get_current_track(&self) -> Option<Track>;
+    async fn wait_for_current_track(mut channel: UnboundedReceiver<PlayerEvent>) -> Option<Track>;
 }
 
 #[derive(Clone)]
@@ -180,6 +182,17 @@ impl PlayerEngine for Player {
         handle.join().unwrap()
     }
 
+    async fn get_current_track(&self) -> Option<Track> {
+        let channel = self.get_player_event_channel();
+        let handle = thread::spawn(move || {
+            Runtime::new()
+                .unwrap()
+                .block_on(Self::wait_for_current_track(channel))
+        });
+        self.command(PlayerCommand::GetCurrentTrack);
+        handle.join().unwrap()
+    }
+
     async fn wait_for_tracklist(
         mut channel: UnboundedReceiver<PlayerEvent>,
     ) -> (Vec<Track>, Vec<Track>) {
@@ -189,6 +202,15 @@ impl PlayerEngine for Player {
             }
         }
         (vec![], vec![])
+    }
+
+    async fn wait_for_current_track(mut channel: UnboundedReceiver<PlayerEvent>) -> Option<Track> {
+        while let Some(event) = channel.recv().await {
+            if matches!(event, PlayerEvent::CurrentTrack { .. }) {
+                return event.get_current_track().unwrap();
+            }
+        }
+        None
     }
 }
 
@@ -342,6 +364,7 @@ impl PlayerInternal {
             PlayerCommand::Previous => self.handle_previous(),
             PlayerCommand::Clear => self.handle_clear(),
             PlayerCommand::GetTracks => self.handle_get_tracks(),
+            PlayerCommand::GetCurrentTrack => self.handle_get_current_track(),
         }
         Ok(())
     }
@@ -477,6 +500,11 @@ impl PlayerInternal {
     fn handle_get_tracks(&mut self) {
         let tracks = self.tracklist.tracks();
         self.send_event(PlayerEvent::TracklistUpdated { tracks });
+    }
+
+    fn handle_get_current_track(&mut self) {
+        let track = self.tracklist.current_track();
+        self.send_event(PlayerEvent::CurrentTrack { track });
     }
 }
 
@@ -615,6 +643,7 @@ enum PlayerCommand {
     AddEventSender(mpsc::UnboundedSender<PlayerEvent>),
     Clear,
     GetTracks,
+    GetCurrentTrack,
 }
 
 #[derive(Debug, Clone)]
@@ -630,6 +659,7 @@ pub enum PlayerEvent {
     VolumeSet { volume: u16 },
     Error { track_id: String, error: String },
     TracklistUpdated { tracks: (Vec<Track>, Vec<Track>) },
+    CurrentTrack { track: Option<Track> },
 }
 
 impl PlayerEvent {
@@ -645,6 +675,14 @@ impl PlayerEvent {
         use PlayerEvent::*;
         match self {
             TracklistUpdated { tracks, .. } => Some(tracks.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn get_current_track(&self) -> Option<Option<Track>> {
+        use PlayerEvent::*;
+        match self {
+            CurrentTrack { track, .. } => Some(track.clone()),
             _ => None,
         }
     }

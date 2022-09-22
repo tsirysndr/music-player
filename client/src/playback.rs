@@ -1,6 +1,12 @@
-use music_player_server::api::v1alpha1::playback_service_client::PlaybackServiceClient;
+use music_player_server::{
+    api::v1alpha1::{
+        playback_service_client::PlaybackServiceClient, GetCurrentlyPlayingSongRequest,
+        NextRequest, PauseRequest, PlayRequest, PreviousRequest, StopRequest,
+    },
+    metadata::v1alpha1::Track,
+};
 use music_player_settings::{read_settings, Settings};
-use tonic::transport::Channel;
+use tonic::{codegen::http::request, transport::Channel};
 
 pub struct PlaybackClient {
     client: PlaybackServiceClient<Channel>,
@@ -15,39 +21,51 @@ impl PlaybackClient {
         Ok(Self { client })
     }
 
-    pub async fn play(&self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn play(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(PlayRequest {});
+        self.client.play(request).await?;
         Ok(())
     }
 
-    pub async fn pause(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn pause(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(PauseRequest {});
+        self.client.pause(request).await?;
         Ok(())
     }
 
-    pub async fn stop(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn stop(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(StopRequest {});
+        self.client.stop(request).await?;
         Ok(())
     }
 
-    pub async fn next(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn next(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(NextRequest {});
+        self.client.next(request).await?;
         Ok(())
     }
 
-    pub async fn prev(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn prev(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(PreviousRequest {});
+        self.client.previous(request).await?;
         Ok(())
     }
 
-    pub async fn seek(&self, position: u32) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn seek(&mut self, position: u32) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
-    pub async fn set_volume(&self, volume: u32) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn set_volume(&mut self, volume: u32) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
-    pub async fn status(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn status(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
-    pub async fn current(&self) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
+    pub async fn current(&mut self) -> Result<Option<Track>, Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(GetCurrentlyPlayingSongRequest {});
+        let response = self.client.get_currently_playing_song(request).await?;
+        Ok(response.into_inner().track)
     }
 }

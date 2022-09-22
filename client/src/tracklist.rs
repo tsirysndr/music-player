@@ -1,4 +1,10 @@
-use music_player_server::api::v1alpha1::tracklist_service_client::TracklistServiceClient;
+use music_player_server::{
+    api::v1alpha1::{
+        tracklist_service_client::TracklistServiceClient, AddTrackRequest, ClearTracklistRequest,
+        GetTracklistTracksRequest, RemoveTrackRequest,
+    },
+    metadata::v1alpha1::Track,
+};
 use music_player_settings::{read_settings, Settings};
 use tonic::transport::Channel;
 
@@ -15,11 +21,47 @@ impl TracklistClient {
         Ok(Self { client })
     }
 
-    pub async fn add(&self, id: &str) {}
+    pub async fn add(&mut self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(AddTrackRequest {
+            track: Some(Track {
+                id: id.to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        let response = self.client.add_track(request).await?;
+        Ok(())
+    }
 
-    pub async fn clear(&self) {}
+    pub async fn add_tracks(&mut self, ids: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(AddTrackRequest {
+            ..Default::default()
+        });
+        let response = self.client.add_track(request).await?;
+        Ok(())
+    }
 
-    pub async fn list(&self) {}
+    pub async fn clear(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(ClearTracklistRequest {
+            ..Default::default()
+        });
+        let response = self.client.clear_tracklist(request).await?;
+        Ok(())
+    }
 
-    pub async fn remove(&self, id: &str) {}
+    pub async fn list(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(GetTracklistTracksRequest {
+            ..Default::default()
+        });
+        let response = self.client.get_tracklist_tracks(request).await?;
+        Ok(())
+    }
+
+    pub async fn remove(&mut self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(RemoveTrackRequest {
+            ..Default::default()
+        });
+        let response = self.client.remove_track(request).await?;
+        Ok(())
+    }
 }

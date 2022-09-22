@@ -3,12 +3,15 @@ use std::sync::Arc;
 use music_player_playback::player::{Player, PlayerEngine};
 use tokio::sync::Mutex;
 
-use crate::api::v1alpha1::{
-    playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
-    GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
-    GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
-    PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
-    SeekResponse, StopRequest, StopResponse,
+use crate::{
+    api::v1alpha1::{
+        playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
+        GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
+        GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
+        PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
+        SeekResponse, StopRequest, StopResponse,
+    },
+    metadata::v1alpha1::{Album, Artist, Track},
 };
 
 pub struct Playback {
@@ -27,7 +30,32 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<GetCurrentlyPlayingSongRequest>,
     ) -> Result<tonic::Response<GetCurrentlyPlayingSongResponse>, tonic::Status> {
-        let response = GetCurrentlyPlayingSongResponse {};
+        let player = self.player.lock().await;
+        let track = player.get_current_track().await;
+        if track.is_none() {
+            let response = GetCurrentlyPlayingSongResponse { track: None };
+            return Ok(tonic::Response::new(response));
+        }
+        let track = track.unwrap();
+        let response = GetCurrentlyPlayingSongResponse {
+            track: Some(Track {
+                id: track.id,
+                title: track.title,
+                uri: track.uri,
+                disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
+                artists: vec![Artist {
+                    name: track.artist,
+                    ..Default::default()
+                }],
+                album: Some(Album {
+                    // id: track.album_id.unwrap(),
+                    title: track.album,
+                    year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+        };
         Ok(tonic::Response::new(response))
     }
     async fn get_playback_state(

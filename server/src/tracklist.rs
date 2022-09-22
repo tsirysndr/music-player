@@ -3,6 +3,7 @@ use std::sync::Arc;
 use music_player_entity::track;
 use music_player_playback::player::{Player, PlayerEngine};
 use music_player_storage::Database;
+use sea_orm::EntityTrait;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -37,18 +38,15 @@ impl TracklistService for Tracklist {
         request: tonic::Request<AddTrackRequest>,
     ) -> Result<tonic::Response<AddTrackResponse>, tonic::Status> {
         let song = request.get_ref().track.as_ref().unwrap();
-        let artist = match song.artists.len() {
-            0 => "Unknown Artist".to_string(),
-            _ => song.artists[0].name.clone(),
-        };
-        self.player.lock().await.load_tracklist(vec![track::Model {
-            id: song.id.clone(),
-            uri: song.uri.clone(),
-            title: song.title.clone(),
-            album: song.album.clone().unwrap_or_default().title,
-            artist,
-            ..Default::default()
-        }]);
+        let result = track::Entity::find_by_id(song.clone().id)
+            .one(self.db.get_connection())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if result.is_none() {
+            return Err(tonic::Status::not_found("Track not found"));
+        }
+        let track = result.unwrap();
+        self.player.lock().await.load_tracklist(vec![track]);
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }

@@ -26,15 +26,21 @@ message GetTracksRequest {}
 
 message GetTracksResponse { repeated metadata.v1alpha1.Track tracks = 1; }
 
-message GetAlbumDetailsRequest {}
+message GetAlbumDetailsRequest {
+    string id = 1;
+}
 
 message GetAlbumDetailsResponse { metadata.v1alpha1.Album album = 1; }
 
-message GetArtistDetailsRequest {}
+message GetArtistDetailsRequest {
+    string id = 1;
+}
 
 message GetArtistDetailsResponse { metadata.v1alpha1.Artist artist = 1; }
 
-message GetTrackDetailsRequest {}
+message GetTrackDetailsRequest {
+    string id = 1;
+}
 
 message GetTrackDetailsResponse { metadata.v1alpha1.Track track = 1; }
 

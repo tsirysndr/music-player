@@ -110,7 +110,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("queue") {
-        let client = TracklistClient::new().await?;
+        let mut client = TracklistClient::new().await?;
 
         if let Some(matches) = matches.subcommand_matches("list") {
             let all = matches.is_present("all");
@@ -119,8 +119,8 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         }
 
         if let Some(matches) = matches.subcommand_matches("add") {
-            let song = matches.value_of("song").unwrap();
-
+            let id = matches.value_of("track_id").unwrap();
+            client.add(id).await?;
             return Ok(());
         }
 
@@ -144,10 +144,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         let mut builder = Builder::default();
         builder.set_columns(["id", "title"]);
         result.iter().for_each(|song| {
-            builder.add_record([
-                song.id.as_str(),
-                song.title.magenta().to_string().as_str(),
-            ]);
+            builder.add_record([song.id.as_str(), song.title.magenta().to_string().as_str()]);
         });
         let table = builder.build().with(Style::psql());
         println!("\n{}", table);
@@ -163,27 +160,43 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("pause") {
-        let client = PlaybackClient::new().await?;
+        let mut client = PlaybackClient::new().await?;
+        client.pause().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("resume") {
-        let client = PlaybackClient::new().await?;
+        let mut client = PlaybackClient::new().await?;
+        client.play().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("next") {
-        let client = PlaybackClient::new().await?;
+        let mut client = PlaybackClient::new().await?;
+        client.next().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("prev") {
-        let client = PlaybackClient::new().await?;
+        let mut client = PlaybackClient::new().await?;
+        client.prev().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("stop") {
-        let client = PlaybackClient::new().await?;
+        let mut client = PlaybackClient::new().await?;
+        client.stop().await?;
+        return Ok(());
+    }
+
+    if let Some(_) = matches.subcommand_matches("current") {
+        let mut client = PlaybackClient::new().await?;
+        let result = client.current().await?;
+        if result.is_none() {
+            println!("No song is currently playing");
+            return Ok(());
+        }
+        println!("{:?}", result.unwrap());
         return Ok(());
     }
 

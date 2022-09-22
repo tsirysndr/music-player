@@ -2,9 +2,13 @@ syntax = "proto3";
 
 package music.v1alpha1;
 
+import "metadata/v1alpha1/track.proto";
+
 message GetCurrentlyPlayingSongRequest {}
 
-message GetCurrentlyPlayingSongResponse {}
+message GetCurrentlyPlayingSongResponse {
+    metadata.v1alpha1.Track track = 1;
+}
 
 message GetPlaybackStateRequest {}
 

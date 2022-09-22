@@ -179,14 +179,35 @@ impl LibraryService for Library {
 
     async fn get_track_details(
         &self,
-        _request: tonic::Request<GetTrackDetailsRequest>,
+        request: tonic::Request<GetTrackDetailsRequest>,
     ) -> Result<tonic::Response<GetTrackDetailsResponse>, tonic::Status> {
-        track::Entity::find()
+        let result = track::Entity::find_by_id(request.into_inner().id)
             .one(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if result.is_none() {
+            return Err(tonic::Status::not_found("Track not found"));
+        }
+        let track = result.unwrap();
         let response = GetTrackDetailsResponse {
-            track: Some(Track::default()),
+            track: Some(Track {
+                id: track.id,
+                title: track.title,
+                uri: track.uri,
+                duration: track.duration.unwrap_or_default(),
+                disc_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                artists: vec![Artist {
+                    name: track.artist,
+                    ..Default::default()
+                }],
+                album: Some(Album {
+                    id: track.album_id.unwrap(),
+                    title: track.album,
+                    year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
         };
         Ok(tonic::Response::new(response))
     }

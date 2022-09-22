@@ -33,10 +33,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                 Err(_) => (),
             }
 
-            let id = format!(
-                "{:x}",
-                md5::compute(format!("{}{}", song.album, song.artist))
-            );
+            let id = format!("{:x}", md5::compute(format!("{}", song.album)));
             let item = album::ActiveModel {
                 id: ActiveValue::set(id),
                 title: ActiveValue::Set(song.album.clone()),
@@ -67,7 +64,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                 uri: ActiveValue::Set(song.uri.clone().unwrap_or_default()),
                 album_id: ActiveValue::Set(Some(format!(
                     "{:x}",
-                    md5::compute(format!("{}{}", song.album, song.artist))
+                    md5::compute(format!("{}", song.album))
                 ))),
             };
 

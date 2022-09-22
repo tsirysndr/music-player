@@ -112,9 +112,24 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(matches) = matches.subcommand_matches("queue") {
         let mut client = TracklistClient::new().await?;
 
-        if let Some(matches) = matches.subcommand_matches("list") {
-            let all = matches.is_present("all");
-
+        if let Some(_) = matches.subcommand_matches("list") {
+            let (mut previous_tracks, next_tracks) = client.list().await?;
+            let last_track = previous_tracks.pop().unwrap();
+            for (i, track) in previous_tracks.iter().enumerate() {
+                println!("{} {}", format_number(i + 1), track.title);
+            }
+            println!(
+                "{} {}",
+                format_number(previous_tracks.len() + 1).magenta(),
+                last_track.title.magenta()
+            );
+            for (i, track) in next_tracks.iter().enumerate() {
+                println!(
+                    "{} {}",
+                    format_number(i + previous_tracks.len() + 2),
+                    track.title
+                );
+            }
             return Ok(());
         }
 
@@ -196,9 +211,34 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
             println!("No song is currently playing");
             return Ok(());
         }
-        println!("{:?}", result.unwrap());
+
+        let result = result.unwrap();
+        let artists = result.artists;
+        let title = result.title;
+        println!("");
+        println!("Title  : {}", title.magenta());
+        println!(
+            "Artist : {}",
+            artists
+                .iter()
+                .map(|a| a.name.clone())
+                .collect::<Vec<String>>()
+                .join(", ")
+                .magenta()
+        );
+        let album = result.album;
+        if album.is_some() {
+            println!("Album  : {}", album.unwrap().title.magenta());
+        }
         return Ok(());
     }
 
     return Err("No subcommand found".into());
+}
+
+fn format_number(number: usize) -> String {
+    if number < 10 {
+        return format!("0{}", number);
+    }
+    format!("{}", number)
 }

@@ -49,12 +49,13 @@ impl TracklistClient {
         Ok(())
     }
 
-    pub async fn list(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn list(&mut self) -> Result<(Vec<Track>, Vec<Track>), Box<dyn std::error::Error>> {
         let request = tonic::Request::new(GetTracklistTracksRequest {
             ..Default::default()
         });
         let response = self.client.get_tracklist_tracks(request).await?;
-        Ok(())
+        let response = response.into_inner();
+        Ok((response.previous_tracks, response.next_tracks))
     }
 
     pub async fn remove(&mut self, id: &str) -> Result<(), Box<dyn std::error::Error>> {

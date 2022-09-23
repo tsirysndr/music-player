@@ -1575,7 +1575,7 @@ checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
 name = "music-player"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "clap",
  "daemonize",
@@ -1655,7 +1655,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-scanner"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "dirs",
  "futures",
@@ -1671,7 +1671,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "cuid",
  "futures",

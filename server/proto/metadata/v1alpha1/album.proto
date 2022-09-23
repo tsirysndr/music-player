@@ -13,6 +13,7 @@ message Song {
   repeated SongArtist artists = 4;
   int32 duration = 5;
   int32 disc_number = 6;
+  int32 track_number = 7;
 }
 
 message Album {

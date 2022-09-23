@@ -13,6 +13,7 @@ message Track {
   repeated metadata.v1alpha1.Artist artists = 4;
   float duration = 5;
   int32 disc_number = 6;
-  metadata.v1alpha1.Lyrics lyrics = 7;
-  string uri = 8;
+  int32 track_number = 7;
+  metadata.v1alpha1.Lyrics lyrics = 8;
+  string uri = 9;
 }

@@ -1,7 +1,7 @@
 use std::{sync::Arc, thread};
 
 use args::parse_args;
-use clap::Command;
+use clap::{arg, Command};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -37,7 +37,9 @@ A simple music player written in Rust"#,
                 .arg_from_usage("<song> 'The path to the song'"),
         )
         .subcommand(Command::new("scan").about("Scan music library: $HOME/Music"))
-        .subcommand(Command::new("albums").about("List all albums"))
+        .subcommand(Command::new("albums").arg(
+            arg!(-i --id <id> "Show the album with the given id").required(false)
+        ).about("List all albums"))
         .subcommand(Command::new("artists").about("List all artists"))
         .subcommand(
             Command::new("playlist")
@@ -62,6 +64,11 @@ A simple music player written in Rust"#,
                 )
                 .subcommand(Command::new("shuffle").about("Shuffle the playlist"))
                 .subcommand(Command::new("all").about("List all songs in the playlist"))
+                .subcommand(
+                    Command::new("show")
+                        .about("Show the playlist details")
+                        .arg_from_usage("<id> 'The track id'")
+                )
                 .about("Manage playlists")
                 .arg_required_else_help(true),
         )

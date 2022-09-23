@@ -2,7 +2,7 @@ use futures::future::FutureExt;
 use music_player_entity::{album, artist, track};
 use music_player_scanner::scan_directory;
 use music_player_storage::Database;
-use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait, ModelTrait, QueryOrder};
 use std::sync::Arc;
 
 use crate::api::v1alpha1::{
@@ -11,7 +11,7 @@ use crate::api::v1alpha1::{
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
     GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
-use crate::metadata::v1alpha1::{Album, Artist, Track};
+use crate::metadata::v1alpha1::{Album, Artist, Song, Track};
 
 pub struct Library {
     db: Arc<Database>,
@@ -159,7 +159,7 @@ impl LibraryService for Library {
                     title: track.title,
                     uri: track.uri,
                     duration: track.duration.unwrap_or_default(),
-                    disc_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                    track_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
                     artists: vec![Artist {
                         name: track.artist,
                         ..Default::default()
@@ -195,7 +195,7 @@ impl LibraryService for Library {
                 title: track.title,
                 uri: track.uri,
                 duration: track.duration.unwrap_or_default(),
-                disc_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                track_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
                 artists: vec![Artist {
                     name: track.artist,
                     ..Default::default()
@@ -214,15 +214,37 @@ impl LibraryService for Library {
 
     async fn get_album_details(
         &self,
-        _request: tonic::Request<GetAlbumDetailsRequest>,
+        request: tonic::Request<GetAlbumDetailsRequest>,
     ) -> Result<tonic::Response<GetAlbumDetailsResponse>, tonic::Status> {
-        album::Entity::find()
+        let result = album::Entity::find_by_id(request.into_inner().id)
             .one(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let response = GetAlbumDetailsResponse {
-            album: Some(Album::default()),
-        };
+        if result.is_none() {
+            return Err(tonic::Status::not_found("Album not found"));
+        }
+        let album = result.unwrap();
+        let tracks = album
+            .find_related(track::Entity)
+            .order_by_asc(track::Column::Track)
+            .all(self.db.get_connection())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let album = Some(Album {
+            id: album.id,
+            title: album.title,
+            tracks: tracks
+                .into_iter()
+                .map(|track| Song {
+                    id: track.id,
+                    title: track.title,
+                    track_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        });
+        let response = GetAlbumDetailsResponse { album };
         Ok(tonic::Response::new(response))
     }
 

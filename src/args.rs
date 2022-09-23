@@ -33,8 +33,34 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         return Ok(());
     }
 
-    if let Some(_) = matches.subcommand_matches("albums") {
+    if let Some(matches) = matches.subcommand_matches("albums") {
         let mut client = LibraryClient::new().await?;
+
+        if matches.is_present("id") {
+            let id = matches.value_of("id").unwrap();
+            let album = client.album(id).await?;
+            if album.is_none() {
+                return Err("Album not found".into());
+            }
+            let album = album.unwrap();
+
+            let mut builder = Builder::default();
+            builder.set_columns(["id", "title", "album"]);
+            album.tracks.iter().for_each(|track| {
+                let title = format!(
+                    "{} {}",
+                    format_number(usize::try_from(track.track_number).unwrap()),
+                    track.title
+                );
+                let album_title = album.title.to_string();
+                builder.add_record([track.id.as_str(), title.as_str(), album_title.as_str()]);
+            });
+            let table = builder.build().with(Style::psql());
+            println!("\n{}", table);
+
+            return Ok(());
+        }
+
         let result = client.albums().await?;
 
         let mut builder = Builder::default();

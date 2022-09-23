@@ -20,6 +20,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Installing needed dependencies
         run: brew install protobuf
+      - name: Install aarch64-apple-darwin toolchain
+        uses: actions-rs/cargo@v1
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: rustup target add aarch64-apple-darwin
       - name: Running cargo build
         uses: actions-rs/cargo@v1
         with:

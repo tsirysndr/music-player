@@ -12,6 +12,8 @@ jobs:
         include:
           - target: x86_64-apple-darwin
             archive: tar.gz tar.xz
+          - target: aarch64-apple-darwin
+            archive: tar.gz tar.xz
 
     steps:
       - uses: actions/checkout@master

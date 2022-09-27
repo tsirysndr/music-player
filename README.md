@@ -21,8 +21,8 @@
   </a>
 </p>
 
-<p style="margin-top: 50px; margin-bottom: 50px;">
-<img src="./cover.svg" height="300" />
+<p style="margin-top: 20px; margin-bottom: 50px;">
+<img src="./preview.png" width="100%" />
 </p>
 
 Note: This is a work in progress.

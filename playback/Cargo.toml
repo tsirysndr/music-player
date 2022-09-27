@@ -28,7 +28,7 @@ rand = { version = "0.8.5", features = ["small_rng"] }
 rand_distr = "0.4.3"
 rb = "0.4.1"
 rodio  = { version = "0.15" }
-symphonia = { version = "0.5.1", features = ["aac", "alac", "mp3"] }
+symphonia = { version = "0.5.1", features = ["aac", "alac", "mp3", "isomp4", "flac"] }
 thiserror = "1.0.34"
 tokio = { version = "1.21.0", features = ["full"] }
 zerocopy = "0.6.1"

@@ -14,6 +14,7 @@ use tokio::sync::Mutex;
 
 mod args;
 mod scan;
+mod ui;
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -80,3 +80,5 @@ lofty = "0.8.1"
 owo-colors = "3.5.0"
 daemonize = "0.4.1"
 tabled = "0.8.0"
+crossterm = { version = "0.25.0", features = ["serde"] }
+tui = { version = "0.19.0", features = ["crossterm", "serde"] }

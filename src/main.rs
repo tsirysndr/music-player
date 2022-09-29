@@ -1,20 +1,46 @@
-use std::{sync::Arc, thread};
+use std::{
+    io::{self, stdout},
+    sync::Arc,
+    thread,
+};
 
+use app::{ActiveBlock, App, RouteId};
 use args::parse_args;
 use clap::{arg, Command};
+use crossterm::{
+    cursor::MoveTo,
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute,
+    terminal::{
+        disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
+    },
+    ExecutableCommand,
+};
+use event::Key;
+use migration::SeaRc;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
     player::Player,
 };
 use music_player_server::server::MusicPlayerServer;
+use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
 use scan::auto_scan_music_library;
 use tokio::sync::Mutex;
+use tui::{
+    backend::{Backend, CrosstermBackend},
+    Terminal,
+};
 
+mod app;
 mod args;
+mod event;
+mod handlers;
+mod network;
 mod scan;
 mod ui;
+mod user_config;
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -148,7 +174,96 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         runtime.block_on(auto_scan_music_library());
     });
 
-    MusicPlayerServer::new(Arc::new(Mutex::new(player)))
+    let start_server = MusicPlayerServer::new(Arc::new(Mutex::new(player)))
         .start()
-        .await
+        .await;
+    if start_server.is_err() {
+        let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
+        let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
+        return start_ui(&app).await;
+    }
+    start_server
+}
+
+#[tokio::main]
+async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IoEvent>, network: &mut Network) {
+    while let Ok(io_event) = io_rx.recv() {
+        network.handle_network_event(io_event).await;
+    }
+}
+
+async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error>> {
+    // Terminal initialization
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    enable_raw_mode()?;
+
+    let mut backend = CrosstermBackend::new(stdout);
+
+    backend.execute(SetTitle("mpt - Music Player TUI"))?;
+
+    let mut terminal = Terminal::new(backend)?;
+    terminal.hide_cursor()?;
+
+    let events = event::Events::new(800);
+
+    loop {
+        let mut app = app.lock().await;
+
+        if let Ok(size) = terminal.backend().size() {
+            app.size = size;
+        }
+
+        let current_route = app.get_current_route();
+        terminal.draw(|mut f| ui::draw_main_layout(&mut f, &app))?;
+
+        if current_route.active_block == ActiveBlock::Input {
+            terminal.show_cursor()?;
+        } else {
+            terminal.hide_cursor()?;
+        }
+
+        let cursor_offset = if app.size.height > ui::util::SMALL_TERMINAL_HEIGHT {
+            2
+        } else {
+            1
+        };
+
+        // Put the cursor back inside the input box
+        terminal.backend_mut().execute(MoveTo(
+            cursor_offset + app.input_cursor_position,
+            cursor_offset,
+        ))?;
+
+        match events.next()? {
+            event::Event::Input(key) => {
+                if key == Key::Ctrl('c') {
+                    break;
+                }
+                if key == app.user_config.keys.back {
+                    let pop_result = match app.pop_navigation_stack() {
+                        Some(ref x) if x.id == RouteId::Search => app.pop_navigation_stack(),
+                        Some(x) => Some(x),
+                        None => None,
+                    };
+                    if pop_result.is_none() {
+                        break; // Exit application
+                    }
+                } else {
+                    handlers::handle_app(key, &mut app);
+                }
+            }
+            event::Event::Tick => {}
+        }
+    }
+
+    close_application()?;
+    Ok(())
+}
+
+fn close_application() -> Result<(), Box<dyn std::error::Error>> {
+    disable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, LeaveAlternateScreen, DisableMouseCapture)?;
+    Ok(())
 }

@@ -9,6 +9,7 @@ use crate::app::{AlbumTable, App, ArtistTable, TrackTable};
 
 #[derive(Debug)]
 pub enum IoEvent {
+    PlayTrack(String),
     NextTrack,
     PreviousTrack,
     GetTracks,
@@ -52,6 +53,7 @@ impl<'a> Network<'a> {
         io_event: IoEvent,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match io_event {
+            IoEvent::PlayTrack(track_id) => self.play_track(track_id).await,
             IoEvent::NextTrack => self.next_track().await,
             IoEvent::PreviousTrack => self.previous_track().await,
             IoEvent::GetTracks => self.get_tracks().await,
@@ -67,6 +69,11 @@ impl<'a> Network<'a> {
             IoEvent::Play => self.play().await,
             IoEvent::Pause => self.pause().await,
         }
+    }
+
+    async fn play_track(&mut self, track_id: String) -> Result<(), Box<dyn std::error::Error>> {
+        self.tracklist.add(&track_id).await?;
+        Ok(())
     }
 
     async fn next_track(&mut self) -> Result<(), Box<dyn std::error::Error>> {

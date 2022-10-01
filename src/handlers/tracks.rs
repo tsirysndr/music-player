@@ -1,4 +1,4 @@
-use crate::{app::App, event::Key};
+use crate::{app::App, event::Key, network::IoEvent};
 
 use super::common_key_events;
 
@@ -22,6 +22,13 @@ pub fn handler(key: Key, app: &mut App) {
         k if common_key_events::high_event(k) => {
             let next_index = common_key_events::on_high_press_handler();
             app.track_table.selected_index = next_index;
+        }
+        Key::Enter => {
+            app.dispatch(IoEvent::PlayTrack(
+                app.track_table.tracks[app.track_table.selected_index]
+                    .id
+                    .clone(),
+            ));
         }
         _ => (),
     }

@@ -262,7 +262,7 @@ where
             },
             TableHeaderItem {
                 text: "Duration",
-                width: get_percentage_width(layout_chunk.width, 0.1),
+                width: get_percentage_width(layout_chunk.width, 0.2),
                 ..Default::default()
             },
         ],

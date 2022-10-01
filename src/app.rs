@@ -47,6 +47,7 @@ pub struct App {
     pub artist_table: ArtistTable,
     pub album_table: AlbumTable,
     pub track_table: TrackTable,
+    pub selected_album: Option<Album>,
 }
 
 impl App {
@@ -67,6 +68,7 @@ impl App {
             track_table: Default::default(),
             artist_table: Default::default(),
             album_table: Default::default(),
+            selected_album: None,
         }
     }
 

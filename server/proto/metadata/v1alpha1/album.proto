@@ -11,7 +11,7 @@ message Song {
   string id = 1;
   string title = 2;
   repeated SongArtist artists = 4;
-  int32 duration = 5;
+  float duration = 5;
   int32 disc_number = 6;
   int32 track_number = 7;
 }

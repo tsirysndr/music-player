@@ -1,6 +1,7 @@
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, tracklist::TracklistClient,
 };
+use music_player_server::metadata::v1alpha1::{Artist, Track};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -12,6 +13,7 @@ pub enum IoEvent {
     PreviousTrack,
     GetTracks,
     GetAlbums,
+    GetAlbum(String),
     GetArtists,
     GetPlayQueue,
     GetAlbumTracks(String),
@@ -54,6 +56,7 @@ impl<'a> Network<'a> {
             IoEvent::PreviousTrack => self.previous_track().await,
             IoEvent::GetTracks => self.get_tracks().await,
             IoEvent::GetAlbums => self.get_albums().await,
+            IoEvent::GetAlbum(id) => self.get_album(id).await,
             IoEvent::GetArtists => self.get_artists().await,
             IoEvent::GetPlayQueue => self.get_play_queue().await,
             IoEvent::GetAlbumTracks(id) => self.get_album_tracks(id).await,
@@ -89,6 +92,36 @@ impl<'a> Network<'a> {
         let mut app = self.app.lock().await;
         app.album_table = AlbumTable {
             albums,
+            selected_index: 0,
+        };
+        Ok(())
+    }
+
+    async fn get_album(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+        let album = self.library.album(&id).await?;
+        let mut app = self.app.lock().await;
+        let tracks = album
+            .unwrap_or_default()
+            .tracks
+            .iter()
+            .map(|t| Track {
+                id: t.id.clone(),
+                title: t.title.clone(),
+                track_number: t.track_number,
+                duration: t.duration,
+                artists: t
+                    .artists
+                    .iter()
+                    .map(|a| Artist {
+                        name: a.name.clone(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            })
+            .collect();
+        app.track_table = TrackTable {
+            tracks,
             selected_index: 0,
         };
         Ok(())

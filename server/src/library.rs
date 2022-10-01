@@ -11,7 +11,7 @@ use crate::api::v1alpha1::{
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
     GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
-use crate::metadata::v1alpha1::{Album, Artist, Song, Track};
+use crate::metadata::v1alpha1::{Album, Artist, Song, SongArtist, Track};
 
 pub struct Library {
     db: Arc<Database>,
@@ -242,6 +242,11 @@ impl LibraryService for Library {
                     id: track.id,
                     title: track.title,
                     track_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                    duration: track.duration.unwrap_or_default(),
+                    artists: vec![SongArtist {
+                        name: track.artist,
+                        ..Default::default()
+                    }],
                     ..Default::default()
                 })
                 .collect(),

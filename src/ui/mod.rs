@@ -242,7 +242,72 @@ pub fn draw_album_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    todo!()
+    let header = TableHeader {
+        id: TableId::Song,
+        items: vec![
+            TableHeaderItem {
+                text: "#",
+                width: get_percentage_width(layout_chunk.width, 0.1),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                id: ColumnId::Title,
+                text: "Title",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+            },
+            TableHeaderItem {
+                text: "Artist",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Duration",
+                width: get_percentage_width(layout_chunk.width, 0.1),
+                ..Default::default()
+            },
+        ],
+    };
+
+    let items = app
+        .track_table
+        .tracks
+        .iter()
+        .map(|item| TableItem {
+            id: item.id.clone(),
+            format: vec![
+                item.track_number.to_string(),
+                item.title.clone(),
+                item.artists
+                    .iter()
+                    .map(|a| a.name.to_owned())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                millis_to_minutes((item.duration * 1000.0) as u128),
+            ],
+        })
+        .collect::<Vec<TableItem>>();
+
+    let current_route = app.get_current_route();
+    let highlight_state = (
+        current_route.active_block == ActiveBlock::TrackTable,
+        current_route.hovered_block == ActiveBlock::TrackTable,
+    );
+
+    let title = format!(
+        "{} by {}",
+        app.album_table.albums[app.album_table.selected_index].title,
+        app.album_table.albums[app.album_table.selected_index].artist
+    );
+
+    draw_table(
+        f,
+        app,
+        layout_chunk,
+        (&title, &header),
+        &items,
+        app.track_table.selected_index,
+        highlight_state,
+    )
 }
 
 pub fn draw_artist_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)

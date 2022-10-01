@@ -39,26 +39,27 @@ pub fn handler(key: Key, app: &mut App) {
         // `library` should probably be an array of structs with enums rather than just using indexes
         // like this
         Key::Enter => match app.library.selected_index {
-            // Made For You,
+            //  Tracks,
             0 => {
-                //app.dispatch(IoEvent::GetPlayQueue(None));
-                app.push_navigation_stack(RouteId::PlayQueue, ActiveBlock::PlayQueue);
+                app.dispatch(IoEvent::GetTracks);
+                app.push_navigation_stack(RouteId::TrackTable, ActiveBlock::TrackTable);
             }
             // Albums,
             1 => {
-                //app.dispatch(IoEvent::GetAlbums(None));
+                app.dispatch(IoEvent::GetAlbums);
                 app.push_navigation_stack(RouteId::AlbumList, ActiveBlock::AlbumList);
             }
-            //  Tracks,
-            2 => {
-                //app.dispatch(IoEvent::GetTracks(None));
-                app.push_navigation_stack(RouteId::TrackTable, ActiveBlock::TrackTable);
-            }
             //  Artists,
-            3 => {
-                //app.dispatch(IoEvent::GetArtists(None));
+            2 => {
+                app.dispatch(IoEvent::GetArtists);
                 app.push_navigation_stack(RouteId::Artists, ActiveBlock::Artists);
             }
+            // PlayQueue,
+            3 => {
+                app.dispatch(IoEvent::GetPlayQueue);
+                app.push_navigation_stack(RouteId::PlayQueue, ActiveBlock::PlayQueue);
+            }
+
             // This is required because Rust can't tell if this pattern in exhaustive
             _ => {}
         },

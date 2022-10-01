@@ -180,7 +180,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if start_server.is_err() {
         let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
         let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
-        return start_ui(&app).await;
+        let cloned_app = Arc::clone(&app);
+        std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            match runtime.block_on(Network::new(&app)) {
+                Ok(mut network) => start_tokio(sync_io_rx, &mut network),
+                Err(err) => println!("{}", err),
+            }
+        });
+        return start_ui(&cloned_app).await;
     }
     start_server
 }
@@ -206,6 +217,8 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
     terminal.hide_cursor()?;
 
     let events = event::Events::new(800);
+
+    let mut is_first_render = true;
 
     loop {
         let mut app = app.lock().await;
@@ -254,6 +267,11 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
                 }
             }
             event::Event::Tick => {}
+        }
+
+        if is_first_render {
+            app.dispatch(IoEvent::GetTracks);
+            is_first_render = false;
         }
     }
 

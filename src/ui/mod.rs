@@ -1,9 +1,11 @@
+use std::default;
+
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Span, Text},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Row, Table},
     Frame,
 };
 
@@ -12,7 +14,7 @@ use crate::{
     ui::util::SMALL_TERMINAL_WIDTH,
 };
 
-use self::util::get_color;
+use self::util::{get_color, get_percentage_width, millis_to_minutes};
 
 pub mod util;
 
@@ -20,12 +22,17 @@ pub enum TableId {
     Album,
     AlbumList,
     Artist,
+    ArtistList,
     Song,
 }
 
+#[derive(Default)]
 pub enum ColumnId {
+    #[default]
     None,
     Title,
+    Artist,
+    Album,
 }
 
 pub struct TableHeader<'a> {
@@ -33,6 +40,7 @@ pub struct TableHeader<'a> {
     items: Vec<TableHeaderItem<'a>>,
 }
 
+#[derive(Default)]
 pub struct TableHeaderItem<'a> {
     id: ColumnId,
     text: &'a str,
@@ -234,54 +242,113 @@ pub fn draw_album_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
+    todo!()
 }
 
 pub fn draw_artist_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    let artist_items: Vec<String> = Vec::new();
+    let header = TableHeader {
+        id: TableId::ArtistList,
+        items: vec![TableHeaderItem {
+            id: ColumnId::Artist,
+            text: "Name",
+            width: get_percentage_width(layout_chunk.width, 0.3),
+        }],
+    };
+
+    let items = app
+        .artist_table
+        .artists
+        .iter()
+        .map(|item| TableItem {
+            id: item.id.clone(),
+            format: vec![item.name.clone()],
+        })
+        .collect::<Vec<TableItem>>();
 
     let current_route = app.get_current_route();
-
     let highlight_state = (
         current_route.active_block == ActiveBlock::Artists,
         current_route.hovered_block == ActiveBlock::Artists,
     );
 
-    draw_selectable_list(
+    draw_table(
         f,
         app,
         layout_chunk,
-        "Artists",
-        &artist_items,
+        ("Artists", &header),
+        &items,
+        app.artist_table.selected_index,
         highlight_state,
-        None,
-    );
+    )
 }
 
 pub fn draw_song_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    let track_items: Vec<String> = Vec::new();
+    let header = TableHeader {
+        id: TableId::Song,
+        items: vec![
+            TableHeaderItem {
+                id: ColumnId::Title,
+                text: "Title",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+            },
+            TableHeaderItem {
+                text: "Artist",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Album",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Duration",
+                width: get_percentage_width(layout_chunk.width, 0.1),
+                ..Default::default()
+            },
+        ],
+    };
+
+    let items = app
+        .track_table
+        .tracks
+        .iter()
+        .map(|item| TableItem {
+            id: item.id.clone(),
+            format: vec![
+                item.title.clone(),
+                item.artists
+                    .iter()
+                    .map(|a| a.name.to_owned())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                item.album.clone().unwrap_or_default().title,
+                millis_to_minutes((item.duration * 1000.0) as u128),
+            ],
+        })
+        .collect::<Vec<TableItem>>();
 
     let current_route = app.get_current_route();
-
     let highlight_state = (
         current_route.active_block == ActiveBlock::TrackTable,
         current_route.hovered_block == ActiveBlock::TrackTable,
     );
 
-    draw_selectable_list(
+    draw_table(
         f,
         app,
         layout_chunk,
-        "Tracks",
-        &track_items,
+        ("Tracks", &header),
+        &items,
+        app.track_table.selected_index,
         highlight_state,
-        None,
-    );
+    )
 }
 
 pub fn draw_home<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
@@ -294,24 +361,56 @@ pub fn draw_album_list<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    let album_items: Vec<String> = Vec::new();
+    let header = TableHeader {
+        id: TableId::AlbumList,
+        items: vec![
+            TableHeaderItem {
+                id: ColumnId::Title,
+                text: "Title",
+                width: get_percentage_width(layout_chunk.width, 0.4),
+            },
+            TableHeaderItem {
+                text: "Artist",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Year",
+                width: get_percentage_width(layout_chunk.width, 0.1),
+                ..Default::default()
+            },
+        ],
+    };
+
+    let items = app
+        .album_table
+        .albums
+        .iter()
+        .map(|item| TableItem {
+            id: item.id.clone(),
+            format: vec![
+                item.title.clone(),
+                item.artist.clone(),
+                item.year.to_string(),
+            ],
+        })
+        .collect::<Vec<TableItem>>();
 
     let current_route = app.get_current_route();
-
     let highlight_state = (
         current_route.active_block == ActiveBlock::AlbumList,
         current_route.hovered_block == ActiveBlock::AlbumList,
     );
 
-    draw_selectable_list(
+    draw_table(
         f,
         app,
         layout_chunk,
-        "Albums",
-        &album_items,
+        ("Albums", &header),
+        &items,
+        app.album_table.selected_index,
         highlight_state,
-        None,
-    );
+    )
 }
 
 pub fn draw_artist_albums<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
@@ -326,10 +425,68 @@ where
 {
 }
 
-pub fn draw_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
-where
+fn draw_table<B>(
+    f: &mut Frame<B>,
+    app: &App,
+    layout_chunk: Rect,
+    table_layout: (&str, &TableHeader), // (title, header colums)
+    items: &[TableItem], // The nested vector must have the same length as the `header_columns`
+    selected_index: usize,
+    highlight_state: (bool, bool),
+) where
     B: Backend,
 {
+    let selected_style =
+        get_color(highlight_state, app.user_config.theme).add_modifier(Modifier::BOLD);
+
+    let (title, header) = table_layout;
+
+    // Make sure that the selected item is visible on the page. Need to add some rows of padding
+    // to chunk height for header and header space to get a true table height
+    let padding = 5;
+    let offset = layout_chunk
+        .height
+        .checked_sub(padding)
+        .and_then(|height| selected_index.checked_sub(height as usize))
+        .unwrap_or(0);
+
+    let rows = items.iter().skip(offset).enumerate().map(|(i, item)| {
+        let mut formatted_row = item.format.clone();
+        let mut style = Style::default().fg(app.user_config.theme.text); // default styling
+
+        // Next check if the item is under selection.
+        if Some(i) == selected_index.checked_sub(offset) {
+            style = selected_style;
+        }
+
+        // Return row styled data
+        Row::new(formatted_row).style(style)
+    });
+
+    let widths = header
+        .items
+        .iter()
+        .map(|h| Constraint::Length(h.width))
+        .collect::<Vec<tui::layout::Constraint>>();
+
+    let table = Table::new(rows)
+        .header(
+            Row::new(header.items.iter().map(|h| h.text))
+                .style(Style::default().fg(app.user_config.theme.header)),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(app.user_config.theme.text))
+                .title(Span::styled(
+                    title,
+                    get_color(highlight_state, app.user_config.theme),
+                ))
+                .border_style(get_color(highlight_state, app.user_config.theme)),
+        )
+        .style(Style::default().fg(app.user_config.theme.text))
+        .widths(&widths);
+    f.render_widget(table, layout_chunk);
 }
 
 pub fn draw_play_queue<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)

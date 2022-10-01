@@ -53,6 +53,7 @@ impl LibraryService for Library {
                         "{:x}",
                         md5::compute(song.artist.to_string())
                     ))),
+                    year: ActiveValue::Set(song.year),
                 };
                 match item.insert(db.get_connection()).await {
                     Ok(_) => (),
@@ -136,6 +137,8 @@ impl LibraryService for Library {
                 .map(|album| Album {
                     id: album.id,
                     title: album.title,
+                    artist: album.artist,
+                    year: album.year.unwrap_or_default() as i32,
                     ..Default::default()
                 })
                 .collect(),

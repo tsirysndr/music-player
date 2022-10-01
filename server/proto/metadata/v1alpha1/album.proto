@@ -22,6 +22,7 @@ message Album {
   string cover = 3;
   string release_date = 4;
   int32 year = 5;
-  repeated string genres = 6;
-  repeated Song tracks = 7;
+  string artist = 6;
+  repeated string genres = 7;
+  repeated Song tracks = 8;
 }

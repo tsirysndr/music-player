@@ -1,11 +1,144 @@
+use music_player_client::{
+    library::LibraryClient, playback::PlaybackClient, tracklist::TracklistClient,
+};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+use crate::app::{AlbumTable, App, ArtistTable, TrackTable};
+
 #[derive(Debug)]
 pub enum IoEvent {
     NextTrack,
     PreviousTrack,
+    GetTracks,
+    GetAlbums,
+    GetArtists,
+    GetPlayQueue,
+    GetAlbumTracks(String),
+    AddItemToQueue(String),
+    Shuffle(bool),
+    Repeat(bool),
+    GetCurrentPlayback,
+    Play,
+    Pause,
 }
 
-pub struct Network {}
+pub struct Network<'a> {
+    pub app: &'a Arc<Mutex<App>>,
+    library: LibraryClient,
+    playback: PlaybackClient,
+    tracklist: TracklistClient,
+    playlist: PlaybackClient,
+}
 
-impl Network {
-    pub async fn handle_network_event(&self, event: IoEvent) {}
+impl<'a> Network<'a> {
+    pub async fn new(app: &'a Arc<Mutex<App>>) -> Result<Network<'a>, Box<dyn std::error::Error>> {
+        let library = LibraryClient::new().await?;
+        let playback = PlaybackClient::new().await?;
+        let tracklist = TracklistClient::new().await?;
+        let playlist = PlaybackClient::new().await?;
+        Ok(Network {
+            app,
+            library,
+            playback,
+            tracklist,
+            playlist,
+        })
+    }
+    pub async fn handle_network_event(
+        &mut self,
+        io_event: IoEvent,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match io_event {
+            IoEvent::NextTrack => self.next_track().await,
+            IoEvent::PreviousTrack => self.previous_track().await,
+            IoEvent::GetTracks => self.get_tracks().await,
+            IoEvent::GetAlbums => self.get_albums().await,
+            IoEvent::GetArtists => self.get_artists().await,
+            IoEvent::GetPlayQueue => self.get_play_queue().await,
+            IoEvent::GetAlbumTracks(id) => self.get_album_tracks(id).await,
+            IoEvent::AddItemToQueue(id) => self.add_item_to_queue(id).await,
+            IoEvent::Shuffle(enable) => self.shuffle(enable).await,
+            IoEvent::Repeat(enable) => self.repeat(enable).await,
+            IoEvent::GetCurrentPlayback => self.get_current_playback().await,
+            IoEvent::Play => self.play().await,
+            IoEvent::Pause => self.pause().await,
+        }
+    }
+
+    async fn next_track(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.playback.next().await
+    }
+
+    async fn previous_track(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.playback.prev().await
+    }
+
+    async fn get_tracks(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let tracks = self.library.songs().await?;
+        let mut app = self.app.lock().await;
+        app.track_table = TrackTable {
+            tracks,
+            selected_index: 0,
+        };
+        Ok(())
+    }
+
+    async fn get_albums(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let albums = self.library.albums().await?;
+        let mut app = self.app.lock().await;
+        app.album_table = AlbumTable {
+            albums,
+            selected_index: 0,
+        };
+        Ok(())
+    }
+
+    async fn get_artists(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let artists = self.library.artists().await?;
+        let mut app = self.app.lock().await;
+        app.artist_table = ArtistTable {
+            artists,
+            selected_index: 0,
+        };
+        Ok(())
+    }
+
+    async fn get_play_queue(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let (played_tracks, next_tracks) = self.tracklist.list().await?;
+        let mut app = self.app.lock().await;
+        app.track_table = TrackTable {
+            tracks: [played_tracks, next_tracks].concat(),
+            selected_index: 0,
+        };
+        Ok(())
+    }
+
+    async fn get_album_tracks(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
+
+    async fn add_item_to_queue(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
+
+    async fn shuffle(&mut self, enable: bool) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
+
+    async fn repeat(&mut self, enable: bool) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
+
+    async fn get_current_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
+
+    async fn play(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
+
+    async fn pause(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        todo!()
+    }
 }

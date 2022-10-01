@@ -254,7 +254,7 @@ where
         items: vec![TableHeaderItem {
             id: ColumnId::Artist,
             text: "Name",
-            width: get_percentage_width(layout_chunk.width, 0.3),
+            width: get_percentage_width(layout_chunk.width, 1.0),
         }],
     };
 

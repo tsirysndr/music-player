@@ -22,8 +22,7 @@ pub enum IoEvent {
     Shuffle(bool),
     Repeat(bool),
     GetCurrentPlayback,
-    Play,
-    Pause,
+    TogglePlayback,
 }
 
 pub struct Network<'a> {
@@ -66,8 +65,7 @@ impl<'a> Network<'a> {
             IoEvent::Shuffle(enable) => self.shuffle(enable).await,
             IoEvent::Repeat(enable) => self.repeat(enable).await,
             IoEvent::GetCurrentPlayback => self.get_current_playback().await,
-            IoEvent::Play => self.play().await,
-            IoEvent::Pause => self.pause().await,
+            IoEvent::TogglePlayback => self.toggle_playback().await,
         }
     }
 
@@ -174,11 +172,11 @@ impl<'a> Network<'a> {
         todo!()
     }
 
-    async fn play(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        todo!()
-    }
-
-    async fn pause(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        todo!()
+    async fn toggle_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let (_, is_playing) = self.playback.current().await?;
+        if is_playing {
+            return self.playback.pause().await;
+        }
+        self.playback.play().await
     }
 }

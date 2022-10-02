@@ -50,8 +50,10 @@ pub trait PlayerEngine: Send + Sync {
     async fn wait_for_tracklist(
         mut event: UnboundedReceiver<PlayerEvent>,
     ) -> (Vec<Track>, Vec<Track>);
-    async fn get_current_track(&self) -> Option<Track>;
-    async fn wait_for_current_track(mut channel: UnboundedReceiver<PlayerEvent>) -> Option<Track>;
+    async fn get_current_track(&self) -> Option<(Option<Track>, bool)>;
+    async fn wait_for_current_track(
+        mut channel: UnboundedReceiver<PlayerEvent>,
+    ) -> Option<(Option<Track>, bool)>;
 }
 
 #[derive(Clone)]
@@ -182,7 +184,7 @@ impl PlayerEngine for Player {
         handle.join().unwrap()
     }
 
-    async fn get_current_track(&self) -> Option<Track> {
+    async fn get_current_track(&self) -> Option<(Option<Track>, bool)> {
         let channel = self.get_player_event_channel();
         let handle = thread::spawn(move || {
             Runtime::new()
@@ -204,10 +206,12 @@ impl PlayerEngine for Player {
         (vec![], vec![])
     }
 
-    async fn wait_for_current_track(mut channel: UnboundedReceiver<PlayerEvent>) -> Option<Track> {
+    async fn wait_for_current_track(
+        mut channel: UnboundedReceiver<PlayerEvent>,
+    ) -> Option<(Option<Track>, bool)> {
         while let Some(event) = channel.recv().await {
             if matches!(event, PlayerEvent::CurrentTrack { .. }) {
-                return event.get_current_track().unwrap();
+                return event.get_current_track();
             }
         }
         None
@@ -504,7 +508,8 @@ impl PlayerInternal {
 
     fn handle_get_current_track(&mut self) {
         let track = self.tracklist.current_track();
-        self.send_event(PlayerEvent::CurrentTrack { track });
+        let is_playing = self.state.is_playing();
+        self.send_event(PlayerEvent::CurrentTrack { track, is_playing });
     }
 }
 
@@ -655,11 +660,23 @@ pub enum PlayerEvent {
     Playing,
     Paused,
     TimeToPreloadNextTrack,
-    EndOfTrack { is_last_track: bool },
-    VolumeSet { volume: u16 },
-    Error { track_id: String, error: String },
-    TracklistUpdated { tracks: (Vec<Track>, Vec<Track>) },
-    CurrentTrack { track: Option<Track> },
+    EndOfTrack {
+        is_last_track: bool,
+    },
+    VolumeSet {
+        volume: u16,
+    },
+    Error {
+        track_id: String,
+        error: String,
+    },
+    TracklistUpdated {
+        tracks: (Vec<Track>, Vec<Track>),
+    },
+    CurrentTrack {
+        track: Option<Track>,
+        is_playing: bool,
+    },
 }
 
 impl PlayerEvent {
@@ -679,10 +696,10 @@ impl PlayerEvent {
         }
     }
 
-    pub fn get_current_track(&self) -> Option<Option<Track>> {
+    pub fn get_current_track(&self) -> Option<(Option<Track>, bool)> {
         use PlayerEvent::*;
         match self {
-            CurrentTrack { track, .. } => Some(track.clone()),
+            CurrentTrack { track, is_playing } => Some((track.clone(), is_playing.clone())),
             _ => None,
         }
     }

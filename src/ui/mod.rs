@@ -558,22 +558,64 @@ pub fn draw_play_queue<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    let track_items: Vec<String> = Vec::new();
+    let header = TableHeader {
+        id: TableId::Song,
+        items: vec![
+            TableHeaderItem {
+                id: ColumnId::Title,
+                text: "Title",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+            },
+            TableHeaderItem {
+                text: "Artist",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Album",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Duration",
+                width: get_percentage_width(layout_chunk.width, 0.1),
+                ..Default::default()
+            },
+        ],
+    };
+
+    let items = app
+        .track_table
+        .tracks
+        .iter()
+        .map(|item| TableItem {
+            id: item.id.clone(),
+            format: vec![
+                item.title.clone(),
+                item.artists
+                    .iter()
+                    .map(|a| a.name.to_owned())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                item.album.clone().unwrap_or_default().title,
+                millis_to_minutes((item.duration * 1000.0) as u128),
+            ],
+        })
+        .collect::<Vec<TableItem>>();
 
     let current_route = app.get_current_route();
-
     let highlight_state = (
         current_route.active_block == ActiveBlock::PlayQueue,
         current_route.hovered_block == ActiveBlock::PlayQueue,
     );
 
-    draw_selectable_list(
+    draw_table(
         f,
         app,
         layout_chunk,
-        "Play Queue",
-        &track_items,
+        ("Play Queue", &header),
+        &items,
+        app.track_table.selected_index,
         highlight_state,
-        None,
-    );
+    )
 }

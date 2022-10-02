@@ -32,10 +32,24 @@ impl PlaybackService for Playback {
     ) -> Result<tonic::Response<GetCurrentlyPlayingSongResponse>, tonic::Status> {
         let player = self.player.lock().await;
         let track = player.get_current_track().await;
+
         if track.is_none() {
-            let response = GetCurrentlyPlayingSongResponse { track: None };
+            let response = GetCurrentlyPlayingSongResponse {
+                track: None,
+                is_playing: false,
+            };
             return Ok(tonic::Response::new(response));
         }
+
+        let (track, is_playing) = track.unwrap();
+        if track.is_none() {
+            let response = GetCurrentlyPlayingSongResponse {
+                track: None,
+                is_playing: false,
+            };
+            return Ok(tonic::Response::new(response));
+        }
+
         let track = track.unwrap();
         let response = GetCurrentlyPlayingSongResponse {
             track: Some(Track {
@@ -55,6 +69,7 @@ impl PlaybackService for Playback {
                 }),
                 ..Default::default()
             }),
+            is_playing,
         };
         Ok(tonic::Response::new(response))
     }

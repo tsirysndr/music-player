@@ -142,7 +142,9 @@ impl App {
 
     pub fn increase_volume(&mut self) {}
 
-    pub fn toggle_playback(&mut self) {}
+    pub fn toggle_playback(&mut self) {
+        self.dispatch(IoEvent::TogglePlayback);
+    }
 
     pub fn seek_forwards(&mut self) {}
 

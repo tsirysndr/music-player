@@ -1,5 +1,6 @@
 use std::default;
 
+use music_player_playback::player::RepeatState;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -14,7 +15,7 @@ use crate::{
     ui::util::SMALL_TERMINAL_WIDTH,
 };
 
-use self::util::{get_color, get_percentage_width, millis_to_minutes};
+use self::util::{create_artist_string, get_color, get_percentage_width, millis_to_minutes};
 
 pub mod util;
 
@@ -79,6 +80,9 @@ where
 
     // Nested main block with potential routes
     draw_routes(f, app, parent_layout[1]);
+
+    // Currently playing
+    draw_playbar(f, app, parent_layout[2]);
 }
 
 pub fn draw_routes<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
@@ -488,6 +492,87 @@ pub fn draw_playbar<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage(50),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+            ]
+            .as_ref(),
+        )
+        .margin(1)
+        .split(layout_chunk);
+
+    if let Some(current_playback_context) = &app.current_playback_context {
+        if let Some(track_item) = &current_playback_context.track {
+            let play_title = if current_playback_context.is_playing {
+                "Playing"
+            } else {
+                "Paused"
+            };
+
+            let shuffle_text = "Off";
+            /*
+            if current_playback_context.shuffle_state {
+                "On"
+            } else {
+                "Off"
+            };
+            */
+
+            let repeat_text = "Off";
+            /*
+            match current_playback_context.repeat_state {
+                RepeatState::Off => "Off",
+                RepeatState::One => "On",
+                RepeatState::All => "All",
+            };
+            */
+
+            let title = format!(
+                "{:-7} (Shuffle: {:-3} | Repeat: {:})",
+                play_title, shuffle_text, repeat_text,
+            );
+
+            let current_route = app.get_current_route();
+            let highlight_state = (
+                current_route.active_block == ActiveBlock::PlayBar,
+                current_route.hovered_block == ActiveBlock::PlayBar,
+            );
+
+            let title_block = Block::default()
+                .borders(Borders::ALL)
+                .title(Span::styled(
+                    &title,
+                    get_color(highlight_state, app.user_config.theme),
+                ))
+                .border_style(get_color(highlight_state, app.user_config.theme));
+
+            f.render_widget(title_block, layout_chunk);
+
+            let track_name = track_item.title.clone();
+            let play_bar_text = create_artist_string(&track_item.artists);
+
+            let lines = Text::from(Span::styled(
+                play_bar_text,
+                Style::default().fg(app.user_config.theme.playbar_text),
+            ));
+
+            let artist = Paragraph::new(lines)
+                .style(Style::default().fg(app.user_config.theme.playbar_text))
+                .block(
+                    Block::default().title(Span::styled(
+                        &track_name,
+                        Style::default()
+                            .fg(app.user_config.theme.selected)
+                            .add_modifier(Modifier::BOLD),
+                    )),
+                );
+            f.render_widget(artist, chunks[0]);
+        }
+    }
 }
 
 fn draw_table<B>(

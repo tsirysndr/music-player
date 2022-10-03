@@ -1,9 +1,14 @@
 use std::sync::mpsc::Sender;
 
-use music_player_server::metadata::v1alpha1::{Album, Artist, Track};
+use music_player_server::{
+    api::v1alpha1::GetCurrentlyPlayingSongResponse,
+    metadata::v1alpha1::{Album, Artist, Track},
+};
 use tui::layout::Rect;
 
 use crate::{network::IoEvent, user_config::UserConfig};
+
+pub type CurrentlyPlaybackContext = GetCurrentlyPlayingSongResponse;
 
 pub struct Playlist {
     pub items: Vec<PlaylistItem>,
@@ -48,6 +53,7 @@ pub struct App {
     pub album_table: AlbumTable,
     pub track_table: TrackTable,
     pub selected_album: Option<Album>,
+    pub current_playback_context: Option<CurrentlyPlaybackContext>,
 }
 
 impl App {
@@ -69,6 +75,7 @@ impl App {
             artist_table: Default::default(),
             album_table: Default::default(),
             selected_album: None,
+            current_playback_context: None,
         }
     }
 

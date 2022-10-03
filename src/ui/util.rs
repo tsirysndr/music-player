@@ -1,3 +1,4 @@
+use music_player_server::metadata::v1alpha1::Artist;
 use tui::style::Style;
 
 use crate::{app::App, user_config::Theme};
@@ -43,4 +44,12 @@ pub fn millis_to_minutes(millis: u128) -> String {
     } else {
         format!("{}:{}", minutes, seconds_display)
     }
+}
+
+pub fn create_artist_string(artists: &[Artist]) -> String {
+    artists
+        .iter()
+        .map(|artist| artist.name.to_string())
+        .collect::<Vec<String>>()
+        .join(", ")
 }

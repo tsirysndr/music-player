@@ -11,3 +11,4 @@ description = "Entities for the music player"
 
 [dependencies]
 sea-orm = { version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+serde = "1.0.145"

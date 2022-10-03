@@ -1,11 +1,12 @@
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, tracklist::TracklistClient,
+    ws_client::WebsocketClient,
 };
 use music_player_server::metadata::v1alpha1::{Artist, Track};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::app::{AlbumTable, App, ArtistTable, TrackTable};
+use crate::app::{AlbumTable, App, ArtistTable, CurrentlyPlaybackContext, TrackTable};
 
 #[derive(Debug)]
 pub enum IoEvent {
@@ -39,6 +40,7 @@ impl<'a> Network<'a> {
         let playback = PlaybackClient::new().await?;
         let tracklist = TracklistClient::new().await?;
         let playlist = PlaybackClient::new().await?;
+        let ws = WebsocketClient::new().await;
         Ok(Network {
             app,
             library,
@@ -169,7 +171,10 @@ impl<'a> Network<'a> {
     }
 
     async fn get_current_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        todo!()
+        let (track, is_playing) = self.playback.current().await?;
+        let mut app = self.app.lock().await;
+        app.current_playback_context = Some(CurrentlyPlaybackContext { track, is_playing });
+        Ok(())
     }
 
     async fn toggle_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {

@@ -25,6 +25,10 @@
 <img src="./preview.png" width="100%" />
 </p>
 
+<p style="margin-top: 20px; margin-bottom: 50px;">
+<img src="./preview-tui.png" width="100%" />
+</p>
+
 Note: This is a work in progress.
 
 This is a simple music player that I made for my own use. It is written in Rust and uses [rodio](https://github.com/RustAudio/rodio), [symphonia](https://github.com/pdeljanov/Symphonia), and [gRPC](https://grpc.io/) libraries.
@@ -98,8 +102,8 @@ SUBCOMMANDS:
 - [x] Play/Pause/Stop music
 - [x] Next/Previous track
 - [x] Create/Delete playlists
-- [ ] Music Player client
-- [ ] Terminal UI (using [tui-rs](https://github.com/fdehau/tui-rs))
+- [x] Music Player Client
+- [x] Terminal UI (using [tui-rs](https://github.com/fdehau/tui-rs))
 - [ ] Web UI
 - [ ] Desktop version (using [gtk-rs](https://gtk-rs.org/))
 - [ ] Mobile version

@@ -78,11 +78,11 @@ SUBCOMMANDS:
     help        Print this message or the help of the given subcommand(s)
     next        Play the next song
     pause       Pause the current song
-    play        Play a song
+    open        Open audio file
     playlist    Manage playlists
     prev        Play the previous song
     queue       Manage the queue
-    resume      Resume the current song
+    play        Resume the current song
     scan        Scan music library: $HOME/Music
     search      Search for a song, album, artist or playlist
     stop        Stop the current song

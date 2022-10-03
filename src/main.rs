@@ -60,7 +60,7 @@ A simple music player written in Rust"#,
         )
         .subcommand(
             Command::new("open")
-                .about("Play a song")
+                .about("open audio file")
                 .arg_from_usage("<song> 'The path to the song'"),
         )
         .subcommand(Command::new("scan").about("Scan music library: $HOME/Music"))

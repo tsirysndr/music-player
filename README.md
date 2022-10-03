@@ -39,6 +39,7 @@ This is a simple music player that I made for my own use. It is written in Rust 
 # Install dependencies
 brew install protobuf # macOS
 sudo apt-get install -y libasound2-dev protobuf-compiler # Ubuntu/Debian
+choco install protoc # Windows using Chocolatey Package Manager
 # Compile
 git clone https://github.com/tsirysndr/music-player.git
 cd music-player

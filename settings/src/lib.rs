@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct Settings {
     pub database_url: String,
     pub port: u16,
+    pub ws_port: u16,
     pub addons: Option<Vec<String>>,
     pub music_directory: String,
 }
@@ -25,6 +26,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     let default_settings = Settings {
         database_url: format!("sqlite:{}/music-player.sqlite3", path),
         port: 50051,
+        ws_port: 50052,
         addons: Some(vec![
             "deezer".to_string(),
             "datpiff".to_string(),

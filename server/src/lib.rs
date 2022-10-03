@@ -7,7 +7,7 @@ pub mod playback;
 pub mod playlist;
 pub mod server;
 pub mod tracklist;
-
+pub mod event;
 pub mod api {
     pub mod v1alpha1 {
         tonic::include_proto!("music.v1alpha1");
@@ -25,3 +25,4 @@ pub mod metadata {
         tonic::include_proto!("metadata.v1alpha1");
     }
 }
+

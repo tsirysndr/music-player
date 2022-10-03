@@ -14,11 +14,11 @@ use tabled::{builder::Builder, Style};
 use crate::scan::scan_music_library;
 
 pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(matches) = matches.subcommand_matches("play") {
+    if let Some(matches) = matches.subcommand_matches("open") {
         let audio_format = AudioFormat::default();
         let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
 
-        let (mut player, _) = Player::new(move || backend(None, audio_format));
+        let (mut player, _) = Player::new(move || backend(None, audio_format), |_| {});
 
         let song = matches.value_of("song").unwrap();
 
@@ -206,7 +206,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         return Ok(());
     }
 
-    if let Some(_) = matches.subcommand_matches("resume") {
+    if let Some(_) = matches.subcommand_matches("play") {
         let mut client = PlaybackClient::new().await?;
         client.play().await?;
         return Ok(());
@@ -232,7 +232,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
     if let Some(_) = matches.subcommand_matches("current") {
         let mut client = PlaybackClient::new().await?;
-        let result = client.current().await?;
+        let (result, _) = client.current().await?;
         if result.is_none() {
             println!("No song is currently playing");
             return Ok(());

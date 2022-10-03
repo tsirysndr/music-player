@@ -1,8 +1,14 @@
 use std::sync::mpsc::Sender;
 
+use music_player_server::{
+    api::v1alpha1::GetCurrentlyPlayingSongResponse,
+    metadata::v1alpha1::{Album, Artist, Track},
+};
 use tui::layout::Rect;
 
 use crate::{network::IoEvent, user_config::UserConfig};
+
+pub type CurrentlyPlaybackContext = GetCurrentlyPlayingSongResponse;
 
 pub struct Playlist {
     pub items: Vec<PlaylistItem>,
@@ -10,6 +16,24 @@ pub struct Playlist {
 
 pub struct PlaylistItem {
     pub name: String,
+}
+
+#[derive(Default)]
+pub struct TrackTable {
+    pub tracks: Vec<Track>,
+    pub selected_index: usize,
+}
+
+#[derive(Default)]
+pub struct ArtistTable {
+    pub artists: Vec<Artist>,
+    pub selected_index: usize,
+}
+
+#[derive(Default)]
+pub struct AlbumTable {
+    pub albums: Vec<Album>,
+    pub selected_index: usize,
 }
 
 pub struct App {
@@ -25,6 +49,11 @@ pub struct App {
     pub playlists: Option<Playlist>,
     pub selected_playlist_index: Option<usize>,
     pub active_playlist_index: Option<usize>,
+    pub artist_table: ArtistTable,
+    pub album_table: AlbumTable,
+    pub track_table: TrackTable,
+    pub selected_album: Option<Album>,
+    pub current_playback_context: Option<CurrentlyPlaybackContext>,
 }
 
 impl App {
@@ -42,6 +71,11 @@ impl App {
             playlists: None,
             io_tx: Some(io_tx),
             is_loading: false,
+            track_table: Default::default(),
+            artist_table: Default::default(),
+            album_table: Default::default(),
+            selected_album: None,
+            current_playback_context: None,
         }
     }
 
@@ -115,7 +149,9 @@ impl App {
 
     pub fn increase_volume(&mut self) {}
 
-    pub fn toggle_playback(&mut self) {}
+    pub fn toggle_playback(&mut self) {
+        self.dispatch(IoEvent::TogglePlayback);
+    }
 
     pub fn seek_forwards(&mut self) {}
 
@@ -126,10 +162,10 @@ impl App {
     pub fn repeat(&mut self) {}
 }
 
-pub const LIBRARY_OPTIONS: [&str; 4] = ["Play Queue", "Albums", "Tracks", "Artists"];
+pub const LIBRARY_OPTIONS: [&str; 4] = ["Tracks", "Albums", "Artists", "Play Queue"];
 
 const DEFAULT_ROUTE: Route = Route {
-    id: RouteId::PlayQueue,
+    id: RouteId::TrackTable,
     active_block: ActiveBlock::Empty,
     hovered_block: ActiveBlock::Library,
 };

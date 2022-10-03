@@ -8,6 +8,7 @@ message GetCurrentlyPlayingSongRequest {}
 
 message GetCurrentlyPlayingSongResponse {
     metadata.v1alpha1.Track track = 1;
+    bool is_playing = 2;
 }
 
 message GetPlaybackStateRequest {}

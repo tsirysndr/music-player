@@ -11,7 +11,7 @@ use crate::api::v1alpha1::{
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
     GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
-use crate::metadata::v1alpha1::{Album, Artist, Song, Track};
+use crate::metadata::v1alpha1::{Album, Artist, Song, SongArtist, Track};
 
 pub struct Library {
     db: Arc<Database>,
@@ -53,6 +53,7 @@ impl LibraryService for Library {
                         "{:x}",
                         md5::compute(song.artist.to_string())
                     ))),
+                    year: ActiveValue::Set(song.year),
                 };
                 match item.insert(db.get_connection()).await {
                     Ok(_) => (),
@@ -136,6 +137,8 @@ impl LibraryService for Library {
                 .map(|album| Album {
                     id: album.id,
                     title: album.title,
+                    artist: album.artist,
+                    year: album.year.unwrap_or_default() as i32,
                     ..Default::default()
                 })
                 .collect(),
@@ -239,6 +242,11 @@ impl LibraryService for Library {
                     id: track.id,
                     title: track.title,
                     track_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                    duration: track.duration.unwrap_or_default(),
+                    artists: vec![SongArtist {
+                        name: track.artist,
+                        ..Default::default()
+                    }],
                     ..Default::default()
                 })
                 .collect(),

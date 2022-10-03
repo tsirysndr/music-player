@@ -27,7 +27,7 @@ pub async fn scan_directory(
 
         if mime == "audio/mpeg"
             || mime == "audio/mp4"
-            || mime == "audio/ogg"
+           // || mime == "audio/ogg"
             || mime == "audio/m4a"
             || mime == "audio/aac"
         {

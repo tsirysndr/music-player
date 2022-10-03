@@ -63,9 +63,10 @@ impl PlaybackClient {
         Ok(())
     }
 
-    pub async fn current(&mut self) -> Result<Option<Track>, Box<dyn std::error::Error>> {
+    pub async fn current(&mut self) -> Result<(Option<Track>, bool), Box<dyn std::error::Error>> {
         let request = tonic::Request::new(GetCurrentlyPlayingSongRequest {});
         let response = self.client.get_currently_playing_song(request).await?;
-        Ok(response.into_inner().track)
+        let response = response.into_inner();
+        Ok((response.track, response.is_playing))
     }
 }

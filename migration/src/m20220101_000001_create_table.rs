@@ -25,6 +25,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Album::Title).string().not_null())
                     .col(ColumnDef::new(Album::Artist).string().not_null())
                     .col(ColumnDef::new(Album::ArtistId).string())
+                    .col(ColumnDef::new(Track::Year).integer())
                     .foreign_key(
                         ForeignKeyCreateStatement::new()
                             .name("album_artist_id_fkey")

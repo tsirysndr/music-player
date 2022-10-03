@@ -1,10 +1,12 @@
 use std::{
+    collections::HashMap,
     io::{self, stdout},
-    sync::Arc,
+    net::SocketAddr,
+    sync::{self, mpsc, Arc},
     thread,
 };
 
-use app::{ActiveBlock, App, RouteId};
+use app::{ActiveBlock, App, CurrentlyPlaybackContext, RouteId};
 use args::parse_args;
 use clap::{arg, Command};
 use crossterm::{
@@ -17,13 +19,21 @@ use crossterm::{
     ExecutableCommand,
 };
 use event::Key;
+use futures::StreamExt;
+use futures_channel::mpsc::UnboundedSender;
 use migration::SeaRc;
+use music_player_client::ws_client::WebsocketClient;
+use music_player_entity::track::Model as TrackModel;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
-    player::Player,
+    player::{Player, PlayerEvent},
 };
-use music_player_server::server::MusicPlayerServer;
+use music_player_server::{event::Event, metadata::v1alpha1::Track};
+use music_player_server::{
+    metadata::v1alpha1::{Album, Artist},
+    server::MusicPlayerServer,
+};
 use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
 use scan::auto_scan_music_library;
@@ -32,6 +42,7 @@ use tui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
+use tungstenite::Message;
 
 mod app;
 mod args;
@@ -41,6 +52,9 @@ mod network;
 mod scan;
 mod ui;
 mod user_config;
+
+type Tx = UnboundedSender<Message>;
+type PeerMap = Arc<sync::Mutex<HashMap<SocketAddr, Tx>>>;
 
 fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -144,8 +158,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
+    let cloned_peer_map = Arc::clone(&peer_map);
 
-    let (player, _) = Player::new(move || backend(None, audio_format));
+    let (player, _) = Player::new(
+        move || backend(None, audio_format),
+        move |event| {
+            let peers = cloned_peer_map.lock().unwrap();
+
+            let broadcast_recipients = peers.iter().map(|(_, ws_sink)| ws_sink);
+
+            match event {
+                PlayerEvent::CurrentTrack { track, .. } => {
+                    let msg = Event {
+                        event_type: "current_track".to_string(),
+                        data: serde_json::to_string(&track).unwrap(),
+                    };
+                    for recp in broadcast_recipients {
+                        recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()))
+                            .unwrap();
+                    }
+                }
+                _ => {}
+            }
+        },
+    );
 
     let parsed = parse_args(matches.clone()).await;
 
@@ -174,13 +211,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         runtime.block_on(auto_scan_music_library());
     });
 
-    let start_server = MusicPlayerServer::new(Arc::new(Mutex::new(player)))
+    let player = Arc::new(Mutex::new(player));
+    let cloned_player = Arc::clone(&player);
+
+    let cloned_peer_map = Arc::clone(&peer_map);
+
+    // Spawn a thread to handle the player events
+    thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        match runtime.block_on(MusicPlayerServer::new(player, cloned_peer_map).start_ws()) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    });
+
+    let start_server = MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map))
         .start()
         .await;
     if start_server.is_err() {
         let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
         let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
-        return start_ui(&app).await;
+        let cloned_app = Arc::clone(&app);
+        std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            match runtime.block_on(Network::new(&app)) {
+                Ok(mut network) => start_tokio(sync_io_rx, &mut network),
+                Err(err) => println!("{}", err),
+            }
+        });
+        return start_ui(&cloned_app).await;
     }
     start_server
 }
@@ -206,6 +273,10 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
     terminal.hide_cursor()?;
 
     let events = event::Events::new(800);
+
+    let mut is_first_render = true;
+
+    listen_for_player_events(app).await;
 
     loop {
         let mut app = app.lock().await;
@@ -255,6 +326,12 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
             }
             event::Event::Tick => {}
         }
+
+        if is_first_render {
+            app.dispatch(IoEvent::GetTracks);
+            app.dispatch(IoEvent::GetCurrentPlayback);
+            is_first_render = false;
+        }
     }
 
     close_application()?;
@@ -266,4 +343,72 @@ fn close_application() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = io::stdout();
     execute!(stdout, LeaveAlternateScreen, DisableMouseCapture)?;
     Ok(())
+}
+
+async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
+    let ws_client = WebsocketClient::new().await;
+    let (tx, rx) = mpsc::channel::<Event>();
+
+    thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(ws_client.read.for_each(|message| async {
+            match message {
+                Ok(msg) => match serde_json::from_str(&msg.to_string()) {
+                    Ok(event) => {
+                        tx.send(event).unwrap();
+                    }
+                    Err(e) => {
+                        println!("{}", e);
+                    }
+                },
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
+            }
+        }));
+    });
+
+    {
+        let app = app.clone();
+        thread::spawn(move || loop {
+            let ev = rx.recv();
+            if ev.is_ok() {
+                let event = ev.unwrap();
+                let runtime = tokio::runtime::Builder::new_multi_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                let mut app = runtime.block_on(app.lock());
+                match event.event_type.as_str() {
+                    "current_track" => {
+                        let track: TrackModel = serde_json::from_str(&event.data).unwrap();
+                        app.current_playback_context = Some(CurrentlyPlaybackContext {
+                            track: Some(Track {
+                                id: track.id,
+                                title: track.title,
+                                uri: track.uri,
+                                disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
+                                artists: vec![Artist {
+                                    name: track.artist,
+                                    ..Default::default()
+                                }],
+                                album: Some(Album {
+                                    // id: track.album_id.unwrap(),
+                                    title: track.album,
+                                    year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
+                                    ..Default::default()
+                                }),
+                                ..Default::default()
+                            }),
+                            is_playing: true,
+                        });
+                    }
+                    _ => {}
+                }
+            }
+        });
+    }
 }

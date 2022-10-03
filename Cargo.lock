@@ -1596,6 +1596,7 @@ dependencies = [
  "clap",
  "crossterm",
  "futures",
+ "futures-channel",
  "lofty",
  "md5",
  "music-player-addons",
@@ -1611,9 +1612,11 @@ dependencies = [
  "owo-colors",
  "sea-orm",
  "sea-orm-migration",
+ "serde_json",
  "tabled",
  "tokio",
  "tui",
+ "tungstenite",
 ]
 
 [[package]]
@@ -1624,9 +1627,13 @@ version = "0.1.0"
 name = "music-player-client"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "music-player-server",
  "music-player-settings",
+ "tokio",
+ "tokio-tungstenite",
  "tonic",
+ "url",
 ]
 
 [[package]]
@@ -1634,6 +1641,7 @@ name = "music-player-entity"
 version = "0.1.3"
 dependencies = [
  "sea-orm",
+ "serde",
 ]
 
 [[package]]
@@ -1692,6 +1700,8 @@ version = "0.1.6"
 dependencies = [
  "cuid",
  "futures",
+ "futures-channel",
+ "futures-util",
  "md5",
  "music-player-entity",
  "music-player-playback",
@@ -1701,10 +1711,13 @@ dependencies = [
  "owo-colors",
  "prost",
  "sea-orm",
+ "serde",
  "tokio",
+ "tokio-tungstenite",
  "tonic",
  "tonic-build",
  "tonic-web",
+ "tungstenite",
  "uuid",
 ]
 
@@ -2749,18 +2762,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.144"
+version = "1.0.145"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f747710de3dcd43b88c9168773254e809d8ddbdf9653b84e2554ab219f17860"
+checksum = "728eb6351430bccb993660dfffc5a72f91ccc1295abaa8ce19b27ebe4f75568b"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.144"
+version = "1.0.145"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94ed3a816fb1d101812f83e789f888322c34e291f894f19590dc310963e87a00"
+checksum = "81fa1584d3d1bcacd84c277a0dfe21f5b0f6accf4a23d04d4c6d61f1af522b4c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2776,6 +2789,17 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "sha-1"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "028f48d513f9678cda28f6e4064755b3fbb2af6acd672f2c209b62323f7aea0f"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
 ]
 
 [[package]]
@@ -3347,9 +3371,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.21.0"
+version = "1.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89797afd69d206ccd11fb0ea560a44bbb87731d020670e79416d442919257d42"
+checksum = "a9e03c497dc955702ba729190dc4aac6f2a0ce97f913e5b1b5912fc5039d9099"
 dependencies = [
  "autocfg",
  "bytes",
@@ -3357,7 +3381,6 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "once_cell",
  "parking_lot 0.12.1",
  "pin-project-lite",
  "signal-hook-registry",
@@ -3407,6 +3430,18 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+]
+
+[[package]]
+name = "tokio-tungstenite"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f714dd15bead90401d77e04243611caec13726c2408afd5b31901dfcdcb3b181"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite",
 ]
 
 [[package]]
@@ -3640,6 +3675,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tungstenite"
+version = "0.17.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e27992fd6a8c29ee7eef28fc78349aa244134e10ad447ce3b9f0ac0ed0fa4ce0"
+dependencies = [
+ "base64",
+ "byteorder",
+ "bytes",
+ "http",
+ "httparse",
+ "log",
+ "rand",
+ "sha-1",
+ "thiserror",
+ "url",
+ "utf-8",
+]
+
+[[package]]
 name = "typenum"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3721,6 +3775,12 @@ dependencies = [
  "idna",
  "percent-encoding",
 ]
+
+[[package]]
+name = "utf-8"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
 name = "uuid"

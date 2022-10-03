@@ -42,6 +42,11 @@ futures = "0.3.24"
 cuid = "1.2.0"
 md5 = "0.7.0"
 uuid = "1.1.2"
+tungstenite = "0.17.3"
+tokio-tungstenite = "0.17.2"
+futures-channel = "0.3.24"
+futures-util = "0.3.24"
+serde = "1.0.145"
 
 [build-dependencies]
 tonic-build = "0.8"

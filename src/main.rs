@@ -59,7 +59,7 @@ fn cli() -> Command<'static> {
 A simple music player written in Rust"#,
         )
         .subcommand(
-            Command::new("play")
+            Command::new("open")
                 .about("Play a song")
                 .arg_from_usage("<song> 'The path to the song'"),
         )
@@ -80,7 +80,7 @@ A simple music player written in Rust"#,
                     "[id] 'The playlist id, if not specified, the current playlist will be cleared'",
                 ))
                 .subcommand(
-                    Command::new("play")
+                    Command::new("open")
                         .about("Play the playlist")
                         .arg_from_usage("[id] 'The playlist id'"),
                 )
@@ -131,7 +131,7 @@ A simple music player written in Rust"#,
                 .arg_from_usage("<query> 'The query to search for'"),
         )
         .subcommand(Command::new("pause").about("Pause the current song"))
-        .subcommand(Command::new("resume").about("Resume the current song"))
+        .subcommand(Command::new("play").about("Resume the current song"))
         .subcommand(Command::new("next").about("Play the next song"))
         .subcommand(Command::new("prev").about("Play the previous song"))
         .subcommand(Command::new("stop").about("Stop the current song"))

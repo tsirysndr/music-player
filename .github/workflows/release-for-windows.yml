@@ -13,5 +13,10 @@ jobs:
           run: |
             choco install protoc
             choco install rust
+            choco install checksum
+            choco install archiver
         - name: Build
-          run: cargo build --release && dir target\release
+          run: |
+            cargo build --release
+            arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe
+            checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz > music-player_x86_64-pc-windows-gnu.tar.gz.sha256

@@ -19,9 +19,7 @@ jobs:
           run: |
             cargo build --release
             arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe
-            checksum -a sha256  music-player_x86_64-pc-windows-gnu.tar.gz > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
-            dir target\release
-            dir .
+            checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz" > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
         - name: Releasing assets
           uses: softprops/action-gh-release@v1
           with:

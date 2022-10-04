@@ -19,6 +19,9 @@
   <a href="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml" target="_blank">
     <img alt="rust-clippy" src="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml/badge.svg?branch=master" />
   </a>
+  <a href="https://discord.gg/reJ9gUNsMV" target="_blank">
+    <img alt="discord-server" src="https://img.shields.io/discord/1026789060515205181?color=blue&label=server&logo=discord">
+  </a>
 </p>
 
 <p style="margin-top: 20px; margin-bottom: 50px;">

@@ -1,0 +1,17 @@
+on:
+  push:
+    branches: ["feat/windows"]
+
+jobs:
+  compile:
+    name: Compile
+    runs-on: windows-latest
+  
+    steps:
+        - uses: actions/checkout@master
+        - name: Install dependencies
+          run: |
+            choco install protobuf
+            choco install rust
+        - name: Build
+          run: cargo build --release && dir target\release

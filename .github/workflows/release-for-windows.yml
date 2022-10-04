@@ -19,4 +19,4 @@ jobs:
           run: |
             cargo build --release
             arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe
-            checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
+            checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz" > music-player_x86_64-pc-windows-gnu.tar.gz.sha256

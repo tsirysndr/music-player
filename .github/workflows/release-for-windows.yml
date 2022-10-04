@@ -24,7 +24,7 @@ jobs:
           uses: softprops/action-gh-release@v1
           with:
             files: |
-              target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz
-              target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
+              music-player_x86_64-pc-windows-gnu.tar.gz
+              music-player_x86_64-pc-windows-gnu.tar.gz.sha256
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

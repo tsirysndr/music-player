@@ -1,6 +1,6 @@
 on:
   push:
-    branches: ["feat/windows"]
+    branches: ["master"]
 
 jobs:
   compile:
@@ -11,7 +11,7 @@ jobs:
         - uses: actions/checkout@master
         - name: Install dependencies
           run: |
-            choco install protobuf
+            choco install protoc
             choco install rust
         - name: Build
           run: cargo build --release && dir target\release

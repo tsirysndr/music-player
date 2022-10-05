@@ -107,6 +107,7 @@ impl LibraryService for Library {
         _request: tonic::Request<GetArtistsRequest>,
     ) -> Result<tonic::Response<GetArtistsResponse>, tonic::Status> {
         let results = artist::Entity::find()
+            .order_by_asc(artist::Column::Name)
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -128,6 +129,7 @@ impl LibraryService for Library {
         _request: tonic::Request<GetAlbumsRequest>,
     ) -> Result<tonic::Response<GetAlbumsResponse>, tonic::Status> {
         let results = album::Entity::find()
+            .order_by_asc(album::Column::Title)
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -151,6 +153,7 @@ impl LibraryService for Library {
         _request: tonic::Request<GetTracksRequest>,
     ) -> Result<tonic::Response<GetTracksResponse>, tonic::Status> {
         let results = track::Entity::find()
+            .order_by_asc(track::Column::Title)
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;

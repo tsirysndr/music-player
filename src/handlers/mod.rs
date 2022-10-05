@@ -1,11 +1,12 @@
 use crate::{
-    app::{ActiveBlock, App, ArtistBlock, SearchResultBlock},
+    app::{ActiveBlock, App},
     event::Key,
     network::IoEvent,
 };
 
 pub mod album_tracks;
 pub mod albums;
+pub mod artist_tracks;
 pub mod artists;
 pub mod common_key_events;
 pub mod empty;
@@ -82,7 +83,9 @@ fn handle_block_events(key: Key, app: &mut App) {
         ActiveBlock::AlbumList => {
             albums::handler(key, app);
         }
-        ActiveBlock::ArtistBlock => todo!(),
+        ActiveBlock::ArtistBlock => {
+            artist_tracks::handler(key, app);
+        }
         ActiveBlock::Library => {
             library::handler(key, app);
         }

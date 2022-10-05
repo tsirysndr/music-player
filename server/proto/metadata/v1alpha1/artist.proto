@@ -4,6 +4,17 @@ package metadata.v1alpha1;
 
 import "metadata/v1alpha1/album.proto";
 
+message ArtistSong {
+  string id = 1;
+  string title = 2;
+  repeated Artist artists = 4;
+  float duration = 5;
+  int32 disc_number = 6;
+  int32 track_number = 7;
+  metadata.v1alpha1.Album album = 8;
+}
+
+
 message Artist {
   string id = 1;
   string name = 2;
@@ -13,4 +24,5 @@ message Artist {
   repeated string genres = 6;
   repeated string images = 7;
   repeated metadata.v1alpha1.Album albums = 8;
+  repeated ArtistSong songs = 9;
 }

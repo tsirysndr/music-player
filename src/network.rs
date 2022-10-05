@@ -2,7 +2,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, tracklist::TracklistClient,
     ws_client::WebsocketClient,
 };
-use music_player_server::metadata::v1alpha1::{Artist, Track};
+use music_player_server::metadata::v1alpha1::{Album, Artist, Track};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -17,6 +17,7 @@ pub enum IoEvent {
     GetAlbums,
     GetAlbum(String),
     GetArtists,
+    GetArtist(String),
     GetPlayQueue,
     GetAlbumTracks(String),
     AddItemToQueue(String),
@@ -61,6 +62,7 @@ impl<'a> Network<'a> {
             IoEvent::GetAlbums => self.get_albums().await,
             IoEvent::GetAlbum(id) => self.get_album(id).await,
             IoEvent::GetArtists => self.get_artists().await,
+            IoEvent::GetArtist(id) => self.get_artist(id).await,
             IoEvent::GetPlayQueue => self.get_play_queue().await,
             IoEvent::GetAlbumTracks(id) => self.get_album_tracks(id).await,
             IoEvent::AddItemToQueue(id) => self.add_item_to_queue(id).await,
@@ -139,6 +141,41 @@ impl<'a> Network<'a> {
         let mut app = self.app.lock().await;
         app.artist_table = ArtistTable {
             artists,
+            selected_index: 0,
+        };
+        Ok(())
+    }
+
+    async fn get_artist(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+        let artist = self.library.artist(&id).await?;
+        let mut app = self.app.lock().await;
+        let tracks = artist
+            .unwrap_or_default()
+            .songs
+            .iter()
+            .map(|t| Track {
+                id: t.id.clone(),
+                title: t.title.clone(),
+                track_number: t.track_number,
+                duration: t.duration,
+                artists: t
+                    .artists
+                    .iter()
+                    .map(|a| Artist {
+                        name: a.name.clone(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                album: t.album.as_ref().map(|a| Album {
+                    id: a.id.clone(),
+                    title: a.title.clone(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
+            .collect();
+        app.track_table = TrackTable {
+            tracks,
             selected_index: 0,
         };
         Ok(())

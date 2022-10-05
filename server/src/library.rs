@@ -2,7 +2,9 @@ use futures::future::FutureExt;
 use music_player_entity::{album, artist, track};
 use music_player_scanner::scan_directory;
 use music_player_storage::Database;
-use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait, ModelTrait, QueryOrder};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
+};
 use std::sync::Arc;
 
 use crate::api::v1alpha1::{
@@ -11,7 +13,7 @@ use crate::api::v1alpha1::{
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
     GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
-use crate::metadata::v1alpha1::{Album, Artist, Song, SongArtist, Track};
+use crate::metadata::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
 
 pub struct Library {
     db: Arc<Database>,
@@ -261,14 +263,52 @@ impl LibraryService for Library {
 
     async fn get_artist_details(
         &self,
-        _request: tonic::Request<GetArtistDetailsRequest>,
+        request: tonic::Request<GetArtistDetailsRequest>,
     ) -> Result<tonic::Response<GetArtistDetailsResponse>, tonic::Status> {
-        artist::Entity::find()
+        let result = artist::Entity::find_by_id(request.into_inner().id)
             .one(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        if result.is_none() {
+            return Err(tonic::Status::not_found("Artist not found"));
+        }
+
+        let artist = result.unwrap();
+        let name = artist.name.clone();
+        let tracks = track::Entity::find()
+            .filter(track::Column::Artist.eq(artist.name.to_owned()))
+            .order_by_asc(track::Column::Title)
+            .all(self.db.get_connection())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let response = GetArtistDetailsResponse {
-            artist: Some(Artist::default()),
+            artist: Some(Artist {
+                id: artist.id,
+                name: artist.name.to_owned(),
+                songs: tracks
+                    .into_iter()
+                    .map(|track| ArtistSong {
+                        id: track.id,
+                        title: track.title,
+                        track_number: i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                        duration: track.duration.unwrap_or_default(),
+                        artists: vec![Artist {
+                            name: name.to_owned(),
+                            ..Default::default()
+                        }],
+                        album: Some(Album {
+                            id: track.album_id.unwrap(),
+                            title: track.album,
+                            year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            }),
         };
         Ok(tonic::Response::new(response))
     }

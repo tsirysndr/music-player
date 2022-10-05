@@ -293,8 +293,8 @@ where
 
     let current_route = app.get_current_route();
     let highlight_state = (
-        current_route.active_block == ActiveBlock::TrackTable,
-        current_route.hovered_block == ActiveBlock::TrackTable,
+        current_route.active_block == ActiveBlock::AlbumTracks,
+        current_route.hovered_block == ActiveBlock::AlbumTracks,
     );
 
     let title = format!(

@@ -55,5 +55,10 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     Config::builder()
         .add_source(config::File::with_name(&settings_path))
         .add_source(config::Environment::with_prefix("MUSIC_PLAYER"))
+        .set_default("database_url", default_settings.database_url)?
+        .set_default("port", default_settings.port)?
+        .set_default("addons", default_settings.addons)?
+        .set_default("ws_port", default_settings.ws_port)?
+        .set_default("music_directory", default_settings.music_directory)?
         .build()
 }

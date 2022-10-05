@@ -100,7 +100,7 @@ where
     match current_route.id {
         RouteId::AlbumTracks => draw_album_table(f, app, chunks[1]),
         RouteId::AlbumList => draw_album_list(f, app, chunks[1]),
-        RouteId::Artist => draw_artist_albums(f, app, chunks[1]),
+        RouteId::Artist => draw_artist_song_table(f, app, chunks[1]),
         RouteId::Search => draw_search_results(f, app, chunks[1]),
         RouteId::TrackTable => draw_song_table(f, app, chunks[1]),
         RouteId::Artists => draw_artist_table(f, app, chunks[1]),
@@ -350,6 +350,72 @@ where
         ("Artists", &header),
         &items,
         app.artist_table.selected_index,
+        highlight_state,
+    )
+}
+
+pub fn draw_artist_song_table<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+where
+    B: Backend,
+{
+    let header = TableHeader {
+        id: TableId::Song,
+        items: vec![
+            TableHeaderItem {
+                id: ColumnId::Title,
+                text: "Title",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+            },
+            TableHeaderItem {
+                text: "Artist",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Album",
+                width: get_percentage_width(layout_chunk.width, 0.3),
+                ..Default::default()
+            },
+            TableHeaderItem {
+                text: "Duration",
+                width: get_percentage_width(layout_chunk.width, 0.1),
+                ..Default::default()
+            },
+        ],
+    };
+
+    let items = app
+        .track_table
+        .tracks
+        .iter()
+        .map(|item| TableItem {
+            id: item.id.clone(),
+            format: vec![
+                item.title.clone(),
+                item.artists
+                    .iter()
+                    .map(|a| a.name.to_owned())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                item.album.clone().unwrap_or_default().title,
+                millis_to_minutes((item.duration * 1000.0) as u128),
+            ],
+        })
+        .collect::<Vec<TableItem>>();
+
+    let current_route = app.get_current_route();
+    let highlight_state = (
+        current_route.active_block == ActiveBlock::ArtistBlock,
+        current_route.hovered_block == ActiveBlock::ArtistBlock,
+    );
+
+    draw_table(
+        f,
+        app,
+        layout_chunk,
+        ("Tracks", &header),
+        &items,
+        app.track_table.selected_index,
         highlight_state,
     )
 }

@@ -1,7 +1,7 @@
 use music_player_server::{
     api::v1alpha1::{
         library_service_client::LibraryServiceClient, GetAlbumDetailsRequest, GetAlbumsRequest,
-        GetArtistsRequest, GetTracksRequest,
+        GetArtistDetailsRequest, GetArtistsRequest, GetTracksRequest,
     },
     metadata::v1alpha1::{Album, Artist, Track},
 };
@@ -31,6 +31,12 @@ impl LibraryClient {
         let request = tonic::Request::new(GetAlbumsRequest {});
         let response = self.client.get_albums(request).await?;
         Ok(response.into_inner().albums.into_iter().collect())
+    }
+
+    pub async fn artist(&mut self, id: &str) -> Result<Option<Artist>, Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(GetArtistDetailsRequest { id: id.to_string() });
+        let response = self.client.get_artist_details(request).await?;
+        Ok(response.into_inner().artist)
     }
 
     pub async fn artists(&mut self) -> Result<Vec<Artist>, Box<dyn std::error::Error>> {

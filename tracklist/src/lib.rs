@@ -108,4 +108,19 @@ impl Tracklist {
     pub fn shuffle(&mut self) {
         self.tracks.shuffle(&mut rand::thread_rng());
     }
+
+    pub fn play_track_at(&mut self, index: usize) -> Option<Track> {
+        if index >= (self.tracks.len() + self.played.len()) {
+            return None;
+        }
+
+        self.played = [self.played.clone(), self.tracks.clone()].concat();
+        self.tracks = self.played.split_off(index);
+
+        if index > 1 {
+            self.next_track();
+        }
+        self.next_track();
+        self.current_track()
+    }
 }

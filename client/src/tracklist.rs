@@ -1,7 +1,7 @@
 use music_player_server::{
     api::v1alpha1::{
         tracklist_service_client::TracklistServiceClient, AddTrackRequest, ClearTracklistRequest,
-        GetTracklistTracksRequest, RemoveTrackRequest,
+        GetTracklistTracksRequest, PlayTrackAtRequest, RemoveTrackRequest,
     },
     metadata::v1alpha1::Track,
 };
@@ -63,6 +63,14 @@ impl TracklistClient {
             ..Default::default()
         });
         let response = self.client.remove_track(request).await?;
+        Ok(())
+    }
+
+    pub async fn play_track_at(&mut self, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(PlayTrackAtRequest {
+            index: index as u32,
+        });
+        let response = self.client.play_track_at(request).await?;
         Ok(())
     }
 }

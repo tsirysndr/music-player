@@ -14,8 +14,8 @@ use crate::{
         GetPreviousTrackRequest, GetPreviousTrackResponse, GetRandomRequest, GetRandomResponse,
         GetRepeatRequest, GetRepeatResponse, GetSingleRequest, GetSingleResponse,
         GetTracklistTracksRequest, GetTracklistTracksResponse, PlayNextRequest, PlayNextResponse,
-        RemoveTrackRequest, RemoveTrackResponse, SetRepeatRequest, SetRepeatResponse,
-        ShuffleRequest, ShuffleResponse,
+        PlayTrackAtRequest, PlayTrackAtResponse, RemoveTrackRequest, RemoveTrackResponse,
+        SetRepeatRequest, SetRepeatResponse, ShuffleRequest, ShuffleResponse,
     },
     metadata::v1alpha1::{Album, Artist, Track},
 };
@@ -205,6 +205,19 @@ impl TracklistService for Tracklist {
         _request: tonic::Request<PlayNextRequest>,
     ) -> Result<tonic::Response<PlayNextResponse>, tonic::Status> {
         let response = PlayNextResponse {};
+        Ok(tonic::Response::new(response))
+    }
+
+    async fn play_track_at(
+        &self,
+        request: tonic::Request<PlayTrackAtRequest>,
+    ) -> Result<tonic::Response<PlayTrackAtResponse>, tonic::Status> {
+        let request = request.into_inner();
+        self.player
+            .lock()
+            .await
+            .play_track_at(request.index as usize);
+        let response = PlayTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }
 }

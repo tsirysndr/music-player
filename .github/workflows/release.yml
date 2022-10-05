@@ -40,3 +40,7 @@ jobs:
             target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "✏️ Generate release changelog"
+        uses: heinrichreimer/github-changelog-generator-action@v2.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} 

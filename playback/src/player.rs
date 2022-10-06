@@ -57,10 +57,10 @@ pub trait PlayerEngine: Send + Sync {
     async fn wait_for_tracklist(
         mut event: UnboundedReceiver<PlayerEvent>,
     ) -> (Vec<Track>, Vec<Track>);
-    async fn get_current_track(&self) -> Option<(Option<Track>, bool)>;
+    async fn get_current_track(&self) -> Option<(Option<Track>, usize, bool)>;
     async fn wait_for_current_track(
         mut channel: UnboundedReceiver<PlayerEvent>,
-    ) -> Option<(Option<Track>, bool)>;
+    ) -> Option<(Option<Track>, usize, bool)>;
 }
 
 #[derive(Clone)]
@@ -197,7 +197,7 @@ impl PlayerEngine for Player {
         handle.join().unwrap()
     }
 
-    async fn get_current_track(&self) -> Option<(Option<Track>, bool)> {
+    async fn get_current_track(&self) -> Option<(Option<Track>, usize, bool)> {
         let channel = self.get_player_event_channel();
         let handle = thread::spawn(move || {
             Runtime::new()
@@ -221,7 +221,7 @@ impl PlayerEngine for Player {
 
     async fn wait_for_current_track(
         mut channel: UnboundedReceiver<PlayerEvent>,
-    ) -> Option<(Option<Track>, bool)> {
+    ) -> Option<(Option<Track>, usize, bool)> {
         while let Some(event) = channel.recv().await {
             if matches!(event, PlayerEvent::CurrentTrack { .. }) {
                 return event.get_current_track();
@@ -438,8 +438,10 @@ impl PlayerInternal {
         self.state = PlayerState::Playing {
             decoder: loaded_track.decoder,
         };
+        let (track, position) = self.tracklist.current_track();
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
-            track: self.tracklist.current_track(),
+            track,
+            position,
             is_playing: true,
         });
     }
@@ -467,7 +469,8 @@ impl PlayerInternal {
 
     fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
         self.tracklist.queue(tracks);
-        if self.tracklist.current_track().is_none() {
+        let (current_track, _) = self.tracklist.current_track();
+        if current_track.is_none() {
             self.handle_next();
         }
     }
@@ -506,19 +509,22 @@ impl PlayerInternal {
 
     fn handle_next(&mut self) {
         if self.tracklist.next_track().is_some() {
-            self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
+            let (current_track, _) = self.tracklist.current_track();
+            self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_previous(&mut self) {
         if self.tracklist.previous_track().is_some() {
-            self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
+            let (current_track, _) = self.tracklist.current_track();
+            self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_play_track_at(&mut self, index: usize) {
-        if self.tracklist.play_track_at(index).is_some() {
-            self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
+        let (current_track, _) = self.tracklist.play_track_at(index);
+        if current_track.is_some() {
+            self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
@@ -532,9 +538,13 @@ impl PlayerInternal {
     }
 
     fn handle_get_current_track(&mut self) {
-        let track = self.tracklist.current_track();
+        let (track, position) = self.tracklist.current_track();
         let is_playing = self.state.is_playing();
-        self.send_event(PlayerEvent::CurrentTrack { track, is_playing });
+        self.send_event(PlayerEvent::CurrentTrack {
+            track,
+            position,
+            is_playing,
+        });
     }
 }
 
@@ -701,6 +711,7 @@ pub enum PlayerEvent {
     },
     CurrentTrack {
         track: Option<Track>,
+        position: usize,
         is_playing: bool,
     },
 }
@@ -722,10 +733,14 @@ impl PlayerEvent {
         }
     }
 
-    pub fn get_current_track(&self) -> Option<(Option<Track>, bool)> {
+    pub fn get_current_track(&self) -> Option<(Option<Track>, usize, bool)> {
         use PlayerEvent::*;
         match self {
-            CurrentTrack { track, is_playing } => Some((track.clone(), is_playing.clone())),
+            CurrentTrack {
+                track,
+                position,
+                is_playing,
+            } => Some((track.clone(), position.clone(), is_playing.clone())),
             _ => None,
         }
     }

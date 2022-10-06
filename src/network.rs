@@ -210,14 +210,18 @@ impl<'a> Network<'a> {
     }
 
     async fn get_current_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let (track, is_playing) = self.playback.current().await?;
+        let (track, index, is_playing) = self.playback.current().await?;
         let mut app = self.app.lock().await;
-        app.current_playback_context = Some(CurrentlyPlaybackContext { track, is_playing });
+        app.current_playback_context = Some(CurrentlyPlaybackContext {
+            track,
+            index,
+            is_playing,
+        });
         Ok(())
     }
 
     async fn toggle_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let (_, is_playing) = self.playback.current().await?;
+        let (_, _, is_playing) = self.playback.current().await?;
         if is_playing {
             return self.playback.pause().await;
         }

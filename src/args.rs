@@ -232,7 +232,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
     if let Some(_) = matches.subcommand_matches("current") {
         let mut client = PlaybackClient::new().await?;
-        let (result, _) = client.current().await?;
+        let (result, _, _) = client.current().await?;
         if result.is_none() {
             println!("No song is currently playing");
             return Ok(());

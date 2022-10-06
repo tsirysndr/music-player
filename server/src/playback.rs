@@ -36,15 +36,17 @@ impl PlaybackService for Playback {
         if track.is_none() {
             let response = GetCurrentlyPlayingSongResponse {
                 track: None,
+                index: 0,
                 is_playing: false,
             };
             return Ok(tonic::Response::new(response));
         }
 
-        let (track, is_playing) = track.unwrap();
+        let (track, index, is_playing) = track.unwrap();
         if track.is_none() {
             let response = GetCurrentlyPlayingSongResponse {
                 track: None,
+                index: 0,
                 is_playing: false,
             };
             return Ok(tonic::Response::new(response));
@@ -69,6 +71,7 @@ impl PlaybackService for Playback {
                 }),
                 ..Default::default()
             }),
+            index: index as u32,
             is_playing,
         };
         Ok(tonic::Response::new(response))

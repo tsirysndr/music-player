@@ -1,5 +1,3 @@
-use std::default;
-
 use music_player_playback::player::RepeatState;
 use tui::{
     backend::Backend,
@@ -25,9 +23,10 @@ pub enum TableId {
     Artist,
     ArtistList,
     Song,
+    PlayQueue,
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum ColumnId {
     #[default]
     None,
@@ -39,6 +38,12 @@ pub enum ColumnId {
 pub struct TableHeader<'a> {
     id: TableId,
     items: Vec<TableHeaderItem<'a>>,
+}
+
+impl TableHeader<'_> {
+    pub fn get_index(&self, id: ColumnId) -> Option<usize> {
+        self.items.iter().position(|item| item.id == id)
+    }
 }
 
 #[derive(Default)]
@@ -675,6 +680,48 @@ fn draw_table<B>(
             style = selected_style;
         }
 
+        // if table displays songs
+        match header.id {
+            TableId::PlayQueue => match app.current_playback_context.clone() {
+                Some(current_playback) => {
+                    if let Some(title_idx) = header.get_index(ColumnId::Title) {
+                        if let Some(track_playing_offset_index) =
+                            current_playback.index.checked_sub(offset as u32)
+                        {
+                            if track_playing_offset_index == (i as u32 + 1) {
+                                formatted_row[title_idx] =
+                                    format!("▶ {}", &formatted_row[title_idx]);
+                                style = Style::default()
+                                    .fg(app.user_config.theme.active)
+                                    .add_modifier(Modifier::BOLD);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            },
+            TableId::Song | TableId::Album => match app.current_playback_context.clone() {
+                Some(current_playback) => {
+                    if let Some(title_idx) = header.get_index(ColumnId::Title) {
+                        match current_playback.track {
+                            Some(track) => {
+                                if track.id == item.id {
+                                    formatted_row[title_idx] =
+                                        format!("▶ {}", &formatted_row[title_idx]);
+                                    style = Style::default()
+                                        .fg(app.user_config.theme.active)
+                                        .add_modifier(Modifier::BOLD);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        };
+
         // Return row styled data
         Row::new(formatted_row).style(style)
     });
@@ -710,7 +757,7 @@ where
     B: Backend,
 {
     let header = TableHeader {
-        id: TableId::Song,
+        id: TableId::PlayQueue,
         items: vec![
             TableHeaderItem {
                 id: ColumnId::Title,

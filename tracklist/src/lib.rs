@@ -60,8 +60,8 @@ impl Tracklist {
         Some(previous_track)
     }
 
-    pub fn current_track(&self) -> Option<Track> {
-        self.current_track.clone()
+    pub fn current_track(&self) -> (Option<Track>, usize) {
+        (self.current_track.clone(), self.played.len())
     }
 
     pub fn tracks(&self) -> (Vec<Track>, Vec<Track>) {
@@ -109,9 +109,9 @@ impl Tracklist {
         self.tracks.shuffle(&mut rand::thread_rng());
     }
 
-    pub fn play_track_at(&mut self, index: usize) -> Option<Track> {
+    pub fn play_track_at(&mut self, index: usize) -> (Option<Track>, usize) {
         if index >= (self.tracks.len() + self.played.len()) {
-            return None;
+            return (None, 0);
         }
 
         self.played = [self.played.clone(), self.tracks.clone()].concat();

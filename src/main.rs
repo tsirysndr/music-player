@@ -29,7 +29,10 @@ use music_player_playback::{
     config::AudioFormat,
     player::{Player, PlayerEvent},
 };
-use music_player_server::{event::Event, metadata::v1alpha1::Track};
+use music_player_server::{
+    event::{Event, TrackEvent},
+    metadata::v1alpha1::Track,
+};
 use music_player_server::{
     metadata::v1alpha1::{Album, Artist},
     server::MusicPlayerServer,
@@ -169,10 +172,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let broadcast_recipients = peers.iter().map(|(_, ws_sink)| ws_sink);
 
             match event {
-                PlayerEvent::CurrentTrack { track, .. } => {
+                PlayerEvent::CurrentTrack {
+                    track,
+                    position,
+                    is_playing,
+                } => {
+                    let track_event = TrackEvent {
+                        track,
+                        index: position as u32,
+                        is_playing,
+                    };
                     let msg = Event {
                         event_type: "current_track".to_string(),
-                        data: serde_json::to_string(&track).unwrap(),
+                        data: serde_json::to_string(&track_event).unwrap(),
                     };
                     for recp in broadcast_recipients {
                         recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()))
@@ -272,7 +284,7 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    let events = event::Events::new(800);
+    let events = event::Events::new(300);
 
     let mut is_first_render = true;
 
@@ -384,7 +396,8 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                 let mut app = runtime.block_on(app.lock());
                 match event.event_type.as_str() {
                     "current_track" => {
-                        let track: TrackModel = serde_json::from_str(&event.data).unwrap();
+                        let track_event: TrackEvent = serde_json::from_str(&event.data).unwrap();
+                        let track = track_event.track.unwrap();
                         app.current_playback_context = Some(CurrentlyPlaybackContext {
                             track: Some(Track {
                                 id: track.id,
@@ -403,7 +416,9 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                                 }),
                                 ..Default::default()
                             }),
-                            is_playing: true,
+                            is_playing: track_event.is_playing,
+                            index: track_event.index,
+                            ..Default::default()
                         });
                     }
                     _ => {}

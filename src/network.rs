@@ -25,6 +25,7 @@ pub enum IoEvent {
     Repeat(bool),
     GetCurrentPlayback,
     TogglePlayback,
+    PlayTrackAt(usize),
 }
 
 pub struct Network<'a> {
@@ -70,6 +71,7 @@ impl<'a> Network<'a> {
             IoEvent::Repeat(enable) => self.repeat(enable).await,
             IoEvent::GetCurrentPlayback => self.get_current_playback().await,
             IoEvent::TogglePlayback => self.toggle_playback().await,
+            IoEvent::PlayTrackAt(index) => self.play_track_at(index).await,
         }
     }
 
@@ -220,5 +222,9 @@ impl<'a> Network<'a> {
             return self.playback.pause().await;
         }
         self.playback.play().await
+    }
+
+    async fn play_track_at(&mut self, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+        self.tracklist.play_track_at(index).await
     }
 }

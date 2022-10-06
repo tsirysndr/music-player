@@ -63,6 +63,10 @@ message PlayNextRequest { metadata.v1alpha1.Track track = 1; }
 
 message PlayNextResponse {}
 
+message PlayTrackAtRequest { uint32 index = 1; }
+
+message PlayTrackAtResponse {}
+
 service TracklistService {
   rpc AddTrack(AddTrackRequest) returns (AddTrackResponse) {}
   rpc AddTracks(AddTracksRequest) returns (AddTracksResponse) {}
@@ -81,4 +85,5 @@ service TracklistService {
   rpc GetTracklistTracks(GetTracklistTracksRequest)
       returns (GetTracklistTracksResponse) {}
   rpc PlayNext(PlayNextRequest) returns (PlayNextResponse) {}
+  rpc PlayTrackAt(PlayTrackAtRequest) returns (PlayTrackAtResponse) {}
 }

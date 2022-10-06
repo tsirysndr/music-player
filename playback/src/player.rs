@@ -51,6 +51,7 @@ pub trait PlayerEngine: Send + Sync {
     fn seek(&self, position_ms: u32);
     fn next(&self);
     fn previous(&self);
+    fn play_track_at(&self, index: usize);
     fn clear(&self);
     async fn get_tracks(&self) -> (Vec<Track>, Vec<Track>);
     async fn wait_for_tracklist(
@@ -175,6 +176,10 @@ impl PlayerEngine for Player {
 
     fn previous(&self) {
         self.command(PlayerCommand::Previous);
+    }
+
+    fn play_track_at(&self, index: usize) {
+        self.command(PlayerCommand::PlayTrackAt(index));
     }
 
     fn clear(&self) {
@@ -375,6 +380,7 @@ impl PlayerInternal {
             PlayerCommand::AddEventSender(sender) => self.event_senders.push(sender),
             PlayerCommand::Next => self.handle_next(),
             PlayerCommand::Previous => self.handle_previous(),
+            PlayerCommand::PlayTrackAt(index) => self.handle_play_track_at(index),
             PlayerCommand::Clear => self.handle_clear(),
             PlayerCommand::GetTracks => self.handle_get_tracks(),
             PlayerCommand::GetCurrentTrack => self.handle_get_current_track(),
@@ -506,6 +512,12 @@ impl PlayerInternal {
 
     fn handle_previous(&mut self) {
         if self.tracklist.previous_track().is_some() {
+            self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
+        }
+    }
+
+    fn handle_play_track_at(&mut self, index: usize) {
+        if self.tracklist.play_track_at(index).is_some() {
             self.handle_command_load(&self.tracklist.current_track().unwrap().uri);
         }
     }
@@ -658,6 +670,7 @@ enum PlayerCommand {
     Seek(u32),
     Next,
     Previous,
+    PlayTrackAt(usize),
     AddEventSender(mpsc::UnboundedSender<PlayerEvent>),
     Clear,
     GetTracks,

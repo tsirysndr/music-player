@@ -118,4 +118,5 @@ SUBCOMMANDS:
 - [ ] Stream from Soundcloud
 - [ ] Stream from Deezer
 - [ ] Stream from DatPiff
+- [ ] Stream from Tidal
 - [ ] Stream from [MyVazo](https://myvazo.com/)

@@ -117,7 +117,7 @@ impl Tracklist {
         self.played = [self.played.clone(), self.tracks.clone()].concat();
         self.tracks = self.played.split_off(index);
 
-        if index > 1 {
+        if index > 1 && index < self.played.len() - 1 {
             self.next_track();
         }
         self.next_track();

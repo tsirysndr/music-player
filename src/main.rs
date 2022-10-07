@@ -4,6 +4,7 @@ use std::{
     net::SocketAddr,
     sync::{self, mpsc, Arc},
     thread,
+    time::Instant,
 };
 
 use app::{ActiveBlock, App, CurrentlyPlaybackContext, RouteId};
@@ -411,6 +412,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                     "current_track" => {
                         let track_event: TrackEvent = serde_json::from_str(&event.data).unwrap();
                         let track = track_event.track.unwrap();
+                        app.instant_since_last_current_playback_poll = Instant::now();
                         app.current_playback_context = Some(CurrentlyPlaybackContext {
                             track: Some(Track {
                                 id: track.id,

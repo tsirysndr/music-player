@@ -51,11 +51,9 @@ pub fn handle_app(key: Key, app: &mut App) {
         }
         _ if key == app.user_config.keys.next_track => {
             app.dispatch(IoEvent::NextTrack);
-            app.dispatch(IoEvent::GetCurrentPlayback);
         }
         _ if key == app.user_config.keys.previous_track => {
             app.dispatch(IoEvent::PreviousTrack);
-            app.dispatch(IoEvent::GetCurrentPlayback);
         }
         _ if key == app.user_config.keys.shuffle => {
             app.shuffle();

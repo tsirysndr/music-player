@@ -407,9 +407,9 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                     .enable_all()
                     .build()
                     .unwrap();
-                let mut app = runtime.block_on(app.lock());
                 match event.event_type.as_str() {
                     "current_track" => {
+                        let mut app = runtime.block_on(app.lock());
                         let track_event: TrackEvent = serde_json::from_str(&event.data).unwrap();
                         let track = track_event.track.unwrap();
                         app.instant_since_last_current_playback_poll = Instant::now();

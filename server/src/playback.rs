@@ -71,6 +71,7 @@ impl PlaybackService for Playback {
                     year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
                     ..Default::default()
                 }),
+                duration: track.duration.unwrap_or(0.0),
                 ..Default::default()
             }),
             index: index as u32,

@@ -3,7 +3,7 @@ use music_player_client::{
     ws_client::WebsocketClient,
 };
 use music_player_server::metadata::v1alpha1::{Album, Artist, Track};
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
 
 use crate::app::{AlbumTable, App, ArtistTable, CurrentlyPlaybackContext, TrackTable};
@@ -212,6 +212,7 @@ impl<'a> Network<'a> {
     async fn get_current_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let (track, index, position_ms, is_playing) = self.playback.current().await?;
         let mut app = self.app.lock().await;
+        app.instant_since_last_current_playback_poll = Instant::now();
         app.current_playback_context = Some(CurrentlyPlaybackContext {
             track,
             index,

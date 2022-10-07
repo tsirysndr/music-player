@@ -25,6 +25,7 @@ pub fn handler(key: Key, app: &mut App) {
         }
         Key::Enter => {
             app.dispatch(IoEvent::PlayTrackAt(app.track_table.selected_index));
+            app.dispatch(IoEvent::GetCurrentPlayback);
         }
         _ => (),
     }

@@ -66,9 +66,15 @@ pub struct KeyBindings {
 }
 
 #[derive(Clone)]
+pub struct BehaviorConfig {
+    pub enable_text_emphasis: bool,
+}
+
+#[derive(Clone)]
 pub struct UserConfig {
     pub theme: Theme,
     pub keys: KeyBindings,
+    pub behavior: BehaviorConfig,
 }
 
 impl UserConfig {
@@ -96,6 +102,9 @@ impl UserConfig {
                 search: Key::Char('/'),
                 submit: Key::Enter,
                 add_item_to_queue: Key::Char('z'),
+            },
+            behavior: BehaviorConfig {
+                enable_text_emphasis: true,
             },
         }
     }

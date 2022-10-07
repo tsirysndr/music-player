@@ -175,6 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 PlayerEvent::CurrentTrack {
                     track,
                     position,
+                    position_ms,
                     is_playing,
                 } => {
                     let track_event = TrackEvent {
@@ -185,6 +186,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let msg = Event {
                         event_type: "current_track".to_string(),
                         data: serde_json::to_string(&track_event).unwrap(),
+                    };
+                    for recp in broadcast_recipients {
+                        recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()))
+                            .unwrap();
+                    }
+                }
+                PlayerEvent::TrackTimePosition { position_ms } => {
+                    let msg = Event {
+                        event_type: "track_time_position".to_string(),
+                        data: format!("{}", position_ms),
                     };
                     for recp in broadcast_recipients {
                         recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()))
@@ -284,7 +295,7 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    let events = event::Events::new(300);
+    let events = event::Events::new(250);
 
     let mut is_first_render = true;
 
@@ -336,7 +347,9 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
                     handlers::handle_app(key, &mut app);
                 }
             }
-            event::Event::Tick => {}
+            event::Event::Tick => {
+                app.update_on_tick();
+            }
         }
 
         if is_first_render {
@@ -414,6 +427,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                                     year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
                                     ..Default::default()
                                 }),
+                                duration: track.duration.unwrap_or(0.0),
                                 ..Default::default()
                             }),
                             is_playing: track_event.is_playing,

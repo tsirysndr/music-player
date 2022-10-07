@@ -53,3 +53,18 @@ pub fn create_artist_string(artists: &[Artist]) -> String {
         .collect::<Vec<String>>()
         .join(", ")
 }
+
+pub fn get_track_progress_percentage(song_progress_ms: u128, track_duration_ms: u32) -> u16 {
+    let min_perc = 0_f64;
+    let track_progress = std::cmp::min(song_progress_ms, track_duration_ms.into());
+    let track_perc = (track_progress as f64 / f64::from(track_duration_ms)) * 100_f64;
+    min_perc.max(track_perc) as u16
+}
+
+pub fn display_track_progress(progress: u128, track_duration: u32) -> String {
+    let duration = millis_to_minutes(u128::from(track_duration));
+    let progress_display = millis_to_minutes(progress);
+    let remaining = millis_to_minutes(u128::from(track_duration).saturating_sub(progress));
+
+    format!("{}/{} (-{})", progress_display, duration, remaining,)
+}

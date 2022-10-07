@@ -4,7 +4,7 @@ use tui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Span, Text},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Row, Table},
+    widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph, Row, Table},
     Frame,
 };
 
@@ -13,7 +13,10 @@ use crate::{
     ui::util::SMALL_TERMINAL_WIDTH,
 };
 
-use self::util::{create_artist_string, get_color, get_percentage_width, millis_to_minutes};
+use self::util::{
+    create_artist_string, display_track_progress, get_color, get_percentage_width,
+    get_track_progress_percentage, millis_to_minutes,
+};
 
 pub mod util;
 
@@ -624,7 +627,14 @@ where
             f.render_widget(title_block, layout_chunk);
 
             let track_name = track_item.title.clone();
-            let play_bar_text = create_artist_string(&track_item.artists);
+            let play_bar_text = match track_item.album.clone() {
+                Some(album) => format!(
+                    "{} - {}",
+                    create_artist_string(&track_item.artists),
+                    album.title
+                ),
+                None => create_artist_string(&track_item.artists),
+            };
 
             let lines = Text::from(Span::styled(
                 play_bar_text,
@@ -642,6 +652,35 @@ where
                     )),
                 );
             f.render_widget(artist, chunks[0]);
+
+            let progress_ms = match app.seek_ms {
+                Some(seek_ms) => seek_ms,
+                None => app.song_progress_ms,
+            };
+
+            let duration_ms = (track_item.duration * 1000.0) as u32;
+
+            let perc = get_track_progress_percentage(progress_ms, duration_ms);
+
+            let song_progress_label = display_track_progress(progress_ms, duration_ms);
+            let modifier = if app.user_config.behavior.enable_text_emphasis {
+                Modifier::ITALIC | Modifier::BOLD
+            } else {
+                Modifier::empty()
+            };
+            let song_progress = Gauge::default()
+                .gauge_style(
+                    Style::default()
+                        .fg(app.user_config.theme.playbar_progress)
+                        .bg(app.user_config.theme.playbar_background)
+                        .add_modifier(modifier),
+                )
+                .percent(perc)
+                .label(Span::styled(
+                    &song_progress_label,
+                    Style::default().fg(app.user_config.theme.playbar_progress_text),
+                ));
+            f.render_widget(song_progress, chunks[2]);
         }
     }
 }

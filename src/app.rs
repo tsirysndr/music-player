@@ -1,4 +1,4 @@
-use std::sync::mpsc::Sender;
+use std::{sync::mpsc::Sender, time::Instant};
 
 use music_player_server::{
     api::v1alpha1::GetCurrentlyPlayingSongResponse,
@@ -37,6 +37,7 @@ pub struct AlbumTable {
 }
 
 pub struct App {
+    pub instant_since_last_current_playback_poll: Instant,
     pub size: Rect,
     navigation_stack: Vec<Route>,
     pub library: Library,
@@ -54,6 +55,9 @@ pub struct App {
     pub track_table: TrackTable,
     pub selected_album: Option<Album>,
     pub current_playback_context: Option<CurrentlyPlaybackContext>,
+    pub seek_ms: Option<u128>,
+    pub song_progress_ms: u128,
+    pub is_fetching_current_playback: bool,
 }
 
 impl App {
@@ -76,6 +80,10 @@ impl App {
             album_table: Default::default(),
             selected_album: None,
             current_playback_context: None,
+            seek_ms: None,
+            song_progress_ms: 0,
+            is_fetching_current_playback: false,
+            instant_since_last_current_playback_poll: Instant::now(),
         }
     }
 
@@ -160,6 +168,46 @@ impl App {
     pub fn shuffle(&mut self) {}
 
     pub fn repeat(&mut self) {}
+
+    pub fn poll_current_playback(&mut self) {
+        // Poll every 5 seconds
+        let poll_interval_ms = 5_000;
+
+        let elapsed = self
+            .instant_since_last_current_playback_poll
+            .elapsed()
+            .as_millis();
+
+        if !self.is_fetching_current_playback && elapsed >= poll_interval_ms {
+            self.is_fetching_current_playback = true;
+            self.dispatch(IoEvent::GetCurrentPlayback);
+        }
+    }
+
+    pub fn update_on_tick(&mut self) {
+        self.poll_current_playback();
+        if let Some(CurrentlyPlaybackContext {
+            track: Some(track),
+            position_ms,
+            is_playing,
+            ..
+        }) = &self.current_playback_context
+        {
+            let elapsed = if *is_playing {
+                self.instant_since_last_current_playback_poll
+                    .elapsed()
+                    .as_millis()
+            } else {
+                0u128
+            } + u128::from(*position_ms);
+            let duration_ms = (track.duration * 1000.0) as u128;
+            if elapsed < duration_ms {
+                self.song_progress_ms = elapsed;
+            } else {
+                self.song_progress_ms = duration_ms;
+            }
+        }
+    }
 }
 
 pub const LIBRARY_OPTIONS: [&str; 4] = ["Tracks", "Albums", "Artists", "Play Queue"];

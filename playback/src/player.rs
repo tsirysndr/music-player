@@ -57,10 +57,10 @@ pub trait PlayerEngine: Send + Sync {
     async fn wait_for_tracklist(
         mut event: UnboundedReceiver<PlayerEvent>,
     ) -> (Vec<Track>, Vec<Track>);
-    async fn get_current_track(&self) -> Option<(Option<Track>, usize, bool)>;
+    async fn get_current_track(&self) -> Option<(Option<Track>, usize, u32, bool)>;
     async fn wait_for_current_track(
         mut channel: UnboundedReceiver<PlayerEvent>,
-    ) -> Option<(Option<Track>, usize, bool)>;
+    ) -> Option<(Option<Track>, usize, u32, bool)>;
 }
 
 #[derive(Clone)]
@@ -88,6 +88,7 @@ impl Player {
                 event_senders: [event_sender].to_vec(),
                 tracklist: Tracklist::new_empty(),
                 event_broadcaster: Box::new(event_broadcaster),
+                position_ms: 0,
             };
             let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             runtime.block_on(internal);
@@ -197,7 +198,7 @@ impl PlayerEngine for Player {
         handle.join().unwrap()
     }
 
-    async fn get_current_track(&self) -> Option<(Option<Track>, usize, bool)> {
+    async fn get_current_track(&self) -> Option<(Option<Track>, usize, u32, bool)> {
         let channel = self.get_player_event_channel();
         let handle = thread::spawn(move || {
             Runtime::new()
@@ -221,7 +222,7 @@ impl PlayerEngine for Player {
 
     async fn wait_for_current_track(
         mut channel: UnboundedReceiver<PlayerEvent>,
-    ) -> Option<(Option<Track>, usize, bool)> {
+    ) -> Option<(Option<Track>, usize, u32, bool)> {
         while let Some(event) = channel.recv().await {
             if matches!(event, PlayerEvent::CurrentTrack { .. }) {
                 return event.get_current_track();
@@ -250,6 +251,7 @@ struct PlayerInternal {
     sink_event_callback: Option<SinkEventCallback>,
     event_senders: Vec<mpsc::UnboundedSender<PlayerEvent>>,
     tracklist: Tracklist,
+    position_ms: u32,
     event_broadcaster: Box<dyn Fn(PlayerEvent) + Send + 'static>,
 }
 
@@ -258,15 +260,10 @@ impl Future for PlayerInternal {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
         loop {
-            let mut all_futures_completed_or_not_ready = true;
-
             // process commands that were sent to us
             let cmd = match self.commands.poll_recv(cx) {
                 Poll::Ready(None) => return Poll::Ready(()), // client has disconnected - shut down.
-                Poll::Ready(Some(cmd)) => {
-                    all_futures_completed_or_not_ready = false;
-                    Some(cmd)
-                }
+                Poll::Ready(Some(cmd)) => Some(cmd),
                 _ => None,
             };
 
@@ -279,8 +276,7 @@ impl Future for PlayerInternal {
             if let PlayerState::Playing { ref mut decoder } = self.state {
                 match decoder.next_packet() {
                     Ok(result) => {
-                        if let Some((ref _packet_position, packet, channels, sample_rate)) = result
-                        {
+                        if let Some((ref packet_position, packet, channels, sample_rate)) = result {
                             match packet.samples() {
                                 Ok(_) => {
                                     let mut converter =
@@ -299,6 +295,10 @@ impl Future for PlayerInternal {
                                     error!("Failed to decode packet: {}", e);
                                 }
                             }
+                            (self.event_broadcaster)(PlayerEvent::TrackTimePosition {
+                                position_ms: packet_position.position_ms,
+                            });
+                            self.position_ms = packet_position.position_ms;
                         } else {
                             // end of track
                             self.state = PlayerState::Stopped;
@@ -442,6 +442,7 @@ impl PlayerInternal {
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
             track,
             position,
+            position_ms: self.position_ms,
             is_playing: true,
         });
     }
@@ -543,6 +544,7 @@ impl PlayerInternal {
         self.send_event(PlayerEvent::CurrentTrack {
             track,
             position,
+            position_ms: self.position_ms,
             is_playing,
         });
     }
@@ -712,7 +714,11 @@ pub enum PlayerEvent {
     CurrentTrack {
         track: Option<Track>,
         position: usize,
+        position_ms: u32,
         is_playing: bool,
+    },
+    TrackTimePosition {
+        position_ms: u32,
     },
 }
 
@@ -733,14 +739,20 @@ impl PlayerEvent {
         }
     }
 
-    pub fn get_current_track(&self) -> Option<(Option<Track>, usize, bool)> {
+    pub fn get_current_track(&self) -> Option<(Option<Track>, usize, u32, bool)> {
         use PlayerEvent::*;
         match self {
             CurrentTrack {
                 track,
                 position,
+                position_ms,
                 is_playing,
-            } => Some((track.clone(), position.clone(), is_playing.clone())),
+            } => Some((
+                track.clone(),
+                position.clone(),
+                position_ms.clone(),
+                is_playing.clone(),
+            )),
             _ => None,
         }
     }

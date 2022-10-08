@@ -16,7 +16,7 @@ impl PlaybackClient {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();
-        let url = format!("http://[::1]:{}", settings.port);
+        let url = format!("http://{}:{}", settings.host, settings.port);
         let client = PlaybackServiceClient::connect(url).await?;
         Ok(Self { client })
     }

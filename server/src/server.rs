@@ -51,7 +51,7 @@ impl MusicPlayerServer {
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();
-        let addr: SocketAddr = format!("[::1]:{}", settings.port).parse().unwrap();
+        let addr: SocketAddr = format!("0.0.0.0:{}", settings.port).parse().unwrap();
 
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());
@@ -88,7 +88,7 @@ impl MusicPlayerServer {
     pub async fn start_ws(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();
-        let addr: SocketAddr = format!("[::1]:{}", settings.ws_port).parse().unwrap();
+        let addr: SocketAddr = format!("0.0.0.0:{}", settings.ws_port).parse().unwrap();
 
         let try_socket = TcpListener::bind(addr).await;
         let listener = try_socket.expect("Failed to bind");

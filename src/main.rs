@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    env,
     io::{self, stdout},
     net::SocketAddr,
     sync::{self, mpsc, Arc},
@@ -154,6 +155,11 @@ A simple music player written in Rust"#,
         .subcommand(Command::new("prev").about("Play the previous song"))
         .subcommand(Command::new("stop").about("Stop the current song"))
         .subcommand(Command::new("current").about("Show the current song"))
+        .subcommand(Command::new("connect").arg(
+            arg!(-s --host <host> "The host to connect to").required(true)
+        ).arg(
+            arg!(-p --port <port> "The port to connect to").default_value("50051").required(false)
+        ).about("Connect to the server"))
 }
 
 #[tokio::main]
@@ -225,39 +231,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(err.into());
     }
 
-    migration::run().await;
+    let mode = env::var("MUSIC_PLAYER_MODE").unwrap_or("server".to_owned());
 
-    thread::spawn(|| {
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        runtime.block_on(auto_scan_music_library());
-    });
+    if mode == "server" {
+        migration::run().await;
+
+        thread::spawn(|| {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            runtime.block_on(auto_scan_music_library());
+        });
+    }
 
     let player = Arc::new(Mutex::new(player));
     let cloned_player = Arc::clone(&player);
 
     let cloned_peer_map = Arc::clone(&peer_map);
 
-    // Spawn a thread to handle the player events
-    thread::spawn(move || {
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        match runtime.block_on(MusicPlayerServer::new(player, cloned_peer_map).start_ws()) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("{}", e);
+    if mode == "server" {
+        // Spawn a thread to handle the player events
+        thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            match runtime.block_on(MusicPlayerServer::new(player, cloned_peer_map).start_ws()) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("{}", e);
+                }
             }
-        }
-    });
+        });
+    }
 
-    let start_server = MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map))
-        .start()
-        .await;
-    if start_server.is_err() {
+    let mut start_server = Err("".into());
+
+    if mode == "server" {
+        start_server = MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map))
+            .start()
+            .await;
+    }
+
+    if start_server.is_err() || mode == "client" {
         let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
         let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
         let cloned_app = Arc::clone(&app);

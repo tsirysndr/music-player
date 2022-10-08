@@ -16,7 +16,7 @@ impl WebsocketClient {
     pub async fn new() -> Self {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();
-        let url = format!("ws://[::1]:{}", settings.ws_port);
+        let url = format!("ws://{}:{}", settings.host, settings.ws_port);
         let url = Url::parse(&url).unwrap();
         let (ws_stream, _) = connect_async(url)
             .await

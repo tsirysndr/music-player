@@ -14,6 +14,7 @@ pub struct Settings {
     pub ws_port: u16,
     pub addons: Option<Vec<String>>,
     pub music_directory: String,
+    pub host: String,
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
@@ -38,6 +39,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             "lastfm".to_string(),
         ]),
         music_directory: dirs::audio_dir().unwrap().to_str().unwrap().to_string(),
+        host: "0.0.0.0".to_string(),
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -60,5 +62,6 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("addons", default_settings.addons)?
         .set_default("ws_port", default_settings.ws_port)?
         .set_default("music_directory", default_settings.music_directory)?
+        .set_default("host", default_settings.host)?
         .build()
 }

@@ -1,3 +1,5 @@
+use std::env;
+
 use clap::ArgMatches;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
@@ -257,6 +259,14 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
             println!("Album  : {}", album.unwrap().title.magenta());
         }
         return Ok(());
+    }
+
+    if let Some(matches) = matches.subcommand_matches("connect") {
+        let host = matches.value_of("host").unwrap();
+        let port = matches.value_of("port").unwrap();
+        env::set_var("MUSIC_PLAYER_HOST", host);
+        env::set_var("MUSIC_PLAYER_PORT", port);
+        env::set_var("MUSIC_PLAYER_MODE", "client");
     }
 
     return Err("No subcommand found".into());

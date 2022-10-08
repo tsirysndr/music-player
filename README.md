@@ -20,7 +20,7 @@
     <img alt="rust-clippy" src="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml/badge.svg?branch=master" />
   </a>
   <a href="https://discord.gg/reJ9gUNsMV" target="_blank">
-    <img alt="discord-server" src="https://img.shields.io/discord/1026789060515205181?color=blue&label=server&logo=discord">
+    <img alt="discord-server" src="https://img.shields.io/discord/1026789060515205181?label=discord&logo=discord&color=5865F2">
   </a>
 </p>
 

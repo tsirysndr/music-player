@@ -9,7 +9,7 @@ const Container = styled.div`
   padding-left: 28px;
   padding-right: 28px;
   padding-top: 30px;
-  overflow-y: scroll;
+  overflow-y: auto;
 `;
 
 const Sidebar = () => {

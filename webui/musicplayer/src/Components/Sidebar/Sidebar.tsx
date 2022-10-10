@@ -5,10 +5,10 @@ import Search from "../Search";
 
 const Container = styled.div`
   height: 100vh;
-  width: 284px;
-  padding-left: 28px;
-  padding-right: 28px;
   padding-top: 30px;
+  padding-left: 30px;
+  padding-right: 30px;
+  min-width: 222px;
   overflow-y: auto;
 `;
 

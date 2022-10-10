@@ -12,6 +12,7 @@ const Container = styled.div`
 `;
 
 const Item = styled.div<{ active?: boolean }>`
+  cursor: pointer;
   height: 45px;
   width: 183px;
   display: flex;

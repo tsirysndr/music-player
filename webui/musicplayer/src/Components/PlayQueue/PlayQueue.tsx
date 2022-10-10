@@ -7,15 +7,15 @@ const Container = styled.div`
   flex-direction: row;
 `;
 
-const Tracks = () => {
+const PlayQueue = () => {
   return (
-    <Container>
+    <div>
       <Sidebar />
       <div>
         <ControlBar />
       </div>
-    </Container>
+    </div>
   );
 };
 
-export default Tracks;
+export default PlayQueue;

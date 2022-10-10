@@ -2,7 +2,7 @@ import { ComponentMeta, ComponentStory } from "@storybook/react";
 import Albums from "../Components/Albums";
 
 export default {
-  title: "Components/Artists",
+  title: "Components/Albums",
   component: Albums,
 } as ComponentMeta<typeof Albums>;
 

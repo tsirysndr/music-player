@@ -4,7 +4,7 @@ import Playlists from "../Playlists";
 import Search from "../Search";
 
 const Container = styled.div`
-  height: 100vh;
+  height: calc(100vh - 30px);
   padding-top: 30px;
   padding-left: 30px;
   padding-right: 20px;

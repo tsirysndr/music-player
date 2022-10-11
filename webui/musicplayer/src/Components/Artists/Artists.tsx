@@ -1,5 +1,7 @@
 import styled from "@emotion/styled";
+import { FC } from "react";
 import ControlBar from "../ControlBar";
+import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 
 const Container = styled.div`
@@ -13,12 +15,17 @@ const Content = styled.div`
   flex: 1;
 `;
 
-const Artists = () => {
+export type ArtistsProps = {
+  onClickLibraryItem: (item: string) => void;
+};
+
+const Artists: FC<ArtistsProps> = ({ onClickLibraryItem }) => {
   return (
     <Container>
-      <Sidebar />
+      <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
       <Content>
         <ControlBar />
+        <MainContent title="Artists" placeholder="Filter Artists"></MainContent>
       </Content>
     </Container>
   );

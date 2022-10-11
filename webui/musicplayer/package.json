@@ -13,6 +13,7 @@
     "@types/react": "^18.0.20",
     "@types/react-dom": "^18.0.6",
     "baseui": "^12.2.0",
+    "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.4.2",
@@ -70,6 +71,7 @@
     "@storybook/react": "^6.5.12",
     "@storybook/testing-library": "^0.0.13",
     "babel-plugin-named-exports-order": "^0.0.2",
+    "msw": "^0.47.4",
     "prop-types": "^15.8.1",
     "webpack": "^5.74.0"
   }

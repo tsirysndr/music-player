@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { FC } from "react";
 import Library from "../Library";
 import Playlists from "../Playlists";
 import Search from "../Search";
@@ -12,14 +13,23 @@ const Container = styled.div`
   overflow-y: auto;
 `;
 
-const Sidebar = () => {
+export type SidebarProps = {
+  active?: string;
+  onClickLibraryItem: (item: string) => void;
+};
+
+const Sidebar: FC<SidebarProps> = (props) => {
   return (
     <Container>
       <Search />
-      <Library />
+      <Library {...props} />
       <Playlists />
     </Container>
   );
+};
+
+Sidebar.defaultProps = {
+  active: "tracks",
 };
 
 export default Sidebar;

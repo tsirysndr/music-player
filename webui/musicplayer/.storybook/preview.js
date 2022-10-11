@@ -14,6 +14,9 @@ export const parameters = {
       date: /Date$/,
     },
   },
+  reactRouter: {
+    routePath: "/albums",
+  },
 };
 
 export const decorators = [

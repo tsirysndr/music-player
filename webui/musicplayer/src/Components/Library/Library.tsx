@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { FC } from "react";
 
 const Title = styled.div`
   font-size: 16px;
@@ -22,16 +23,45 @@ const Container = styled.div`
   margin-left: 10px;
 `;
 
-const Library = () => {
+export type LibraryProps = {
+  active?: string;
+  onClickLibraryItem: (item: string) => void;
+};
+
+const Library: FC<LibraryProps> = ({ active, onClickLibraryItem }) => {
   return (
     <Container>
       <Title>Library</Title>
-      <Item active>Tracks</Item>
-      <Item>Albums</Item>
-      <Item>Artists</Item>
-      <Item>Play Queue</Item>
+      <Item
+        active={active === "tracks"}
+        onClick={() => onClickLibraryItem("tracks")}
+      >
+        Tracks
+      </Item>
+      <Item
+        active={active === "albums"}
+        onClick={() => onClickLibraryItem("albums")}
+      >
+        Albums
+      </Item>
+      <Item
+        active={active === "artists"}
+        onClick={() => onClickLibraryItem("artists")}
+      >
+        Artists
+      </Item>
+      <Item
+        active={active === "play-queue"}
+        onClick={() => onClickLibraryItem("play-queue")}
+      >
+        Play Queue
+      </Item>
     </Container>
   );
+};
+
+Library.defaultProps = {
+  active: "tracks",
 };
 
 export default Library;

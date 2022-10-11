@@ -1,4 +1,6 @@
+import { linkTo } from "@storybook/addon-links";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
+import _ from "lodash";
 import Artists from "../Components/Artists";
 
 export default {
@@ -11,3 +13,15 @@ const Template: ComponentStory<typeof Artists> = (args: any) => (
 );
 
 export const Default = Template.bind({});
+
+Default.args = {
+  onClickLibraryItem(item) {
+    linkTo(
+      `Components/${item
+        .split("-")
+        .map((x) => _.capitalize(x))
+        .join("")}`,
+      "Default"
+    )();
+  },
+};

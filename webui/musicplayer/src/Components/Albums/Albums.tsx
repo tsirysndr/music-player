@@ -7,13 +7,19 @@ const Container = styled.div`
   flex-direction: row;
 `;
 
+const Content = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+`;
+
 const Albums = () => {
   return (
     <Container>
       <Sidebar />
-      <div>
+      <Container>
         <ControlBar />
-      </div>
+      </Container>
     </Container>
   );
 };

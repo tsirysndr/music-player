@@ -8,14 +8,20 @@ const Container = styled.div`
   flex-direction: row;
 `;
 
+const Content = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+`;
+
 const Tracks = () => {
   return (
     <Container>
       <Sidebar />
-      <div>
+      <Content>
         <ControlBar />
         <MainContent title="Tracks" />
-      </div>
+      </Content>
     </Container>
   );
 };

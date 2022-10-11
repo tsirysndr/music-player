@@ -10,6 +10,7 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   height: 96px;
+  padding-left: 10px;
 `;
 
 const Controls = styled.div`

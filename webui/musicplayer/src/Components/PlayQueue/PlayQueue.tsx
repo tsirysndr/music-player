@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import ControlBar from "../ControlBar";
+import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 
 const Container = styled.div`
@@ -9,12 +10,13 @@ const Container = styled.div`
 
 const PlayQueue = () => {
   return (
-    <div>
+    <Container>
       <Sidebar />
       <div>
         <ControlBar />
+        <MainContent title="Play Queue" />
       </div>
-    </div>
+    </Container>
   );
 };
 

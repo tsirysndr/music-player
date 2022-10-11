@@ -1,7 +1,6 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
 import { ProgressBar } from "baseui/progress-bar";
-import Californication from "../../../Assets/images/californication.jpeg";
 
 const Container = styled.div`
   height: 76px;
@@ -44,7 +43,7 @@ const Title = styled.div`
 const CurrentTrack: FC = (props) => {
   return (
     <Container>
-      <AlbumCover src={Californication} />
+      <AlbumCover src="https://resources.tidal.com/images/543575fc/ad02/419b/ae61/671558dc019d/320x320.jpg" />
       <Wrapper>
         <TrackInfo>
           <Title>Otherside</Title>

@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import ControlBar from "../ControlBar";
+import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 
 const Container = styled.div`
@@ -13,6 +14,7 @@ const Tracks = () => {
       <Sidebar />
       <div>
         <ControlBar />
+        <MainContent title="Tracks" />
       </div>
     </Container>
   );

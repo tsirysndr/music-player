@@ -33,7 +33,7 @@ const albums = [
   {
     id: "4",
     title: "Pluto x Baby Pluto (Deluxe)",
-    artist: "Big K.R.I.T.",
+    artist: "Future, Lil Uzi Vert",
     cover:
       "https://resources.tidal.com/images/fe6787d5/4ba5/4d3e/8576/48943ee6a768/320x320.jpg",
   },
@@ -75,6 +75,9 @@ export const Default = Template.bind({});
 
 Default.args = {
   albums,
+  onClickAlbum(album) {
+    linkTo("Components/AlbumDetails", "Default")();
+  },
   onClickLibraryItem(item) {
     linkTo(
       `Components/${item

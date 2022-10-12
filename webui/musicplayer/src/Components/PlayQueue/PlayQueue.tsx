@@ -17,17 +17,18 @@ const Content = styled.div`
 `;
 
 export type PlayQueueProps = {
+  tracks: any[];
   onClickLibraryItem: (item: string) => void;
 };
 
-const PlayQueue: FC<PlayQueueProps> = ({ onClickLibraryItem }) => {
+const PlayQueue: FC<PlayQueueProps> = ({ onClickLibraryItem, tracks }) => {
   return (
     <Container>
       <Sidebar active="play-queue" onClickLibraryItem={onClickLibraryItem} />
       <Content>
         <ControlBar />
         <MainContent title="Play Queue">
-          <TracksTable />
+          <TracksTable tracks={tracks} />
         </MainContent>
       </Content>
     </Container>

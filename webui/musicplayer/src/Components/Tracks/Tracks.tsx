@@ -17,17 +17,18 @@ const Content = styled.div`
 `;
 
 export type TracksProps = {
+  tracks: any[];
   onClickLibraryItem: (item: string) => void;
 };
 
-const Tracks: FC<TracksProps> = ({ onClickLibraryItem }) => {
+const Tracks: FC<TracksProps> = ({ onClickLibraryItem, tracks }) => {
   return (
     <Container>
       <Sidebar active="tracks" onClickLibraryItem={onClickLibraryItem} />
       <Content>
         <ControlBar />
         <MainContent title="Tracks">
-          <TracksTable />
+          <TracksTable tracks={tracks} />
         </MainContent>
       </Content>
     </Container>

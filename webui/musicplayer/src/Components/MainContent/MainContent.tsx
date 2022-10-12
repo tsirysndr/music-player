@@ -15,22 +15,27 @@ const Header = styled.div`
 `;
 
 export type MainContentProps = {
-  title: string;
+  title?: string;
   placeholder?: string;
   children?: ReactNode;
+  displayHeader?: boolean;
 };
 
 const MainContent: FC<MainContentProps> = ({
   title,
   placeholder,
   children,
+  displayHeader,
 }) => {
   return (
     <div>
-      <Header>
-        <Title>{title}</Title>
-        <Filter placeholder={placeholder} />
-      </Header>
+      {displayHeader && (
+        <Header>
+          <Title>{title}</Title>
+          <Filter placeholder={placeholder} />
+        </Header>
+      )}
+
       {children}
     </div>
   );
@@ -38,6 +43,7 @@ const MainContent: FC<MainContentProps> = ({
 
 MainContent.defaultProps = {
   placeholder: "Filter Tracks",
+  displayHeader: true,
 };
 
 export default MainContent;

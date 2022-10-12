@@ -6,27 +6,27 @@ const TableWrapper = styled.div`
   margin-top: 31px;
 `;
 
-const TracksTable: FC = () => {
+export type TracksTableProps = {
+  tracks: any[];
+  header?: string[];
+};
+
+const TracksTable: FC<TracksTableProps> = ({ tracks, header }) => {
   return (
     <TableWrapper>
       <Table
-        columns={["Title", "Album", "Artist", "Time"]}
-        data={[
-          ["Otherside", "Red Hot Chilli Peppers", "Californication", "4:15"],
-          [
-            "Road Trippin'",
-            "Red Hot Chilli Peppers",
-            "Californication",
-            "3:25",
-          ],
-        ]}
+        columns={header}
+        data={tracks}
         overrides={{
           TableHeadCell: {
-            style: () => ({
-              outline: `#fff solid`,
-              borderBottomColor: "#fff !important",
-              color: "rgba(0, 0, 0, 0.542)",
-            }),
+            style: ({ $col }) => {
+              return {
+                width: $col === "#" ? "10px" : "intial",
+                outline: `#fff solid`,
+                borderBottomColor: "#fff !important",
+                color: "rgba(0, 0, 0, 0.542)",
+              };
+            },
           },
           TableBodyCell: {
             style: () => ({
@@ -47,6 +47,10 @@ const TracksTable: FC = () => {
       />
     </TableWrapper>
   );
+};
+
+TracksTable.defaultProps = {
+  header: ["Title", "Artist", "Album", "Duration"],
 };
 
 export default TracksTable;

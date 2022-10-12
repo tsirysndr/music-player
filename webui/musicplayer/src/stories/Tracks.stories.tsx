@@ -15,6 +15,10 @@ const Template: ComponentStory<typeof Tracks> = (args: any) => (
 export const Default = Template.bind({});
 
 Default.args = {
+  tracks: [
+    ["Otherside", "Red Hot Chilli Peppers", "Californication", "4:15"],
+    ["Road Trippin'", "Red Hot Chilli Peppers", "Californication", "3:25"],
+  ],
   onClickLibraryItem(item) {
     linkTo(
       `Components/${item

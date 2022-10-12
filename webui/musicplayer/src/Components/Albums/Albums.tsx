@@ -34,6 +34,7 @@ const Artist = styled.div`
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  cursor: pointer;
 `;
 
 const Title = styled.div`
@@ -41,6 +42,7 @@ const Title = styled.div`
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  cursor: pointer;
 `;
 
 const Scrollable = styled.div`
@@ -50,10 +52,15 @@ const Scrollable = styled.div`
 
 export type AlbumProps = {
   albums: any[];
+  onClickAlbum: (album: any) => void;
   onClickLibraryItem: (item: string) => void;
 };
 
-const Albums: FC<AlbumProps> = ({ albums, onClickLibraryItem }) => {
+const Albums: FC<AlbumProps> = ({
+  albums,
+  onClickAlbum,
+  onClickLibraryItem,
+}) => {
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
@@ -65,8 +72,13 @@ const Albums: FC<AlbumProps> = ({ albums, onClickLibraryItem }) => {
               <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
                 {albums.map((item) => (
                   <Cell key={item.id}>
-                    <AlbumCover src={item.cover} />
-                    <Title>{item.title}</Title>
+                    <AlbumCover
+                      src={item.cover}
+                      onClick={() => onClickAlbum(item)}
+                    />
+                    <Title onClick={() => onClickAlbum(item)}>
+                      {item.title}
+                    </Title>
                     <Artist>{item.artist}</Artist>
                   </Cell>
                 ))}

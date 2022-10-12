@@ -1,6 +1,8 @@
 import styled from "@emotion/styled";
+import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
 import ControlBar from "../ControlBar";
+import Artist from "../Icons/Artist";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 
@@ -15,20 +17,91 @@ const Content = styled.div`
   flex: 1;
 `;
 
+const Scrollable = styled.div`
+  height: calc(100vh - 100px);
+  overflow-y: auto;
+`;
+
+const Wrapper = styled.div`
+  margin-top: 34px;
+`;
+
+const ArtistCover = styled.img`
+  height: 220px;
+  width: 220px;
+  border-radius: 110px;
+  cursor: pointer;
+`;
+
+const NoArtistCover = styled.div`
+  height: 220px;
+  width: 220px;
+  border-radius: 110px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f3f3f3b9;
+`;
+
+const ArtistName = styled.div`
+  font-size: 14px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+  margin-top: 20px;
+  margin-bottom: 18px;
+  text-align: center;
+`;
+
 export type ArtistsProps = {
+  artists: any[];
   onClickLibraryItem: (item: string) => void;
+  onClickArtist: (artist: any) => void;
 };
 
-const Artists: FC<ArtistsProps> = ({ onClickLibraryItem }) => {
+const Artists: FC<ArtistsProps> = ({
+  onClickLibraryItem,
+  onClickArtist,
+  artists,
+}) => {
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
       <Content>
         <ControlBar />
-        <MainContent title="Artists" placeholder="Filter Artists"></MainContent>
+        <Scrollable>
+          <MainContent title="Artists" placeholder="Filter Artists">
+            <Wrapper>
+              <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
+                {artists.map((item) => (
+                  <Cell key={item.id}>
+                    {item.cover && (
+                      <ArtistCover
+                        src={item.cover}
+                        onClick={() => onClickArtist(item)}
+                      />
+                    )}
+                    {!item.cover && (
+                      <NoArtistCover onClick={() => onClickArtist(item)}>
+                        <Artist width={75} height={75} color="#a4a3a3" />
+                      </NoArtistCover>
+                    )}
+                    <ArtistName>{item.name}</ArtistName>
+                  </Cell>
+                ))}
+              </Grid>
+            </Wrapper>
+          </MainContent>
+        </Scrollable>
       </Content>
     </Container>
   );
+};
+
+Artists.defaultProps = {
+  artists: [],
 };
 
 export default Artists;

@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { FC } from "react";
 import Next from "../Icons/Next";
 import Play from "../Icons/Play";
 import Previous from "../Icons/Previous";
@@ -30,7 +31,18 @@ const Button = styled.button`
   justify-content: center;
 `;
 
-const ControlBar = () => {
+export type ControlBarProps = {
+  nowPlaying?: {
+    album: string;
+    artist: string;
+    title: string;
+    cover: string;
+    duration: number;
+    progress: number;
+  };
+};
+
+const ControlBar: FC<ControlBarProps> = ({ nowPlaying }) => {
   return (
     <Container>
       <Controls>
@@ -50,7 +62,7 @@ const ControlBar = () => {
           <Repeat />
         </Button>
       </Controls>
-      <CurrentTrack />
+      <CurrentTrack nowPlaying={nowPlaying} />
     </Container>
   );
 };

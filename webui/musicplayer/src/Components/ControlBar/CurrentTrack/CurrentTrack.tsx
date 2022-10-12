@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
 import { ProgressBar } from "baseui/progress-bar";
+import Track from "../../Icons/Track";
 
 const Container = styled.div`
   height: 76px;
@@ -16,6 +17,15 @@ const Container = styled.div`
 const AlbumCover = styled.img`
   height: 62px;
   width: 62px;
+`;
+
+const NoCover = styled.div`
+  height: 62px;
+  width: 62px;
+  background-color: #f3f3f3b9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const TrackInfo = styled.div`
@@ -40,32 +50,67 @@ const Title = styled.div`
   text-align: center;
 `;
 
-const CurrentTrack: FC = (props) => {
+const Placeholder = styled.div`
+  color: #767676;
+`;
+
+export type CurrentTrackProps = {
+  nowPlaying?: {
+    album: string;
+    artist: string;
+    title: string;
+    cover: string;
+    duration: number;
+    progress: number;
+  };
+};
+
+const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
   return (
-    <Container>
-      <AlbumCover src="https://resources.tidal.com/images/543575fc/ad02/419b/ae61/671558dc019d/320x320.jpg" />
-      <Wrapper>
-        <TrackInfo>
-          <Title>Otherside</Title>
-          <Artist>Red Hot Chili Peppers - Californication</Artist>
-        </TrackInfo>
-        <ProgressBar
-          value={30}
-          overrides={{
-            BarProgress: {
-              style: () => ({
-                backgroundColor: "#ab28fc",
-              }),
-            },
-            Bar: {
-              style: () => ({
-                backgroundColor: "rgba(177, 178, 181, 0.218)",
-              }),
-            },
-          }}
-        />
-      </Wrapper>
-    </Container>
+    <>
+      {!nowPlaying && (
+        <Container>
+          <NoCover>
+            <Track width={28} height={28} color="#a4a3a3" />
+          </NoCover>
+          <Wrapper>
+            <Placeholder>No song is currently playing</Placeholder>
+          </Wrapper>
+        </Container>
+      )}
+      {nowPlaying && (
+        <Container>
+          <AlbumCover src={nowPlaying?.cover} />
+          <Wrapper>
+            <TrackInfo>
+              <Title>{nowPlaying?.title}</Title>
+              <Artist>
+                {nowPlaying?.artist} - {nowPlaying?.album}
+              </Artist>
+            </TrackInfo>
+            <ProgressBar
+              value={
+                nowPlaying!.duration > 0
+                  ? (nowPlaying!.progress * 100) / nowPlaying!.duration
+                  : 0
+              }
+              overrides={{
+                BarProgress: {
+                  style: () => ({
+                    backgroundColor: "#ab28fc",
+                  }),
+                },
+                Bar: {
+                  style: () => ({
+                    backgroundColor: "rgba(177, 178, 181, 0.218)",
+                  }),
+                },
+              }}
+            />
+          </Wrapper>
+        </Container>
+      )}
+    </>
   );
 };
 

@@ -9,11 +9,13 @@ const TableWrapper = styled.div`
 export type TracksTableProps = {
   tracks: any[];
   header?: string[];
+  title?: JSX.Element;
 };
 
-const TracksTable: FC<TracksTableProps> = ({ tracks, header }) => {
+const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
   return (
     <TableWrapper>
+      {title}
       <Table
         columns={header}
         data={tracks}
@@ -21,7 +23,8 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header }) => {
           TableHeadCell: {
             style: ({ $col }) => {
               return {
-                width: $col === "#" ? "10px" : "intial",
+                width:
+                  $col === "#" ? "10px" : $col === "Time" ? "98px" : "intial",
                 outline: `#fff solid`,
                 borderBottomColor: "#fff !important",
                 color: "rgba(0, 0, 0, 0.542)",
@@ -50,7 +53,8 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header }) => {
 };
 
 TracksTable.defaultProps = {
-  header: ["Title", "Artist", "Album", "Duration"],
+  header: ["Title", "Artist", "Album", "Time"],
+  title: <div />,
 };
 
 export default TracksTable;

@@ -15,6 +15,9 @@ const Template: ComponentStory<typeof Artists> = (args: any) => (
 export const Default = Template.bind({});
 
 Default.args = {
+  onClickArtist(artist) {
+    linkTo("Components/ArtistDetails", "Default")();
+  },
   onClickLibraryItem(item) {
     linkTo(
       `Components/${item

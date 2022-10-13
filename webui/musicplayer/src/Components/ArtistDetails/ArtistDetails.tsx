@@ -183,7 +183,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = ({
               <Title>Albums</Title>
               <SeeMore>See all</SeeMore>
             </Row>
-            <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
+            <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
               {albums.map((item) => (
                 <Cell key={item.id}>
                   <AlbumCover src={item.cover} />

@@ -53,6 +53,7 @@ const ArtistName = styled.div`
   margin-top: 20px;
   margin-bottom: 18px;
   text-align: center;
+  width: 220px;
 `;
 
 export type ArtistsProps = {

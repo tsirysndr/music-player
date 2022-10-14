@@ -1,17 +1,18 @@
 use std::sync::Arc;
 
 use music_player_storage::Database;
+use tokio::sync::Mutex;
 
 use crate::api::v1alpha1::{
     history_service_server::HistoryService, GetHistoryRequest, GetHistoryResponse,
 };
 
 pub struct History {
-    db: Arc<Database>,
+    db: Arc<Mutex<Database>>,
 }
 
 impl History {
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 }

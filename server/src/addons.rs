@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use music_player_storage::Database;
+use tokio::sync::Mutex;
 
 use crate::api::v1alpha1::{
     addons_service_server::AddonsService, GetAddonDetailsRequest, GetAddonDetailsResponse,
@@ -9,11 +10,11 @@ use crate::api::v1alpha1::{
 use crate::objects::v1alpha1::Addon;
 
 pub struct Addons {
-    db: Arc<Database>,
+    db: Arc<Mutex<Database>>,
 }
 
 impl Addons {
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 }

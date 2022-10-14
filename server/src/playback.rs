@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
 use music_player_playback::player::{Player, PlayerEngine};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::{

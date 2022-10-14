@@ -61,24 +61,24 @@ impl MusicPlayerServer {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
-                Arc::new(db.clone()),
+                Arc::new(Mutex::new(db.clone())),
             ))))
             .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
             .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
-                Arc::new(db.clone()),
+                Arc::new(Mutex::new(db.clone())),
             ))))
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::new(db.clone()),
+                Arc::new(Mutex::new(db.clone())),
             ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
                 Playback::new(Arc::clone(&self.player)),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(Arc::new(db.clone())),
+                Playlist::new(Arc::new(Mutex::new(db.clone()))),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&self.player), Arc::new(db.clone())),
+                Tracklist::new(Arc::clone(&self.player), Arc::new(Mutex::new(db.clone()))),
             )))
             .serve(addr)
             .await?;

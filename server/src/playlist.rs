@@ -4,6 +4,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
 };
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
@@ -17,11 +18,11 @@ use crate::{
 };
 
 pub struct Playlist {
-    db: Arc<Database>,
+    db: Arc<Mutex<Database>>,
 }
 
 impl Playlist {
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 }
@@ -36,7 +37,7 @@ impl PlaylistService for Playlist {
             id: ActiveValue::set(Uuid::new_v4().to_string()),
             name: ActiveValue::set(request.get_ref().name.clone()),
         };
-        match item.insert(self.db.get_connection()).await {
+        match item.insert(self.db.lock().await.get_connection()).await {
             Ok(saved) => {
                 for track in request.get_ref().tracks.iter() {
                     let item = playlist_tracks::ActiveModel {
@@ -44,7 +45,7 @@ impl PlaylistService for Playlist {
                         playlist_id: ActiveValue::set(saved.id.clone()),
                         track_id: ActiveValue::set(track.id.clone()),
                     };
-                    match item.insert(self.db.get_connection()).await {
+                    match item.insert(self.db.lock().await.get_connection()).await {
                         Ok(_) => (),
                         Err(_) => (),
                     }
@@ -65,7 +66,7 @@ impl PlaylistService for Playlist {
         request: tonic::Request<DeleteRequest>,
     ) -> Result<tonic::Response<DeleteResponse>, tonic::Status> {
         playlist::Entity::delete_by_id(request.get_ref().id.clone())
-            .exec(self.db.get_connection())
+            .exec(self.db.lock().await.get_connection())
             .await
             .map(|_| {
                 tonic::Response::new(DeleteResponse {
@@ -81,7 +82,7 @@ impl PlaylistService for Playlist {
         request: tonic::Request<GetItemsRequest>,
     ) -> Result<tonic::Response<GetItemsResponse>, tonic::Status> {
         let result = playlist::Entity::find_by_id(request.get_ref().id.clone())
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await;
         match result {
             Ok(playlist) => {
@@ -92,7 +93,7 @@ impl PlaylistService for Playlist {
                     .clone()
                     .unwrap()
                     .find_related(track::Entity)
-                    .all(self.db.get_connection())
+                    .all(self.db.lock().await.get_connection())
                     .await
                     .map(|tracks| {
                         tonic::Response::new(GetItemsResponse {
@@ -129,7 +130,7 @@ impl PlaylistService for Playlist {
         };
         playlist::Entity::update(updates)
             .filter(playlist::Column::Id.eq("test"))
-            .exec(self.db.get_connection())
+            .exec(self.db.lock().await.get_connection())
             .await
             .map(|updated| {
                 tonic::Response::new(RenameResponse {
@@ -151,7 +152,7 @@ impl PlaylistService for Playlist {
                     .eq(request.get_ref().id.clone())
                     .and(playlist_tracks::Column::TrackId.eq(request.get_ref().track_id.clone())),
             )
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await;
         if item.is_err() {
             return Err(tonic::Status::internal(
@@ -162,7 +163,7 @@ impl PlaylistService for Playlist {
             id: Set(item.unwrap().unwrap().id),
             ..Default::default()
         })
-        .exec(self.db.get_connection())
+        .exec(self.db.lock().await.get_connection())
         .await
         .map(|_| {
             tonic::Response::new(RemoveItemResponse {
@@ -182,7 +183,7 @@ impl PlaylistService for Playlist {
             playlist_id: ActiveValue::set(request.get_ref().id.clone()),
             track_id: ActiveValue::set(request.get_ref().track_id.clone()),
         };
-        match item.insert(self.db.get_connection()).await {
+        match item.insert(self.db.lock().await.get_connection()).await {
             Ok(saved) => Ok(tonic::Response::new(AddItemResponse {
                 id: saved.id,
                 ..Default::default()
@@ -196,7 +197,7 @@ impl PlaylistService for Playlist {
         _request: tonic::Request<FindAllRequest>,
     ) -> Result<tonic::Response<FindAllResponse>, tonic::Status> {
         playlist::Entity::find()
-            .all(self.db.get_connection())
+            .all(self.db.lock().await.get_connection())
             .await
             .map(|playlists| {
                 tonic::Response::new(FindAllResponse {
@@ -224,7 +225,7 @@ impl PlaylistService for Playlist {
         request: tonic::Request<GetPlaylistDetailsRequest>,
     ) -> Result<tonic::Response<GetPlaylistDetailsResponse>, tonic::Status> {
         let result = playlist::Entity::find_by_id(request.get_ref().id.clone())
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await;
         match result {
             Ok(playlist) => {
@@ -235,7 +236,7 @@ impl PlaylistService for Playlist {
                     .clone()
                     .unwrap()
                     .find_related(track::Entity)
-                    .all(self.db.get_connection())
+                    .all(self.db.lock().await.get_connection())
                     .await
                     .map(|tracks| {
                         tonic::Response::new(GetPlaylistDetailsResponse {

@@ -22,11 +22,11 @@ use crate::{
 
 pub struct Tracklist {
     player: Arc<Mutex<Player>>,
-    db: Arc<Database>,
+    db: Arc<Mutex<Database>>,
 }
 
 impl Tracklist {
-    pub fn new(player: Arc<Mutex<Player>>, db: Arc<Database>) -> Self {
+    pub fn new(player: Arc<Mutex<Player>>, db: Arc<Mutex<Database>>) -> Self {
         Self { player, db }
     }
 }
@@ -39,9 +39,10 @@ impl TracklistService for Tracklist {
     ) -> Result<tonic::Response<AddTrackResponse>, tonic::Status> {
         let song = request.get_ref().track.as_ref().unwrap();
         let result = track::Entity::find_by_id(song.clone().id)
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         if result.is_none() {
             return Err(tonic::Status::not_found("Track not found"));
         }

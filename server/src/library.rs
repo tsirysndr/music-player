@@ -6,6 +6,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
 };
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::api::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
@@ -16,11 +17,11 @@ use crate::api::v1alpha1::{
 use crate::metadata::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
 
 pub struct Library {
-    db: Arc<Database>,
+    db: Arc<Mutex<Database>>,
 }
 
 impl Library {
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 }
@@ -110,7 +111,7 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<GetArtistsResponse>, tonic::Status> {
         let results = artist::Entity::find()
             .order_by_asc(artist::Column::Name)
-            .all(self.db.get_connection())
+            .all(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let response = GetArtistsResponse {
@@ -132,7 +133,7 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<GetAlbumsResponse>, tonic::Status> {
         let results = album::Entity::find()
             .order_by_asc(album::Column::Title)
-            .all(self.db.get_connection())
+            .all(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let response = GetAlbumsResponse {
@@ -156,7 +157,7 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<GetTracksResponse>, tonic::Status> {
         let results = track::Entity::find()
             .order_by_asc(track::Column::Title)
-            .all(self.db.get_connection())
+            .all(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let response = GetTracksResponse {
@@ -190,7 +191,7 @@ impl LibraryService for Library {
         request: tonic::Request<GetTrackDetailsRequest>,
     ) -> Result<tonic::Response<GetTrackDetailsResponse>, tonic::Status> {
         let result = track::Entity::find_by_id(request.into_inner().id)
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         if result.is_none() {
@@ -225,7 +226,7 @@ impl LibraryService for Library {
         request: tonic::Request<GetAlbumDetailsRequest>,
     ) -> Result<tonic::Response<GetAlbumDetailsResponse>, tonic::Status> {
         let result = album::Entity::find_by_id(request.into_inner().id)
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         if result.is_none() {
@@ -235,7 +236,7 @@ impl LibraryService for Library {
         let tracks = album
             .find_related(track::Entity)
             .order_by_asc(track::Column::Track)
-            .all(self.db.get_connection())
+            .all(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let album = Some(Album {
@@ -266,7 +267,7 @@ impl LibraryService for Library {
         request: tonic::Request<GetArtistDetailsRequest>,
     ) -> Result<tonic::Response<GetArtistDetailsResponse>, tonic::Status> {
         let result = artist::Entity::find_by_id(request.into_inner().id)
-            .one(self.db.get_connection())
+            .one(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -279,7 +280,7 @@ impl LibraryService for Library {
         let tracks = track::Entity::find()
             .filter(track::Column::Artist.eq(artist.name.to_owned()))
             .order_by_asc(track::Column::Title)
-            .all(self.db.get_connection())
+            .all(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 

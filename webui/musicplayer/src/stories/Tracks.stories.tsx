@@ -16,8 +16,18 @@ export const Default = Template.bind({});
 
 Default.args = {
   tracks: [
-    ["Otherside", "Red Hot Chilli Peppers", "Californication", "4:15"],
-    ["Road Trippin'", "Red Hot Chilli Peppers", "Californication", "3:25"],
+    {
+      title: "Otherside",
+      artist: "Red Hot Chilli Peppers",
+      album: "Californication",
+      time: "4:15",
+    },
+    {
+      title: "Road Trippin'",
+      artist: "Red Hot Chilli Peppers",
+      album: "Californication",
+      time: "3:25",
+    },
   ],
   onClickLibraryItem(item) {
     linkTo(

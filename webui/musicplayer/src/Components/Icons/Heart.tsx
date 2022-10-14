@@ -1,18 +1,44 @@
 import * as React from "react";
 
-const Heart: React.FC = (props) => (
+export type HeartProps = {
+  size?: number;
+  color?: string;
+  width?: number;
+  height?: number;
+};
+
+const Heart: React.FC<HeartProps> = (props) => (
   <svg
+    width={props.size}
     xmlns="http://www.w3.org/2000/svg"
-    className="ionicon"
-    viewBox="0 0 512 512"
+    height={props.size}
+    style={{
+      WebkitPrintColorAdjust: "exact",
+      paddingTop: 1,
+    }}
+    fill="none"
     {...props}
   >
-    <title>{"Heart"}</title>
-    <path
-      d="M256 448a32 32 0 0 1-18-5.57c-78.59-53.35-112.62-89.93-131.39-112.8-40-48.75-59.15-98.8-58.61-153C48.63 114.52 98.46 64 159.08 64c44.08 0 74.61 24.83 92.39 45.51a6 6 0 0 0 9.06 0C278.31 88.81 308.84 64 352.92 64c60.62 0 110.45 50.52 111.08 112.64.54 54.21-18.63 104.26-58.61 153-18.77 22.87-52.8 59.45-131.39 112.8a32 32 0 0 1-18 5.56z"
-      fill="#000"
-    />
+    <g
+      style={{
+        fill: props.color,
+      }}
+    >
+      <path
+        d="M10 17c-.247 0-.488-.071-.692-.203-3.023-1.945-4.332-3.279-5.053-4.113C2.716 10.907 1.98 9.082 2 7.106 2.025 4.842 3.941 3 6.273 3c1.695 0 2.869.905 3.553 1.659a.236.236 0 0 0 .348 0C10.858 3.905 12.032 3 13.727 3 16.059 3 17.975 4.842 18 7.107c.02 1.976-.717 3.801-2.255 5.578-.721.834-2.03 2.167-5.053 4.112A1.275 1.275 0 0 1 10 17Z"
+        style={{
+          fill: props.color,
+          fillOpacity: 1,
+        }}
+        className="ionicon"
+      />
+    </g>
   </svg>
 );
+
+Heart.defaultProps = {
+  size: 20,
+  color: "#ab28fc",
+};
 
 export default Heart;

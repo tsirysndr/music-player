@@ -19,9 +19,24 @@ Default.args = {
     name: "Daft Punk",
   },
   tracks: [
-    ["Get Lucky", "Daft Punk", "Random Access Memories", "6:10"],
-    ["Instant Crush", "Daft Punk", "Random Access Memories", "5:38"],
-    ["Arround the World", "Daft Punk", "Homework", "7:10"],
+    {
+      title: "Get Lucky",
+      artist: "Daft Punk",
+      album: "Random Access Memories",
+      time: "6:10",
+    },
+    {
+      title: "Instant Crush",
+      artist: "Daft Punk",
+      album: "Random Access Memories",
+      time: "5:38",
+    },
+    {
+      title: "Arround the World",
+      artist: "Daft Punk",
+      album: "Homework",
+      time: "7:10",
+    },
   ],
   albums: [
     {

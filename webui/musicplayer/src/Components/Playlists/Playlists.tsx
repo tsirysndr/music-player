@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import Add from "../Icons/Add";
+import AddAlt from "../Icons/AddAlt";
 
 const Title = styled.div`
   font-size: 16px;
@@ -41,7 +42,7 @@ const Playlists = () => {
       <Title>Playlists</Title>
       <Create>
         <Plus>
-          <Add />
+          <AddAlt />
         </Plus>
         <span>Create ...</span>
       </Create>

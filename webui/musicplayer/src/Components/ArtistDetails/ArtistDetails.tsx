@@ -87,7 +87,7 @@ const Row = styled.div`
 `;
 
 const SeeMore = styled.div`
-  width: 115px;
+  width: 64px;
   font-size: 14px;
   color: rgba(0, 0, 0, 0.51);
   cursor: pointer;

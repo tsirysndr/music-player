@@ -19,6 +19,9 @@
   <a href="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml" target="_blank">
     <img alt="rust-clippy" src="https://github.com/tsirysndr/music-player/actions/workflows/rust-clippy.yml/badge.svg?branch=master" />
   </a>
+  <a href="https://feat-webui--6343b23f7b47cd6de45a5849.chromatic.com/" target="_blank">
+  <img src="https://raw.githubusercontent.com/storybooks/brand/master/badge/badge-storybook.svg">
+  </a>
   <a href="https://discord.gg/reJ9gUNsMV" target="_blank">
     <img alt="discord-server" src="https://img.shields.io/discord/1026789060515205181?label=discord&logo=discord&color=5865F2">
   </a>

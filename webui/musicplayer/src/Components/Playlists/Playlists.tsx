@@ -1,6 +1,10 @@
 import styled from "@emotion/styled";
-import Add from "../Icons/Add";
+import { StatefulMenu } from "baseui/menu";
+import { StatefulPopover } from "baseui/popover";
+import { useState } from "react";
 import AddAlt from "../Icons/AddAlt";
+import NewFolderModal from "./NewFolderModal";
+import NewPlaylistModal from "./NewPlaylistModal";
 
 const Title = styled.div`
   font-size: 16px;
@@ -37,15 +41,68 @@ const Plus = styled.div`
 `;
 
 const Playlists = () => {
+  const [newFolderModalOpen, setNewFolderModalOpen] = useState(false);
+  const [newPlaylistModalOpen, setNewPlaylistModalOpen] = useState(false);
   return (
     <Container>
       <Title>Playlists</Title>
-      <Create>
-        <Plus>
-          <AddAlt />
-        </Plus>
-        <span>Create ...</span>
-      </Create>
+      <StatefulPopover
+        placement="bottom"
+        autoFocus={false}
+        dismissOnClickOutside={true}
+        dismissOnEsc={true}
+        content={({ close }) => (
+          <div style={{ width: 205 }}>
+            <StatefulMenu
+              overrides={{
+                List: {
+                  style: {
+                    boxShadow: "none",
+                  },
+                },
+              }}
+              items={[
+                {
+                  label: "Folder",
+                },
+                {
+                  label: "Playlist",
+                },
+              ]}
+              onItemSelect={({ item }) => {
+                close();
+                if (item.label === "Folder") {
+                  setNewFolderModalOpen(true);
+                } else if (item.label === "Playlist") {
+                  setNewPlaylistModalOpen(true);
+                }
+              }}
+            />
+          </div>
+        )}
+        overrides={{
+          Inner: {
+            style: {
+              backgroundColor: "#fff",
+            },
+          },
+        }}
+      >
+        <Create>
+          <Plus>
+            <AddAlt />
+          </Plus>
+          <span>Create ...</span>
+        </Create>
+      </StatefulPopover>
+      <NewFolderModal
+        isOpen={newFolderModalOpen}
+        onClose={() => setNewFolderModalOpen(false)}
+      />
+      <NewPlaylistModal
+        isOpen={newPlaylistModalOpen}
+        onClose={() => setNewPlaylistModalOpen(false)}
+      />
       <Item>New South</Item>
     </Container>
   );

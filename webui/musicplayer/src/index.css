@@ -40,3 +40,7 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+[data-baseweb="modal"] {
+  z-index: 1;
+}

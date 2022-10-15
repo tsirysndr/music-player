@@ -57,7 +57,7 @@ const Track = styled.div`
   align-items: center;
   padding-left: 5px;
   padding-right: 5px;
-  border-bottom: 1px solid #f7f7f8;
+  border-bottom: 1px solid #e0e0e0cc;
 `;
 
 const Artist = styled.div`

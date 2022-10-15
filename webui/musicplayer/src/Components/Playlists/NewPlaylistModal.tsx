@@ -33,12 +33,15 @@ const NewPlaylistModal: FC<NewFolderModalProps> = ({ onClose, isOpen }) => {
                 borderBottomColor: $isFocused
                   ? "rgb(171, 40, 252)"
                   : "rgba(118, 118, 118, 0.189)",
+                marginBottom: "15px",
               }),
             },
             Input: {
               style: {
                 backgroundColor: "#fff",
                 fontSize: "14px",
+                paddingLeft: "0px !important",
+                paddingRight: "0px !important",
               },
             },
             InputContainer: {
@@ -68,6 +71,8 @@ const NewPlaylistModal: FC<NewFolderModalProps> = ({ onClose, isOpen }) => {
               style: {
                 backgroundColor: "#fff",
                 fontSize: "14px",
+                paddingLeft: "0px !important",
+                paddingRight: "0px !important",
               },
             },
             InputContainer: {

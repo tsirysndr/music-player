@@ -38,6 +38,8 @@ const NewFolderModal: FC<NewFolderModalProps> = ({ onClose, isOpen }) => {
               style: {
                 backgroundColor: "#fff",
                 fontSize: "14px",
+                paddingLeft: "0px !important",
+                paddingRight: "0px !important",
               },
             },
             InputContainer: {

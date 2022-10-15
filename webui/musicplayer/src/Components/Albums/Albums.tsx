@@ -69,7 +69,7 @@ const Albums: FC<AlbumProps> = ({
         <Scrollable>
           <MainContent title="Albums" placeholder="Filter Albums">
             <Wrapper>
-              <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
+              <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
                 {albums.map((item) => (
                   <Cell key={item.id}>
                     <AlbumCover

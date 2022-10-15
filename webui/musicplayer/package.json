@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
+    "@styled-icons/ionicons-sharp": "^10.46.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -15,6 +16,7 @@
     "baseui": "^12.2.0",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
+    "react-custom-scrollbars": "^4.2.1",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.4.2",
     "react-scripts": "5.0.1",
@@ -70,6 +72,7 @@
     "@storybook/preset-create-react-app": "^4.1.2",
     "@storybook/react": "^6.5.12",
     "@storybook/testing-library": "^0.0.13",
+    "@types/react-custom-scrollbars": "^4.0.10",
     "babel-plugin-named-exports-order": "^0.0.2",
     "msw": "^0.47.4",
     "msw-storybook-addon": "^1.6.3",

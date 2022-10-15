@@ -18,40 +18,6 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
   return (
     <TableWrapper>
       {title}
-      {/*
-        <Table
-        columns={header}
-        data={tracks}
-        overrides={{
-          TableHeadCell: {
-            style: ({ $col }) => {
-              return {
-                width:
-                  $col === "#" ? "10px" : $col === "Time" ? "98px" : "intial",
-                outline: `#fff solid`,
-                borderBottomColor: "#fff !important",
-                color: "rgba(0, 0, 0, 0.542)",
-              };
-            },
-          },
-          TableBodyCell: {
-            style: () => ({
-              outline: `#fff solid`,
-              backgroundColor: "#fff",
-            }),
-          },
-          TableHead: {
-            style: () => ({
-              outline: `#fff solid`,
-              borderBottomColor: "#fff",
-            }),
-          },
-          TableBody: {
-            style: () => ({ border: "none", backgroundColor: "#fff" }),
-          },
-        }}
-      />
-      */}
       <TableBuilder
         data={tracks}
         overrides={{
@@ -95,7 +61,7 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
           </TableBuilderColumn>
         ))}
         <TableBuilderColumn header="">
-          {() => <ContextMenu />}
+          {(row: any) => <ContextMenu track={row} />}
         </TableBuilderColumn>
       </TableBuilder>
     </TableWrapper>

@@ -44,3 +44,5 @@ code {
 [data-baseweb="modal"] {
   z-index: 1;
 }
+
+*:focus {outline:none !important}

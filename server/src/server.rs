@@ -56,29 +56,29 @@ impl MusicPlayerServer {
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());
 
-        let db = Database::new().await;
+        let db = Arc::new(Mutex::new(Database::new().await));
 
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
-                Arc::new(Mutex::new(db.clone())),
+                Arc::clone(&db),
             ))))
             .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
             .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
-                Arc::new(Mutex::new(db.clone())),
+                Arc::clone(&db),
             ))))
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::new(Mutex::new(db.clone())),
+                Arc::clone(&db),
             ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
                 Playback::new(Arc::clone(&self.player)),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(Arc::new(Mutex::new(db.clone()))),
+                Playlist::new(Arc::clone(&db)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&self.player), Arc::new(Mutex::new(db.clone()))),
+                Tracklist::new(Arc::clone(&self.player), Arc::clone(&db)),
             )))
             .serve(addr)
             .await?;

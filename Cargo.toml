@@ -14,6 +14,20 @@ description = "An extensible music player daemon written in Rust"
 
 [workspace]
 
+members = [
+    "addons",
+    "client",
+    "entity",
+    "migration",
+    "playback",
+    "scanner",
+    "server",
+    "settings",
+    "storage",
+    "tracklist",
+    "webui"
+]
+
 [[bin]]
 name = "music-player"
 path = "src/main.rs"

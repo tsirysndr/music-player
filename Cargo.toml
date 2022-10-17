@@ -78,6 +78,9 @@ version = "0.1.0"
 
 [dependencies.music-player-discovery]
 path = "discovery"
+
+[dependencies.music-player-graphql]
+path = "graphql"
 version = "0.1.0"
 
 [dependencies.sea-orm-migration]

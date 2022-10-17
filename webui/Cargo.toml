@@ -4,9 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies.music-player-graphql]
+path = "../graphql"
+version = "0.1.0"
 
 [dependencies]
 actix-web = "4.2.1"
+async-graphql = "4.0.15"
+async-graphql-actix-web = "4.0.15"
 mime_guess = "2.0.4"
 owo-colors = "3.5.0"
 rust-embed = { version = "6.4.1", features = ["actix"] }

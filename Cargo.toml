@@ -19,6 +19,7 @@ members = [
     "client",
     "discovery",
     "entity",
+    "graphql",
     "migration",
     "playback",
     "scanner",

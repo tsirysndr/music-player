@@ -21,3 +21,5 @@ owo-colors = "3.5.0"
 rust-embed = { version = "6.4.1", features = ["actix"] }
 actix-files = "0.6.2"
 dirs = "4.0.0"
+serde_derive = "1.0.145"
+serde = { version = "1.0.145", features = ["serde_derive"] }

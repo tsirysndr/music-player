@@ -1,7 +1,7 @@
 use actix_files as fs;
 use actix_web::{
     web::{self, Data},
-    App, HttpResponse, HttpServer, Responder, Result,
+    App, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
@@ -13,6 +13,12 @@ use music_player_graphql::{
 use music_player_settings::{read_settings, Settings};
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
+use serde_derive::Deserialize;
+
+#[derive(Deserialize)]
+struct Params {
+    pub origin: Option<String>,
+}
 
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]
@@ -41,14 +47,16 @@ async fn index_graphql(
 }
 
 #[actix_web::get("/graphiql")]
-async fn index_graphiql() -> Result<HttpResponse> {
+async fn index_graphiql(req: HttpRequest) -> Result<HttpResponse> {
+    let params = web::Query::<Params>::from_query(req.query_string()).unwrap();
+    let origin = params.origin.clone();
+    let host = origin.unwrap_or_else(|| "localhost".to_string());
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+    let graphql_endpoint = format!("http://{}:{}/graphql", host, settings.http_port);
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(
-            GraphiQLSource::build()
-                .endpoint("http://localhost:8000/graphql")
-                .finish(),
-        ))
+        .body(GraphiQLSource::build().endpoint(&graphql_endpoint).finish()))
 }
 
 #[actix_web::get("/{_:.*}")]

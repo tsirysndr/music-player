@@ -2958,6 +2958,8 @@ dependencies = [
  "music-player-settings",
  "owo-colors",
  "rust-embed",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]

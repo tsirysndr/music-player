@@ -271,7 +271,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("devices") {
-        discover(SERVICE_NAME).await?;
+        discover(SERVICE_NAME);
         return Ok(());
     }
 

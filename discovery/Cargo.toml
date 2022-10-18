@@ -16,3 +16,4 @@ libmdns = "0.7.2"
 mdns = "3.0.0"
 tokio = { version = "1.21.2", features = ["full"] }
 owo-colors = "3.5.0"
+mdns-sd = "0.5.8"

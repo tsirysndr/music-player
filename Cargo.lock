@@ -1980,6 +1980,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mdns-sd"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b7c35d9612e1eb5eb4f441fbdadf16f8c148dd5b15d6baffcb596354ca1067e"
+dependencies = [
+ "flume",
+ "if-addrs",
+ "log",
+ "polling",
+ "socket2",
+]
+
+[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2123,6 +2136,7 @@ dependencies = [
  "futures-util",
  "libmdns",
  "mdns",
+ "mdns-sd",
  "music-player-settings",
  "owo-colors",
  "tokio",

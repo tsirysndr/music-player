@@ -1,8 +1,8 @@
+use mdns_sd::{ServiceDaemon, ServiceEvent};
 use owo_colors::OwoColorize;
 use std::{net::IpAddr, thread, time::Duration};
 
 use futures_util::{pin_mut, StreamExt};
-use mdns::{Error, Record, RecordKind};
 use music_player_settings::{read_settings, Settings};
 
 pub const SERVICE_NAME: &'static str = "_music-player._tcp.local";
@@ -45,28 +45,22 @@ pub fn register(name: &str, port: u16) {
     }
 }
 
-pub async fn discover(service_name: &str) -> Result<(), Error> {
-    let stream = mdns::discover::all(service_name, Duration::from_secs(3))?.listen();
-    pin_mut!(stream);
-
-    while let Some(Ok(response)) = stream.next().await {
-        let host = response.hostname().unwrap_or("unknown");
-        let port = response.port().unwrap_or_default();
-        let addr = response.records().filter_map(self::to_ip_addr).next();
-
-        if let Some(addr) = addr {
-            println!("{} - {}:{}", host.bright_green(), addr, port)
-        } else {
-            println!("music-player device does not advertise address");
+pub fn discover(service_name: &str) {
+    let mdns = ServiceDaemon::new().unwrap();
+    let service_name = format!("{}.", service_name);
+    let receiver = mdns.browse(&service_name).expect("Failed to browse");
+    while let Ok(event) = receiver.recv() {
+        match event {
+            ServiceEvent::ServiceResolved(info) => {
+                println!(
+                    "{} - {} - {:?} - port: {}",
+                    info.get_fullname().bright_green(),
+                    info.get_hostname().to_lowercase(),
+                    info.get_addresses(),
+                    info.get_port()
+                );
+            }
+            _ => {}
         }
-    }
-    Ok(())
-}
-
-fn to_ip_addr(record: &Record) -> Option<IpAddr> {
-    match record.kind {
-        RecordKind::A(addr) => Some(addr.into()),
-        RecordKind::AAAA(addr) => Some(addr.into()),
-        _ => None,
     }
 }

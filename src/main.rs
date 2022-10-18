@@ -24,7 +24,7 @@ use event::Key;
 use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
 use migration::SeaRc;
-use music_player_client::ws_client::WebsocketClient;
+use music_player_client::{library::LibraryClient, ws_client::WebsocketClient};
 use music_player_discovery::register_services;
 use music_player_entity::track::Model as TrackModel;
 use music_player_playback::{
@@ -233,9 +233,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(err.into());
     }
 
-    let mode = env::var("MUSIC_PLAYER_MODE").unwrap_or("server".to_owned());
+    let mut mode = match connect_to_server().await {
+        true => "client".to_string(),
+        false => "server".to_string(),
+    };
 
-    register_services();
+    mode = env::var("MUSIC_PLAYER_MODE").unwrap_or(mode);
 
     if mode == "server" {
         migration::run().await;
@@ -273,6 +276,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut start_server = Err("".into());
 
     if mode == "server" {
+        register_services();
         start_server = MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map))
             .start()
             .await;
@@ -462,5 +466,12 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                 }
             }
         });
+    }
+}
+
+async fn connect_to_server() -> bool {
+    match LibraryClient::new().await {
+        Ok(_) => true,
+        Err(_) => false,
     }
 }

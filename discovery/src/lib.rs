@@ -1,11 +1,10 @@
 use mdns_sd::{ServiceDaemon, ServiceEvent};
 use owo_colors::OwoColorize;
-use std::{net::IpAddr, thread, time::Duration};
+use std::thread;
 
-use futures_util::{pin_mut, StreamExt};
 use music_player_settings::{read_settings, Settings};
 
-pub const SERVICE_NAME: &'static str = "_music-player._tcp.local";
+pub const SERVICE_NAME: &'static str = "_music-player._tcp.local.";
 
 pub fn register_services() {
     let config = read_settings().unwrap();
@@ -47,7 +46,6 @@ pub fn register(name: &str, port: u16) {
 
 pub fn discover(service_name: &str) {
     let mdns = ServiceDaemon::new().unwrap();
-    let service_name = format!("{}.", service_name);
     let receiver = mdns.browse(&service_name).expect("Failed to browse");
     while let Ok(event) = receiver.recv() {
         match event {

@@ -2124,6 +2124,7 @@ dependencies = [
  "libmdns",
  "mdns",
  "music-player-settings",
+ "owo-colors",
  "tokio",
 ]
 

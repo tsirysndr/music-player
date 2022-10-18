@@ -161,6 +161,7 @@ A simple music player written in Rust"#,
         ).arg(
             arg!(-p --port <port> "The port to connect to").default_value("50051").required(false)
         ).about("Connect to the server"))
+        .subcommand(Command::new("devices").about("List all `music-player` devices on the network"))
 }
 
 #[tokio::main]

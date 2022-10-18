@@ -86,7 +86,7 @@ impl Player {
                 sink_status: SinkStatus::Closed,
                 sink_event_callback: None,
                 event_senders: [event_sender].to_vec(),
-                tracklist: Tracklist::new_empty(),
+                tracklist: Arc::new(Mutex::new(Tracklist::new_empty())),
                 event_broadcaster: Box::new(event_broadcaster),
                 position_ms: 0,
             };
@@ -250,7 +250,7 @@ struct PlayerInternal {
     sink_status: SinkStatus,
     sink_event_callback: Option<SinkEventCallback>,
     event_senders: Vec<mpsc::UnboundedSender<PlayerEvent>>,
-    tracklist: Tracklist,
+    tracklist: Arc<Mutex<Tracklist>>,
     position_ms: u32,
     event_broadcaster: Box<dyn Fn(PlayerEvent) + Send + 'static>,
 }
@@ -304,7 +304,7 @@ impl Future for PlayerInternal {
                             self.state = PlayerState::Stopped;
                             let tracklist = self.tracklist.clone();
                             self.send_event(PlayerEvent::EndOfTrack {
-                                is_last_track: tracklist.is_empty(),
+                                is_last_track: tracklist.lock().is_empty(),
                             });
                             self.handle_next();
                         }
@@ -438,7 +438,7 @@ impl PlayerInternal {
         self.state = PlayerState::Playing {
             decoder: loaded_track.decoder,
         };
-        let (track, position) = self.tracklist.current_track();
+        let (track, position) = self.tracklist.lock().current_track();
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
             track,
             position,
@@ -469,8 +469,8 @@ impl PlayerInternal {
     }
 
     fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
-        self.tracklist.queue(tracks);
-        let (current_track, _) = self.tracklist.current_track();
+        self.tracklist.lock().queue(tracks);
+        let (current_track, _) = self.tracklist.lock().current_track();
         if current_track.is_none() {
             self.handle_next();
         }
@@ -509,37 +509,37 @@ impl PlayerInternal {
     }
 
     fn handle_next(&mut self) {
-        if self.tracklist.next_track().is_some() {
-            let (current_track, _) = self.tracklist.current_track();
+        if self.tracklist.lock().next_track().is_some() {
+            let (current_track, _) = self.tracklist.lock().current_track();
             self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_previous(&mut self) {
-        if self.tracklist.previous_track().is_some() {
-            let (current_track, _) = self.tracklist.current_track();
+        if self.tracklist.lock().previous_track().is_some() {
+            let (current_track, _) = self.tracklist.lock().current_track();
             self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_play_track_at(&mut self, index: usize) {
-        let (current_track, _) = self.tracklist.play_track_at(index);
+        let (current_track, _) = self.tracklist.lock().play_track_at(index);
         if current_track.is_some() {
             self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_clear(&mut self) {
-        self.tracklist.clear();
+        self.tracklist.lock().clear();
     }
 
     fn handle_get_tracks(&mut self) {
-        let tracks = self.tracklist.tracks();
+        let tracks = self.tracklist.lock().tracks();
         self.send_event(PlayerEvent::TracklistUpdated { tracks });
     }
 
     fn handle_get_current_track(&mut self) {
-        let (track, position) = self.tracklist.current_track();
+        let (track, position) = self.tracklist.lock().current_track();
         let is_playing = self.state.is_playing();
         self.send_event(PlayerEvent::CurrentTrack {
             track,

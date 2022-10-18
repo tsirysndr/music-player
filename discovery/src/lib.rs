@@ -6,6 +6,30 @@ use music_player_settings::{read_settings, Settings};
 
 pub const SERVICE_NAME: &'static str = "_music-player._tcp.local.";
 
+pub struct MdnsResponder {
+    responder: libmdns::Responder,
+    svc: Vec<libmdns::Service>,
+}
+
+impl MdnsResponder {
+    pub fn new() -> Self {
+        let responder = libmdns::Responder::new().unwrap();
+        Self {
+            responder,
+            svc: vec![],
+        }
+    }
+
+    pub fn register_service(&mut self, name: &str, port: u16) {
+        self.svc.push(self.responder.register(
+            "_music-player._tcp".to_owned(),
+            name.to_owned(),
+            port,
+            &["path=/"],
+        ));
+    }
+}
+
 pub fn register_services() {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
@@ -14,13 +38,13 @@ pub fn register_services() {
     let grpc_service = format!("grpc-{}", settings.device_id);
 
     thread::spawn(move || {
-        register(&http_service, settings.http_port);
-    });
-    thread::spawn(move || {
-        register(&grpc_service, settings.port);
-    });
-    thread::spawn(move || {
-        register(&ws_service, settings.ws_port);
+        let mut responder = MdnsResponder::new();
+        responder.register_service(&http_service, settings.http_port);
+        responder.register_service(&ws_service, settings.ws_port);
+        responder.register_service(&grpc_service, settings.port);
+        loop {
+            ::std::thread::sleep(::std::time::Duration::from_secs(10));
+        }
     });
 }
 

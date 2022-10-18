@@ -26,7 +26,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         "{}/music-player",
         dirs::config_dir().unwrap().to_str().unwrap()
     );
-    fs::create_dir_all(&path).unwrap();
+    let covers_path = format!("{}/covers", path);
+
+    fs::create_dir_all(&covers_path).unwrap();
 
     let device_id = format!("{:x}", md5::compute(Uuid::new_v4().to_string()));
 

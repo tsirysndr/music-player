@@ -1,10 +1,10 @@
-use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
-use music_player_graphql::schema::Query;
+use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
+use music_player_graphql::schema::{Mutation, Query};
 use tide::{http::mime, Body, Response, StatusCode};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let schema = Schema::new(Query::default(), EmptyMutation, EmptySubscription);
+    let schema = Schema::new(Query::default(), Mutation::default(), EmptySubscription);
     let mut app = tide::new();
 
     app.at("/graphql").post(async_graphql_tide::graphql(schema));

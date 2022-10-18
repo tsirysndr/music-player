@@ -1,5 +1,13 @@
 use async_graphql::MergedObject;
 
+use self::{
+    library::{LibraryMutation, LibraryQuery},
+    mixer::{MixerMutation, MixerQuery},
+    playback::{PlaybackMutation, PlaybackQuery},
+    playlist::{PlaylistMutation, PlaylistQuery},
+    tracklist::{TracklistMutation, TracklistQuery},
+};
+
 pub mod addons;
 pub mod core;
 pub mod history;
@@ -11,7 +19,19 @@ pub mod playlist;
 pub mod tracklist;
 
 #[derive(MergedObject, Default)]
-pub struct Query(playback::PlaybackQuery, tracklist::TracklistQuery);
+pub struct Query(
+    LibraryQuery,
+    MixerQuery,
+    PlaybackQuery,
+    PlaylistQuery,
+    TracklistQuery,
+);
 
 #[derive(MergedObject, Default)]
-pub struct Mutation(playback::PlaybackMutation, tracklist::TracklistMutation);
+pub struct Mutation(
+    LibraryMutation,
+    MixerMutation,
+    PlaybackMutation,
+    PlaylistMutation,
+    TracklistMutation,
+);

@@ -7,7 +7,7 @@ pub struct TracklistQuery;
 
 #[Object]
 impl TracklistQuery {
-    async fn tracks(&self, ctx: &Context<'_>) -> Vec<Track> {
+    async fn tracklist_tracks(&self, ctx: &Context<'_>) -> Vec<Track> {
         vec![]
     }
     async fn get_repeat(&self, ctx: &Context<'_>) -> bool {
@@ -51,6 +51,10 @@ impl TracklistMutation {
     }
 
     async fn shuffle(&self, ctx: &Context<'_>) -> bool {
+        false
+    }
+
+    async fn play_next(&self, ctx: &Context<'_>, id: ID) -> bool {
         false
     }
 }

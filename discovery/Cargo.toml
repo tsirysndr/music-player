@@ -1,0 +1,18 @@
+[package]
+name = "music-player-discovery"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.1.0"
+
+[dependencies]
+env_logger = "0.9.1"
+futures-util = "0.3.24"
+libmdns = "0.7.2"
+mdns = "3.0.0"
+tokio = { version = "1.21.2", features = ["full"] }
+owo-colors = "3.5.0"

@@ -12,5 +12,7 @@ description = "The settings module for the music player"
 [dependencies]
 config = "0.13.2"
 dirs = "4.0.0"
+md5 = "0.7.0"
 serde = "1.0.144"
 toml = "0.5.9"
+uuid = { version = "1.2.1", features = ["v4"] }

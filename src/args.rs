@@ -5,6 +5,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
+use music_player_discovery::{discover, SERVICE_NAME};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -267,6 +268,11 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         env::set_var("MUSIC_PLAYER_HOST", host);
         env::set_var("MUSIC_PLAYER_PORT", port);
         env::set_var("MUSIC_PLAYER_MODE", "client");
+    }
+
+    if let Some(_) = matches.subcommand_matches("devices") {
+        discover(SERVICE_NAME).await?;
+        return Ok(());
     }
 
     return Err("No subcommand found".into());

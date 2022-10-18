@@ -6,6 +6,7 @@ use std::{
 
 use config::{Config, ConfigError};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
@@ -15,6 +16,9 @@ pub struct Settings {
     pub addons: Option<Vec<String>>,
     pub music_directory: String,
     pub host: String,
+    pub device_name: String,
+    pub device_id: String,
+    pub http_port: u16,
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
@@ -24,10 +28,12 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     );
     fs::create_dir_all(&path).unwrap();
 
+    let device_id = format!("{:x}", md5::compute(Uuid::new_v4().to_string()));
+
     let default_settings = Settings {
         database_url: format!("sqlite:{}/music-player.sqlite3", path),
-        port: 50051,
-        ws_port: 50052,
+        port: 5051,
+        ws_port: 5052,
         addons: Some(vec![
             "deezer".to_string(),
             "datpiff".to_string(),
@@ -40,6 +46,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         ]),
         music_directory: dirs::audio_dir().unwrap().to_str().unwrap().to_string(),
         host: "0.0.0.0".to_string(),
+        device_name: "Music Player".to_string(),
+        device_id,
+        http_port: 5053,
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -63,5 +72,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("ws_port", default_settings.ws_port)?
         .set_default("music_directory", default_settings.music_directory)?
         .set_default("host", default_settings.host)?
+        .set_default("device_name", default_settings.device_name)?
+        .set_default("device_id", default_settings.device_id)?
+        .set_default("http_port", default_settings.http_port)?
         .build()
 }

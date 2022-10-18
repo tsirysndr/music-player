@@ -25,6 +25,7 @@ use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
 use migration::SeaRc;
 use music_player_client::ws_client::WebsocketClient;
+use music_player_discovery::register_services;
 use music_player_entity::track::Model as TrackModel;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
@@ -232,6 +233,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mode = env::var("MUSIC_PLAYER_MODE").unwrap_or("server".to_owned());
+
+    register_services();
 
     if mode == "server" {
         migration::run().await;

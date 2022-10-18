@@ -17,6 +17,7 @@ description = "An extensible music player daemon written in Rust"
 members = [
     "addons",
     "client",
+    "discovery",
     "entity",
     "migration",
     "playback",
@@ -73,6 +74,10 @@ path = "client"
 
 [dependencies.music-player-webui]
 path = "webui"
+version = "0.1.0"
+
+[dependencies.music-player-discovery]
+path = "discovery"
 version = "0.1.0"
 
 [dependencies.sea-orm-migration]

@@ -2833,7 +2833,13 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-graphql-tide",
+ "md5",
+ "music-player-entity",
+ "music-player-playback",
+ "music-player-scanner",
  "music-player-settings",
+ "music-player-storage",
+ "sea-orm",
  "tide",
  "tokio",
 ]
@@ -2955,11 +2961,14 @@ dependencies = [
  "dirs",
  "mime_guess",
  "music-player-graphql",
+ "music-player-playback",
  "music-player-settings",
+ "music-player-storage",
  "owo-colors",
  "rust-embed",
  "serde",
  "serde_derive",
+ "tokio",
 ]
 
 [[package]]

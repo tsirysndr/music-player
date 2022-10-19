@@ -1,6 +1,6 @@
 use async_graphql::*;
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Artist {
     pub id: ID,
     pub name: String,

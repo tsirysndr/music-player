@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
 use async_graphql::*;
+use music_player_playback::player::Player;
+use tokio::sync::Mutex;
 
 use super::objects::track::{Track, TrackInput};
 
@@ -31,30 +35,44 @@ pub struct TracklistMutation;
 #[Object]
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 
     async fn add_tracks(&self, ctx: &Context<'_>, tracks: Vec<TrackInput>) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 
     async fn clear_tracklist(&self, ctx: &Context<'_>) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 
     async fn remove_track(&self, ctx: &Context<'_>, position: u32) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 
     async fn play_track_at(&self, ctx: &Context<'_>, position: u32) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 
     async fn shuffle(&self, ctx: &Context<'_>) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 
     async fn play_next(&self, ctx: &Context<'_>, id: ID) -> bool {
+        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player = player.lock().await;
         false
     }
 }

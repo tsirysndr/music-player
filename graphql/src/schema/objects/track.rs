@@ -6,7 +6,7 @@ pub struct TrackInput {
     pub title: String,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Track {
     pub id: ID,
     pub title: String,

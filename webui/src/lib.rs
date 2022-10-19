@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use actix_files as fs;
 use actix_web::{
+    http::header::HOST,
     web::{self, Data},
     App, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
@@ -10,15 +13,12 @@ use music_player_graphql::{
     schema::{Mutation, Query},
     MusicPlayerSchema,
 };
+use music_player_playback::player::Player;
 use music_player_settings::{read_settings, Settings};
+use music_player_storage::Database;
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
-use serde_derive::Deserialize;
-
-#[derive(Deserialize)]
-struct Params {
-    pub origin: Option<String>,
-}
+use tokio::sync::Mutex;
 
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]
@@ -48,9 +48,16 @@ async fn index_graphql(
 
 #[actix_web::get("/graphiql")]
 async fn index_graphiql(req: HttpRequest) -> Result<HttpResponse> {
-    let params = web::Query::<Params>::from_query(req.query_string()).unwrap();
-    let origin = params.origin.clone();
-    let host = origin.unwrap_or_else(|| "localhost".to_string());
+    let host = req
+        .headers()
+        .get(HOST)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(":")
+        .next()
+        .unwrap();
+
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
     let graphql_endpoint = format!("http://{}:{}/graphql", host, settings.http_port);
@@ -64,13 +71,17 @@ async fn dist(path: web::Path<String>) -> impl Responder {
     handle_embedded_file(path.as_str())
 }
 
-pub async fn start_server() -> std::io::Result<()> {
+pub async fn start_server(player: Arc<Mutex<Player>>) -> std::io::Result<()> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
 
     let addr = format!("0.0.0.0:{}", settings.http_port);
 
-    let schema = Schema::new(Query::default(), Mutation::default(), EmptySubscription);
+    let db = Arc::new(Mutex::new(Database::new().await));
+    let schema = Schema::build(Query::default(), Mutation::default(), EmptySubscription)
+        .data(db)
+        .data(player)
+        .finish();
     println!("Starting webui at {}", addr.bright_green());
 
     HttpServer::new(move || {

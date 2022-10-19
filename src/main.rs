@@ -191,6 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         track,
                         index: position as u32,
                         is_playing,
+                        position_ms,
                     };
                     let msg = Event {
                         event_type: "current_track".to_string(),

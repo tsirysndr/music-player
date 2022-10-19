@@ -99,6 +99,15 @@ SUBCOMMANDS:
     tracks      List all tracks
 ```
 
+### GraphQL API
+
+```bash
+# Start the server
+music-player
+```
+
+Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your browser.
+
 ### Features
 
 - [x] Play music from specified path

@@ -71,7 +71,7 @@ async fn dist(path: web::Path<String>) -> impl Responder {
     handle_embedded_file(path.as_str())
 }
 
-pub async fn start_server(player: Arc<Mutex<Player>>) -> std::io::Result<()> {
+pub async fn start_webui(player: Arc<Mutex<Player>>) -> std::io::Result<()> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
 

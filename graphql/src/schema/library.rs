@@ -4,7 +4,9 @@ use async_graphql::{futures_util::FutureExt, *};
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_scanner::scan_directory;
 use music_player_storage::Database;
-use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait, QueryOrder};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
+};
 use tokio::sync::Mutex;
 
 use super::objects::{album::Album, artist::Artist, track::Track};
@@ -14,55 +16,177 @@ pub struct LibraryQuery;
 
 #[Object]
 impl LibraryQuery {
-    async fn tracks(&self, ctx: &Context<'_>) -> Vec<Track> {
-        vec![]
+    async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let results = track_entity::Entity::find()
+            .order_by_asc(track_entity::Column::Title)
+            .all(db.lock().await.get_connection())
+            .await?;
+        Ok(results
+            .into_iter()
+            .map(|track| Track {
+                id: ID(track.id),
+                title: track.title,
+                uri: track.uri,
+                duration: track.duration,
+                track_number: track.track,
+                artists: vec![Artist {
+                    name: track.artist,
+                    ..Default::default()
+                }],
+                album: Album {
+                    id: ID(track.album_id.unwrap()),
+                    title: track.album,
+                    year: track.year,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .collect())
     }
 
-    async fn artists(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+    async fn artists(&self, ctx: &Context<'_>) -> Result<Vec<Artist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = artist_entity::Entity::find()
             .order_by_asc(artist_entity::Column::Name)
             .all(db.lock().await.get_connection())
             .await?;
-        println!("{:?}", results);
-        Ok(vec![])
+
+        Ok(results
+            .into_iter()
+            .map(|artist| Artist {
+                id: ID(artist.id),
+                name: artist.name,
+                ..Default::default()
+            })
+            .collect())
     }
 
-    async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+    async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let _results = album_entity::Entity::find()
+        let results = album_entity::Entity::find()
             .order_by_asc(album_entity::Column::Title)
             .all(db.lock().await.get_connection())
             .await?;
-        Ok(vec![])
+        Ok(results
+            .into_iter()
+            .map(|album| Album {
+                id: ID(album.id),
+                title: album.title,
+                artist: album.artist,
+                year: album.year,
+                ..Default::default()
+            })
+            .collect())
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let _result = track_entity::Entity::find_by_id(id.to_string())
+        let result = track_entity::Entity::find_by_id(id.to_string())
             .one(db.lock().await.get_connection())
             .await?;
+        if result.is_none() {
+            return Err(Error::new("Track not found"));
+        }
+        let track = result.unwrap();
         Ok(Track {
+            id: ID(track.id),
+            title: track.title,
+            uri: track.uri,
+            duration: track.duration,
+            track_number: track.track,
+            artists: vec![Artist {
+                name: track.artist,
+                ..Default::default()
+            }],
+            album: Album {
+                id: ID(track.album_id.unwrap()),
+                title: track.album,
+                year: track.year,
+                ..Default::default()
+            },
             ..Default::default()
         })
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let _result = artist_entity::Entity::find_by_id(id.to_string())
+        let result = artist_entity::Entity::find_by_id(id.to_string())
             .one(db.lock().await.get_connection())
             .await?;
+
+        if result.is_none() {
+            return Err(Error::new("Artist not found"));
+        }
+
+        let artist = result.unwrap();
+        let name = artist.name.clone();
+        let tracks = track_entity::Entity::find()
+            .filter(track_entity::Column::Artist.eq(artist.name.to_owned()))
+            .order_by_asc(track_entity::Column::Title)
+            .all(db.lock().await.get_connection())
+            .await?;
+
         Ok(Artist {
+            id: ID(artist.id),
+            name: artist.name.to_owned(),
+            songs: tracks
+                .into_iter()
+                .map(|track| Track {
+                    id: ID(track.id),
+                    title: track.title,
+                    track_number: track.track,
+                    duration: track.duration,
+                    artists: vec![Artist {
+                        name: name.to_owned(),
+                        ..Default::default()
+                    }],
+                    album: Album {
+                        id: ID(track.album_id.unwrap()),
+                        title: track.album,
+                        year: track.year,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .collect(),
             ..Default::default()
         })
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let _result = album_entity::Entity::find_by_id(id.to_string())
+        let result = album_entity::Entity::find_by_id(id.to_string())
             .one(db.lock().await.get_connection())
             .await?;
+        if result.is_none() {
+            return Err(Error::new("Album not found"));
+        }
+        let album = result.unwrap();
+        let tracks = album
+            .find_related(track_entity::Entity)
+            .order_by_asc(track_entity::Column::Track)
+            .all(db.lock().await.get_connection())
+            .await?;
         Ok(Album {
+            id: ID(album.id),
+            title: album.title,
+            artist: album.artist,
+            year: album.year,
+            tracks: tracks
+                .into_iter()
+                .map(|track| Track {
+                    id: ID(track.id),
+                    title: track.title,
+                    track_number: track.track,
+                    duration: track.duration,
+                    artists: vec![Artist {
+                        name: track.artist,
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                })
+                .collect(),
             ..Default::default()
         })
     }

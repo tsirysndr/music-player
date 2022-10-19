@@ -5,6 +5,7 @@ pub struct TrackEvent {
     pub track: Option<Track>,
     pub index: u32,
     pub is_playing: bool,
+    pub position_ms: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

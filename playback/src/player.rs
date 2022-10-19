@@ -485,6 +485,13 @@ impl PlayerInternal {
             self.state.paused_to_playing();
             self.send_event(PlayerEvent::Playing);
             self.ensure_sink_running();
+            let (track, position) = self.tracklist.lock().current_track();
+            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+                track,
+                position,
+                position_ms: self.position_ms,
+                is_playing: true,
+            });
         } else {
             error!("Player::play called from invalid state");
         }
@@ -499,6 +506,13 @@ impl PlayerInternal {
         if let PlayerState::Playing { .. } = self.state {
             self.state.playing_to_paused();
             self.send_event(PlayerEvent::Paused);
+            let (track, position) = self.tracklist.lock().current_track();
+            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+                track,
+                position,
+                position_ms: self.position_ms,
+                is_playing: false,
+            });
         } else {
             error!("Player::pause called from invalid state");
         }

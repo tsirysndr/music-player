@@ -23,7 +23,7 @@ jobs:
           cd webui/musicplayer
           nvm install
           npm install -g yarn
-          yarn install && yarn build
+          yarn install --network-timeout 1000000000 && yarn build
       - name: Running cargo build
         uses: actions-rs/cargo@v1
         with:

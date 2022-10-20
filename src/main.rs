@@ -40,6 +40,7 @@ use music_player_server::{
     metadata::v1alpha1::{Album, Artist},
     server::MusicPlayerServer,
 };
+use music_player_webui::start_webui;
 use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
 use scan::auto_scan_music_library;
@@ -255,6 +256,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let player = Arc::new(Mutex::new(player));
     let cloned_player = Arc::clone(&player);
+    let webui_player = Arc::clone(&player);
 
     let cloned_peer_map = Arc::clone(&peer_map);
 
@@ -272,18 +274,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
-    }
 
-    let mut start_server = Err("".into());
-
-    if mode == "server" {
         register_services();
-        start_server = MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map))
-            .start()
-            .await;
+
+        thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            match runtime
+                .block_on(MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map)).start())
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    panic!("{}", e);
+                }
+            }
+        });
+        start_webui(webui_player).await?;
+        return Ok(());
     }
 
-    if start_server.is_err() || mode == "client" {
+    if mode == "client" {
         let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
         let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
         let cloned_app = Arc::clone(&app);
@@ -299,7 +311,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         return start_ui(&cloned_app).await;
     }
-    start_server
+    Ok(())
 }
 
 #[tokio::main]

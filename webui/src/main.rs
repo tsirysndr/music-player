@@ -1,39 +1,18 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use mime_guess::from_path;
-use owo_colors::OwoColorize;
-use rust_embed::RustEmbed;
+use std::sync::Arc;
 
-#[derive(RustEmbed)]
-#[folder = "musicplayer/build/"]
-struct Asset;
-
-fn handle_embedded_file(path: &str) -> HttpResponse {
-    match Asset::get(path) {
-        Some(content) => HttpResponse::Ok()
-            .content_type(from_path(path).first_or_octet_stream().as_ref())
-            .body(content.data.into_owned()),
-        None => HttpResponse::NotFound().body("404 Not Found"),
-    }
-}
-
-#[actix_web::get("/")]
-async fn index() -> impl Responder {
-    handle_embedded_file("index.html")
-}
-
-#[actix_web::get("/{_:.*}")]
-async fn dist(path: web::Path<String>) -> impl Responder {
-    handle_embedded_file(path.as_str())
-}
+use music_player_playback::{
+    audio_backend::{self, rodio::RodioSink},
+    config::AudioFormat,
+    player::Player,
+};
+use music_player_webui::start_webui;
+use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!(
-        "Starting webui at {}",
-        "http://localhost:8000".bright_green()
-    );
-    HttpServer::new(|| App::new().service(index).service(dist))
-        .bind("0.0.0.0:8000")?
-        .run()
-        .await
+    let audio_format = AudioFormat::default();
+    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+
+    let (player, _) = Player::new(move || backend(None, audio_format), move |event| {});
+    start_webui(Arc::new(Mutex::new(player))).await
 }

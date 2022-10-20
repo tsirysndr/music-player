@@ -1,140 +1,143 @@
-use std::sync::{Arc, Mutex};
-
 use music_player_entity::track::Model as Track;
 use rand::seq::SliceRandom;
 
+#[derive(Default, Debug, Clone)]
+pub struct PlaybackState {
+    pub position_ms: u32,
+    pub is_playing: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct Tracklist {
-    tracks: Arc<Mutex<Vec<Track>>>,
-    played: Arc<Mutex<Vec<Track>>>,
+    tracks: Vec<Track>,
+    played: Vec<Track>,
     current_track: Option<Track>,
+    playback_state: PlaybackState,
 }
 
 impl Tracklist {
     pub fn new(tracks: Vec<Track>) -> Self {
         Self {
-            tracks: Arc::new(Mutex::new(tracks)),
-            played: Arc::new(Mutex::new(Vec::new())),
+            tracks,
+            played: Vec::new(),
             current_track: None,
+            playback_state: PlaybackState::default(),
         }
     }
     pub fn new_empty() -> Self {
         Self {
-            tracks: Arc::new(Mutex::new(Vec::new())),
-            played: Arc::new(Mutex::new(Vec::new())),
+            tracks: Vec::new(),
+            played: Vec::new(),
             current_track: None,
+            playback_state: PlaybackState::default(),
         }
     }
 
     pub fn add_track(&mut self, track: Track) {
-        self.tracks.lock().unwrap().push(track);
+        self.tracks.push(track);
     }
 
     pub fn next_track(&mut self) -> Option<Track> {
-        if self.tracks.lock().unwrap().is_empty() {
+        if self.tracks.is_empty() {
             return None;
         }
 
-        let next_track = self.tracks.lock().unwrap().remove(0);
+        let next_track = self.tracks.remove(0);
         self.current_track = Some(next_track.clone());
-        self.played.lock().unwrap().push(next_track.clone());
+        self.played.push(next_track.clone());
         Some(next_track)
     }
 
     pub fn previous_track(&mut self) -> Option<Track> {
-        if self.played.lock().unwrap().len() < 2 {
+        if self.played.len() < 2 {
             return None;
         }
 
-        let previous_track = self.played.lock().unwrap().pop().unwrap();
-        self.tracks
-            .lock()
-            .unwrap()
-            .insert(0, previous_track.clone());
+        let previous_track = self.played.pop().unwrap();
+        self.tracks.insert(0, previous_track.clone());
 
-        if self.played.lock().unwrap().is_empty() {
+        if self.played.is_empty() {
             self.current_track = None;
             return None;
         }
 
-        let previous_track = self.played.lock().unwrap().pop().unwrap();
+        let previous_track = self.played.pop().unwrap();
         self.current_track = Some(previous_track.clone());
 
-        self.played.lock().unwrap().push(previous_track.clone());
+        self.played.push(previous_track.clone());
 
         Some(previous_track)
     }
 
     pub fn current_track(&self) -> (Option<Track>, usize) {
-        (
-            self.current_track.clone(),
-            self.played.lock().unwrap().len(),
-        )
+        (self.current_track.clone(), self.played.len())
     }
 
     pub fn tracks(&self) -> (Vec<Track>, Vec<Track>) {
-        (
-            self.played.lock().unwrap().clone(),
-            self.tracks.lock().unwrap().clone(),
-        )
+        (self.played.clone(), self.tracks.clone())
     }
 
     pub fn is_empty(&self) -> bool {
-        self.tracks.lock().unwrap().is_empty()
+        self.tracks.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.tracks.lock().unwrap().len()
+        self.tracks.len()
     }
 
     pub fn clear(&mut self) {
-        self.tracks.lock().unwrap().clear();
-        self.played.lock().unwrap().clear();
+        self.tracks.clear();
+        self.played.clear();
     }
 
     pub fn remove_track(&mut self, track: Track) {
-        self.tracks.lock().unwrap().retain(|t| t.id != track.id);
+        self.tracks.retain(|t| t.id != track.id);
     }
 
     pub fn remove_track_at(&mut self, index: usize) {
-        self.tracks.lock().unwrap().remove(index);
+        self.tracks.remove(index);
     }
 
     pub fn insert(&mut self, index: usize, track: Track) {
-        self.tracks.lock().unwrap().insert(index, track);
+        self.tracks.insert(index, track);
     }
 
     pub fn insert_tracks(&mut self, index: usize, tracks: Vec<Track>) {
-        self.tracks.lock().unwrap().splice(index..index, tracks);
+        self.tracks.splice(index..index, tracks);
     }
 
     pub fn insert_next(&mut self, track: Track) {
-        self.tracks.lock().unwrap().insert(0, track);
+        self.tracks.insert(0, track);
     }
 
     pub fn queue(&mut self, tracks: Vec<Track>) {
-        self.tracks.lock().unwrap().extend(tracks);
+        self.tracks.extend(tracks);
     }
 
     pub fn shuffle(&mut self) {
-        self.tracks.lock().unwrap().shuffle(&mut rand::thread_rng());
+        self.tracks.shuffle(&mut rand::thread_rng());
     }
 
     pub fn play_track_at(&mut self, index: usize) -> (Option<Track>, usize) {
-        if index >= (self.tracks.lock().unwrap().len() + self.played.lock().unwrap().len()) {
+        if index >= (self.tracks.len() + self.played.len()) {
             return (None, 0);
         }
-        let played = self.played.lock().unwrap().clone();
-        let tracks = self.tracks.lock().unwrap().clone();
 
-        self.played = Arc::new(Mutex::new([played, tracks].concat()));
+        self.played = [self.played.clone(), self.tracks.clone()].concat();
+        self.tracks = self.played.split_off(index);
 
-        self.tracks = Arc::new(Mutex::new(self.played.lock().unwrap().split_off(index)));
-
-        if index > 1 && index < self.played.lock().unwrap().len() - 1 {
+        if index > 1 && index < self.played.len() - 1 {
             self.next_track();
         }
         self.next_track();
         self.current_track()
+    }
+
+    pub fn playback_state(&self) -> PlaybackState {
+        self.playback_state.clone()
+    }
+
+    pub fn set_playback_state(&mut self, playback_state: PlaybackState) {
+        self.playback_state = playback_state;
     }
 }

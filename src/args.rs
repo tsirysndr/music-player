@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, sync::Mutex};
 
 use clap::ArgMatches;
 use music_player_client::{
@@ -11,7 +11,9 @@ use music_player_playback::{
     config::AudioFormat,
     player::{Player, PlayerEngine},
 };
+use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
+use std::sync::Arc;
 use tabled::{builder::Builder, Style};
 
 use crate::scan::scan_music_library;
@@ -20,8 +22,15 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(matches) = matches.subcommand_matches("open") {
         let audio_format = AudioFormat::default();
         let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
-
-        let (mut player, _) = Player::new(move || backend(None, audio_format), |_| {});
+        let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+        let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
+        let (mut player, _) = Player::new(
+            move || backend(None, audio_format),
+            |_| {},
+            cmd_tx,
+            cmd_rx,
+            tracklist,
+        );
 
         let song = matches.value_of("song").unwrap();
 

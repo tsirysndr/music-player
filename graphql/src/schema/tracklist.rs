@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use music_player_entity::track as track_entity;
-use music_player_playback::player::{Player, PlayerEngine};
+use music_player_playback::player::PlayerCommand;
 use music_player_storage::Database;
+use music_player_tracklist::Tracklist as TracklistState;
 use sea_orm::EntityTrait;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use super::objects::{
     album::Album,
@@ -20,8 +21,8 @@ pub struct TracklistQuery;
 #[Object]
 impl TracklistQuery {
     async fn tracklist_tracks(&self, ctx: &Context<'_>) -> Result<Tracklist, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let (previous_tracks, next_tracks) = player.lock().await.get_tracks().await;
+        let state = ctx.data::<Arc<std::sync::Mutex<TracklistState>>>().unwrap();
+        let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
 
         let response = Tracklist {
             next_tracks: next_tracks
@@ -91,7 +92,7 @@ pub struct TracklistMutation;
 #[Object]
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> Result<Vec<Track>, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let result = track_entity::Entity::find_by_id(track.clone().id.to_string())
@@ -102,46 +103,40 @@ impl TracklistMutation {
         }
 
         let track = result.unwrap();
-        let mut player = player.lock().await;
-        player.load_tracklist(vec![track]);
-
+        player_cmd.send(PlayerCommand::LoadTracklist {
+            tracks: vec![track],
+        });
         Ok(vec![])
     }
 
     async fn add_tracks(&self, ctx: &Context<'_>, tracks: Vec<TrackInput>) -> Result<bool, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let player = player.lock().await;
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         todo!()
     }
 
     async fn clear_tracklist(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let player = player.lock().await;
-        player.clear();
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
+        player_cmd.send(PlayerCommand::Clear);
         Ok(true)
     }
 
     async fn remove_track(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let player = player.lock().await;
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         todo!()
     }
 
     async fn play_track_at(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let player = player.lock().await;
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         todo!()
     }
 
     async fn shuffle(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let player = player.lock().await;
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         todo!()
     }
 
     async fn play_next(&self, ctx: &Context<'_>, id: ID) -> Result<bool, Error> {
-        let player = ctx.data::<Arc<Mutex<Player>>>().unwrap();
-        let player = player.lock().await;
+        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         todo!()
     }
 }

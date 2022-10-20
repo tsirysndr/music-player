@@ -13,12 +13,13 @@ use music_player_graphql::{
     schema::{Mutation, Query},
     MusicPlayerSchema,
 };
-use music_player_playback::player::Player;
+use music_player_playback::player::{Player, PlayerCommand};
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
+use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]
@@ -71,7 +72,10 @@ async fn dist(path: web::Path<String>) -> impl Responder {
     handle_embedded_file(path.as_str())
 }
 
-pub async fn start_webui(player: Arc<Mutex<Player>>) -> std::io::Result<()> {
+pub async fn start_webui(
+    cmd_tx: UnboundedSender<PlayerCommand>,
+    tracklist: Arc<std::sync::Mutex<Tracklist>>,
+) -> std::io::Result<()> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
 
@@ -80,7 +84,8 @@ pub async fn start_webui(player: Arc<Mutex<Player>>) -> std::io::Result<()> {
     let db = Arc::new(Mutex::new(Database::new().await));
     let schema = Schema::build(Query::default(), Mutation::default(), EmptySubscription)
         .data(db)
-        .data(player)
+        .data(cmd_tx)
+        .data(tracklist)
         .finish();
     println!("Starting webui at {}", addr.bright_green());
 

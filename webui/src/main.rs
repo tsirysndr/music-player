@@ -5,6 +5,7 @@ use music_player_playback::{
     config::AudioFormat,
     player::Player,
 };
+use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
 use tokio::sync::Mutex;
 
@@ -12,7 +13,16 @@ use tokio::sync::Mutex;
 async fn main() -> std::io::Result<()> {
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
-
-    let (player, _) = Player::new(move || backend(None, audio_format), move |event| {});
-    start_webui(Arc::new(Mutex::new(player))).await
+    let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
+    let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+    let cloned_tracklist = tracklist.clone();
+    let cloned_cmd_tx = cmd_tx.clone();
+    let (_, _) = Player::new(
+        move || backend(None, audio_format),
+        move |_| {},
+        cloned_cmd_tx,
+        cmd_rx,
+        cloned_tracklist,
+    );
+    start_webui(cmd_tx, tracklist).await
 }

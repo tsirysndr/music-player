@@ -23,10 +23,8 @@ use crossterm::{
 use event::Key;
 use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
-use migration::SeaRc;
 use music_player_client::{library::LibraryClient, ws_client::WebsocketClient};
 use music_player_discovery::register_services;
-use music_player_entity::track::Model as TrackModel;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -40,6 +38,8 @@ use music_player_server::{
     metadata::v1alpha1::{Album, Artist},
     server::MusicPlayerServer,
 };
+use music_player_storage::Database;
+use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
 use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
@@ -174,7 +174,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
     let cloned_peer_map = Arc::clone(&peer_map);
 
-    let (player, _) = Player::new(
+    let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
+    let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+    let cloned_tracklist = Arc::clone(&tracklist);
+    let cmd_tx_ws = cmd_tx.clone();
+    let cmd_tx_webui = cmd_tx.clone();
+    let (_, _) = Player::new(
         move || backend(None, audio_format),
         move |event| {
             let peers = cloned_peer_map.lock().unwrap();
@@ -216,6 +221,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 _ => {}
             }
         },
+        cmd_tx.clone(),
+        cmd_rx,
+        Arc::clone(&tracklist),
     );
 
     let parsed = parse_args(matches.clone()).await;
@@ -254,27 +262,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    let player = Arc::new(Mutex::new(player));
-    let cloned_player = Arc::clone(&player);
-    let webui_player = Arc::clone(&player);
+    let tracklist_ws = Arc::clone(&tracklist);
+    let tracklist_webui = Arc::clone(&tracklist);
+    let db = Arc::new(Mutex::new(Database::new().await));
+    let db_ws = Arc::clone(&db);
 
-    let cloned_peer_map = Arc::clone(&peer_map);
+    let peer_map_ws = Arc::clone(&peer_map);
 
     if mode == "server" {
-        // Spawn a thread to handle the player events
-        thread::spawn(move || {
-            let runtime = tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap();
-            match runtime.block_on(MusicPlayerServer::new(player, cloned_peer_map).start_ws()) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("{}", e);
-                }
-            }
-        });
-
         register_services();
 
         thread::spawn(move || {
@@ -282,16 +277,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .enable_all()
                 .build()
                 .unwrap();
-            match runtime
-                .block_on(MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map)).start())
-            {
+            match runtime.block_on(
+                MusicPlayerServer::new(cloned_tracklist, cmd_tx, Arc::clone(&peer_map), db).start(),
+            ) {
                 Ok(_) => {}
                 Err(e) => {
                     panic!("{}", e);
                 }
             }
         });
-        start_webui(webui_player).await?;
+        // Spawn a thread to handle the player events
+        thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            match runtime.block_on(
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db_ws).start_ws(),
+            ) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("{}", e);
+                }
+            }
+        });
+        start_webui(cmd_tx_webui, tracklist_webui).await?;
         return Ok(());
     }
 

@@ -110,3 +110,4 @@ tui = { version = "0.19.0", features = ["crossterm", "serde"] }
 tungstenite = "0.17.3"
 futures-channel = "0.3.24"
 serde_json = "1.0.85"
+parking_lot = "0.12.1"

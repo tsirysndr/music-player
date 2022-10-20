@@ -1,6 +1,6 @@
 on:
-  release:
-    types: [created]
+ push:
+    branches: ["master"]
 
 jobs:
   compile:
@@ -16,11 +16,12 @@ jobs:
             choco install checksum
             choco install archiver
             choco install nodejs-lts
+            refreshenv
         - name: Build
           run: |
             cd webui\musicplayer
             npm install -g yarn
-            yarn install
+            yarn install --network-timeout 1000000000
             yarn build
             cd ..\..
             cargo build --release

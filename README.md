@@ -108,6 +108,10 @@ music-player
 
 Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your browser.
 
+<p style="margin-top: 20px; margin-bottom: 20px;">
+ <img src="./preview-api.png" width="100%" />
+</p>
+
 ### Features
 
 - [x] Play music from specified path

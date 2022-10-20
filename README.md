@@ -52,7 +52,11 @@ sudo apt-get install -y libasound2-dev protobuf-compiler # Ubuntu/Debian
 choco install protoc # Windows using Chocolatey Package Manager
 # Compile
 git clone https://github.com/tsirysndr/music-player.git
-cd music-player
+cd music-player/webui/musicplayer
+nvm install # install node version specified in .nvmrc (optional on windows)
+npm install -g yarn
+yarn install && yarn build # build webui
+cd ../..
 cargo install --path .
 ```
 

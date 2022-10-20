@@ -123,6 +123,7 @@ Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your br
 - [x] Create/Delete playlists
 - [x] Music Player Client
 - [x] Terminal UI (using [tui-rs](https://github.com/fdehau/tui-rs))
+- [x] GraphQL API 
 - [ ] Web UI
 - [ ] Desktop version (using [gtk-rs](https://gtk-rs.org/))
 - [ ] Mobile version

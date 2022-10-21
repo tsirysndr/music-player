@@ -37,7 +37,9 @@
 
 Note: This is a work in progress.
 
-This is a simple music player that I made for my own use. It is written in Rust and uses [rodio](https://github.com/RustAudio/rodio), [symphonia](https://github.com/pdeljanov/Symphonia), and [gRPC](https://grpc.io/) libraries.
+This is a simple music player that I made for my own use. It is written in Rust and uses [rodio](https://github.com/RustAudio/rodio), [symphonia](https://github.com/pdeljanov/Symphonia), and [gRPC](https://grpc.io/) libraries.<br />
+Music is played through the server's audio device. The daemon stores info about all available music, and this info can be easily searched and retrieved.
+Like [mpd](https://github.com/MusicPlayerDaemon/MPD) or [Mopidy](https://github.com/mopidy/mopidy) but written in Rust.
 
 <p style="margin-top: 20px; margin-bottom: 20px;">
   <img src="./preview.svg" width="800" />

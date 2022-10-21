@@ -482,6 +482,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                             }),
                             is_playing: track_event.is_playing,
                             index: track_event.index,
+                            position_ms: track_event.position_ms,
                             ..Default::default()
                         });
                     }

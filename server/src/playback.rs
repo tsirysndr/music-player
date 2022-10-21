@@ -133,7 +133,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<StopRequest>,
     ) -> Result<tonic::Response<StopResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Stop);
+        self.cmd_tx.send(PlayerCommand::Stop).unwrap();
         let response = StopResponse {};
         Ok(tonic::Response::new(response))
     }

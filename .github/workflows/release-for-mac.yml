@@ -17,6 +17,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
       - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
       - name: Installing needed dependencies
@@ -27,7 +30,6 @@ jobs:
       - name: Build webui
         run: |
           cd webui/musicplayer
-          nvm install
           npm install -g yarn
           yarn install --network-timeout 1000000000 && yarn build
       - name: Running cargo build

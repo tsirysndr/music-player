@@ -132,7 +132,9 @@ Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your br
 - [x] GraphQL API 
 - [ ] Web UI
 - [ ] Desktop version (using [gtk-rs](https://gtk-rs.org/))
-- [ ] Mobile version
+- [ ] Android Library
+- [ ] iOS Library
+- [ ] Mobile version (React Native)
 - [ ] Stream to Chromecast
 - [ ] Stream to Airplay
 - [ ] Stream to Kodi

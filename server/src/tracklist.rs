@@ -23,14 +23,14 @@ use crate::{
 
 pub struct Tracklist {
     state: Arc<std::sync::Mutex<TracklistState>>,
-    cmd_tx: UnboundedSender<PlayerCommand>,
+    cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     db: Arc<Mutex<Database>>,
 }
 
 impl Tracklist {
     pub fn new(
         state: Arc<std::sync::Mutex<TracklistState>>,
-        cmd_tx: UnboundedSender<PlayerCommand>,
+        cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
         db: Arc<Mutex<Database>>,
     ) -> Self {
         Self { state, cmd_tx, db }
@@ -53,9 +53,12 @@ impl TracklistService for Tracklist {
             return Err(tonic::Status::not_found("Track not found"));
         }
         let track = result.unwrap();
-        self.cmd_tx.send(PlayerCommand::LoadTracklist {
-            tracks: vec![track],
-        });
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::LoadTracklist {
+                tracks: vec![track],
+            });
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -71,7 +74,7 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
     ) -> Result<tonic::Response<ClearTracklistResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Clear);
+        self.cmd_tx.lock().unwrap().send(PlayerCommand::Clear);
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -223,7 +226,10 @@ impl TracklistService for Tracklist {
     ) -> Result<tonic::Response<PlayTrackAtResponse>, tonic::Status> {
         let request = request.into_inner();
         self.cmd_tx
-            .send(PlayerCommand::PlayTrackAt(request.index as usize));
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::PlayTrackAt(request.index as usize))
+            .unwrap();
         let response = PlayTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }

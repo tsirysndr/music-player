@@ -16,13 +16,13 @@ use crate::{
 
 pub struct Playback {
     tracklist: Arc<std::sync::Mutex<TracklistState>>,
-    cmd_tx: UnboundedSender<PlayerCommand>,
+    cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
 }
 
 impl Playback {
     pub fn new(
         tracklist: Arc<std::sync::Mutex<TracklistState>>,
-        cmd_tx: UnboundedSender<PlayerCommand>,
+        cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     ) -> Self {
         Self { tracklist, cmd_tx }
     }
@@ -101,7 +101,11 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<NextRequest>,
     ) -> Result<tonic::Response<NextResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Next).unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Next)
+            .unwrap();
         let response = NextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -109,7 +113,11 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PreviousRequest>,
     ) -> Result<tonic::Response<PreviousResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Previous).unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Previous)
+            .unwrap();
         let response = PreviousResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -117,7 +125,11 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PlayRequest>,
     ) -> Result<tonic::Response<PlayResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Play).unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Play)
+            .unwrap();
         let response = PlayResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -125,7 +137,11 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PauseRequest>,
     ) -> Result<tonic::Response<PauseResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Pause).unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Pause)
+            .unwrap();
         let response = PauseResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -133,7 +149,11 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<StopRequest>,
     ) -> Result<tonic::Response<StopResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Stop).unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Stop)
+            .unwrap();
         let response = StopResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -141,7 +161,11 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<SeekRequest>,
     ) -> Result<tonic::Response<SeekResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Seek(12)).unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Seek(12))
+            .unwrap();
         let response = SeekResponse {};
         Ok(tonic::Response::new(response))
     }

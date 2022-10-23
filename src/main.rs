@@ -177,8 +177,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cloned_tracklist = Arc::clone(&tracklist);
-    let cmd_tx_ws = cmd_tx.clone();
-    let cmd_tx_webui = cmd_tx.clone();
+    let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
+    let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
+    let cloned_cmd_tx = Arc::clone(&cmd_tx);
+    let cloned_cmd_rx = Arc::clone(&cmd_rx);
+    let cmd_tx_ws = Arc::clone(&cloned_cmd_tx);
+    let cmd_tx_webui = Arc::clone(&cloned_cmd_tx);
     let (_, _) = Player::new(
         move || backend(None, audio_format),
         move |event| {
@@ -221,8 +225,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 _ => {}
             }
         },
-        cmd_tx.clone(),
-        cmd_rx,
+        cloned_cmd_tx,
+        cloned_cmd_rx,
         Arc::clone(&tracklist),
     );
 
@@ -278,7 +282,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build()
                 .unwrap();
             match runtime.block_on(
-                MusicPlayerServer::new(cloned_tracklist, cmd_tx, Arc::clone(&peer_map), db).start(),
+                MusicPlayerServer::new(
+                    cloned_tracklist,
+                    Arc::clone(&cmd_tx),
+                    Arc::clone(&peer_map),
+                    db,
+                )
+                .start(),
             ) {
                 Ok(_) => {}
                 Err(e) => {
@@ -327,7 +337,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IoEvent>, network: &mut Network) {
     while let Ok(io_event) = io_rx.recv() {
-        network.handle_network_event(io_event).await;
+        network.handle_network_event(io_event).await.unwrap();
     }
 }
 

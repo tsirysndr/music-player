@@ -81,38 +81,74 @@ pub struct PlaybackMutation;
 #[Object]
 impl PlaybackMutation {
     async fn next(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Next).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Next)
+            .unwrap();
         Ok(true)
     }
 
     async fn play(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Play).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Play)
+            .unwrap();
         Ok(true)
     }
 
     async fn pause(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Pause).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Pause)
+            .unwrap();
         Ok(true)
     }
 
     async fn previous(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Previous).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Previous)
+            .unwrap();
         Ok(true)
     }
 
     async fn seek(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Seek(position)).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Seek(position))
+            .unwrap();
         Ok(true)
     }
 
     async fn stop(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Stop).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Stop)
+            .unwrap();
         Ok(true)
     }
 }

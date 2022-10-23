@@ -92,7 +92,7 @@ pub struct TracklistMutation;
 #[Object]
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> Result<Vec<Track>, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
+        let player_cmd = ctx.data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>().unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let result = track_entity::Entity::find_by_id(track.clone().id.to_string())
@@ -103,7 +103,7 @@ impl TracklistMutation {
         }
 
         let track = result.unwrap();
-        player_cmd.send(PlayerCommand::LoadTracklist {
+        player_cmd.lock().unwrap().send(PlayerCommand::LoadTracklist {
             tracks: vec![track],
         });
         Ok(vec![])

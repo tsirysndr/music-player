@@ -13,7 +13,7 @@ use music_player_graphql::{
     schema::{Mutation, Query},
     MusicPlayerSchema,
 };
-use music_player_playback::player::{Player, PlayerCommand};
+use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
@@ -73,7 +73,7 @@ async fn dist(path: web::Path<String>) -> impl Responder {
 }
 
 pub async fn start_webui(
-    cmd_tx: UnboundedSender<PlayerCommand>,
+    cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     tracklist: Arc<std::sync::Mutex<Tracklist>>,
 ) -> std::io::Result<()> {
     let config = read_settings().unwrap();

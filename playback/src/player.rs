@@ -65,15 +65,15 @@ pub trait PlayerEngine: Send + Sync {
 
 #[derive(Clone)]
 pub struct Player {
-    commands: Option<mpsc::UnboundedSender<PlayerCommand>>,
+    commands: Option<Arc<std::sync::Mutex<mpsc::UnboundedSender<PlayerCommand>>>>,
 }
 
 impl Player {
     pub fn new<F, G>(
         sink_builder: F,
         event_broadcaster: G,
-        cmd_tx: mpsc::UnboundedSender<PlayerCommand>,
-        cmd_rx: mpsc::UnboundedReceiver<PlayerCommand>,
+        cmd_tx: Arc<std::sync::Mutex<mpsc::UnboundedSender<PlayerCommand>>>,
+        cmd_rx: Arc<std::sync::Mutex<mpsc::UnboundedReceiver<PlayerCommand>>>,
         tracklist: Arc<std::sync::Mutex<Tracklist>>,
     ) -> (Player, PlayerEventChannel)
     where
@@ -108,7 +108,7 @@ impl Player {
 
     fn command(&self, cmd: PlayerCommand) {
         if let Some(commands) = self.commands.as_ref() {
-            if let Err(e) = commands.send(cmd) {
+            if let Err(e) = commands.lock().unwrap().send(cmd) {
                 error!("Player Commands Error: {}", e);
             }
         }
@@ -247,7 +247,7 @@ pub enum SinkStatus {
 pub type SinkEventCallback = Box<dyn Fn(SinkStatus) + Send>;
 
 struct PlayerInternal {
-    commands: mpsc::UnboundedReceiver<PlayerCommand>,
+    commands: Arc<std::sync::Mutex<mpsc::UnboundedReceiver<PlayerCommand>>>,
     load_handles: Arc<Mutex<HashMap<thread::ThreadId, thread::JoinHandle<()>>>>,
 
     state: PlayerState,
@@ -266,7 +266,7 @@ impl Future for PlayerInternal {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
         loop {
             // process commands that were sent to us
-            let cmd = match self.commands.poll_recv(cx) {
+            let cmd = match self.commands.lock().unwrap().poll_recv(cx) {
                 Poll::Ready(None) => return Poll::Ready(()), // client has disconnected - shut down.
                 Poll::Ready(Some(cmd)) => Some(cmd),
                 _ => None,
@@ -313,6 +313,14 @@ impl Future for PlayerInternal {
                             // end of track
                             self.state = PlayerState::Stopped;
                             let tracklist = self.tracklist.clone();
+                            let playback_state = self.tracklist.lock().unwrap().playback_state();
+                            self.tracklist
+                                .lock()
+                                .unwrap()
+                                .set_playback_state(PlaybackState {
+                                    is_playing: false,
+                                    ..playback_state
+                                });
                             self.send_event(PlayerEvent::EndOfTrack {
                                 is_last_track: tracklist.lock().unwrap().is_empty(),
                             });
@@ -449,6 +457,14 @@ impl PlayerInternal {
             decoder: loaded_track.decoder,
         };
         let (track, position) = self.tracklist.lock().unwrap().current_track();
+        let playback_state = self.tracklist.lock().unwrap().playback_state();
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_playback_state(PlaybackState {
+                is_playing: true,
+                ..playback_state
+            });
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
             track,
             position,

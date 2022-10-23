@@ -23,6 +23,8 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         let audio_format = AudioFormat::default();
         let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
         let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+        let cmd_tx = Arc::new(Mutex::new(cmd_tx));
+        let cmd_rx = Arc::new(Mutex::new(cmd_rx));
         let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
         let (mut player, _) = Player::new(
             move || backend(None, audio_format),

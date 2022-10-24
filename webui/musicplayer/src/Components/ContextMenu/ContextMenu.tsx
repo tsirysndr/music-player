@@ -66,6 +66,7 @@ const Artist = styled.div`
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
+  max-width: 125px;
 `;
 
 const Title = styled.div`

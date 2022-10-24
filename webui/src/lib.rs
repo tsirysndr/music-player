@@ -3,7 +3,7 @@ use std::sync::Arc;
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
-    http::{self, header::HOST},
+    http::header::HOST,
     web::{self, Data},
     App, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };

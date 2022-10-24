@@ -40,6 +40,10 @@ async fn index() -> impl Responder {
     handle_embedded_file("index.html")
 }
 
+async fn index_spa() -> impl Responder {
+    handle_embedded_file("index.html")
+}
+
 #[actix_web::post("/graphql")]
 async fn index_graphql(
     schema: web::Data<MusicPlayerSchema>,
@@ -104,6 +108,10 @@ pub async fn start_webui(
             .service(index_graphiql)
             .service(fs::Files::new("/covers", covers_path).show_files_listing())
             .service(index)
+            .route("/tracks", web::get().to(index_spa))
+            .route("/play-queue", web::get().to(index_spa))
+            .route("/artists", web::get().to(index_spa))
+            .route("/albums", web::get().to(index_spa))
             .service(dist)
     })
     .bind(addr)?

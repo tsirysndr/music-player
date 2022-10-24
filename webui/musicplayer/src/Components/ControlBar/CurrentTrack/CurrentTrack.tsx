@@ -78,7 +78,7 @@ export type CurrentTrackProps = {
 const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
   return (
     <>
-      {!nowPlaying && (
+      {(!nowPlaying || !nowPlaying!.title) && (
         <Container>
           <NoCover>
             <Track width={28} height={28} color="#a4a3a3" />
@@ -88,7 +88,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
           </Wrapper>
         </Container>
       )}
-      {nowPlaying && nowPlaying!.duration && (
+      {nowPlaying && nowPlaying!.title && (
         <Container>
           {nowPlaying?.cover && <AlbumCover src={nowPlaying?.cover} />}
           {!nowPlaying?.cover && (

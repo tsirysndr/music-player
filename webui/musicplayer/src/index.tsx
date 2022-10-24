@@ -13,7 +13,7 @@ const uri =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3001/graphql"
     : // eslint-disable-next-line no-restricted-globals
-      `${location.protocol}://${location.host}/graphql`;
+      "/graphql";
 
 const client = new ApolloClient({
   uri,

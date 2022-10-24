@@ -18,6 +18,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Installing needed dependencies
         run: sudo apt-get install -y libasound2-dev protobuf-compiler
+      - name: Build webui
+        run: |
+          cd webui/musicplayer
+          nvm install
+          npm install -g yarn
+          yarn install --network-timeout 1000000000 && yarn build
       - name: Running cargo build
         uses: actions-rs/cargo@v1
         with:

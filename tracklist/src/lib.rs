@@ -1,11 +1,18 @@
 use music_player_entity::track::Model as Track;
 use rand::seq::SliceRandom;
 
+#[derive(Default, Debug, Clone)]
+pub struct PlaybackState {
+    pub position_ms: u32,
+    pub is_playing: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct Tracklist {
     tracks: Vec<Track>,
     played: Vec<Track>,
     current_track: Option<Track>,
+    playback_state: PlaybackState,
 }
 
 impl Tracklist {
@@ -14,6 +21,7 @@ impl Tracklist {
             tracks,
             played: Vec::new(),
             current_track: None,
+            playback_state: PlaybackState::default(),
         }
     }
     pub fn new_empty() -> Self {
@@ -21,6 +29,7 @@ impl Tracklist {
             tracks: Vec::new(),
             played: Vec::new(),
             current_track: None,
+            playback_state: PlaybackState::default(),
         }
     }
 
@@ -122,5 +131,13 @@ impl Tracklist {
         }
         self.next_track();
         self.current_track()
+    }
+
+    pub fn playback_state(&self) -> PlaybackState {
+        self.playback_state.clone()
+    }
+
+    pub fn set_playback_state(&mut self, playback_state: PlaybackState) {
+        self.playback_state = playback_state;
     }
 }

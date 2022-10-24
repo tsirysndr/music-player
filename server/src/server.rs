@@ -4,11 +4,13 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{self, Arc};
 
-use music_player_playback::player::Player;
+use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
+use music_player_tracklist::Tracklist as TracklistState;
 use owo_colors::OwoColorize;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc::UnboundedSender as TokioUnboundedSender;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
 use tungstenite::Message;
@@ -39,13 +41,25 @@ type Tx = UnboundedSender<Message>;
 type PeerMap = Arc<sync::Mutex<HashMap<SocketAddr, Tx>>>;
 
 pub struct MusicPlayerServer {
-    player: Arc<Mutex<Player>>,
+    db: Arc<Mutex<Database>>,
+    tracklist: Arc<std::sync::Mutex<TracklistState>>,
+    cmd_tx: TokioUnboundedSender<PlayerCommand>,
     peer_map: PeerMap,
 }
 
 impl MusicPlayerServer {
-    pub fn new(player: Arc<Mutex<Player>>, peer_map: PeerMap) -> Self {
-        Self { player, peer_map }
+    pub fn new(
+        tracklist: Arc<std::sync::Mutex<TracklistState>>,
+        cmd_tx: TokioUnboundedSender<PlayerCommand>,
+        peer_map: PeerMap,
+        db: Arc<Mutex<Database>>,
+    ) -> Self {
+        Self {
+            db,
+            tracklist,
+            cmd_tx,
+            peer_map,
+        }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -56,29 +70,31 @@ impl MusicPlayerServer {
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());
 
-        let db = Arc::new(Mutex::new(Database::new().await));
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
-                Arc::clone(&db),
+                Arc::clone(&self.db),
             ))))
             .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
             .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
-                Arc::clone(&db),
+                Arc::clone(&self.db),
             ))))
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                Arc::clone(&self.db),
             ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&self.player)),
+                Playback::new(Arc::clone(&self.tracklist), self.cmd_tx.clone()),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(Arc::clone(&db)),
+                Playlist::new(Arc::clone(&self.db)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&self.player), Arc::clone(&db)),
+                Tracklist::new(
+                    Arc::clone(&self.tracklist),
+                    self.cmd_tx.clone(),
+                    Arc::clone(&self.db),
+                ),
             )))
             .serve(addr)
             .await?;

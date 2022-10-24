@@ -1,8 +1,10 @@
+use std::io::Write;
+
 use futures::future::BoxFuture;
 use music_player_storage::{Database, Searcher};
 use music_player_types::types::Song;
 
-use lofty::{Accessor, AudioFile, LoftyError, Probe};
+use lofty::{Accessor, AudioFile, LoftyError, Probe, Tag};
 use music_player_settings::{read_settings, Settings};
 use walkdir::WalkDir;
 
@@ -63,6 +65,8 @@ pub async fn scan_directory(
                     };
                     let id = format!("{:x}", md5::compute(song.uri.as_ref().unwrap()));
                     searcher.insert_song(song.clone(), id).unwrap();
+                    let album = song.album.clone();
+                    extract_and_save_album_cover(tag, &album);
                     save(&song, &db).await;
                     songs.push(song);
 
@@ -72,4 +76,30 @@ pub async fn scan_directory(
         }
     }
     Ok(songs)
+}
+
+fn extract_and_save_album_cover(tag: &Tag, album: &str) {
+    let pictures = tag.pictures();
+    if pictures.len() > 0 {
+        let covers_path = format!(
+            "{}/music-player/covers",
+            dirs::config_dir().unwrap().to_str().unwrap()
+        );
+        let picture = &pictures[0];
+        let album = md5::compute(album.as_bytes());
+        let filename = format!("{}/{:x}", covers_path, album);
+        match picture.mime_type() {
+            lofty::MimeType::Jpeg => {
+                let filename = format!("{}.jpg", filename);
+                let mut file = std::fs::File::create(filename).unwrap();
+                file.write_all(picture.data()).unwrap();
+            }
+            lofty::MimeType::Png => {
+                let filename = format!("{}.png", filename);
+                let mut file = std::fs::File::create(filename).unwrap();
+                file.write_all(picture.data()).unwrap();
+            }
+            _ => println!("Unsupported picture format"),
+        }
+    }
 }

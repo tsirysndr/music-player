@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures_util::{future::FusedFuture, Future};
 use log::{error, trace};
 use music_player_entity::track::Model as Track;
-use music_player_tracklist::Tracklist;
+use music_player_tracklist::{PlaybackState, Tracklist};
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
@@ -69,12 +69,17 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new<F, G>(sink_builder: F, event_broadcaster: G) -> (Player, PlayerEventChannel)
+    pub fn new<F, G>(
+        sink_builder: F,
+        event_broadcaster: G,
+        cmd_tx: mpsc::UnboundedSender<PlayerCommand>,
+        cmd_rx: mpsc::UnboundedReceiver<PlayerCommand>,
+        tracklist: Arc<std::sync::Mutex<Tracklist>>,
+    ) -> (Player, PlayerEventChannel)
     where
         F: FnOnce() -> Box<dyn Sink> + Send + 'static,
         G: Fn(PlayerEvent) + Send + 'static,
     {
-        let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
 
         thread::spawn(move || {
@@ -86,7 +91,7 @@ impl Player {
                 sink_status: SinkStatus::Closed,
                 sink_event_callback: None,
                 event_senders: [event_sender].to_vec(),
-                tracklist: Tracklist::new_empty(),
+                tracklist,
                 event_broadcaster: Box::new(event_broadcaster),
                 position_ms: 0,
             };
@@ -250,7 +255,7 @@ struct PlayerInternal {
     sink_status: SinkStatus,
     sink_event_callback: Option<SinkEventCallback>,
     event_senders: Vec<mpsc::UnboundedSender<PlayerEvent>>,
-    tracklist: Tracklist,
+    tracklist: Arc<std::sync::Mutex<Tracklist>>,
     position_ms: u32,
     event_broadcaster: Box<dyn Fn(PlayerEvent) + Send + 'static>,
 }
@@ -295,16 +300,21 @@ impl Future for PlayerInternal {
                                     error!("Failed to decode packet: {}", e);
                                 }
                             }
-                            (self.event_broadcaster)(PlayerEvent::TrackTimePosition {
-                                position_ms: packet_position.position_ms,
-                            });
                             self.position_ms = packet_position.position_ms;
+                            let playback_state = self.tracklist.lock().unwrap().playback_state();
+                            self.tracklist
+                                .lock()
+                                .unwrap()
+                                .set_playback_state(PlaybackState {
+                                    position_ms: self.position_ms,
+                                    ..playback_state
+                                });
                         } else {
                             // end of track
                             self.state = PlayerState::Stopped;
                             let tracklist = self.tracklist.clone();
                             self.send_event(PlayerEvent::EndOfTrack {
-                                is_last_track: tracklist.is_empty(),
+                                is_last_track: tracklist.lock().unwrap().is_empty(),
                             });
                             self.handle_next();
                         }
@@ -438,11 +448,11 @@ impl PlayerInternal {
         self.state = PlayerState::Playing {
             decoder: loaded_track.decoder,
         };
-        let (track, position) = self.tracklist.current_track();
+        let (track, position) = self.tracklist.lock().unwrap().current_track();
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
             track,
             position,
-            position_ms: self.position_ms,
+            position_ms: 0,
             is_playing: true,
         });
     }
@@ -469,8 +479,8 @@ impl PlayerInternal {
     }
 
     fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
-        self.tracklist.queue(tracks);
-        let (current_track, _) = self.tracklist.current_track();
+        self.tracklist.lock().unwrap().queue(tracks);
+        let (current_track, _) = self.tracklist.lock().unwrap().current_track();
         if current_track.is_none() {
             self.handle_next();
         }
@@ -482,9 +492,24 @@ impl PlayerInternal {
 
     fn handle_play(&mut self) {
         if let PlayerState::Paused { .. } = self.state {
+            let playback_state = self.tracklist.lock().unwrap().playback_state();
+            self.tracklist
+                .lock()
+                .unwrap()
+                .set_playback_state(PlaybackState {
+                    is_playing: true,
+                    ..playback_state
+                });
             self.state.paused_to_playing();
             self.send_event(PlayerEvent::Playing);
             self.ensure_sink_running();
+            let (track, position) = self.tracklist.lock().unwrap().current_track();
+            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+                track,
+                position,
+                position_ms: self.position_ms,
+                is_playing: true,
+            });
         } else {
             error!("Player::play called from invalid state");
         }
@@ -497,8 +522,23 @@ impl PlayerInternal {
 
     fn handle_pause(&mut self) {
         if let PlayerState::Playing { .. } = self.state {
+            let playback_state = self.tracklist.lock().unwrap().playback_state();
+            self.tracklist
+                .lock()
+                .unwrap()
+                .set_playback_state(PlaybackState {
+                    is_playing: false,
+                    ..playback_state
+                });
             self.state.playing_to_paused();
             self.send_event(PlayerEvent::Paused);
+            let (track, position) = self.tracklist.lock().unwrap().current_track();
+            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+                track,
+                position,
+                position_ms: self.position_ms,
+                is_playing: false,
+            });
         } else {
             error!("Player::pause called from invalid state");
         }
@@ -509,37 +549,37 @@ impl PlayerInternal {
     }
 
     fn handle_next(&mut self) {
-        if self.tracklist.next_track().is_some() {
-            let (current_track, _) = self.tracklist.current_track();
+        if self.tracklist.lock().unwrap().next_track().is_some() {
+            let (current_track, _) = self.tracklist.lock().unwrap().current_track();
             self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_previous(&mut self) {
-        if self.tracklist.previous_track().is_some() {
-            let (current_track, _) = self.tracklist.current_track();
+        if self.tracklist.lock().unwrap().previous_track().is_some() {
+            let (current_track, _) = self.tracklist.lock().unwrap().current_track();
             self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_play_track_at(&mut self, index: usize) {
-        let (current_track, _) = self.tracklist.play_track_at(index);
+        let (current_track, _) = self.tracklist.lock().unwrap().play_track_at(index);
         if current_track.is_some() {
             self.handle_command_load(&current_track.unwrap().uri);
         }
     }
 
     fn handle_clear(&mut self) {
-        self.tracklist.clear();
+        self.tracklist.lock().unwrap().clear();
     }
 
     fn handle_get_tracks(&mut self) {
-        let tracks = self.tracklist.tracks();
+        let tracks = self.tracklist.lock().unwrap().tracks();
         self.send_event(PlayerEvent::TracklistUpdated { tracks });
     }
 
     fn handle_get_current_track(&mut self) {
-        let (track, position) = self.tracklist.current_track();
+        let (track, position) = self.tracklist.lock().unwrap().current_track();
         let is_playing = self.state.is_playing();
         self.send_event(PlayerEvent::CurrentTrack {
             track,
@@ -672,7 +712,8 @@ impl PlayerTrackLoader {
     }
 }
 
-enum PlayerCommand {
+#[derive(Debug)]
+pub enum PlayerCommand {
     Load { track_id: String },
     LoadTracklist { tracks: Vec<Track> },
     Preload,

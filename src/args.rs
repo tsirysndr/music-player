@@ -1,16 +1,19 @@
-use std::env;
+use std::{env, sync::Mutex};
 
 use clap::ArgMatches;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
+use music_player_discovery::{discover, SERVICE_NAME};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
     player::{Player, PlayerEngine},
 };
+use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
+use std::sync::Arc;
 use tabled::{builder::Builder, Style};
 
 use crate::scan::scan_music_library;
@@ -19,8 +22,15 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(matches) = matches.subcommand_matches("open") {
         let audio_format = AudioFormat::default();
         let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
-
-        let (mut player, _) = Player::new(move || backend(None, audio_format), |_| {});
+        let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+        let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
+        let (mut player, _) = Player::new(
+            move || backend(None, audio_format),
+            |_| {},
+            cmd_tx,
+            cmd_rx,
+            tracklist,
+        );
 
         let song = matches.value_of("song").unwrap();
 
@@ -267,6 +277,11 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         env::set_var("MUSIC_PLAYER_HOST", host);
         env::set_var("MUSIC_PLAYER_PORT", port);
         env::set_var("MUSIC_PLAYER_MODE", "client");
+    }
+
+    if let Some(_) = matches.subcommand_matches("devices") {
+        discover(SERVICE_NAME);
+        return Ok(());
     }
 
     return Err("No subcommand found".into());

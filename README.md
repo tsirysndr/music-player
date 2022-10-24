@@ -37,7 +37,9 @@
 
 Note: This is a work in progress.
 
-This is a simple music player that I made for my own use. It is written in Rust and uses [rodio](https://github.com/RustAudio/rodio), [symphonia](https://github.com/pdeljanov/Symphonia), and [gRPC](https://grpc.io/) libraries.
+This is a simple music player that I made for my own use. It is written in Rust and uses [rodio](https://github.com/RustAudio/rodio), [symphonia](https://github.com/pdeljanov/Symphonia), and [gRPC](https://grpc.io/) libraries.<br />
+Music is played through the server's audio device. The daemon stores info about all available music, and this info can be easily searched and retrieved.
+Like [mpd](https://github.com/MusicPlayerDaemon/MPD) or [Mopidy](https://github.com/mopidy/mopidy) but written in Rust.
 
 <p style="margin-top: 20px; margin-bottom: 20px;">
   <img src="./preview.svg" width="800" />
@@ -52,7 +54,11 @@ sudo apt-get install -y libasound2-dev protobuf-compiler # Ubuntu/Debian
 choco install protoc # Windows using Chocolatey Package Manager
 # Compile
 git clone https://github.com/tsirysndr/music-player.git
-cd music-player
+cd music-player/webui/musicplayer
+nvm install # install node version specified in .nvmrc (optional on windows)
+npm install -g yarn
+yarn install && yarn build # build webui
+cd ../..
 cargo install --path .
 ```
 
@@ -99,6 +105,19 @@ SUBCOMMANDS:
     tracks      List all tracks
 ```
 
+### GraphQL API
+
+```bash
+# Start the server
+music-player
+```
+
+Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your browser.
+
+<p style="margin-top: 20px; margin-bottom: 20px;">
+ <img src="./preview-api.png" width="100%" />
+</p>
+
 ### Features
 
 - [x] Play music from specified path
@@ -110,6 +129,7 @@ SUBCOMMANDS:
 - [x] Create/Delete playlists
 - [x] Music Player Client
 - [x] Terminal UI (using [tui-rs](https://github.com/fdehau/tui-rs))
+- [x] GraphQL API 
 - [ ] Web UI
 - [ ] Desktop version (using [gtk-rs](https://gtk-rs.org/))
 - [ ] Mobile version

@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use music_player_entity::track;
-use music_player_playback::player::{Player, PlayerEngine};
+use music_player_playback::player::PlayerCommand;
 use music_player_storage::Database;
+use music_player_tracklist::Tracklist as TracklistState;
 use sea_orm::EntityTrait;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use crate::{
     api::v1alpha1::{
@@ -21,13 +22,18 @@ use crate::{
 };
 
 pub struct Tracklist {
-    player: Arc<Mutex<Player>>,
+    state: Arc<std::sync::Mutex<TracklistState>>,
+    cmd_tx: UnboundedSender<PlayerCommand>,
     db: Arc<Mutex<Database>>,
 }
 
 impl Tracklist {
-    pub fn new(player: Arc<Mutex<Player>>, db: Arc<Mutex<Database>>) -> Self {
-        Self { player, db }
+    pub fn new(
+        state: Arc<std::sync::Mutex<TracklistState>>,
+        cmd_tx: UnboundedSender<PlayerCommand>,
+        db: Arc<Mutex<Database>>,
+    ) -> Self {
+        Self { state, cmd_tx, db }
     }
 }
 
@@ -47,7 +53,9 @@ impl TracklistService for Tracklist {
             return Err(tonic::Status::not_found("Track not found"));
         }
         let track = result.unwrap();
-        self.player.lock().await.load_tracklist(vec![track]);
+        self.cmd_tx.send(PlayerCommand::LoadTracklist {
+            tracks: vec![track],
+        });
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -63,7 +71,7 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
     ) -> Result<tonic::Response<ClearTracklistResponse>, tonic::Status> {
-        self.player.lock().await.clear();
+        self.cmd_tx.send(PlayerCommand::Clear);
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -152,7 +160,7 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<GetTracklistTracksRequest>,
     ) -> Result<tonic::Response<GetTracklistTracksResponse>, tonic::Status> {
-        let (previous_tracks, next_tracks) = self.player.lock().await.get_tracks().await;
+        let (previous_tracks, next_tracks) = self.state.lock().unwrap().tracks();
 
         let response = GetTracklistTracksResponse {
             next_tracks: next_tracks
@@ -214,10 +222,8 @@ impl TracklistService for Tracklist {
         request: tonic::Request<PlayTrackAtRequest>,
     ) -> Result<tonic::Response<PlayTrackAtResponse>, tonic::Status> {
         let request = request.into_inner();
-        self.player
-            .lock()
-            .await
-            .play_track_at(request.index as usize);
+        self.cmd_tx
+            .send(PlayerCommand::PlayTrackAt(request.index as usize));
         let response = PlayTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }

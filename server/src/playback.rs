@@ -1,6 +1,7 @@
-use music_player_playback::player::{Player, PlayerEngine};
+use music_player_playback::player::PlayerCommand;
+use music_player_tracklist::Tracklist as TracklistState;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     api::v1alpha1::{
@@ -14,12 +15,16 @@ use crate::{
 };
 
 pub struct Playback {
-    player: Arc<Mutex<Player>>,
+    tracklist: Arc<std::sync::Mutex<TracklistState>>,
+    cmd_tx: UnboundedSender<PlayerCommand>,
 }
 
 impl Playback {
-    pub fn new(player: Arc<Mutex<Player>>) -> Self {
-        Self { player }
+    pub fn new(
+        tracklist: Arc<std::sync::Mutex<TracklistState>>,
+        cmd_tx: UnboundedSender<PlayerCommand>,
+    ) -> Self {
+        Self { tracklist, cmd_tx }
     }
 }
 
@@ -29,8 +34,8 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<GetCurrentlyPlayingSongRequest>,
     ) -> Result<tonic::Response<GetCurrentlyPlayingSongResponse>, tonic::Status> {
-        let player = self.player.lock().await;
-        let track = player.get_current_track().await;
+        let (track, index) = self.tracklist.lock().unwrap().current_track();
+        let playback_state = self.tracklist.lock().unwrap().playback_state();
 
         if track.is_none() {
             let response = GetCurrentlyPlayingSongResponse {
@@ -42,7 +47,6 @@ impl PlaybackService for Playback {
             return Ok(tonic::Response::new(response));
         }
 
-        let (track, index, position_ms, is_playing) = track.unwrap();
         if track.is_none() {
             let response = GetCurrentlyPlayingSongResponse {
                 track: None,
@@ -74,8 +78,8 @@ impl PlaybackService for Playback {
                 ..Default::default()
             }),
             index: index as u32,
-            position_ms,
-            is_playing,
+            position_ms: playback_state.position_ms,
+            is_playing: playback_state.is_playing,
         };
         Ok(tonic::Response::new(response))
     }
@@ -97,7 +101,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<NextRequest>,
     ) -> Result<tonic::Response<NextResponse>, tonic::Status> {
-        self.player.lock().await.next();
+        self.cmd_tx.send(PlayerCommand::Next).unwrap();
         let response = NextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -105,7 +109,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PreviousRequest>,
     ) -> Result<tonic::Response<PreviousResponse>, tonic::Status> {
-        self.player.lock().await.previous();
+        self.cmd_tx.send(PlayerCommand::Previous).unwrap();
         let response = PreviousResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -113,7 +117,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PlayRequest>,
     ) -> Result<tonic::Response<PlayResponse>, tonic::Status> {
-        self.player.lock().await.play();
+        self.cmd_tx.send(PlayerCommand::Play).unwrap();
         let response = PlayResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -121,7 +125,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PauseRequest>,
     ) -> Result<tonic::Response<PauseResponse>, tonic::Status> {
-        self.player.lock().await.pause();
+        self.cmd_tx.send(PlayerCommand::Pause).unwrap();
         let response = PauseResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -129,7 +133,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<StopRequest>,
     ) -> Result<tonic::Response<StopResponse>, tonic::Status> {
-        self.player.lock().await.stop();
+        self.cmd_tx.send(PlayerCommand::Stop).unwrap();
         let response = StopResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -137,7 +141,7 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<SeekRequest>,
     ) -> Result<tonic::Response<SeekResponse>, tonic::Status> {
-        self.player.lock().await.seek(12);
+        self.cmd_tx.send(PlayerCommand::Seek(12)).unwrap();
         let response = SeekResponse {};
         Ok(tonic::Response::new(response))
     }

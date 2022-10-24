@@ -23,9 +23,8 @@ use crossterm::{
 use event::Key;
 use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
-use migration::SeaRc;
-use music_player_client::ws_client::WebsocketClient;
-use music_player_entity::track::Model as TrackModel;
+use music_player_client::{library::LibraryClient, ws_client::WebsocketClient};
+use music_player_discovery::register_services;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -39,6 +38,9 @@ use music_player_server::{
     metadata::v1alpha1::{Album, Artist},
     server::MusicPlayerServer,
 };
+use music_player_storage::Database;
+use music_player_tracklist::Tracklist;
+use music_player_webui::start_webui;
 use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
 use scan::auto_scan_music_library;
@@ -160,6 +162,7 @@ A simple music player written in Rust"#,
         ).arg(
             arg!(-p --port <port> "The port to connect to").default_value("50051").required(false)
         ).about("Connect to the server"))
+        .subcommand(Command::new("devices").about("List all `music-player` devices on the network"))
 }
 
 #[tokio::main]
@@ -171,7 +174,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
     let cloned_peer_map = Arc::clone(&peer_map);
 
-    let (player, _) = Player::new(
+    let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
+    let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+    let cloned_tracklist = Arc::clone(&tracklist);
+    let cmd_tx_ws = cmd_tx.clone();
+    let cmd_tx_webui = cmd_tx.clone();
+    let (_, _) = Player::new(
         move || backend(None, audio_format),
         move |event| {
             let peers = cloned_peer_map.lock().unwrap();
@@ -189,6 +197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         track,
                         index: position as u32,
                         is_playing,
+                        position_ms,
                     };
                     let msg = Event {
                         event_type: "current_track".to_string(),
@@ -212,6 +221,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 _ => {}
             }
         },
+        cmd_tx.clone(),
+        cmd_rx,
+        Arc::clone(&tracklist),
     );
 
     let parsed = parse_args(matches.clone()).await;
@@ -231,7 +243,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(err.into());
     }
 
-    let mode = env::var("MUSIC_PLAYER_MODE").unwrap_or("server".to_owned());
+    let mut mode = match connect_to_server().await {
+        true => "client".to_string(),
+        false => "server".to_string(),
+    };
+
+    mode = env::var("MUSIC_PLAYER_MODE").unwrap_or(mode);
 
     if mode == "server" {
         migration::run().await;
@@ -245,36 +262,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    let player = Arc::new(Mutex::new(player));
-    let cloned_player = Arc::clone(&player);
+    let tracklist_ws = Arc::clone(&tracklist);
+    let tracklist_webui = Arc::clone(&tracklist);
+    let db = Arc::new(Mutex::new(Database::new().await));
+    let db_ws = Arc::clone(&db);
 
-    let cloned_peer_map = Arc::clone(&peer_map);
+    let peer_map_ws = Arc::clone(&peer_map);
 
     if mode == "server" {
+        register_services();
+
+        thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            match runtime.block_on(
+                MusicPlayerServer::new(cloned_tracklist, cmd_tx, Arc::clone(&peer_map), db).start(),
+            ) {
+                Ok(_) => {}
+                Err(e) => {
+                    panic!("{}", e);
+                }
+            }
+        });
         // Spawn a thread to handle the player events
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
-            match runtime.block_on(MusicPlayerServer::new(player, cloned_peer_map).start_ws()) {
+            match runtime.block_on(
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db_ws).start_ws(),
+            ) {
                 Ok(_) => {}
                 Err(e) => {
                     println!("{}", e);
                 }
             }
         });
+        start_webui(cmd_tx_webui, tracklist_webui).await?;
+        return Ok(());
     }
 
-    let mut start_server = Err("".into());
-
-    if mode == "server" {
-        start_server = MusicPlayerServer::new(cloned_player, Arc::clone(&peer_map))
-            .start()
-            .await;
-    }
-
-    if start_server.is_err() || mode == "client" {
+    if mode == "client" {
         let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
         let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
         let cloned_app = Arc::clone(&app);
@@ -290,7 +321,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         return start_ui(&cloned_app).await;
     }
-    start_server
+    Ok(())
 }
 
 #[tokio::main]
@@ -451,6 +482,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                             }),
                             is_playing: track_event.is_playing,
                             index: track_event.index,
+                            position_ms: track_event.position_ms,
                             ..Default::default()
                         });
                     }
@@ -458,5 +490,12 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                 }
             }
         });
+    }
+}
+
+async fn connect_to_server() -> bool {
+    match LibraryClient::new().await {
+        Ok(_) => true,
+        Err(_) => false,
     }
 }

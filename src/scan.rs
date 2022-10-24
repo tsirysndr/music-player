@@ -1,7 +1,7 @@
 use futures::future::FutureExt;
 use music_player_entity::{album, artist, track};
 use music_player_scanner::scan_directory;
-use music_player_scanner::types::Song;
+use music_player_types::types::Song;
 use music_player_storage::Database;
 use owo_colors::OwoColorize;
 use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};

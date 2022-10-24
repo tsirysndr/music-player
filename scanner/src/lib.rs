@@ -1,12 +1,11 @@
 use futures::future::BoxFuture;
-use music_player_storage::Database;
+use music_player_storage::{Database, Searcher};
+use music_player_types::types::Song;
 
 use lofty::{Accessor, AudioFile, LoftyError, Probe};
 use music_player_settings::{read_settings, Settings};
-use types::Song;
 use walkdir::WalkDir;
 
-pub mod types;
 
 pub async fn scan_directory(
     save: impl for<'a> Fn(&'a Song, &'a Database) -> BoxFuture<'a, ()> + 'static,
@@ -14,6 +13,8 @@ pub async fn scan_directory(
     let db = Database::new().await;
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
+
+    let searcher: &Searcher = db.get_searcher();
 
     let mut songs: Vec<Song> = Vec::new();
     for entry in WalkDir::new(settings.music_directory)
@@ -60,8 +61,11 @@ pub async fn scan_directory(
                         duration: properties.duration(),
                         uri: Some(path),
                     };
+                    let id = format!("{:x}", md5::compute(song.uri.as_ref().unwrap()));
+                    searcher.insert_song(song.clone(), id).unwrap();
                     save(&song, &db).await;
                     songs.push(song);
+
                 }
                 Err(e) => println!("ERROR: {}", e),
             }

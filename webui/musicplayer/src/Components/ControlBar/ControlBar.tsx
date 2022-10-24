@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
 import Next from "../Icons/Next";
+import Pause from "../Icons/Pause";
 import Play from "../Icons/Play";
 import Previous from "../Icons/Previous";
 import Repeat from "../Icons/Repeat";
@@ -39,26 +40,48 @@ export type ControlBarProps = {
     cover: string;
     duration: number;
     progress: number;
+    isPlaying?: boolean;
   };
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
 };
 
-const ControlBar: FC<ControlBarProps> = ({ nowPlaying }) => {
+const ControlBar: FC<ControlBarProps> = ({
+  nowPlaying,
+  onNext,
+  onPrevious,
+  onPlay,
+  onPause,
+  onShuffle,
+  onRepeat,
+}) => {
   return (
     <Container>
       <Controls>
-        <Button>
+        <Button onClick={onShuffle}>
           <Shuffle />
         </Button>
-        <Button>
+        <Button onClick={onPrevious}>
           <Previous />
         </Button>
-        <Button>
-          <Play />
-        </Button>
-        <Button>
+        {!nowPlaying?.isPlaying && (
+          <Button onClick={onPlay}>
+            <Play />
+          </Button>
+        )}
+        {nowPlaying?.isPlaying && (
+          <Button onClick={onPause}>
+            <Pause />
+          </Button>
+        )}
+        <Button onClick={onNext}>
           <Next />
         </Button>
-        <Button>
+        <Button onClick={onRepeat}>
           <Repeat />
         </Button>
       </Controls>

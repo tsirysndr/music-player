@@ -110,18 +110,21 @@ export type AlbumDetailsProps = {
   onBack: () => void;
   onClickLibraryItem: (item: string) => void;
   album: any;
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
 };
 
-const AlbumDetails: FC<AlbumDetailsProps> = ({
-  onBack,
-  onClickLibraryItem,
-  album,
-}) => {
+const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
+  const { onBack, onClickLibraryItem, album } = props;
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>

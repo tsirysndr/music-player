@@ -9,6 +9,7 @@ pub struct Model {
     pub artist: String,
     pub artist_id: Option<String>,
     pub year: Option<u32>,
+    pub cover: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

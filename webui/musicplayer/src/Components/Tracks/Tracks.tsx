@@ -19,14 +19,22 @@ const Content = styled.div`
 export type TracksProps = {
   tracks: any[];
   onClickLibraryItem: (item: string) => void;
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
+  nowPlaying: any;
 };
 
-const Tracks: FC<TracksProps> = ({ onClickLibraryItem, tracks }) => {
+const Tracks: FC<TracksProps> = (props) => {
+  const { onClickLibraryItem, tracks } = props;
   return (
     <Container>
       <Sidebar active="tracks" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <MainContent title="Tracks">
           <TracksTable tracks={tracks} />
         </MainContent>

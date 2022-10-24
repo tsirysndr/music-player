@@ -60,18 +60,22 @@ export type ArtistsProps = {
   artists: any[];
   onClickLibraryItem: (item: string) => void;
   onClickArtist: (artist: any) => void;
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
+  nowPlaying: any;
 };
 
-const Artists: FC<ArtistsProps> = ({
-  onClickLibraryItem,
-  onClickArtist,
-  artists,
-}) => {
+const Artists: FC<ArtistsProps> = (props) => {
+  const { onClickLibraryItem, onClickArtist, artists } = props;
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <Scrollable>
           <MainContent title="Artists" placeholder="Filter Artists">
             <Wrapper>

@@ -28,6 +28,7 @@ export const GET_TRACKS = gql`
     tracks {
       ...TrackFragment
       artists {
+        id
         name
       }
       album {

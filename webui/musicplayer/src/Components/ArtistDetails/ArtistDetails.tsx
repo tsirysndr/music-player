@@ -128,20 +128,21 @@ export type ArtistDetailsProps = {
   artist: any;
   tracks: any[];
   albums: any[];
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
 };
 
-const ArtistDetails: FC<ArtistDetailsProps> = ({
-  onBack,
-  onClickLibraryItem,
-  artist,
-  tracks,
-  albums,
-}) => {
+const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
+  const { onBack, onClickLibraryItem, artist, tracks, albums } = props;
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>

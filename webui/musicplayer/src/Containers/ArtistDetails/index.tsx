@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Artists from "../../Components/Artists";
+import ArtistDetails from "../../Components/ArtistDetails";
 import {
   useCurrentlyPlayingSongQuery,
   useNextMutation,
@@ -9,8 +9,7 @@ import {
   usePreviousMutation,
 } from "../../Hooks/GraphQL";
 
-const ArtistsPage = () => {
-  const navigate = useNavigate();
+const ArtistDetailsPage = () => {
   const {
     data: playback,
     startPolling,
@@ -23,6 +22,7 @@ const ArtistsPage = () => {
   const [pause] = usePauseMutation();
   const [next] = useNextMutation();
   const [previous] = usePreviousMutation();
+  const navigate = useNavigate();
   const duration = playback?.currentlyPlayingSong?.track?.duration! * 1000;
   const position = playback?.currentlyPlayingSong?.positionMs!;
   const nowPlaying = {
@@ -40,19 +40,20 @@ const ArtistsPage = () => {
     return () => stopPolling();
   }, [startPolling, stopPolling]);
   return (
-    <Artists
-      artists={[]}
-      onClickArtist={() => {}}
-      onClickLibraryItem={(item) => navigate(`/${item}`)}
-      onPlay={() => play()}
-      onPause={() => pause()}
-      onNext={() => next()}
-      onPrevious={() => previous()}
+    <ArtistDetails
+      onBack={() => {}}
+      onClickLibraryItem={() => {}}
+      onPlay={() => {}}
+      onPause={() => {}}
+      onNext={() => {}}
+      onPrevious={() => {}}
       onShuffle={() => {}}
       onRepeat={() => {}}
-      nowPlaying={nowPlaying}
+      artist={{}}
+      tracks={[]}
+      albums={[]}
     />
   );
 };
 
-export default ArtistsPage;
+export default ArtistDetailsPage;

@@ -31,6 +31,8 @@ const NoCover = styled.div`
 const TrackInfo = styled.div`
   display: flex;
   flex-direction: column;
+  width: 90%;
+  overflow: hidden;
 `;
 
 const Wrapper = styled.div`
@@ -38,16 +40,24 @@ const Wrapper = styled.div`
   flex: 1;
   flex-direction: column;
   align-items: center;
+  width: 90%;
+  overflow: hidden;
 `;
 
 const Artist = styled.div`
   text-align: center;
   font-family: RockfordSansLight;
+  font-size: 14px;
   color: rgba(0, 0, 0, 0.542);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 `;
 
 const Title = styled.div`
   text-align: center;
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 `;
 
 const Placeholder = styled.div`
@@ -78,9 +88,14 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
           </Wrapper>
         </Container>
       )}
-      {nowPlaying && (
+      {nowPlaying && nowPlaying!.duration && (
         <Container>
-          <AlbumCover src={nowPlaying?.cover} />
+          {nowPlaying?.cover && <AlbumCover src={nowPlaying?.cover} />}
+          {!nowPlaying?.cover && (
+            <NoCover>
+              <Track width={28} height={28} color="#a4a3a3" />
+            </NoCover>
+          )}
           <Wrapper>
             <TrackInfo>
               <Title>{nowPlaying?.title}</Title>
@@ -91,7 +106,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
             <ProgressBar
               value={
                 nowPlaying!.duration > 0
-                  ? (nowPlaying!.progress * 100) / nowPlaying!.duration
+                  ? (nowPlaying!.progress / nowPlaying!.duration) * 100
                   : 0
               }
               overrides={{

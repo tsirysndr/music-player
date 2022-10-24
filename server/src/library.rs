@@ -57,6 +57,7 @@ impl LibraryService for Library {
                         md5::compute(song.artist.to_string())
                     ))),
                     year: ActiveValue::Set(song.year),
+                    cover: ActiveValue::Set(song.cover.clone()),
                 };
                 match item.insert(db.get_connection()).await {
                     Ok(_) => (),

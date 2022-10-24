@@ -51,6 +51,7 @@ impl PlaybackQuery {
                 uri: track.uri,
                 track_number: track.track,
                 artists: vec![Artist {
+                    id: ID(format!("{:x}", md5::compute(track.artist.clone()))),
                     name: track.artist,
                     ..Default::default()
                 }],

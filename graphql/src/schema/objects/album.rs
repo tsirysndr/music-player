@@ -6,7 +6,7 @@ use super::track::Track;
 pub struct Album {
     pub id: ID,
     pub title: String,
-    pub cover: String,
+    pub cover: Option<String>,
     pub release_date: String,
     pub artist: String,
     pub year: Option<u32>,
@@ -24,7 +24,7 @@ impl Album {
         &self.title
     }
 
-    async fn cover(&self) -> &str {
+    async fn cover(&self) -> &Option<String> {
         &self.cover
     }
 

@@ -11,7 +11,7 @@ import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 
 const uri =
   process.env.NODE_ENV === "development"
-    ? "http://localhost:3001/graphql"
+    ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
     : // eslint-disable-next-line no-restricted-globals
       "/graphql";
 

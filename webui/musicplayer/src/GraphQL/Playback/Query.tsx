@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import { TRACK_FRAGMENT, ARTIST_FRAGMENT } from "../Fragments";
+import { TRACK_FRAGMENT } from "../Fragments";
 
 export const GET_CURRENTLY_PLAYING = gql`
   query CurrentlyPlayingSong {
@@ -7,13 +7,16 @@ export const GET_CURRENTLY_PLAYING = gql`
       track {
         ...TrackFragment
         artists {
-          ...ArtistFragment
+          name
+        }
+        album {
+          title
         }
       }
+      index
       isPlaying
       positionMs
     }
   }
   ${TRACK_FRAGMENT}
-  ${ARTIST_FRAGMENT}
 `;

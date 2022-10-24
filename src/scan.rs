@@ -43,6 +43,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                     md5::compute(song.artist.to_string())
                 ))),
                 year: ActiveValue::Set(song.year),
+                cover: ActiveValue::Set(song.cover.clone()),
             };
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),

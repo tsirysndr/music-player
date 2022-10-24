@@ -1,4 +1,5 @@
 import { gql } from "@apollo/client";
+import { TRACK_FRAGMENT } from "../Fragments";
 
 export const GET_TRACKLIST = gql`
   query GetTracklist {
@@ -10,5 +11,20 @@ export const GET_TRACKLIST = gql`
         title
       }
     }
+    currentlyPlayingSong {
+      track {
+        ...TrackFragment
+        artists {
+          name
+        }
+        album {
+          title
+        }
+      }
+      index
+      isPlaying
+      positionMs
+    }
   }
+  ${TRACK_FRAGMENT}
 `;

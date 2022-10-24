@@ -31,7 +31,8 @@ impl LibraryQuery {
                 duration: track.duration,
                 track_number: track.track,
                 artists: vec![Artist {
-                    name: track.artist,
+                    id: ID(format!("{:x}", md5::compute(track.artist.clone()))),
+                    name: track.artist.clone(),
                     ..Default::default()
                 }],
                 album: Album {
@@ -187,6 +188,7 @@ impl LibraryQuery {
                     ..Default::default()
                 })
                 .collect(),
+            cover: album.cover,
             ..Default::default()
         })
     }
@@ -228,6 +230,7 @@ impl LibraryMutation {
                         md5::compute(song.artist.to_string())
                     ))),
                     year: ActiveValue::Set(song.year),
+                    cover: ActiveValue::Set(song.cover.clone()),
                 };
                 match item.insert(db.get_connection()).await {
                     Ok(_) => (),

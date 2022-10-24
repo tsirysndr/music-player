@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
@@ -26,5 +26,6 @@ async fn main() -> std::io::Result<()> {
         cloned_cmd_rx,
         cloned_tracklist,
     );
+    env::set_var("MUSIC_PLAYER_HTTP_PORT", "3001");
     start_webui(cmd_tx, tracklist).await
 }

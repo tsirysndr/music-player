@@ -21,6 +21,11 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
       <TableBuilder
         data={tracks}
         overrides={{
+          Root: {
+            style: {
+              maxHeight: "calc(100vh - 250px)",
+            },
+          },
           TableHeadCell: {
             style: ({ $col }) => {
               return {
@@ -31,7 +36,11 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
                     ? "98px"
                     : $col.header === ""
                     ? "50px"
-                    : "intial",
+                    : $col.header === "Title"
+                    ? "calc(100% - 200px)"
+                    : $col.header === "Artist"
+                    ? "100px"
+                    : "auto",
                 outline: `#fff solid`,
                 borderBottomColor: "#fff !important",
                 color: "rgba(0, 0, 0, 0.542)",
@@ -39,9 +48,16 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
             },
           },
           TableBodyCell: {
-            style: () => ({
+            style: ({ $col }) => ({
               outline: `#fff solid`,
               backgroundColor: "#fff",
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              maxWidth:
+                $col.header === "Artist" || $col.header === "Album"
+                  ? "120px"
+                  : "300px",
             }),
           },
           TableHead: {
@@ -55,8 +71,8 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
           },
         }}
       >
-        {header?.map((item) => (
-          <TableBuilderColumn header={item}>
+        {header?.map((item, index) => (
+          <TableBuilderColumn key={index} header={item}>
             {(row: any) => <div>{_.get(row, _.toLower(item), "")}</div>}
           </TableBuilderColumn>
         ))}

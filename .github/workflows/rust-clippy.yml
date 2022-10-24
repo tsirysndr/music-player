@@ -38,7 +38,9 @@ jobs:
           override: true
 
       - name: Install required cargo
-        run: cargo install clippy-sarif sarif-fmt
+        run: |
+          cargo install clippy-sarif --version 0.3.0
+          cargo install sarif-fmt --version 0.3.0
 
       - name: Run rust-clippy
         run: cargo clippy

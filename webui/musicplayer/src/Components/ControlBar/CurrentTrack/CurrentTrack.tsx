@@ -81,7 +81,10 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
     if (nowPlaying?.cover) {
       fetch(nowPlaying.cover)
         .then((res) => {
-          if (res.status === 200) {
+          if (
+            res.status === 200 &&
+            res.headers.get("Content-Type") === "image/jpeg"
+          ) {
             setCover(nowPlaying.cover);
           }
         })

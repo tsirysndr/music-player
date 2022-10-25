@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import Next from "../Icons/Next";
 import Pause from "../Icons/Pause";
 import Play from "../Icons/Play";
@@ -59,6 +59,24 @@ const ControlBar: FC<ControlBarProps> = ({
   onShuffle,
   onRepeat,
 }) => {
+  const [played, setPlayed] = useState(false);
+
+  useEffect(() => {
+    if (nowPlaying) {
+      setPlayed(nowPlaying.isPlaying!);
+    }
+  }, [nowPlaying]);
+
+  const handlePlay = () => {
+    setPlayed(true);
+    onPlay();
+  };
+
+  const handlePause = () => {
+    setPlayed(false);
+    onPause();
+  };
+
   return (
     <Container>
       <Controls>
@@ -68,13 +86,13 @@ const ControlBar: FC<ControlBarProps> = ({
         <Button onClick={onPrevious}>
           <Previous />
         </Button>
-        {!nowPlaying?.isPlaying && (
-          <Button onClick={onPlay}>
+        {!played && (
+          <Button onClick={handlePlay}>
             <Play />
           </Button>
         )}
-        {nowPlaying?.isPlaying && (
-          <Button onClick={onPause}>
+        {played && (
+          <Button onClick={handlePause}>
             <Pause />
           </Button>
         )}

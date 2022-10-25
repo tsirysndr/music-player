@@ -37,6 +37,7 @@ const TracksPage = () => {
     isPlaying: playback?.currentlyPlayingSong?.isPlaying,
     duration,
     progress: position,
+    cover: `/covers/${playback?.currentlyPlayingSong?.track?.album?.id}.jpg`,
   };
   useEffect(() => {
     startPolling!(1000);

@@ -268,7 +268,7 @@ export type PreviousMutation = { __typename?: 'Mutation', previous: boolean };
 export type CurrentlyPlayingSongQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
+export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } | null } };
 
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -538,9 +538,11 @@ export const CurrentlyPlayingSongDocument = gql`
     track {
       ...TrackFragment
       artists {
+        id
         name
       }
       album {
+        id
         title
       }
     }

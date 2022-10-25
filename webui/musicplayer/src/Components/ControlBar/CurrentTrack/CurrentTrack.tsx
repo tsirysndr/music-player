@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import { ProgressBar } from "baseui/progress-bar";
 import Track from "../../Icons/Track";
 
@@ -76,6 +76,18 @@ export type CurrentTrackProps = {
 };
 
 const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
+  const [cover, setCover] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (nowPlaying?.cover) {
+      fetch(nowPlaying.cover)
+        .then((res) => {
+          if (res.status === 200) {
+            setCover(nowPlaying.cover);
+          }
+        })
+        .catch(() => console.log("Failed to fetch Album Cover"));
+    }
+  }, [nowPlaying]);
   return (
     <>
       {(!nowPlaying || !nowPlaying!.title) && (
@@ -90,8 +102,8 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
       )}
       {nowPlaying && nowPlaying!.title && (
         <Container>
-          {nowPlaying?.cover && <AlbumCover src={nowPlaying?.cover} />}
-          {!nowPlaying?.cover && (
+          {cover && <AlbumCover src={cover} />}
+          {!cover && (
             <NoCover>
               <Track width={28} height={28} color="#a4a3a3" />
             </NoCover>

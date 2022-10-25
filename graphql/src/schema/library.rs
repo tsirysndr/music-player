@@ -76,6 +76,7 @@ impl LibraryQuery {
                 title: album.title,
                 artist: album.artist,
                 year: album.year,
+                cover: album.cover,
                 ..Default::default()
             })
             .collect())

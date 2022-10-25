@@ -7,9 +7,11 @@ export const GET_CURRENTLY_PLAYING = gql`
       track {
         ...TrackFragment
         artists {
+          id
           name
         }
         album {
+          id
           title
         }
       }

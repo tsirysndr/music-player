@@ -145,6 +145,7 @@ impl LibraryService for Library {
                     title: album.title,
                     artist: album.artist,
                     year: album.year.unwrap_or_default() as i32,
+                    cover: album.cover.unwrap_or_default(),
                     ..Default::default()
                 })
                 .collect(),
@@ -257,6 +258,7 @@ impl LibraryService for Library {
                     ..Default::default()
                 })
                 .collect(),
+            cover: album.cover.unwrap_or_default(),
             ..Default::default()
         });
         let response = GetAlbumDetailsResponse { album };

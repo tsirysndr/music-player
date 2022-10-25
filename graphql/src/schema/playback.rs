@@ -56,7 +56,7 @@ impl PlaybackQuery {
                     ..Default::default()
                 }],
                 album: Album {
-                    // id: track.album_id.unwrap(),
+                    id: ID(track.album_id.unwrap_or_default()),
                     title: track.album,
                     year: track.year,
                     ..Default::default()

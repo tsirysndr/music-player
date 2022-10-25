@@ -1,47 +1,20 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Artists from "../../Components/Artists";
-import {
-  useCurrentlyPlayingSongQuery,
-  useNextMutation,
-  usePauseMutation,
-  usePlayMutation,
-  usePreviousMutation,
-} from "../../Hooks/GraphQL";
+import { useGetArtistsQuery } from "../../Hooks/GraphQL";
+import { usePlayback } from "../../Hooks/usePlayback";
 
 const ArtistsPage = () => {
+  const { data, loading } = useGetArtistsQuery();
   const navigate = useNavigate();
-  const {
-    data: playback,
-    startPolling,
-    stopPolling,
-  } = useCurrentlyPlayingSongQuery({
-    pollInterval: 1000,
-    nextFetchPolicy: "network-only",
-  });
-  const [play] = usePlayMutation();
-  const [pause] = usePauseMutation();
-  const [next] = useNextMutation();
-  const [previous] = usePreviousMutation();
-  const duration = playback?.currentlyPlayingSong?.track?.duration! * 1000;
-  const position = playback?.currentlyPlayingSong?.positionMs!;
-  const nowPlaying = {
-    title: playback?.currentlyPlayingSong?.track?.title,
-    artist: playback?.currentlyPlayingSong?.track?.artists
-      ?.map((artist) => artist.name)
-      .join(", "),
-    album: playback?.currentlyPlayingSong?.track?.album?.title,
-    isPlaying: playback?.currentlyPlayingSong?.isPlaying,
-    duration,
-    progress: position,
-  };
-  useEffect(() => {
-    startPolling!(1000);
-    return () => stopPolling();
-  }, [startPolling, stopPolling]);
+  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const artists = !loading && data ? data.artists : [];
   return (
     <Artists
-      artists={[]}
+      artists={artists.map((artist) => ({
+        id: artist.id,
+        name: artist.name,
+        cover: artist.picture,
+      }))}
       onClickArtist={() => {}}
       onClickLibraryItem={(item) => navigate(`/${item}`)}
       onPlay={() => play()}

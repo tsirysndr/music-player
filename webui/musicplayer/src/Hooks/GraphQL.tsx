@@ -226,7 +226,7 @@ export type Tracklist = {
 
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover: string };
 
-export type ArtistFragmentFragment = { __typename?: 'Artist', id: string, name: string };
+export type ArtistFragmentFragment = { __typename?: 'Artist', id: string, name: string, picture: string };
 
 export type TrackFragmentFragment = { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null };
 
@@ -238,7 +238,7 @@ export type GetAlbumsQuery = { __typename?: 'Query', albums: Array<{ __typename?
 export type GetArtistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetArtistsQuery = { __typename?: 'Query', artists: Array<{ __typename?: 'Artist', id: string, name: string }> };
+export type GetArtistsQuery = { __typename?: 'Query', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }> };
 
 export type GetTracksQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -273,7 +273,7 @@ export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlaying
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', title: string }>, nextTracks: Array<{ __typename?: 'Track', title: string }> }, currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
+export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', title: string } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', title: string } }> }, currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
 
 export const AlbumFragmentFragmentDoc = gql`
     fragment AlbumFragment on Album {
@@ -288,6 +288,7 @@ export const ArtistFragmentFragmentDoc = gql`
     fragment ArtistFragment on Artist {
   id
   name
+  picture
 }
     `;
 export const TrackFragmentFragmentDoc = gql`
@@ -583,10 +584,28 @@ export const GetTracklistDocument = gql`
     query GetTracklist {
   tracklistTracks {
     previousTracks {
+      id
       title
+      duration
+      artists {
+        id
+        name
+      }
+      album {
+        title
+      }
     }
     nextTracks {
+      id
       title
+      duration
+      artists {
+        id
+        name
+      }
+      album {
+        title
+      }
     }
   }
   currentlyPlayingSong {

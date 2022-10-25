@@ -33,11 +33,12 @@ impl TracklistQuery {
                     uri: track.uri,
                     track_number: track.track,
                     artists: vec![Artist {
+                        id: ID(format!("{:x}", md5::compute(track.artist.clone()))),
                         name: track.artist,
                         ..Default::default()
                     }],
                     album: Album {
-                        // id: track.album_id.unwrap(),
+                        id: ID(track.album_id.unwrap()),
                         title: track.album,
                         year: track.year,
                         ..Default::default()
@@ -92,7 +93,9 @@ pub struct TracklistMutation;
 #[Object]
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> Result<Vec<Track>, Error> {
-        let player_cmd = ctx.data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>().unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let result = track_entity::Entity::find_by_id(track.clone().id.to_string())
@@ -103,9 +106,13 @@ impl TracklistMutation {
         }
 
         let track = result.unwrap();
-        player_cmd.lock().unwrap().send(PlayerCommand::LoadTracklist {
-            tracks: vec![track],
-        });
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::LoadTracklist {
+                tracks: vec![track],
+            })
+            .unwrap();
         Ok(vec![])
     }
 
@@ -116,7 +123,7 @@ impl TracklistMutation {
 
     async fn clear_tracklist(&self, ctx: &Context<'_>) -> Result<bool, Error> {
         let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Clear);
+        player_cmd.send(PlayerCommand::Clear).unwrap();
         Ok(true)
     }
 

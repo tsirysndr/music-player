@@ -14,6 +14,7 @@ export const ARTIST_FRAGMENT = gql`
   fragment ArtistFragment on Artist {
     id
     name
+    picture
   }
 `;
 

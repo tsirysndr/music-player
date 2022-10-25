@@ -134,6 +134,7 @@ export type ArtistDetailsProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
+  nowPlaying: any;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {

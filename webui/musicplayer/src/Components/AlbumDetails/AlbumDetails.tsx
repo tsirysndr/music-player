@@ -30,7 +30,7 @@ const BackButton = styled.button`
   width: 30px;
   border-radius: 15px;
   background-color: #f7f7f8;
-  margin-left: 10px;
+  margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
   z-index: 1;
@@ -48,6 +48,7 @@ const Album = styled.div`
   display: flex;
   flex-direction: row;
   margin-top: 90px;
+  margin-left: 16px;
 `;
 
 const Title = styled.div`

@@ -12,7 +12,7 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   height: 96px;
-  padding-left: 10px;
+  padding-left: 26px;
 `;
 
 const Controls = styled.div`

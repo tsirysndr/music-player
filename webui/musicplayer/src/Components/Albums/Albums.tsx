@@ -38,6 +38,7 @@ const NoAlbumCover = styled.div`
 
 const Wrapper = styled.div`
   margin-top: 34px;
+  margin-left: 10px;
 `;
 
 const Artist = styled.div`

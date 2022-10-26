@@ -29,14 +29,18 @@ export type TracksProps = {
 };
 
 const Tracks: FC<TracksProps> = (props) => {
-  const { onClickLibraryItem, tracks } = props;
+  const { onClickLibraryItem, tracks, nowPlaying } = props;
   return (
     <Container>
       <Sidebar active="tracks" onClickLibraryItem={onClickLibraryItem} />
       <Content>
         <ControlBar {...props} />
         <MainContent title="Tracks">
-          <TracksTable tracks={tracks} />
+          <TracksTable
+            tracks={tracks}
+            currentTrackId={nowPlaying.id}
+            isPlaying={nowPlaying.isPlaying}
+          />
         </MainContent>
       </Content>
     </Container>

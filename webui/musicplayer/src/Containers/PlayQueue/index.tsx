@@ -1,21 +1,13 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PlayQueue from "../../Components/PlayQueue";
-import {
-  useCurrentlyPlayingSongQuery,
-  useGetTracklistQuery,
-  useNextMutation,
-  usePauseMutation,
-  usePlayMutation,
-  usePreviousMutation,
-} from "../../Hooks/GraphQL";
+import { useGetTracklistQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 
 const PlayQueuePage = () => {
   const navigate = useNavigate();
   const { data, loading } = useGetTracklistQuery();
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const { play, pause, next, previous, nowPlaying, index } = usePlayback();
   const { formatTime } = useTimeFormat();
   const previousTracks = (
     !loading && data ? data.tracklistTracks.previousTracks : []
@@ -39,7 +31,10 @@ const PlayQueuePage = () => {
   }));
   return (
     <PlayQueue
-      tracks={[...previousTracks, ...nextTracks]}
+      tracks={[...previousTracks, ...nextTracks].map((item, index) => ({
+        ...item,
+        index: index + 1,
+      }))}
       onClickLibraryItem={(item) => navigate(`/${item}`)}
       onPlay={() => play()}
       onPause={() => pause()}
@@ -48,6 +43,7 @@ const PlayQueuePage = () => {
       onShuffle={() => {}}
       onRepeat={() => {}}
       nowPlaying={nowPlaying}
+      currentIndex={index}
     />
   );
 };

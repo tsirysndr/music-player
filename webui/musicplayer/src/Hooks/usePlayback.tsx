@@ -19,9 +19,11 @@ export const usePlayback = () => {
   const [pause] = usePauseMutation();
   const [next] = useNextMutation();
   const [previous] = usePreviousMutation();
+  const index = playback?.currentlyPlayingSong.index;
   const duration = playback?.currentlyPlayingSong?.track?.duration! * 1000;
   const position = playback?.currentlyPlayingSong?.positionMs!;
   const nowPlaying = {
+    id: playback?.currentlyPlayingSong?.track?.id,
     title: playback?.currentlyPlayingSong?.track?.title,
     artist: playback?.currentlyPlayingSong?.track?.artists
       ?.map((artist) => artist.name)
@@ -42,5 +44,6 @@ export const usePlayback = () => {
     pause,
     next,
     previous,
+    index,
   };
 };

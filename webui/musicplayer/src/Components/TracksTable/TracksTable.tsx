@@ -3,6 +3,7 @@ import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
 import _ from "lodash";
 import { FC } from "react";
 import ContextMenu from "../ContextMenu";
+import Speaker from "../Icons/Speaker";
 
 const TableWrapper = styled.div`
   margin-top: 31px;
@@ -12,9 +13,19 @@ export type TracksTableProps = {
   tracks: any[];
   header?: string[];
   title?: JSX.Element;
+  currentIndex?: number;
+  currentTrackId?: string;
+  isPlaying?: boolean;
 };
 
-const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
+const TracksTable: FC<TracksTableProps> = ({
+  tracks,
+  header,
+  title,
+  currentIndex,
+  currentTrackId,
+  isPlaying,
+}) => {
   return (
     <TableWrapper>
       {title}
@@ -24,6 +35,7 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
           Root: {
             style: {
               maxHeight: "calc(100vh - 250px)",
+              paddingLeft: "10px",
             },
           },
           TableHeadCell: {
@@ -73,7 +85,32 @@ const TracksTable: FC<TracksTableProps> = ({ tracks, header, title }) => {
       >
         {header?.map((item, index) => (
           <TableBuilderColumn key={index} header={item}>
-            {(row: any) => <div>{_.get(row, _.toLower(item), "")}</div>}
+            {(row: any) => {
+              const current =
+                item === "Title" &&
+                ((currentIndex && currentIndex === row.index) ||
+                  (!currentTrackId && row.id === currentTrackId)) &&
+                isPlaying;
+              return (
+                <>
+                  {current && (
+                    <div>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: -4,
+                          marginTop: -1,
+                        }}
+                      >
+                        <Speaker color="#ab28fc" />
+                      </div>
+                      <div>{_.get(row, _.toLower(item), "")}</div>
+                    </div>
+                  )}
+                  {!current && <div>{_.get(row, _.toLower(item), "")}</div>}
+                </>
+              );
+            }}
           </TableBuilderColumn>
         ))}
         <TableBuilderColumn header="">

@@ -26,17 +26,22 @@ export type PlayQueueProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
+  currentIndex?: number;
 };
 
 const PlayQueue: FC<PlayQueueProps> = (props) => {
-  const { onClickLibraryItem, tracks } = props;
+  const { onClickLibraryItem, tracks, currentIndex, nowPlaying } = props;
   return (
     <Container>
       <Sidebar active="play-queue" onClickLibraryItem={onClickLibraryItem} />
       <Content>
         <ControlBar {...props} />
         <MainContent title="Play Queue">
-          <TracksTable tracks={tracks} />
+          <TracksTable
+            tracks={tracks}
+            currentIndex={currentIndex}
+            isPlaying={nowPlaying.isPlaying}
+          />
         </MainContent>
       </Content>
     </Container>

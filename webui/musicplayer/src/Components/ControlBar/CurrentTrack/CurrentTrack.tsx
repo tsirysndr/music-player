@@ -3,6 +3,7 @@ import { FC } from "react";
 import { ProgressBar } from "baseui/progress-bar";
 import Track from "../../Icons/Track";
 import { useCover } from "../../../Hooks/useCover";
+import { useTimeFormat } from "../../../Hooks/useFormat";
 
 const Container = styled.div`
   height: 76px;
@@ -61,6 +62,26 @@ const Title = styled.div`
   text-overflow: ellipsis;
 `;
 
+const Row = styled.div`
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  align-items: center;
+`;
+
+const Time = styled.div`
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.542);
+  font-family: RockfordSansRegular;
+  text-align: center;
+  width: 60px;
+  margin-top: -3px;
+`;
+
+const ProgressbarContainer = styled.div`
+  width: 88%;
+`;
+
 const Placeholder = styled.div`
   color: #767676;
 `;
@@ -78,6 +99,7 @@ export type CurrentTrackProps = {
 
 const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
   const { cover } = useCover(nowPlaying?.cover);
+  const { formatTime } = useTimeFormat();
   return (
     <>
       {(!nowPlaying || !nowPlaying!.title) && (
@@ -105,25 +127,31 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
                 {nowPlaying?.artist} - {nowPlaying?.album}
               </Artist>
             </TrackInfo>
-            <ProgressBar
-              value={
-                nowPlaying!.duration > 0
-                  ? (nowPlaying!.progress / nowPlaying!.duration) * 100
-                  : 0
-              }
-              overrides={{
-                BarProgress: {
-                  style: () => ({
-                    backgroundColor: "#ab28fc",
-                  }),
-                },
-                Bar: {
-                  style: () => ({
-                    backgroundColor: "rgba(177, 178, 181, 0.218)",
-                  }),
-                },
-              }}
-            />
+            <Row>
+              <Time>{formatTime(nowPlaying?.progress)}</Time>
+              <ProgressbarContainer>
+                <ProgressBar
+                  value={
+                    nowPlaying!.duration > 0
+                      ? (nowPlaying!.progress / nowPlaying!.duration) * 100
+                      : 0
+                  }
+                  overrides={{
+                    BarProgress: {
+                      style: () => ({
+                        backgroundColor: "#ab28fc",
+                      }),
+                    },
+                    Bar: {
+                      style: () => ({
+                        backgroundColor: "rgba(177, 178, 181, 0.218)",
+                      }),
+                    },
+                  }}
+                />
+              </ProgressbarContainer>
+              <Time>{formatTime(nowPlaying?.duration)}</Time>
+            </Row>
           </Wrapper>
         </Container>
       )}

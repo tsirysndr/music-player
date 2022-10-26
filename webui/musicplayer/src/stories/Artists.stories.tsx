@@ -6,6 +6,14 @@ import Artists from "../Components/Artists";
 export default {
   title: "Components/Artists",
   component: Artists,
+  argTypes: {
+    onPlay: { action: "play" },
+    onPause: { action: "pause" },
+    onNext: { action: "next" },
+    onPrevious: { action: "previous" },
+    onShuffle: { action: "shuffle" },
+    onRepeat: { action: "repeat" },
+  },
 } as ComponentMeta<typeof Artists>;
 
 const Template: ComponentStory<typeof Artists> = (args: any) => (

@@ -4,6 +4,14 @@ import ControlBar from "../Components/ControlBar";
 export default {
   title: "Components/ControlBar",
   component: ControlBar,
+  argTypes: {
+    onPlay: { action: "play" },
+    onPause: { action: "pause" },
+    onNext: { action: "next" },
+    onPrevious: { action: "previous" },
+    onShuffle: { action: "shuffle" },
+    onRepeat: { action: "repeat" },
+  },
 } as ComponentMeta<typeof ControlBar>;
 
 const Template: ComponentStory<typeof ControlBar> = (args: any) => (

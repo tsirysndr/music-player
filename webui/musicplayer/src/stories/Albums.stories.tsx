@@ -6,6 +6,14 @@ import _ from "lodash";
 export default {
   title: "Components/Albums",
   component: Albums,
+  argTypes: {
+    onPlay: { action: "play" },
+    onPause: { action: "pause" },
+    onNext: { action: "next" },
+    onPrevious: { action: "previous" },
+    onShuffle: { action: "shuffle" },
+    onRepeat: { action: "repeat" },
+  },
 } as ComponentMeta<typeof Albums>;
 
 const albums = [

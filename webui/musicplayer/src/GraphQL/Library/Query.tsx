@@ -40,3 +40,46 @@ export const GET_TRACKS = gql`
   ${ARTIST_FRAGMENT}
   ${ALBUM_FRAGMENT}
 `;
+
+export const GET_ARTIST = gql`
+  query GetArtist($id: ID!) {
+    artist(id: $id) {
+      id
+      name
+      picture
+      songs {
+        id
+        title
+        artists {
+          id
+          name
+        }
+        album {
+          id
+          title
+          cover
+        }
+        duration
+      }
+    }
+  }
+`;
+
+export const GET_ALBUM = gql`
+  query GetAlbum($id: ID!) {
+    album(id: $id) {
+      ...AlbumFragment
+      tracks {
+        id
+        trackNumber
+        title
+        artists {
+          id
+          name
+        }
+        duration
+      }
+    }
+  }
+  ${ALBUM_FRAGMENT}
+`;

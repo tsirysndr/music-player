@@ -18,7 +18,7 @@ const AlbumsPage = () => {
         artist: album.artist,
         cover: album.cover && `/covers/${album.cover}`,
       }))}
-      onClickAlbum={() => {}}
+      onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
       onClickLibraryItem={(item) => navigate(`/${item}`)}
       onPlay={() => play()}
       onPause={() => pause()}

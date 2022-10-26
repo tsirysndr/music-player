@@ -16,6 +16,7 @@ export type TracksTableProps = {
   currentIndex?: number;
   currentTrackId?: string;
   isPlaying?: boolean;
+  maxHeight?: string;
 };
 
 const TracksTable: FC<TracksTableProps> = ({
@@ -25,6 +26,7 @@ const TracksTable: FC<TracksTableProps> = ({
   currentIndex,
   currentTrackId,
   isPlaying,
+  maxHeight,
 }) => {
   return (
     <TableWrapper>
@@ -34,7 +36,7 @@ const TracksTable: FC<TracksTableProps> = ({
         overrides={{
           Root: {
             style: {
-              maxHeight: "calc(100vh - 250px)",
+              maxHeight,
               paddingLeft: "10px",
             },
           },
@@ -53,7 +55,7 @@ const TracksTable: FC<TracksTableProps> = ({
                     : $col.header === "Artist"
                     ? "100px"
                     : "auto",
-                outline: `#fff solid`,
+                outlineWidth: "0px",
                 borderBottomColor: "#fff !important",
                 color: "rgba(0, 0, 0, 0.542)",
               };
@@ -61,8 +63,8 @@ const TracksTable: FC<TracksTableProps> = ({
           },
           TableBodyCell: {
             style: ({ $col }) => ({
-              outline: `#fff solid`,
-              backgroundColor: "#fff",
+              outlineWidth: "0px 0px 0px 0px",
+              borderBottomColor: "#fff !important",
               overflow: "hidden",
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
@@ -74,12 +76,12 @@ const TracksTable: FC<TracksTableProps> = ({
           },
           TableHead: {
             style: () => ({
-              outline: `#fff solid`,
+              outlineWidth: "0px",
               borderBottomColor: "#fff",
             }),
           },
           TableBody: {
-            style: () => ({ border: "none", backgroundColor: "#fff" }),
+            style: () => ({ border: "none" }),
           },
         }}
       >
@@ -89,7 +91,7 @@ const TracksTable: FC<TracksTableProps> = ({
               const current =
                 item === "Title" &&
                 ((currentIndex && currentIndex === row.index) ||
-                  (!currentTrackId && row.id === currentTrackId)) &&
+                  (currentTrackId && row.id === currentTrackId)) &&
                 isPlaying;
               return (
                 <>
@@ -124,6 +126,7 @@ const TracksTable: FC<TracksTableProps> = ({
 TracksTable.defaultProps = {
   header: ["Title", "Artist", "Album", "Time"],
   title: <div />,
+  maxHeight: "calc(100vh - 250px)",
 };
 
 export default TracksTable;

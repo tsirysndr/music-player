@@ -18,8 +18,8 @@ const Separator = styled.div`
 `;
 
 const Hover = styled.button`
-  color: #fff;
-  background-color: #fff;
+  color: transparent;
+  background-color: transparent;
   border: none;
   &:hover,
   &:focus {

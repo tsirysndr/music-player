@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
+import { useCover } from "../../Hooks/useCover";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
@@ -8,6 +9,7 @@ import Shuffle from "../Icons/Shuffle";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
+import AlbumIcon from "../Icons/AlbumCover";
 
 const Container = styled.div`
   display: flex;
@@ -42,6 +44,17 @@ const AlbumCover = styled.img`
   border-radius: 3px;
   cursor: pointer;
   margin-left: 10px;
+`;
+
+const NoAlbumCover = styled.div`
+  height: 240px;
+  width: 240px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ddaefb14;
 `;
 
 const Album = styled.div`
@@ -117,10 +130,12 @@ export type AlbumDetailsProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
+  nowPlaying: any;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
-  const { onBack, onClickLibraryItem, album } = props;
+  const { onBack, onClickLibraryItem, album, nowPlaying } = props;
+  const { cover } = useCover(`/covers/${album.cover}`);
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
@@ -134,7 +149,12 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
               </div>
             </BackButton>
             <Album>
-              <AlbumCover src={album.cover} />
+              {cover && <AlbumCover src={cover} />}
+              {!cover && (
+                <NoAlbumCover>
+                  <AlbumIcon />
+                </NoAlbumCover>
+              )}
               <Metadata>
                 <MetadataContainer>
                   <Title>{album.title}</Title>
@@ -162,7 +182,10 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
             </Album>
             <TracksTable
               tracks={album.tracks}
+              currentTrackId={nowPlaying.id}
+              isPlaying={nowPlaying.isPlaying}
               header={["#", "Title", "Artist", "Time"]}
+              maxHeight={"initial"}
             />
           </Scrollable>
         </MainContent>

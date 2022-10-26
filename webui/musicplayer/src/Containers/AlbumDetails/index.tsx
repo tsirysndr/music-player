@@ -1,21 +1,22 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlbumDetails from "../../Components/AlbumDetails";
-import { useGetAlbumLazyQuery, useGetAlbumQuery } from "../../Hooks/GraphQL";
+import { useGetAlbumQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 
 const AlbumDetailsPage = () => {
   const params = useParams();
-  const [getAlbum, { data, loading }] = useGetAlbumLazyQuery({
+  const { data, loading, refetch } = useGetAlbumQuery({
     variables: {
       id: params.id!,
     },
+    fetchPolicy: "network-only",
   });
 
   useEffect(() => {
-    params.id && getAlbum();
-  }, [params.id, getAlbum]);
+    params.id && refetch();
+  }, [params.id, refetch]);
 
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();

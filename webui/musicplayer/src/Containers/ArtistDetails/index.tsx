@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ArtistDetails from "../../Components/ArtistDetails";
-import { useGetArtistLazyQuery } from "../../Hooks/GraphQL";
+import { useGetArtistQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 
 const ArtistDetailsPage = () => {
   const params = useParams();
-  const [getArtist, { data, loading }] = useGetArtistLazyQuery({
+  const { data, loading, refetch } = useGetArtistQuery({
     variables: {
       id: params.id!,
     },
@@ -15,8 +15,8 @@ const ArtistDetailsPage = () => {
   });
 
   useEffect(() => {
-    params.id && getArtist();
-  }, [params.id, getArtist]);
+    params.id && refetch();
+  }, [params.id, refetch]);
 
   const { formatTime } = useTimeFormat();
   const navigate = useNavigate();

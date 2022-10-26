@@ -1,17 +1,23 @@
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ArtistDetails from "../../Components/ArtistDetails";
-import { useGetArtistQuery } from "../../Hooks/GraphQL";
+import { useGetArtistLazyQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 
 const ArtistDetailsPage = () => {
   const params = useParams();
-  const { data, loading } = useGetArtistQuery({
+  const [getArtist, { data, loading }] = useGetArtistLazyQuery({
     variables: {
       id: params.id!,
     },
     fetchPolicy: "network-only",
   });
+
+  useEffect(() => {
+    params.id && getArtist();
+  }, [params.id, getArtist]);
+
   const { formatTime } = useTimeFormat();
   const navigate = useNavigate();
   const { play, pause, next, previous, nowPlaying } = usePlayback();

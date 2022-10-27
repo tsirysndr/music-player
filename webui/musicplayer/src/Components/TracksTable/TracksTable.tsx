@@ -53,17 +53,20 @@ const Cell: FC<CellProps> = ({
           <TrackIcon width={24} height={24} color="#a4a3a3" />
         </AlbumCoverAlt>
       )}
-      {current && (
+      {current && isAlbumTracks && (
         <div>
-          <div
-            style={{
-              position: "absolute",
-              left: isAlbumTracks ? 20 : 37,
-              marginTop: -1,
-            }}
-          >
-            <Speaker color="#ab28fc" />
-          </div>
+          {item === "#" && (
+            <div
+              style={{
+                position: "absolute",
+                left: isAlbumTracks ? 20 : 37,
+                marginTop: -11,
+              }}
+            >
+              <Speaker color="#ab28fc" />
+            </div>
+          )}
+
           {item !== "#" && (
             <div style={{ flex: 1 }}>{_.get(row, _.toLower(item), "")}</div>
           )}

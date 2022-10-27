@@ -7,6 +7,7 @@ import { EllipsisHorizontal } from "@styled-icons/ionicons-sharp";
 import { StatefulPopover } from "baseui/popover";
 import { StatefulMenu } from "baseui/menu";
 import TrackIcon from "../Icons/Track";
+import { useCover } from "../../Hooks/useCover";
 
 const Container = styled.div`
   display: flex;
@@ -88,6 +89,7 @@ export type ContextMenuProps = {
 };
 
 const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
+  const { cover } = useCover(track.cover);
   return (
     <Container>
       <Hover>
@@ -97,8 +99,8 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
           content={() => (
             <div style={{ width: 205 }}>
               <Track>
-                {track.cover && <AlbumCover src={track.cover} />}
-                {!track.cover && (
+                {cover && <AlbumCover src={cover} />}
+                {!cover && (
                   <AlbumCoverAlt>
                     <TrackIcon width={24} height={24} color="#a4a3a3" />
                   </AlbumCoverAlt>

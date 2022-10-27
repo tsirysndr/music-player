@@ -181,7 +181,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
               </Metadata>
             </Album>
             <TracksTable
-              tracks={album.tracks}
+              tracks={album.tracks.map((track: any) => ({ ...track, cover }))}
               currentTrackId={nowPlaying.id}
               isPlaying={nowPlaying.isPlaying}
               header={["#", "Title", "Artist", "Time"]}

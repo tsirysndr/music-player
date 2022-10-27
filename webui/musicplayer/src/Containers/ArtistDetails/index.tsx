@@ -29,6 +29,7 @@ const ArtistDetailsPage = () => {
           title: track.title,
           artist: track.artists.map((artist) => artist.name).join(", "),
           time: formatTime(track.duration! * 1000),
+          cover: `/covers/${track.album.id}.jpg`,
         }))
       : [];
   return (

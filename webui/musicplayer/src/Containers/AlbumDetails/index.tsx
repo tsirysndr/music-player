@@ -47,6 +47,7 @@ const AlbumDetailsPage = () => {
       onRepeat={() => {}}
       album={album}
       nowPlaying={nowPlaying}
+      onPlayTrack={(id, position) => {}}
     />
   );
 };

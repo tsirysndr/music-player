@@ -12,6 +12,7 @@ import { useCover } from "../../Hooks/useCover";
 const Container = styled.div`
   display: flex;
   flex-direction: row;
+  height: 45px;
 `;
 
 const Separator = styled.div`
@@ -31,7 +32,7 @@ const Hover = styled.button`
 const Icon = styled.div`
   cursor: pointer;
   display: flex;
-  height: 24px;
+  height: 45px;
   width: 24px;
   justify-content: center;
   align-items: center;

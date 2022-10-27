@@ -41,6 +41,7 @@ export type ControlBarProps = {
     duration: number;
     progress: number;
     isPlaying?: boolean;
+    albumId: string;
   };
   onPlay: () => void;
   onPause: () => void;

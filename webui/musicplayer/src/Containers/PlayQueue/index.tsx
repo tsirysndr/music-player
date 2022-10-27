@@ -44,6 +44,7 @@ const PlayQueuePage = () => {
       onRepeat={() => {}}
       nowPlaying={nowPlaying}
       currentIndex={index}
+      onPlayTrack={(id, position) => {}}
     />
   );
 };

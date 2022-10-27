@@ -131,10 +131,11 @@ export type AlbumDetailsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
+  onPlayTrack: (id: string, position?: number) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
-  const { onBack, onClickLibraryItem, album, nowPlaying } = props;
+  const { onBack, onClickLibraryItem, album, nowPlaying, onPlayTrack } = props;
   const { cover } = useCover(`/covers/${album.cover}`);
   return (
     <Container>
@@ -186,6 +187,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
               isPlaying={nowPlaying.isPlaying}
               header={["#", "Title", "Artist", "Time"]}
               maxHeight={"initial"}
+              onPlayTrack={onPlayTrack}
             />
           </Scrollable>
         </MainContent>

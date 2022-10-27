@@ -27,10 +27,12 @@ export type PlayQueueProps = {
   onRepeat: () => void;
   nowPlaying: any;
   currentIndex?: number;
+  onPlayTrack: (id: string, postion?: number) => void;
 };
 
 const PlayQueue: FC<PlayQueueProps> = (props) => {
-  const { onClickLibraryItem, tracks, currentIndex, nowPlaying } = props;
+  const { onClickLibraryItem, tracks, currentIndex, nowPlaying, onPlayTrack } =
+    props;
   return (
     <Container>
       <Sidebar active="play-queue" onClickLibraryItem={onClickLibraryItem} />
@@ -41,6 +43,7 @@ const PlayQueue: FC<PlayQueueProps> = (props) => {
             tracks={tracks}
             currentIndex={currentIndex}
             isPlaying={nowPlaying.isPlaying}
+            onPlayTrack={onPlayTrack}
           />
         </MainContent>
       </Content>

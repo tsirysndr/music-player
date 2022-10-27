@@ -31,6 +31,7 @@ const TracksPage = () => {
         onShuffle={() => {}}
         onRepeat={() => {}}
         nowPlaying={nowPlaying}
+        onPlayTrack={(id, position) => {}}
       />
     </>
   );

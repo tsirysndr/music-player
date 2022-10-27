@@ -136,10 +136,12 @@ export type ArtistDetailsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
+  onPlayTrack: (id: string, position?: number) => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
-  const { onBack, onClickLibraryItem, artist, tracks, albums } = props;
+  const { onBack, onClickLibraryItem, artist, tracks, albums, onPlayTrack } =
+    props;
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
@@ -180,6 +182,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                   </Row>
                 }
                 maxHeight={"initial"}
+                onPlayTrack={onPlayTrack}
               />
             </Tracks>
 

@@ -6,6 +6,7 @@ use music_player_scanner::scan_directory;
 use music_player_storage::Database;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
+    QuerySelect,
 };
 use tokio::sync::Mutex;
 
@@ -19,6 +20,7 @@ impl LibraryQuery {
     async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = track_entity::Entity::find()
+            .limit(100)
             .order_by_asc(track_entity::Column::Title)
             .all(db.lock().await.get_connection())
             .await?;

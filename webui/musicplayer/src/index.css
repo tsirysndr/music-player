@@ -46,3 +46,41 @@ code {
 }
 
 *:focus {outline:none !important}
+
+.play {
+  display: none;
+}
+
+.floating-play {
+  display: none;
+  position: absolute;
+  left: 40px;
+}
+
+tr:hover td div .play {
+  cursor: pointer;
+  display: block;
+}
+
+tr:hover td div .floating-play {
+  cursor: pointer;
+  display: block;
+}
+
+
+tr:hover td div .tracknumber {
+ display: none;
+}
+
+tr:hover td div .album-cover {
+  opacity: 0;
+ }
+
+tr:hover td div button {
+  color: #000;
+ }
+
+ tr td div div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+ }

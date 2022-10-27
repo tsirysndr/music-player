@@ -46,6 +46,7 @@ const ArtistDetailsPage = () => {
       tracks={tracks}
       albums={[]}
       nowPlaying={nowPlaying}
+      onPlayTrack={(id, position) => {}}
     />
   );
 };

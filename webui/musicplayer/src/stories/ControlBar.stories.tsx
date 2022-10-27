@@ -29,6 +29,7 @@ Default.args = {
     progress: 123456.789,
     cover:
       "https://resources.tidal.com/images/543575fc/ad02/419b/ae61/671558dc019d/320x320.jpg",
+    albumId: "671558dc019d",
   },
 };
 

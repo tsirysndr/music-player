@@ -33,6 +33,7 @@ export const usePlayback = () => {
     duration,
     progress: position,
     cover: `/covers/${playback?.currentlyPlayingSong?.track?.album?.id}.jpg`,
+    albumId: playback?.currentlyPlayingSong?.track?.album?.id,
   };
   useEffect(() => {
     startPolling!(1000);

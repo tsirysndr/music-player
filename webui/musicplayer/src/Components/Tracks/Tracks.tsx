@@ -26,10 +26,11 @@ export type TracksProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
+  onPlayTrack: (id: string, postion?: number) => void;
 };
 
 const Tracks: FC<TracksProps> = (props) => {
-  const { onClickLibraryItem, tracks, nowPlaying } = props;
+  const { onClickLibraryItem, tracks, nowPlaying, onPlayTrack } = props;
   return (
     <Container>
       <Sidebar active="tracks" onClickLibraryItem={onClickLibraryItem} />
@@ -40,6 +41,7 @@ const Tracks: FC<TracksProps> = (props) => {
             tracks={tracks}
             currentTrackId={nowPlaying.id}
             isPlaying={nowPlaying.isPlaying}
+            onPlayTrack={onPlayTrack}
           />
         </MainContent>
       </Content>

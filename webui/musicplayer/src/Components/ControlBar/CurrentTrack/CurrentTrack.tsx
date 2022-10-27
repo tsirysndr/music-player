@@ -55,6 +55,13 @@ const Artist = styled.div`
   text-overflow: ellipsis;
 `;
 
+const AlbumTitle = styled.a`
+  color: rgba(0, 0, 0, 0.542) !important;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-decoration: initial !important;
+`;
+
 const Title = styled.div`
   text-align: center;
   font-size: 14px;
@@ -86,6 +93,11 @@ const Placeholder = styled.div`
   color: #767676;
 `;
 
+const Separator = styled.span`
+  margin-left: 8px;
+  margin-right: 8px;
+`;
+
 export type CurrentTrackProps = {
   nowPlaying?: {
     album: string;
@@ -94,6 +106,7 @@ export type CurrentTrackProps = {
     cover: string;
     duration: number;
     progress: number;
+    albumId: string;
   };
 };
 
@@ -114,17 +127,23 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
       )}
       {nowPlaying && nowPlaying!.title && (
         <Container>
-          {cover && <AlbumCover src={cover} />}
-          {!cover && (
-            <NoCover>
-              <Track width={28} height={28} color="#a4a3a3" />
-            </NoCover>
-          )}
+          <a href={`/albums/${nowPlaying!.albumId}`}>
+            {cover && <AlbumCover src={cover} />}
+            {!cover && (
+              <NoCover>
+                <Track width={28} height={28} color="#a4a3a3" />
+              </NoCover>
+            )}
+          </a>
           <Wrapper>
             <TrackInfo>
               <Title>{nowPlaying?.title}</Title>
               <Artist>
-                {nowPlaying?.artist} - {nowPlaying?.album}
+                <span>{nowPlaying?.artist}</span>
+                <Separator>-</Separator>
+                <AlbumTitle href={`/albums/${nowPlaying!.albumId}`}>
+                  {nowPlaying?.album}
+                </AlbumTitle>
               </Artist>
             </TrackInfo>
             <Row>

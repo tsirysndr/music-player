@@ -72,6 +72,21 @@ const Cell: FC<CellProps> = ({
           )}
         </div>
       )}
+      {current && !isAlbumTracks && (
+        <div>
+          {item === "Title" && (
+            <div
+              style={{
+                position: "absolute",
+                left: isAlbumTracks ? 20 : 37,
+              }}
+            >
+              <Speaker color="#ab28fc" />
+            </div>
+          )}
+          <div style={{ flex: 1 }}>{_.get(row, _.toLower(item), "")}</div>
+        </div>
+      )}
       {!current && !isAlbumTracks && item === "Title" && (
         <div
           onClick={() => onPlayTrack(row.id, index)}

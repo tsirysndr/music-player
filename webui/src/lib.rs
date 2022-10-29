@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
     http::header::HOST,
@@ -13,7 +14,7 @@ use music_player_graphql::{
     schema::{Mutation, Query},
     MusicPlayerSchema,
 };
-use music_player_playback::player::{Player, PlayerCommand};
+use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
@@ -36,6 +37,10 @@ fn handle_embedded_file(path: &str) -> HttpResponse {
 
 #[actix_web::get("/")]
 async fn index() -> impl Responder {
+    handle_embedded_file("index.html")
+}
+
+async fn index_spa() -> impl Responder {
     handle_embedded_file("index.html")
 }
 
@@ -73,7 +78,7 @@ async fn dist(path: web::Path<String>) -> impl Responder {
 }
 
 pub async fn start_webui(
-    cmd_tx: UnboundedSender<PlayerCommand>,
+    cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     tracklist: Arc<std::sync::Mutex<Tracklist>>,
 ) -> std::io::Result<()> {
     let config = read_settings().unwrap();
@@ -90,16 +95,25 @@ pub async fn start_webui(
     println!("Starting webui at {}", addr.bright_green());
 
     HttpServer::new(move || {
+        let cors = Cors::permissive();
+
         let covers_path = format!(
             "{}/music-player/covers",
             dirs::config_dir().unwrap().to_str().unwrap()
         );
         App::new()
             .app_data(Data::new(schema.clone()))
+            .wrap(cors)
             .service(index_graphql)
             .service(index_graphiql)
             .service(fs::Files::new("/covers", covers_path).show_files_listing())
             .service(index)
+            .route("/tracks", web::get().to(index_spa))
+            .route("/play-queue", web::get().to(index_spa))
+            .route("/artists", web::get().to(index_spa))
+            .route("/albums", web::get().to(index_spa))
+            .route("/artists/{_:.*}", web::get().to(index_spa))
+            .route("/albums/{_:.*}", web::get().to(index_spa))
             .service(dist)
     })
     .bind(addr)?

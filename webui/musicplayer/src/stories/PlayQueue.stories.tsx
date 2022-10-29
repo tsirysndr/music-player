@@ -6,6 +6,14 @@ import PlayQueue from "../Components/PlayQueue";
 export default {
   title: "Components/PlayQueue",
   component: PlayQueue,
+  argTypes: {
+    onPlay: { action: "play" },
+    onPause: { action: "pause" },
+    onNext: { action: "next" },
+    onPrevious: { action: "previous" },
+    onShuffle: { action: "shuffle" },
+    onRepeat: { action: "repeat" },
+  },
 } as ComponentMeta<typeof PlayQueue>;
 
 const Template: ComponentStory<typeof PlayQueue> = (args: any) => (
@@ -38,4 +46,5 @@ Default.args = {
       "Default"
     )();
   },
+  nowPlaying: {},
 };

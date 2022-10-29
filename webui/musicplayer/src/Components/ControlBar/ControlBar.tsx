@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import Next from "../Icons/Next";
+import Pause from "../Icons/Pause";
 import Play from "../Icons/Play";
 import Previous from "../Icons/Previous";
 import Repeat from "../Icons/Repeat";
@@ -11,7 +12,7 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   height: 96px;
-  padding-left: 10px;
+  padding-left: 26px;
 `;
 
 const Controls = styled.div`
@@ -39,26 +40,67 @@ export type ControlBarProps = {
     cover: string;
     duration: number;
     progress: number;
+    isPlaying?: boolean;
+    albumId: string;
   };
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
 };
 
-const ControlBar: FC<ControlBarProps> = ({ nowPlaying }) => {
+const ControlBar: FC<ControlBarProps> = ({
+  nowPlaying,
+  onNext,
+  onPrevious,
+  onPlay,
+  onPause,
+  onShuffle,
+  onRepeat,
+}) => {
+  const [played, setPlayed] = useState(false);
+
+  useEffect(() => {
+    if (nowPlaying) {
+      setPlayed(nowPlaying.isPlaying!);
+    }
+  }, [nowPlaying]);
+
+  const handlePlay = () => {
+    setPlayed(true);
+    onPlay();
+  };
+
+  const handlePause = () => {
+    setPlayed(false);
+    onPause();
+  };
+
   return (
     <Container>
       <Controls>
-        <Button>
+        <Button onClick={onShuffle}>
           <Shuffle />
         </Button>
-        <Button>
+        <Button onClick={onPrevious}>
           <Previous />
         </Button>
-        <Button>
-          <Play />
-        </Button>
-        <Button>
+        {!played && (
+          <Button onClick={handlePlay}>
+            <Play />
+          </Button>
+        )}
+        {played && (
+          <Button onClick={handlePause}>
+            <Pause />
+          </Button>
+        )}
+        <Button onClick={onNext}>
           <Next />
         </Button>
-        <Button>
+        <Button onClick={onRepeat}>
           <Repeat />
         </Button>
       </Controls>

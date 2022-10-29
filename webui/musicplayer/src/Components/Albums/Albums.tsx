@@ -1,9 +1,11 @@
 import styled from "@emotion/styled";
-import { Cell, Grid, STYLE } from "baseui/layout-grid";
+import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
+import { useCover } from "../../Hooks/useCover";
 import ControlBar from "../ControlBar";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
+import AlbumIcon from "../Icons/AlbumCover";
 
 const Container = styled.div`
   display: flex;
@@ -23,8 +25,20 @@ const AlbumCover = styled.img`
   cursor: pointer;
 `;
 
+const NoAlbumCover = styled.div`
+  height: 220px;
+  width: 220px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ddaefb14;
+`;
+
 const Wrapper = styled.div`
   margin-top: 34px;
+  margin-left: 10px;
 `;
 
 const Artist = styled.div`
@@ -50,36 +64,54 @@ const Scrollable = styled.div`
   overflow-y: auto;
 `;
 
-export type AlbumProps = {
+export type AlbumsProps = {
   albums: any[];
   onClickAlbum: (album: any) => void;
   onClickLibraryItem: (item: string) => void;
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
+  nowPlaying: any;
 };
 
-const Albums: FC<AlbumProps> = ({
-  albums,
-  onClickAlbum,
-  onClickLibraryItem,
-}) => {
+export type AlbumProps = {
+  onClick: (item: any) => void;
+  album: any;
+};
+
+const Album: FC<AlbumProps> = ({ onClick, album }) => {
+  const { cover } = useCover(album.cover);
+  return (
+    <>
+      {cover && <AlbumCover src={cover} onClick={() => onClick(album)} />}
+      {!cover && (
+        <NoAlbumCover onClick={() => onClick(album)}>
+          <AlbumIcon />
+        </NoAlbumCover>
+      )}
+      <Title onClick={() => onClick(album)}>{album.title}</Title>
+      <Artist>{album.artist}</Artist>
+    </>
+  );
+};
+
+const Albums: FC<AlbumsProps> = (props) => {
+  const { albums, onClickAlbum, onClickLibraryItem } = props;
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <Scrollable>
           <MainContent title="Albums" placeholder="Filter Albums">
             <Wrapper>
               <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
                 {albums.map((item) => (
                   <Cell key={item.id}>
-                    <AlbumCover
-                      src={item.cover}
-                      onClick={() => onClickAlbum(item)}
-                    />
-                    <Title onClick={() => onClickAlbum(item)}>
-                      {item.title}
-                    </Title>
-                    <Artist>{item.artist}</Artist>
+                    <Album onClick={onClickAlbum} album={item} />
                   </Cell>
                 ))}
               </Grid>

@@ -6,6 +6,14 @@ import Tracks from "../Components/Tracks";
 export default {
   title: "Components/Tracks",
   component: Tracks,
+  argTypes: {
+    onPlay: { action: "play" },
+    onPause: { action: "pause" },
+    onNext: { action: "next" },
+    onPrevious: { action: "previous" },
+    onShuffle: { action: "shuffle" },
+    onRepeat: { action: "repeat" },
+  },
 } as ComponentMeta<typeof Tracks>;
 
 const Template: ComponentStory<typeof Tracks> = (args: any) => (
@@ -38,4 +46,5 @@ Default.args = {
       "Default"
     )();
   },
+  nowPlaying: {},
 };

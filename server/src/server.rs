@@ -43,14 +43,14 @@ type PeerMap = Arc<sync::Mutex<HashMap<SocketAddr, Tx>>>;
 pub struct MusicPlayerServer {
     db: Arc<Mutex<Database>>,
     tracklist: Arc<std::sync::Mutex<TracklistState>>,
-    cmd_tx: TokioUnboundedSender<PlayerCommand>,
+    cmd_tx: Arc<std::sync::Mutex<TokioUnboundedSender<PlayerCommand>>>,
     peer_map: PeerMap,
 }
 
 impl MusicPlayerServer {
     pub fn new(
         tracklist: Arc<std::sync::Mutex<TracklistState>>,
-        cmd_tx: TokioUnboundedSender<PlayerCommand>,
+        cmd_tx: Arc<std::sync::Mutex<TokioUnboundedSender<PlayerCommand>>>,
         peer_map: PeerMap,
         db: Arc<Mutex<Database>>,
     ) -> Self {
@@ -84,7 +84,7 @@ impl MusicPlayerServer {
             ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&self.tracklist), self.cmd_tx.clone()),
+                Playback::new(Arc::clone(&self.tracklist), Arc::clone(&self.cmd_tx)),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
                 Playlist::new(Arc::clone(&self.db)),
@@ -92,7 +92,7 @@ impl MusicPlayerServer {
             .add_service(tonic_web::enable(TracklistServiceServer::new(
                 Tracklist::new(
                     Arc::clone(&self.tracklist),
-                    self.cmd_tx.clone(),
+                    Arc::clone(&self.cmd_tx),
                     Arc::clone(&self.db),
                 ),
             )))
@@ -112,7 +112,7 @@ impl MusicPlayerServer {
 
         // Let's spawn the handling of each connection in a separate task.
         while let Ok((stream, addr)) = listener.accept().await {
-            tokio::spawn(handle_connection(self.peer_map.clone(), stream, addr));
+            tokio::spawn(handle_connection(Arc::clone(&self.peer_map), stream, addr));
         }
         Ok(())
     }

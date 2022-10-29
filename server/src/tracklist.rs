@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use music_player_entity::track;
+use music_player_entity::{album, artist, track};
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
@@ -23,14 +23,14 @@ use crate::{
 
 pub struct Tracklist {
     state: Arc<std::sync::Mutex<TracklistState>>,
-    cmd_tx: UnboundedSender<PlayerCommand>,
+    cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     db: Arc<Mutex<Database>>,
 }
 
 impl Tracklist {
     pub fn new(
         state: Arc<std::sync::Mutex<TracklistState>>,
-        cmd_tx: UnboundedSender<PlayerCommand>,
+        cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
         db: Arc<Mutex<Database>>,
     ) -> Self {
         Self { state, cmd_tx, db }
@@ -44,18 +44,35 @@ impl TracklistService for Tracklist {
         request: tonic::Request<AddTrackRequest>,
     ) -> Result<tonic::Response<AddTrackResponse>, tonic::Status> {
         let song = request.get_ref().track.as_ref().unwrap();
-        let result = track::Entity::find_by_id(song.clone().id)
-            .one(self.db.lock().await.get_connection())
+        let id = song.clone().id;
+
+        let result: Vec<(track::Model, Vec<artist::Model>)> = track::Entity::find_by_id(id.clone())
+            .find_with_related(artist::Entity)
+            .all(self.db.lock().await.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        if result.is_none() {
+        if result.len() == 0 {
             return Err(tonic::Status::not_found("Track not found"));
         }
-        let track = result.unwrap();
-        self.cmd_tx.send(PlayerCommand::LoadTracklist {
-            tracks: vec![track],
-        });
+
+        let (mut track, artists) = result.into_iter().next().unwrap();
+        track.artists = artists;
+
+        let result: Vec<(track::Model, Option<album::Model>)> =
+            track::Entity::find_by_id(id.clone())
+                .find_also_related(album::Entity)
+                .all(self.db.lock().await.get_connection())
+                .await
+                .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let (_, album) = result.into_iter().next().unwrap();
+        track.album = album.unwrap();
+
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::LoadTracklist {
+                tracks: vec![track],
+            });
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -71,7 +88,7 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
     ) -> Result<tonic::Response<ClearTracklistResponse>, tonic::Status> {
-        self.cmd_tx.send(PlayerCommand::Clear);
+        self.cmd_tx.lock().unwrap().send(PlayerCommand::Clear);
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -163,48 +180,8 @@ impl TracklistService for Tracklist {
         let (previous_tracks, next_tracks) = self.state.lock().unwrap().tracks();
 
         let response = GetTracklistTracksResponse {
-            next_tracks: next_tracks
-                .into_iter()
-                .map(|track| Track {
-                    id: track.id,
-                    title: track.title,
-                    uri: track.uri,
-                    disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
-                    artists: vec![Artist {
-                        name: track.artist,
-                        ..Default::default()
-                    }],
-                    album: Some(Album {
-                        // id: track.album_id.unwrap(),
-                        title: track.album,
-                        year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
-                        ..Default::default()
-                    }),
-                    duration: track.duration.unwrap_or(0.0),
-                    ..Default::default()
-                })
-                .collect(),
-            previous_tracks: previous_tracks
-                .into_iter()
-                .map(|track| Track {
-                    id: track.id,
-                    title: track.title,
-                    uri: track.uri,
-                    disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
-                    artists: vec![Artist {
-                        name: track.artist,
-                        ..Default::default()
-                    }],
-                    album: Some(Album {
-                        // id: track.album_id.unwrap(),
-                        title: track.album,
-                        year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
-                        ..Default::default()
-                    }),
-                    duration: track.duration.unwrap_or(0.0),
-                    ..Default::default()
-                })
-                .collect(),
+            next_tracks: next_tracks.into_iter().map(Into::into).collect(),
+            previous_tracks: previous_tracks.into_iter().map(Into::into).collect(),
         };
         Ok(tonic::Response::new(response))
     }
@@ -223,7 +200,10 @@ impl TracklistService for Tracklist {
     ) -> Result<tonic::Response<PlayTrackAtResponse>, tonic::Status> {
         let request = request.into_inner();
         self.cmd_tx
-            .send(PlayerCommand::PlayTrackAt(request.index as usize));
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::PlayTrackAt(request.index as usize))
+            .unwrap();
         let response = PlayTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }

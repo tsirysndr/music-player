@@ -14,4 +14,5 @@ pub struct Song {
     pub channels: Option<u8>,
     pub duration: Duration,
     pub uri: Option<String>,
+    pub cover: Option<String>,
 }

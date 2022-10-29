@@ -7,10 +7,12 @@ import { EllipsisHorizontal } from "@styled-icons/ionicons-sharp";
 import { StatefulPopover } from "baseui/popover";
 import { StatefulMenu } from "baseui/menu";
 import TrackIcon from "../Icons/Track";
+import { useCover } from "../../Hooks/useCover";
 
 const Container = styled.div`
   display: flex;
   flex-direction: row;
+  height: 45px;
 `;
 
 const Separator = styled.div`
@@ -18,8 +20,8 @@ const Separator = styled.div`
 `;
 
 const Hover = styled.button`
-  color: #fff;
-  background-color: #fff;
+  color: transparent;
+  background-color: transparent;
   border: none;
   &:hover,
   &:focus {
@@ -30,7 +32,7 @@ const Hover = styled.button`
 const Icon = styled.div`
   cursor: pointer;
   display: flex;
-  height: 24px;
+  height: 45px;
   width: 24px;
   justify-content: center;
   align-items: center;
@@ -66,6 +68,7 @@ const Artist = styled.div`
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
+  max-width: 125px;
 `;
 
 const Title = styled.div`
@@ -73,6 +76,7 @@ const Title = styled.div`
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
+  max-width: 125px;
 `;
 
 const TrackInfos = styled.div`
@@ -86,6 +90,7 @@ export type ContextMenuProps = {
 };
 
 const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
+  const { cover } = useCover(track.cover);
   return (
     <Container>
       <Hover>
@@ -95,8 +100,8 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
           content={() => (
             <div style={{ width: 205 }}>
               <Track>
-                {track.cover && <AlbumCover src={track.cover} />}
-                {!track.cover && (
+                {cover && <AlbumCover src={cover} />}
+                {!cover && (
                   <AlbumCoverAlt>
                     <TrackIcon width={24} height={24} color="#a4a3a3" />
                   </AlbumCoverAlt>

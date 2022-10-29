@@ -1,5 +1,5 @@
 use futures::future::FutureExt;
-use music_player_entity::{album, artist, track};
+use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_scanner::scan_directory;
 use music_player_scanner::types::Song;
 use music_player_storage::Database;
@@ -43,6 +43,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                     md5::compute(song.artist.to_string())
                 ))),
                 year: ActiveValue::Set(song.year),
+                cover: ActiveValue::Set(song.cover.clone()),
             };
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),
@@ -52,8 +53,6 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
             let item = track::ActiveModel {
                 id: ActiveValue::set(id),
                 title: ActiveValue::Set(song.title.clone()),
-                artist: ActiveValue::Set(song.artist.clone()),
-                album: ActiveValue::Set(song.album.clone()),
                 genre: ActiveValue::Set(song.genre.clone()),
                 year: ActiveValue::Set(song.year),
                 track: ActiveValue::Set(song.track),
@@ -67,6 +66,10 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                     "{:x}",
                     md5::compute(format!("{}", song.album))
                 ))),
+                artist_id: ActiveValue::Set(Some(format!(
+                    "{:x}",
+                    md5::compute(song.artist.to_string())
+                ))),
             };
 
             if enable_log {
@@ -77,7 +80,23 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
 
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),
-                Err(_) => (),
+                Err(e) => println!("Error: {}", e),
+            }
+
+            let item = artist_tracks::ActiveModel {
+                id: ActiveValue::set(format!(
+                    "{:x}",
+                    md5::compute(format!("{}{}", song.artist, song.uri.as_ref().unwrap()))
+                )),
+                artist_id: ActiveValue::Set(format!("{:x}", md5::compute(song.artist.to_string()))),
+                track_id: ActiveValue::Set(format!(
+                    "{:x}",
+                    md5::compute(song.uri.as_ref().unwrap())
+                )),
+            };
+            match item.insert(db.get_connection()).await {
+                Ok(_) => (),
+                Err(e) => println!("Error: {}", e),
             }
         }
         .boxed()

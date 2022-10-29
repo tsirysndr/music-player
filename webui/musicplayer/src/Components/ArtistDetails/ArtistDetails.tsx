@@ -31,7 +31,7 @@ const BackButton = styled.button`
   width: 30px;
   border-radius: 15px;
   background-color: #f7f7f8;
-  margin-left: 10px;
+  margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
   z-index: 1;
@@ -46,14 +46,14 @@ const Artist = styled.div`
   font-family: RockfordSansBold;
   font-size: 32px;
   margin-top: 94px;
-  margin-left: 15px;
+  margin-left: 26px;
   margin-bottom: 40px;
 `;
 
 const Buttons = styled.div`
   display: flex;
   flex-direction: row;
-  margin-left: 15px;
+  margin-left: 26px;
   margin-bottom: 20px;
 `;
 
@@ -84,6 +84,7 @@ const Row = styled.div`
   flex-direction: row;
   width: 100%;
   margin-right: 50px;
+  margin-left: 10px;
 `;
 
 const SeeMore = styled.div`
@@ -128,20 +129,24 @@ export type ArtistDetailsProps = {
   artist: any;
   tracks: any[];
   albums: any[];
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
+  nowPlaying: any;
+  onPlayTrack: (id: string, position?: number) => void;
 };
 
-const ArtistDetails: FC<ArtistDetailsProps> = ({
-  onBack,
-  onClickLibraryItem,
-  artist,
-  tracks,
-  albums,
-}) => {
+const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
+  const { onBack, onClickLibraryItem, artist, tracks, albums, onPlayTrack } =
+    props;
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>
@@ -176,6 +181,8 @@ const ArtistDetails: FC<ArtistDetailsProps> = ({
                     <SeeMore>See all</SeeMore>
                   </Row>
                 }
+                maxHeight={"initial"}
+                onPlayTrack={onPlayTrack}
               />
             </Tracks>
 

@@ -23,6 +23,7 @@ const Search = () => {
           InputContainer: {
             style: {
               backgroundColor: "#fff",
+              width: "100%",
             },
           },
         }}

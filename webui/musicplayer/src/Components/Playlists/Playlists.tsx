@@ -1,7 +1,7 @@
 import styled from "@emotion/styled";
 import { StatefulMenu } from "baseui/menu";
 import { StatefulPopover } from "baseui/popover";
-import { useState } from "react";
+import { FC, useState } from "react";
 import AddAlt from "../Icons/AddAlt";
 import NewFolderModal from "./NewFolderModal";
 import NewPlaylistModal from "./NewPlaylistModal";
@@ -40,7 +40,11 @@ const Plus = styled.div`
   width: 28px;
 `;
 
-const Playlists = () => {
+export type PlaylistProps = {
+  playlists?: any[];
+};
+
+const Playlists: FC<PlaylistProps> = ({ playlists }) => {
   const [newFolderModalOpen, setNewFolderModalOpen] = useState(false);
   const [newPlaylistModalOpen, setNewPlaylistModalOpen] = useState(false);
   return (
@@ -103,9 +107,15 @@ const Playlists = () => {
         isOpen={newPlaylistModalOpen}
         onClose={() => setNewPlaylistModalOpen(false)}
       />
-      <Item>New South</Item>
+      {playlists?.slice(0, 5).map((playlist) => (
+        <Item key={playlist.id}>{playlist.name}</Item>
+      ))}
     </Container>
   );
+};
+
+Playlists.defaultProps = {
+  playlists: [],
 };
 
 export default Playlists;

@@ -202,4 +202,5 @@ Default.args = {
       "Default"
     )();
   },
+  nowPlaying: {},
 };

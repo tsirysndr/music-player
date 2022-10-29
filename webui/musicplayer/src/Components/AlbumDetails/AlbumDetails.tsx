@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
+import { useCover } from "../../Hooks/useCover";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
@@ -8,6 +9,7 @@ import Shuffle from "../Icons/Shuffle";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
+import AlbumIcon from "../Icons/AlbumCover";
 
 const Container = styled.div`
   display: flex;
@@ -30,7 +32,7 @@ const BackButton = styled.button`
   width: 30px;
   border-radius: 15px;
   background-color: #f7f7f8;
-  margin-left: 10px;
+  margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
   z-index: 1;
@@ -44,10 +46,22 @@ const AlbumCover = styled.img`
   margin-left: 10px;
 `;
 
+const NoAlbumCover = styled.div`
+  height: 240px;
+  width: 240px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ddaefb14;
+`;
+
 const Album = styled.div`
   display: flex;
   flex-direction: row;
   margin-top: 90px;
+  margin-left: 16px;
 `;
 
 const Title = styled.div`
@@ -110,18 +124,24 @@ export type AlbumDetailsProps = {
   onBack: () => void;
   onClickLibraryItem: (item: string) => void;
   album: any;
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
+  nowPlaying: any;
+  onPlayTrack: (id: string, position?: number) => void;
 };
 
-const AlbumDetails: FC<AlbumDetailsProps> = ({
-  onBack,
-  onClickLibraryItem,
-  album,
-}) => {
+const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
+  const { onBack, onClickLibraryItem, album, nowPlaying, onPlayTrack } = props;
+  const { cover } = useCover(`/covers/${album.cover}`);
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>
@@ -130,7 +150,12 @@ const AlbumDetails: FC<AlbumDetailsProps> = ({
               </div>
             </BackButton>
             <Album>
-              <AlbumCover src={album.cover} />
+              {cover && <AlbumCover src={cover} />}
+              {!cover && (
+                <NoAlbumCover>
+                  <AlbumIcon />
+                </NoAlbumCover>
+              )}
               <Metadata>
                 <MetadataContainer>
                   <Title>{album.title}</Title>
@@ -157,8 +182,12 @@ const AlbumDetails: FC<AlbumDetailsProps> = ({
               </Metadata>
             </Album>
             <TracksTable
-              tracks={album.tracks}
+              tracks={album.tracks.map((track: any) => ({ ...track, cover }))}
+              currentTrackId={nowPlaying.id}
+              isPlaying={nowPlaying.isPlaying}
               header={["#", "Title", "Artist", "Time"]}
+              maxHeight={"initial"}
+              onPlayTrack={onPlayTrack}
             />
           </Scrollable>
         </MainContent>

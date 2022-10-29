@@ -2,6 +2,8 @@ import styled from "@emotion/styled";
 import { FC } from "react";
 import { ProgressBar } from "baseui/progress-bar";
 import Track from "../../Icons/Track";
+import { useCover } from "../../../Hooks/useCover";
+import { useTimeFormat } from "../../../Hooks/useFormat";
 
 const Container = styled.div`
   height: 76px;
@@ -31,6 +33,8 @@ const NoCover = styled.div`
 const TrackInfo = styled.div`
   display: flex;
   flex-direction: column;
+  width: 90%;
+  overflow: hidden;
 `;
 
 const Wrapper = styled.div`
@@ -38,20 +42,60 @@ const Wrapper = styled.div`
   flex: 1;
   flex-direction: column;
   align-items: center;
+  width: 90%;
+  overflow: hidden;
 `;
 
 const Artist = styled.div`
   text-align: center;
   font-family: RockfordSansLight;
+  font-size: 14px;
   color: rgba(0, 0, 0, 0.542);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+`;
+
+const AlbumTitle = styled.a`
+  color: rgba(0, 0, 0, 0.542) !important;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-decoration: initial !important;
 `;
 
 const Title = styled.div`
   text-align: center;
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+`;
+
+const Row = styled.div`
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  align-items: center;
+`;
+
+const Time = styled.div`
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.542);
+  font-family: RockfordSansRegular;
+  text-align: center;
+  width: 60px;
+  margin-top: -3px;
+`;
+
+const ProgressbarContainer = styled.div`
+  width: 88%;
 `;
 
 const Placeholder = styled.div`
   color: #767676;
+`;
+
+const Separator = styled.span`
+  margin-left: 8px;
+  margin-right: 8px;
 `;
 
 export type CurrentTrackProps = {
@@ -62,13 +106,16 @@ export type CurrentTrackProps = {
     cover: string;
     duration: number;
     progress: number;
+    albumId: string;
   };
 };
 
 const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
+  const { cover } = useCover(nowPlaying?.cover);
+  const { formatTime } = useTimeFormat();
   return (
     <>
-      {!nowPlaying && (
+      {(!nowPlaying || !nowPlaying!.title) && (
         <Container>
           <NoCover>
             <Track width={28} height={28} color="#a4a3a3" />
@@ -78,35 +125,52 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
           </Wrapper>
         </Container>
       )}
-      {nowPlaying && (
+      {nowPlaying && nowPlaying!.title && (
         <Container>
-          <AlbumCover src={nowPlaying?.cover} />
+          <a href={`/albums/${nowPlaying!.albumId}`}>
+            {cover && <AlbumCover src={cover} />}
+            {!cover && (
+              <NoCover>
+                <Track width={28} height={28} color="#a4a3a3" />
+              </NoCover>
+            )}
+          </a>
           <Wrapper>
             <TrackInfo>
               <Title>{nowPlaying?.title}</Title>
               <Artist>
-                {nowPlaying?.artist} - {nowPlaying?.album}
+                <span>{nowPlaying?.artist}</span>
+                <Separator>-</Separator>
+                <AlbumTitle href={`/albums/${nowPlaying!.albumId}`}>
+                  {nowPlaying?.album}
+                </AlbumTitle>
               </Artist>
             </TrackInfo>
-            <ProgressBar
-              value={
-                nowPlaying!.duration > 0
-                  ? (nowPlaying!.progress * 100) / nowPlaying!.duration
-                  : 0
-              }
-              overrides={{
-                BarProgress: {
-                  style: () => ({
-                    backgroundColor: "#ab28fc",
-                  }),
-                },
-                Bar: {
-                  style: () => ({
-                    backgroundColor: "rgba(177, 178, 181, 0.218)",
-                  }),
-                },
-              }}
-            />
+            <Row>
+              <Time>{formatTime(nowPlaying?.progress)}</Time>
+              <ProgressbarContainer>
+                <ProgressBar
+                  value={
+                    nowPlaying!.duration > 0
+                      ? (nowPlaying!.progress / nowPlaying!.duration) * 100
+                      : 0
+                  }
+                  overrides={{
+                    BarProgress: {
+                      style: () => ({
+                        backgroundColor: "#ab28fc",
+                      }),
+                    },
+                    Bar: {
+                      style: () => ({
+                        backgroundColor: "rgba(177, 178, 181, 0.218)",
+                      }),
+                    },
+                  }}
+                />
+              </ProgressbarContainer>
+              <Time>{formatTime(nowPlaying?.duration)}</Time>
+            </Row>
           </Wrapper>
         </Container>
       )}

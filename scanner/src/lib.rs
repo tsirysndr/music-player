@@ -48,7 +48,7 @@ pub async fn scan_directory(
 
                     let properties = tagged_file.properties();
 
-                    let song = Song {
+                    let mut song = Song {
                         title: tag.title().unwrap_or("None").to_string(),
                         artist: tag.artist().unwrap_or("None").to_string(),
                         album: tag.album().unwrap_or("None").to_string(),
@@ -61,9 +61,10 @@ pub async fn scan_directory(
                         channels: properties.channels(),
                         duration: properties.duration(),
                         uri: Some(path),
+                        cover: None,
                     };
                     let album = song.album.clone();
-                    extract_and_save_album_cover(tag, &album);
+                    song.cover = extract_and_save_album_cover(tag, &album);
                     save(&song, &db).await;
                     songs.push(song);
                 }
@@ -74,7 +75,7 @@ pub async fn scan_directory(
     Ok(songs)
 }
 
-fn extract_and_save_album_cover(tag: &Tag, album: &str) {
+fn extract_and_save_album_cover(tag: &Tag, album: &str) -> Option<String> {
     let pictures = tag.pictures();
     if pictures.len() > 0 {
         let covers_path = format!(
@@ -89,13 +90,20 @@ fn extract_and_save_album_cover(tag: &Tag, album: &str) {
                 let filename = format!("{}.jpg", filename);
                 let mut file = std::fs::File::create(filename).unwrap();
                 file.write_all(picture.data()).unwrap();
+                Some(format!("{:x}.jpg", album))
             }
             lofty::MimeType::Png => {
                 let filename = format!("{}.png", filename);
                 let mut file = std::fs::File::create(filename).unwrap();
                 file.write_all(picture.data()).unwrap();
+                Some(format!("{:x}.png", album))
             }
-            _ => println!("Unsupported picture format"),
+            _ => {
+                println!("Unsupported picture format");
+                None
+            }
         }
+    } else {
+        None
     }
 }

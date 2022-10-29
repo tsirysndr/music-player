@@ -19,16 +19,32 @@ const Content = styled.div`
 export type PlayQueueProps = {
   tracks: any[];
   onClickLibraryItem: (item: string) => void;
+  onPlay: () => void;
+  onPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onShuffle: () => void;
+  onRepeat: () => void;
+  nowPlaying: any;
+  currentIndex?: number;
+  onPlayTrack: (id: string, postion?: number) => void;
 };
 
-const PlayQueue: FC<PlayQueueProps> = ({ onClickLibraryItem, tracks }) => {
+const PlayQueue: FC<PlayQueueProps> = (props) => {
+  const { onClickLibraryItem, tracks, currentIndex, nowPlaying, onPlayTrack } =
+    props;
   return (
     <Container>
       <Sidebar active="play-queue" onClickLibraryItem={onClickLibraryItem} />
       <Content>
-        <ControlBar />
+        <ControlBar {...props} />
         <MainContent title="Play Queue">
-          <TracksTable tracks={tracks} />
+          <TracksTable
+            tracks={tracks}
+            currentIndex={currentIndex}
+            isPlaying={nowPlaying.isPlaying}
+            onPlayTrack={onPlayTrack}
+          />
         </MainContent>
       </Content>
     </Container>

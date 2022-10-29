@@ -5,9 +5,7 @@ use music_player_playback::player::PlayerCommand;
 use music_player_tracklist::Tracklist;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
-use super::objects::{
-    album::Album, artist::Artist, current_track::CurrentlyPlayingSong, track::Track,
-};
+use super::objects::current_track::CurrentlyPlayingSong;
 
 #[derive(Default)]
 pub struct PlaybackQuery;
@@ -45,24 +43,7 @@ impl PlaybackQuery {
         let track = track.unwrap();
 
         Ok(CurrentlyPlayingSong {
-            track: Some(Track {
-                id: ID(track.id),
-                title: track.title,
-                uri: track.uri,
-                track_number: track.track,
-                artists: vec![Artist {
-                    name: track.artist,
-                    ..Default::default()
-                }],
-                album: Album {
-                    // id: track.album_id.unwrap(),
-                    title: track.album,
-                    year: track.year,
-                    ..Default::default()
-                },
-                duration: track.duration,
-                ..Default::default()
-            }),
+            track: Some(track.into()),
             index: index as u32,
             position_ms: playback_state.position_ms,
             is_playing: playback_state.is_playing,
@@ -81,38 +62,74 @@ pub struct PlaybackMutation;
 #[Object]
 impl PlaybackMutation {
     async fn next(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Next).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Next)
+            .unwrap();
         Ok(true)
     }
 
     async fn play(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Play).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Play)
+            .unwrap();
         Ok(true)
     }
 
     async fn pause(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Pause).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Pause)
+            .unwrap();
         Ok(true)
     }
 
     async fn previous(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Previous).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Previous)
+            .unwrap();
         Ok(true)
     }
 
     async fn seek(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Seek(position)).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Seek(position))
+            .unwrap();
         Ok(true)
     }
 
     async fn stop(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Stop).unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Stop)
+            .unwrap();
         Ok(true)
     }
 }

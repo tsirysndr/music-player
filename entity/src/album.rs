@@ -1,6 +1,7 @@
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "album")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -9,6 +10,9 @@ pub struct Model {
     pub artist: String,
     pub artist_id: Option<String>,
     pub year: Option<u32>,
+    pub cover: Option<String>,
+    #[sea_orm(ignore)]
+    pub tracks: Vec<super::track::Model>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

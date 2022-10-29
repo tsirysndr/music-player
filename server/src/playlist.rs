@@ -106,8 +106,9 @@ impl PlaylistService for Playlist {
                                     title: track.title,
                                     uri: track.uri,
                                     duration: track.duration.unwrap_or_default(),
-                                    disc_number: i32::try_from(track.track.unwrap_or_default())
-                                        .unwrap(),
+                                    disc_number: Some(
+                                        i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                                    ),
                                     ..Default::default()
                                 })
                                 .collect(),
@@ -249,8 +250,9 @@ impl PlaylistService for Playlist {
                                     title: track.title,
                                     uri: track.uri,
                                     duration: track.duration.unwrap_or_default(),
-                                    disc_number: i32::try_from(track.track.unwrap_or_default())
-                                        .unwrap(),
+                                    disc_number: Some(
+                                        i32::try_from(track.track.unwrap_or_default()).unwrap(),
+                                    ),
                                     ..Default::default()
                                 })
                                 .collect(),

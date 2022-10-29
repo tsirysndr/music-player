@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use music_player_entity::track as track_entity;
+use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
@@ -9,8 +9,6 @@ use sea_orm::EntityTrait;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use super::objects::{
-    album::Album,
-    artist::Artist,
     track::{Track, TrackInput},
     tracklist::Tracklist,
 };
@@ -25,48 +23,8 @@ impl TracklistQuery {
         let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
 
         let response = Tracklist {
-            next_tracks: next_tracks
-                .into_iter()
-                .map(|track| Track {
-                    id: ID(track.id),
-                    title: track.title,
-                    uri: track.uri,
-                    track_number: track.track,
-                    artists: vec![Artist {
-                        name: track.artist,
-                        ..Default::default()
-                    }],
-                    album: Album {
-                        // id: track.album_id.unwrap(),
-                        title: track.album,
-                        year: track.year,
-                        ..Default::default()
-                    },
-                    duration: track.duration,
-                    ..Default::default()
-                })
-                .collect(),
-            previous_tracks: previous_tracks
-                .into_iter()
-                .map(|track| Track {
-                    id: ID(track.id),
-                    title: track.title,
-                    uri: track.uri,
-                    track_number: track.track,
-                    artists: vec![Artist {
-                        name: track.artist,
-                        ..Default::default()
-                    }],
-                    album: Album {
-                        // id: track.album_id.unwrap(),
-                        title: track.album,
-                        year: track.year,
-                        ..Default::default()
-                    },
-                    duration: track.duration,
-                    ..Default::default()
-                })
-                .collect(),
+            next_tracks: next_tracks.into_iter().map(Into::into).collect(),
+            previous_tracks: previous_tracks.into_iter().map(Into::into).collect(),
         };
 
         Ok(response)
@@ -92,20 +50,41 @@ pub struct TracklistMutation;
 #[Object]
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> Result<Vec<Track>, Error> {
-        let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
-        let result = track_entity::Entity::find_by_id(track.clone().id.to_string())
-            .one(db.lock().await.get_connection())
-            .await?;
-        if result.is_none() {
+        let id = track.id.to_string();
+
+        let result: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
+            track_entity::Entity::find_by_id(id.clone())
+                .find_with_related(artist_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
+
+        if result.len() == 0 {
             return Err(Error::new("Track not found"));
         }
 
-        let track = result.unwrap();
-        player_cmd.send(PlayerCommand::LoadTracklist {
-            tracks: vec![track],
-        });
+        let (mut track, artists) = result.into_iter().next().unwrap();
+        track.artists = artists;
+
+        let result: Vec<(track_entity::Model, Option<album_entity::Model>)> =
+            track_entity::Entity::find_by_id(id.clone())
+                .find_also_related(album_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
+        let (_, album) = result.into_iter().next().unwrap();
+        track.album = album.unwrap();
+
+        player_cmd
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::LoadTracklist {
+                tracks: vec![track],
+            })
+            .unwrap();
         Ok(vec![])
     }
 
@@ -116,7 +95,7 @@ impl TracklistMutation {
 
     async fn clear_tracklist(&self, ctx: &Context<'_>) -> Result<bool, Error> {
         let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
-        player_cmd.send(PlayerCommand::Clear);
+        player_cmd.send(PlayerCommand::Clear).unwrap();
         Ok(true)
     }
 

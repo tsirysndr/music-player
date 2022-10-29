@@ -11,7 +11,7 @@ const Title = styled.div`
 `;
 
 const Header = styled.div`
-  padding-left: 16px;
+  padding-left: 26px;
 `;
 
 export type MainContentProps = {

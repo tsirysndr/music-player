@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@apollo/client": "^3.7.0",
+    "@apollo/react-components": "^4.0.0",
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
     "@styled-icons/ionicons-sharp": "^10.46.0",
@@ -14,6 +16,7 @@
     "@types/react": "^18.0.20",
     "@types/react-dom": "^18.0.6",
     "baseui": "^12.2.0",
+    "graphql": "15.7.2",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-custom-scrollbars": "^4.2.1",
@@ -32,7 +35,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "storybook": "start-storybook -p 6006 -s public",
-    "build-storybook": "build-storybook -s public"
+    "build-storybook": "build-storybook -s public",
+    "graphql:generate": "graphql-codegen --config codegen.yml"
   },
   "eslintConfig": {
     "extends": [
@@ -63,6 +67,11 @@
     ]
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^2.13.7",
+    "@graphql-codegen/introspection": "2.2.1",
+    "@graphql-codegen/typescript": "2.7.5",
+    "@graphql-codegen/typescript-operations": "2.5.5",
+    "@graphql-codegen/typescript-react-apollo": "3.3.5",
     "@storybook/addon-actions": "^6.5.12",
     "@storybook/addon-essentials": "^6.5.12",
     "@storybook/addon-interactions": "^6.5.12",

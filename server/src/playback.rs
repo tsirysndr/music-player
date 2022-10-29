@@ -59,24 +59,7 @@ impl PlaybackService for Playback {
 
         let track = track.unwrap();
         let response = GetCurrentlyPlayingSongResponse {
-            track: Some(Track {
-                id: track.id,
-                title: track.title,
-                uri: track.uri,
-                disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
-                artists: vec![Artist {
-                    name: track.artist,
-                    ..Default::default()
-                }],
-                album: Some(Album {
-                    // id: track.album_id.unwrap(),
-                    title: track.album,
-                    year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
-                    ..Default::default()
-                }),
-                duration: track.duration.unwrap_or(0.0),
-                ..Default::default()
-            }),
+            track: Some(track.into()),
             index: index as u32,
             position_ms: playback_state.position_ms,
             is_playing: playback_state.is_playing,

@@ -5,9 +5,7 @@ use music_player_playback::player::PlayerCommand;
 use music_player_tracklist::Tracklist;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
-use super::objects::{
-    album::Album, artist::Artist, current_track::CurrentlyPlayingSong, track::Track,
-};
+use super::objects::current_track::CurrentlyPlayingSong;
 
 #[derive(Default)]
 pub struct PlaybackQuery;
@@ -45,25 +43,7 @@ impl PlaybackQuery {
         let track = track.unwrap();
 
         Ok(CurrentlyPlayingSong {
-            track: Some(Track {
-                id: ID(track.id),
-                title: track.title,
-                uri: track.uri,
-                track_number: track.track,
-                artists: vec![Artist {
-                    id: ID(format!("{:x}", md5::compute(track.artist.clone()))),
-                    name: track.artist,
-                    ..Default::default()
-                }],
-                album: Album {
-                    id: ID(track.album_id.unwrap_or_default()),
-                    title: track.album,
-                    year: track.year,
-                    ..Default::default()
-                },
-                duration: track.duration,
-                ..Default::default()
-            }),
+            track: Some(track.into()),
             index: index as u32,
             position_ms: playback_state.position_ms,
             is_playing: playback_state.is_playing,

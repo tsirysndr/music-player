@@ -1,4 +1,5 @@
 use async_graphql::*;
+use music_player_entity::track::Model;
 
 use super::{album::Album, artist::Artist};
 
@@ -56,5 +57,20 @@ impl Track {
 
     async fn album(&self) -> Album {
         self.album.clone()
+    }
+}
+
+impl From<Model> for Track {
+    fn from(model: Model) -> Self {
+        Self {
+            id: ID(model.id),
+            title: model.title,
+            uri: model.uri,
+            duration: model.duration,
+            track_number: model.track,
+            artists: model.artists.into_iter().map(Into::into).collect(),
+            album: model.album.into(),
+            ..Default::default()
+        }
     }
 }

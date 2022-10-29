@@ -63,7 +63,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
             album.tracks.iter().for_each(|track| {
                 let title = format!(
                     "{} {}",
-                    format_number(usize::try_from(track.track_number).unwrap()),
+                    format_number(usize::try_from(track.track_number.unwrap()).unwrap()),
                     track.title
                 );
                 let album_title = album.title.to_string();

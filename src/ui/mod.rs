@@ -287,7 +287,7 @@ where
         .map(|item| TableItem {
             id: item.id.clone(),
             format: vec![
-                item.track_number.to_string(),
+                item.track_number.unwrap().to_string(),
                 item.title.clone(),
                 item.artists
                     .iter()
@@ -534,7 +534,7 @@ where
             format: vec![
                 item.title.clone(),
                 item.artist.clone(),
-                item.year.to_string(),
+                item.year.unwrap_or_default().to_string(),
             ],
         })
         .collect::<Vec<TableItem>>();

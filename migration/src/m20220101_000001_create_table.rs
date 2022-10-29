@@ -46,8 +46,6 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(ColumnDef::new(Track::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Track::Title).string().not_null())
-                    .col(ColumnDef::new(Track::Artist).string().not_null())
-                    .col(ColumnDef::new(Track::Album).string().not_null())
                     .col(ColumnDef::new(Track::Genre).string().not_null())
                     .col(ColumnDef::new(Track::Year).integer())
                     .col(ColumnDef::new(Track::Track).integer())
@@ -58,6 +56,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Track::Duration).float())
                     .col(ColumnDef::new(Track::Uri).string())
                     .col(ColumnDef::new(Track::AlbumId).string())
+                    .col(ColumnDef::new(Track::ArtistId).string())
                     .foreign_key(
                         ForeignKeyCreateStatement::new()
                             .name("track_album_id_fkey")
@@ -65,6 +64,15 @@ impl MigrationTrait for Migration {
                             .from_col(Track::AlbumId)
                             .to_tbl(Album::Table)
                             .to_col(Album::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKeyCreateStatement::new()
+                            .name("track_artist_id_fkey")
+                            .from_tbl(Track::Table)
+                            .from_col(Track::ArtistId)
+                            .to_tbl(Artist::Table)
+                            .to_col(Artist::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
@@ -138,6 +146,40 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(ArtistTrack::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(ArtistTrack::Id)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(ArtistTrack::ArtistId).string().not_null())
+                    .col(ColumnDef::new(ArtistTrack::TrackId).string().not_null())
+                    .foreign_key(
+                        ForeignKeyCreateStatement::new()
+                            .name("artist_track_artist_id_fkey")
+                            .from_tbl(ArtistTrack::Table)
+                            .from_col(ArtistTrack::ArtistId)
+                            .to_tbl(Artist::Table)
+                            .to_col(Artist::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKeyCreateStatement::new()
+                            .name("artist_track_track_id_fkey")
+                            .from_tbl(ArtistTrack::Table)
+                            .from_col(ArtistTrack::TrackId)
+                            .to_tbl(Track::Table)
+                            .to_col(Track::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
         Ok(())
     }
 
@@ -161,6 +203,14 @@ impl MigrationTrait for Migration {
             .drop_table(
                 Table::drop()
                     .table(PlaylistTrack::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(ArtistTrack::Table)
                     .if_exists()
                     .to_owned(),
             )
@@ -204,6 +254,7 @@ enum Track {
     Duration,
     Uri,
     AlbumId,
+    ArtistId,
 }
 
 #[derive(Iden)]
@@ -230,5 +281,13 @@ enum PlaylistTrack {
     Table,
     Id,
     PlaylistId,
+    TrackId,
+}
+
+#[derive(Iden)]
+enum ArtistTrack {
+    Table,
+    Id,
+    ArtistId,
     TrackId,
 }

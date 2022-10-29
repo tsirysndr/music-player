@@ -472,24 +472,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                         let track = track_event.track.unwrap();
                         app.instant_since_last_current_playback_poll = Instant::now();
                         app.current_playback_context = Some(CurrentlyPlaybackContext {
-                            track: Some(Track {
-                                id: track.id,
-                                title: track.title,
-                                uri: track.uri,
-                                disc_number: i32::try_from(track.track.unwrap_or(0)).unwrap(),
-                                artists: vec![Artist {
-                                    name: track.artist,
-                                    ..Default::default()
-                                }],
-                                album: Some(Album {
-                                    // id: track.album_id.unwrap(),
-                                    title: track.album,
-                                    year: i32::try_from(track.year.unwrap_or(0)).unwrap(),
-                                    ..Default::default()
-                                }),
-                                duration: track.duration.unwrap_or(0.0),
-                                ..Default::default()
-                            }),
+                            track: Some(track.into()),
                             is_playing: track_event.is_playing,
                             index: track_event.index,
                             position_ms: track_event.position_ms,

@@ -19,31 +19,37 @@ pub struct LibraryQuery;
 impl LibraryQuery {
     async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let results = track_entity::Entity::find()
-            .limit(100)
-            .order_by_asc(track_entity::Column::Title)
-            .all(db.lock().await.get_connection())
-            .await?;
+        let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
+            track_entity::Entity::find()
+                .limit(100)
+                .order_by_asc(track_entity::Column::Title)
+                .find_with_related(artist_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
+
+        let albums: Vec<(track_entity::Model, Option<album_entity::Model>)> =
+            track_entity::Entity::find()
+                .limit(100)
+                .order_by_asc(track_entity::Column::Title)
+                .find_also_related(album_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
+
+        let albums: Vec<Option<album_entity::Model>> = albums
+            .into_iter()
+            .map(|(_track, album)| album.clone())
+            .collect();
+        let mut albums = albums.into_iter();
+
         Ok(results
             .into_iter()
-            .map(|track| Track {
-                id: ID(track.id),
-                title: track.title,
-                uri: track.uri,
-                duration: track.duration,
-                track_number: track.track,
-                artists: vec![Artist {
-                    id: ID(format!("{:x}", md5::compute(track.artist.clone()))),
-                    name: track.artist.clone(),
-                    ..Default::default()
-                }],
-                album: Album {
-                    id: ID(track.album_id.unwrap()),
-                    title: track.album,
-                    year: track.year,
-                    ..Default::default()
-                },
-                ..Default::default()
+            .map(|(track, artists)| {
+                let album = albums.next().unwrap().unwrap();
+                Track::from(track_entity::Model {
+                    artists,
+                    album,
+                    ..track
+                })
             })
             .collect())
     }
@@ -55,14 +61,7 @@ impl LibraryQuery {
             .all(db.lock().await.get_connection())
             .await?;
 
-        Ok(results
-            .into_iter()
-            .map(|artist| Artist {
-                id: ID(artist.id),
-                name: artist.name,
-                ..Default::default()
-            })
-            .collect())
+        Ok(results.into_iter().map(Into::into).collect())
     }
 
     async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>, Error> {
@@ -71,51 +70,29 @@ impl LibraryQuery {
             .order_by_asc(album_entity::Column::Title)
             .all(db.lock().await.get_connection())
             .await?;
-        Ok(results
-            .into_iter()
-            .map(|album| Album {
-                id: ID(album.id),
-                title: album.title,
-                artist: album.artist,
-                year: album.year,
-                cover: album.cover,
-                ..Default::default()
-            })
-            .collect())
+        Ok(results.into_iter().map(Into::into).collect())
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let result = track_entity::Entity::find_by_id(id.to_string())
-            .one(db.lock().await.get_connection())
-            .await?;
-        if result.is_none() {
+        let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
+            track_entity::Entity::find()
+                .limit(100)
+                .order_by_asc(track_entity::Column::Title)
+                .find_with_related(artist_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
+        if results.len() == 0 {
             return Err(Error::new("Track not found"));
         }
-        let track = result.unwrap();
-        Ok(Track {
-            id: ID(track.id),
-            title: track.title,
-            uri: track.uri,
-            duration: track.duration,
-            track_number: track.track,
-            artists: vec![Artist {
-                name: track.artist,
-                ..Default::default()
-            }],
-            album: Album {
-                id: ID(track.album_id.unwrap()),
-                title: track.album,
-                year: track.year,
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        let (track, artists) = results.into_iter().next().unwrap();
+        Ok(track_entity::Model { artists, ..track }.into())
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let result = artist_entity::Entity::find_by_id(id.to_string())
+        let id = id.to_string();
+        let result = artist_entity::Entity::find_by_id(id.clone())
             .one(db.lock().await.get_connection())
             .await?;
 
@@ -123,39 +100,26 @@ impl LibraryQuery {
             return Err(Error::new("Artist not found"));
         }
 
-        let artist = result.unwrap();
-        let name = artist.name.clone();
-        let tracks = track_entity::Entity::find()
-            .filter(track_entity::Column::Artist.eq(artist.name.to_owned()))
-            .order_by_asc(track_entity::Column::Title)
-            .all(db.lock().await.get_connection())
-            .await?;
+        let mut artist = result.unwrap();
+        let results: Vec<(track_entity::Model, Option<album_entity::Model>)> =
+            track_entity::Entity::find()
+                .filter(track_entity::Column::ArtistId.eq(id.clone()))
+                .order_by_asc(track_entity::Column::Title)
+                .find_also_related(album_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
 
-        Ok(Artist {
-            id: ID(artist.id),
-            name: artist.name.to_owned(),
-            songs: tracks
-                .into_iter()
-                .map(|track| Track {
-                    id: ID(track.id),
-                    title: track.title,
-                    track_number: track.track,
-                    duration: track.duration,
-                    artists: vec![Artist {
-                        name: name.to_owned(),
-                        ..Default::default()
-                    }],
-                    album: Album {
-                        id: ID(track.album_id.unwrap()),
-                        title: track.album,
-                        year: track.year,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
-                .collect(),
-            ..Default::default()
-        })
+        artist.tracks = results
+            .into_iter()
+            .map(|(track, album)| {
+                let mut track = track;
+                track.artists = vec![artist.clone()];
+                track.album = album.unwrap();
+                track
+            })
+            .collect();
+
+        Ok(artist.into())
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
@@ -166,34 +130,20 @@ impl LibraryQuery {
         if result.is_none() {
             return Err(Error::new("Album not found"));
         }
-        let album = result.unwrap();
-        let tracks = album
+        let mut album = result.unwrap();
+        let mut tracks = album
             .find_related(track_entity::Entity)
             .order_by_asc(track_entity::Column::Track)
             .all(db.lock().await.get_connection())
             .await?;
-        Ok(Album {
-            id: ID(album.id),
-            title: album.title,
-            artist: album.artist,
-            year: album.year,
-            tracks: tracks
-                .into_iter()
-                .map(|track| Track {
-                    id: ID(track.id),
-                    title: track.title,
-                    track_number: track.track,
-                    duration: track.duration,
-                    artists: vec![Artist {
-                        name: track.artist,
-                        ..Default::default()
-                    }],
-                    ..Default::default()
-                })
-                .collect(),
-            cover: album.cover,
-            ..Default::default()
-        })
+        for track in &mut tracks {
+            track.artists = track
+                .find_related(artist_entity::Entity)
+                .all(db.lock().await.get_connection())
+                .await?;
+        }
+        album.tracks = tracks;
+        Ok(album.into())
     }
 
     async fn search(&self, ctx: &Context<'_>) -> bool {
@@ -226,8 +176,8 @@ impl LibraryMutation {
                 );
                 let item = album_entity::ActiveModel {
                     id: ActiveValue::set(id),
+                    artist: ActiveValue::set(song.artist.clone()),
                     title: ActiveValue::Set(song.album.clone()),
-                    artist: ActiveValue::Set(song.artist.clone()),
                     artist_id: ActiveValue::Set(Some(format!(
                         "{:x}",
                         md5::compute(song.artist.to_string())
@@ -243,8 +193,6 @@ impl LibraryMutation {
                 let item = track_entity::ActiveModel {
                     id: ActiveValue::set(id),
                     title: ActiveValue::Set(song.title.clone()),
-                    artist: ActiveValue::Set(song.artist.clone()),
-                    album: ActiveValue::Set(song.album.clone()),
                     genre: ActiveValue::Set(song.genre.clone()),
                     year: ActiveValue::Set(song.year),
                     track: ActiveValue::Set(song.track),
@@ -257,6 +205,10 @@ impl LibraryMutation {
                     album_id: ActiveValue::Set(Some(format!(
                         "{:x}",
                         md5::compute(format!("{}{}", song.album, song.artist))
+                    ))),
+                    artist_id: ActiveValue::Set(Some(format!(
+                        "{:x}",
+                        md5::compute(song.artist.to_string())
                     ))),
                 };
 

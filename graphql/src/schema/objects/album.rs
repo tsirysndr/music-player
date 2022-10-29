@@ -1,4 +1,5 @@
 use async_graphql::*;
+use music_player_entity::album::Model;
 
 use super::track::Track;
 
@@ -46,5 +47,19 @@ impl Album {
 
     async fn tracks(&self) -> Vec<Track> {
         self.tracks.clone()
+    }
+}
+
+impl From<Model> for Album {
+    fn from(model: Model) -> Self {
+        Self {
+            id: ID(model.id),
+            title: model.title,
+            cover: model.cover,
+            artist: model.artist,
+            year: model.year,
+            tracks: model.tracks.into_iter().map(Into::into).collect(),
+            ..Default::default()
+        }
     }
 }

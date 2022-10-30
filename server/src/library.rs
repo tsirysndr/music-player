@@ -274,6 +274,13 @@ impl LibraryService for Library {
             })
             .collect();
 
+        artist.albums = album::Entity::find()
+            .filter(album::Column::ArtistId.eq(id.clone()))
+            .order_by_asc(album::Column::Title)
+            .all(self.db.lock().await.get_connection())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let response = GetArtistDetailsResponse {
             artist: Some(artist.into()),
         };

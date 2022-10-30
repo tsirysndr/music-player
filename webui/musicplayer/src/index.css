@@ -73,7 +73,7 @@ tr:hover td div .tracknumber {
 }
 
 tr:hover td div .album-cover {
-  opacity: 0;
+  opacity: 0.4;
  }
 
 tr:hover td div button {

@@ -13,7 +13,9 @@ export const GET_TRACKLIST = gql`
           name
         }
         album {
+          id
           title
+          cover
         }
       }
       nextTracks {
@@ -25,7 +27,9 @@ export const GET_TRACKLIST = gql`
           name
         }
         album {
+          id
           title
+          cover
         }
       }
     }

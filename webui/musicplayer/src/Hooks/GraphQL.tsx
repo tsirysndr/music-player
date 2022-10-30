@@ -18,7 +18,7 @@ export type Scalars = {
 export type Album = {
   __typename?: 'Album';
   artist: Scalars['String'];
-  cover: Scalars['String'];
+  cover?: Maybe<Scalars['String']>;
   genres: Array<Scalars['String']>;
   id: Scalars['String'];
   releaseDate: Scalars['String'];
@@ -224,7 +224,7 @@ export type Tracklist = {
   previousTracks: Array<Track>;
 };
 
-export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover: string };
+export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
 
 export type ArtistFragmentFragment = { __typename?: 'Artist', id: string, name: string, picture: string };
 
@@ -233,7 +233,7 @@ export type TrackFragmentFragment = { __typename?: 'Track', id: string, trackNum
 export type GetAlbumsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAlbumsQuery = { __typename?: 'Query', albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover: string, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null }> }> };
+export type GetAlbumsQuery = { __typename?: 'Query', albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null }> }> };
 
 export type GetArtistsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -243,21 +243,21 @@ export type GetArtistsQuery = { __typename?: 'Query', artists: Array<{ __typenam
 export type GetTracksQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetTracksQuery = { __typename?: 'Query', tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover: string } }> };
+export type GetTracksQuery = { __typename?: 'Query', tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null } }> };
 
 export type GetArtistQueryVariables = Exact<{
   id: Scalars['ID'];
 }>;
 
 
-export type GetArtistQuery = { __typename?: 'Query', artist: { __typename?: 'Artist', id: string, name: string, picture: string, songs: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover: string } }> } };
+export type GetArtistQuery = { __typename?: 'Query', artist: { __typename?: 'Artist', id: string, name: string, picture: string, songs: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }>, albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null }> } };
 
 export type GetAlbumQueryVariables = Exact<{
   id: Scalars['ID'];
 }>;
 
 
-export type GetAlbumQuery = { __typename?: 'Query', album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover: string, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }> }> } };
+export type GetAlbumQuery = { __typename?: 'Query', album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }> }> } };
 
 export type NextMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -287,7 +287,7 @@ export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlaying
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', title: string } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', title: string } }> }, currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
+export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }> }, currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
 
 export const AlbumFragmentFragmentDoc = gql`
     fragment AlbumFragment on Album {
@@ -447,9 +447,12 @@ export const GetArtistDocument = gql`
       }
       duration
     }
+    albums {
+      ...AlbumFragment
+    }
   }
 }
-    `;
+    ${AlbumFragmentFragmentDoc}`;
 
 /**
  * __useGetArtistQuery__
@@ -702,7 +705,9 @@ export const GetTracklistDocument = gql`
         name
       }
       album {
+        id
         title
+        cover
       }
     }
     nextTracks {
@@ -714,7 +719,9 @@ export const GetTracklistDocument = gql`
         name
       }
       album {
+        id
         title
+        cover
       }
     }
   }

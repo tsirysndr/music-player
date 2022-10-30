@@ -60,6 +60,8 @@ impl From<Model> for Artist {
         Self {
             id: ID(model.id),
             name: model.name,
+            albums: model.albums.into_iter().map(Into::into).collect(),
+            songs: model.tracks.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }

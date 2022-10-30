@@ -119,6 +119,12 @@ impl LibraryQuery {
             })
             .collect();
 
+        artist.albums = album_entity::Entity::find()
+            .filter(album_entity::Column::ArtistId.eq(id.clone()))
+            .order_by_asc(album_entity::Column::Title)
+            .all(db.lock().await.get_connection())
+            .await?;
+
         Ok(artist.into())
     }
 

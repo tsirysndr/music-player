@@ -3,6 +3,7 @@ import { Play } from "@styled-icons/ionicons-sharp";
 import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
 import _ from "lodash";
 import { FC } from "react";
+import { useCover } from "../../Hooks/useCover";
 import ContextMenu from "../ContextMenu";
 import Speaker from "../Icons/Speaker";
 import TrackIcon from "../Icons/Track";
@@ -29,6 +30,12 @@ const CellWrapper = styled.div`
   height: 45px;
 `;
 
+const AlbumCover = styled.img`
+  height: 43px;
+  width: 43px;
+  margin-right: 10px;
+`;
+
 export type CellProps = {
   current?: string | boolean;
   row: any;
@@ -46,12 +53,16 @@ const Cell: FC<CellProps> = ({
   index,
   isAlbumTracks,
 }) => {
+  const { cover } = useCover(row.cover);
   return (
     <CellWrapper>
-      {!isAlbumTracks && item === "Title" && (
+      {!isAlbumTracks && item === "Title" && !cover && (
         <AlbumCoverAlt className="album-cover" current={!!current}>
           <TrackIcon width={24} height={24} color="#a4a3a3" />
         </AlbumCoverAlt>
+      )}
+      {!isAlbumTracks && item === "Title" && cover && (
+        <AlbumCover className="album-cover" src={cover} />
       )}
       {current && isAlbumTracks && (
         <div>

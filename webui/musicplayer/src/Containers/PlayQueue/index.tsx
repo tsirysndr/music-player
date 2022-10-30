@@ -18,6 +18,7 @@ const PlayQueuePage = () => {
     album: track.album.title,
     artist: track.artists.map((artist) => artist.name).join(", "),
     time: formatTime(track.duration! * 1000),
+    cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
   }));
   const nextTracks = (
     !loading && data ? data.tracklistTracks.nextTracks : []
@@ -28,6 +29,7 @@ const PlayQueuePage = () => {
     album: track.album.title,
     artist: track.artists.map((artist) => artist.name).join(", "),
     time: formatTime(track.duration! * 1000),
+    cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
   }));
   return (
     <PlayQueue

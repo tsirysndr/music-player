@@ -61,8 +61,12 @@ export const GET_ARTIST = gql`
         }
         duration
       }
+      albums {
+        ...AlbumFragment
+      }
     }
   }
+  ${ALBUM_FRAGMENT}
 `;
 
 export const GET_ALBUM = gql`

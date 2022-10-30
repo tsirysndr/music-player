@@ -80,7 +80,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
 
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),
-                Err(e) => println!("Error: {}", e),
+                Err(_) => (),
             }
 
             let item = artist_tracks::ActiveModel {
@@ -96,7 +96,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
             };
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),
-                Err(e) => println!("Error: {}", e),
+                Err(_) => (),
             }
         }
         .boxed()

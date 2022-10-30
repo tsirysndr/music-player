@@ -28,8 +28,18 @@ const ArtistDetailsPage = () => {
           id: track.id,
           title: track.title,
           artist: track.artists.map((artist) => artist.name).join(", "),
+          album: track.album.title,
           time: formatTime(track.duration! * 1000),
-          cover: `/covers/${track.album.id}.jpg`,
+          cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
+        }))
+      : [];
+  const albums =
+    !loading && data
+      ? data.artist.albums.map((album) => ({
+          id: album.id,
+          title: album.title,
+          artist: album.artist,
+          cover: album.cover ? `/covers/${album.cover}` : undefined,
         }))
       : [];
   return (
@@ -44,7 +54,7 @@ const ArtistDetailsPage = () => {
       onRepeat={() => {}}
       artist={artist}
       tracks={tracks}
-      albums={[]}
+      albums={albums}
       nowPlaying={nowPlaying}
       onPlayTrack={(id, position) => {}}
     />

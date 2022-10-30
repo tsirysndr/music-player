@@ -21,7 +21,7 @@ const TracksPage = () => {
           artist: track.artists.map((artist) => artist.name).join(", "),
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
-          cover: `/covers/${track.album.id}.jpg`,
+          cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
         }))}
         onClickLibraryItem={(item) => navigate(`/${item}`)}
         onPlay={() => play()}

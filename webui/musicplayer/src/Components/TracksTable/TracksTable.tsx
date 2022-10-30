@@ -3,7 +3,6 @@ import { Play } from "@styled-icons/ionicons-sharp";
 import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
 import _ from "lodash";
 import { FC } from "react";
-import { useCover } from "../../Hooks/useCover";
 import ContextMenu from "../ContextMenu";
 import Speaker from "../Icons/Speaker";
 import TrackIcon from "../Icons/Track";
@@ -30,10 +29,11 @@ const CellWrapper = styled.div`
   height: 45px;
 `;
 
-const AlbumCover = styled.img`
+const AlbumCover = styled.img<{ current: boolean }>`
   height: 43px;
   width: 43px;
   margin-right: 10px;
+  ${({ current }) => `opacity: ${current ? 0.4 : 1};`}
 `;
 
 export type CellProps = {
@@ -53,16 +53,19 @@ const Cell: FC<CellProps> = ({
   index,
   isAlbumTracks,
 }) => {
-  const { cover } = useCover(row.cover);
   return (
     <CellWrapper>
-      {!isAlbumTracks && item === "Title" && !cover && (
+      {!isAlbumTracks && item === "Title" && !row.cover && (
         <AlbumCoverAlt className="album-cover" current={!!current}>
           <TrackIcon width={24} height={24} color="#a4a3a3" />
         </AlbumCoverAlt>
       )}
-      {!isAlbumTracks && item === "Title" && cover && (
-        <AlbumCover className="album-cover" src={cover} />
+      {!isAlbumTracks && item === "Title" && row.cover && (
+        <AlbumCover
+          className="album-cover"
+          src={row.cover}
+          current={!!current}
+        />
       )}
       {current && isAlbumTracks && (
         <div>
@@ -92,7 +95,7 @@ const Cell: FC<CellProps> = ({
                 left: isAlbumTracks ? 20 : 37,
               }}
             >
-              <Speaker color="#ab28fc" />
+              <Speaker color={row.cover ? "#fff" : "#ab28fc"} />
             </div>
           )}
           <div style={{ flex: 1 }}>{_.get(row, _.toLower(item), "")}</div>
@@ -103,7 +106,7 @@ const Cell: FC<CellProps> = ({
           onClick={() => onPlayTrack(row.id, index)}
           className="floating-play"
         >
-          <Play size={16} />
+          <Play size={16} color={row.cover ? "#fff" : "#000"} />
         </div>
       )}
       {!current && item === "#" && (

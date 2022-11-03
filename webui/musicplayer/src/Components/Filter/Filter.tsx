@@ -17,9 +17,18 @@ const Filter: FC<FilterProps> = ({ placeholder }) => {
             style: {
               height: "36px",
               width: "222px",
-              borderWidth: "1px !important",
-              borderColor: "rgba(82, 82, 82, 0.0625) !important",
-              borderRadius: "18px !important",
+              borderTopWidth: "1px !important",
+              borderBottomWidth: "1px !important",
+              borderLeftWidth: "1px !important",
+              borderRightWidth: "1px !important",
+              borderTopColor: "rgba(82, 82, 82, 0.0625) !important",
+              borderBottomColor: "rgba(82, 82, 82, 0.0625) !important",
+              borderLeftColor: "rgba(82, 82, 82, 0.0625) !important",
+              borderRightColor: "rgba(82, 82, 82, 0.0625) !important",
+              borderTopRadius: "18px !important",
+              borderBottomRadius: "18px !important",
+              borderLeftRadius: "18px !important",
+              borderRightRadius: "18px !important",
               backgroundColor: "#fff",
             },
           },
@@ -37,7 +46,10 @@ const Filter: FC<FilterProps> = ({ placeholder }) => {
           StartEnhancer: {
             style: {
               backgroundColor: "#fff",
-              padding: "0px",
+              paddingTop: "0px",
+              paddingBottom: "0px",
+              paddingLeft: "0px",
+              paddingRight: "0px",
             },
           },
         }}

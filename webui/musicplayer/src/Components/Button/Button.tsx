@@ -25,7 +25,10 @@ const Button: FC<ButtonProps> = ({
           style: {
             width,
             height,
-            borderRadius,
+            borderTopRadius: borderRadius,
+            borderBottomRadius: borderRadius,
+            borderLeftRadius: borderRadius,
+            borderRightRadius: borderRadius,
             fontSize: "14px",
             fontFamily: "RockfordSansMedium",
           },

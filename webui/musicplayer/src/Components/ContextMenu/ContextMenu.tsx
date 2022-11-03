@@ -5,7 +5,7 @@ import Heart from "../Icons/Heart";
 import HeartOutline from "../Icons/HeartOutline";
 import { EllipsisHorizontal } from "@styled-icons/ionicons-sharp";
 import { StatefulPopover } from "baseui/popover";
-import { StatefulMenu } from "baseui/menu";
+import { NestedMenus, StatefulMenu } from "baseui/menu";
 import TrackIcon from "../Icons/Track";
 import { useCover } from "../../Hooks/useCover";
 
@@ -84,6 +84,26 @@ const TrackInfos = styled.div`
   overflow: hidden;
 `;
 
+const ChildMenu: FC<{ onSelect: () => void }> = ({ onSelect }) => {
+  return (
+    <StatefulMenu
+      items={[
+        {
+          label: "test",
+        },
+      ]}
+      overrides={{
+        List: {
+          style: {
+            boxShadow: "none",
+          },
+        },
+      }}
+      onItemSelect={onSelect}
+    />
+  );
+};
+
 export type ContextMenuProps = {
   liked?: boolean;
   track: any;
@@ -97,7 +117,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
         <StatefulPopover
           placement="left"
           autoFocus={false}
-          content={() => (
+          content={({ close }) => (
             <div style={{ width: 205 }}>
               <Track>
                 {cover && <AlbumCover src={cover} />}
@@ -111,23 +131,40 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
                   <Artist>{track.artist}</Artist>
                 </TrackInfos>
               </Track>
-              <StatefulMenu
-                overrides={{
-                  List: {
-                    style: {
-                      boxShadow: "none",
+              <NestedMenus>
+                <StatefulMenu
+                  overrides={{
+                    List: {
+                      style: {
+                        boxShadow: "none",
+                      },
                     },
-                  },
-                }}
-                items={[
-                  {
-                    label: "Play Next",
-                  },
-                  {
-                    label: "Add to Playlist",
-                  },
-                ]}
-              />
+                    Option: {
+                      props: {
+                        getChildMenu: (item: { label: string }) => {
+                          if (item.label === "Add to Playlist") {
+                            return <ChildMenu onSelect={() => close()} />;
+                          }
+                          return null;
+                        },
+                      },
+                    },
+                  }}
+                  items={[
+                    {
+                      id: "1",
+                      label: "Play Next",
+                    },
+                    {
+                      id: "2",
+                      label: "Add to Playlist",
+                    },
+                  ]}
+                  onItemSelect={() => {
+                    close();
+                  }}
+                />
+              </NestedMenus>
             </div>
           )}
           overrides={{

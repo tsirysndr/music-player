@@ -156,6 +156,12 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
                       : 0
                   }
                   overrides={{
+                    BarContainer: {
+                      style: {
+                        marginLeft: 0,
+                        marginRight: 0,
+                      }
+                    },
                     BarProgress: {
                       style: () => ({
                         backgroundColor: "#ab28fc",

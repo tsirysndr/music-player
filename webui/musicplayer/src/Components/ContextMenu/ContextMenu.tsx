@@ -85,14 +85,25 @@ const TrackInfos = styled.div`
   overflow: hidden;
 `;
 
-const ChildMenu: FC<{ onSelect: () => void }> = ({ onSelect }) => {
+const ChildMenu: FC<{ onSelect: (item: { label: string }) => void }> = ({
+  onSelect,
+}) => {
   return (
     <StatefulMenu
-      items={[
-        {
-          label: "Create new playlist",
-        },
-      ]}
+      items={{
+        __ungrouped: [
+          {
+            label: "Create new playlist",
+          },
+        ],
+        /*
+        RECENT: [
+          {
+            label: "New South",
+          },
+        ],
+        */
+      }}
       overrides={{
         List: {
           style: {
@@ -100,7 +111,7 @@ const ChildMenu: FC<{ onSelect: () => void }> = ({ onSelect }) => {
           },
         },
       }}
-      onItemSelect={onSelect}
+      onItemSelect={({ item }) => onSelect(item)}
     />
   );
 };
@@ -147,8 +158,10 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
                           if (item.label === "Add to Playlist") {
                             return (
                               <ChildMenu
-                                onSelect={() => {
-                                  setIsNewPlaylistModalOpen(true);
+                                onSelect={(item: { label: string }) => {
+                                  if (item.label === "Create new playlist") {
+                                    setIsNewPlaylistModalOpen(true);
+                                  }
                                   close();
                                 }}
                               />

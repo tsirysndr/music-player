@@ -20,7 +20,15 @@ const AlbumDetailsPage = () => {
 
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const {
+    play,
+    pause,
+    next,
+    previous,
+    nowPlaying,
+    nextTracks,
+    previousTracks,
+  } = usePlayback();
   const album =
     !loading && data
       ? {
@@ -49,6 +57,8 @@ const AlbumDetailsPage = () => {
       album={album}
       nowPlaying={nowPlaying}
       onPlayTrack={(id, position) => {}}
+      nextTracks={nextTracks}
+      previousTracks={previousTracks}
     />
   );
 };

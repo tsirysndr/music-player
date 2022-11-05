@@ -7,6 +7,10 @@ import Previous from "../Icons/Previous";
 import Repeat from "../Icons/Repeat";
 import Shuffle from "../Icons/Shuffle";
 import CurrentTrack from "./CurrentTrack";
+import { ListOutline } from "@styled-icons/evaicons-outline";
+import { StatefulPopover } from "baseui/popover";
+import PlayQueue from "./PlayQueue";
+import { Track } from "../../Types";
 
 const Container = styled.div`
   display: flex;
@@ -30,6 +34,18 @@ const Button = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  &:hover {
+    opacity: 0.6;
+  }
+`;
+
+const PlayQueueButton = styled(Button)``;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  padding-right: 25px;
 `;
 
 export type ControlBarProps = {
@@ -49,18 +65,22 @@ export type ControlBarProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
+  nextTracks?: Track[];
+  previousTracks?: Track[];
 };
 
-const ControlBar: FC<ControlBarProps> = ({
-  nowPlaying,
-  onNext,
-  onPrevious,
-  onPlay,
-  onPause,
-  onShuffle,
-  onRepeat,
-}) => {
+const ControlBar: FC<ControlBarProps> = (props) => {
   const [played, setPlayed] = useState(false);
+  const [playQueueButtonColor, setPlayQueueButtonColor] = useState("#000");
+  const {
+    nowPlaying,
+    onNext,
+    onPrevious,
+    onPlay,
+    onPause,
+    onShuffle,
+    onRepeat,
+  } = props;
 
   useEffect(() => {
     if (nowPlaying) {
@@ -105,6 +125,36 @@ const ControlBar: FC<ControlBarProps> = ({
         </Button>
       </Controls>
       <CurrentTrack nowPlaying={nowPlaying} />
+      <ButtonGroup>
+        <StatefulPopover
+          onOpen={() => setPlayQueueButtonColor("#ab28fc")}
+          onClose={() => setPlayQueueButtonColor("#000")}
+          placement="bottom"
+          content={() => (
+            <PlayQueue
+              onPlayTrackAt={(x) => {}}
+              onRemoveTrack={(x) => {}}
+              {...props}
+            />
+          )}
+          overrides={{
+            Body: {
+              style: {
+                left: "-21px",
+              },
+            },
+            Inner: {
+              style: {
+                backgroundColor: "#fff",
+              },
+            },
+          }}
+        >
+          <PlayQueueButton>
+            <ListOutline size={24} color={playQueueButtonColor} />
+          </PlayQueueButton>
+        </StatefulPopover>
+      </ButtonGroup>
     </Container>
   );
 };

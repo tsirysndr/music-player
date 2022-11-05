@@ -118,4 +118,34 @@ impl TracklistMutation {
         let player_cmd = ctx.data::<UnboundedSender<PlayerCommand>>().unwrap();
         todo!()
     }
+
+    async fn play_album(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        position: Option<u32>,
+        shuffle: bool,
+    ) -> Result<bool, Error> {
+        todo!()
+    }
+
+    async fn play_artist_tracks(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        position: Option<u32>,
+        shuffle: bool,
+    ) -> Result<bool, Error> {
+        todo!()
+    }
+
+    async fn play_playlist(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        position: Option<u32>,
+        shuffle: bool,
+    ) -> Result<bool, Error> {
+        todo!()
+    }
 }

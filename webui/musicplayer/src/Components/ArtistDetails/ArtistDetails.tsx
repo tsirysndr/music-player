@@ -11,6 +11,7 @@ import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
+import { Track } from "../../Types";
 
 const Container = styled.div`
   display: flex;
@@ -150,6 +151,8 @@ export type ArtistDetailsProps = {
   onRepeat: () => void;
   nowPlaying: any;
   onPlayTrack: (id: string, position?: number) => void;
+  nextTracks: Track[];
+  previousTracks: Track[];
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {

@@ -6,7 +6,15 @@ import { usePlayback } from "../../Hooks/usePlayback";
 const ArtistsPage = () => {
   const { data, loading } = useGetArtistsQuery();
   const navigate = useNavigate();
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const {
+    play,
+    pause,
+    next,
+    previous,
+    nowPlaying,
+    nextTracks,
+    previousTracks,
+  } = usePlayback();
   const artists = !loading && data ? data.artists : [];
   return (
     <Artists
@@ -24,6 +32,8 @@ const ArtistsPage = () => {
       onShuffle={() => {}}
       onRepeat={() => {}}
       nowPlaying={nowPlaying}
+      nextTracks={nextTracks}
+      previousTracks={previousTracks}
     />
   );
 };

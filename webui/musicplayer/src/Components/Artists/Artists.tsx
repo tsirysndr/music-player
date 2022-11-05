@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
+import { Track } from "../../Types";
 import ControlBar from "../ControlBar";
 import Artist from "../Icons/Artist";
 import MainContent from "../MainContent";
@@ -67,6 +68,8 @@ export type ArtistsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
+  nextTracks: Track[];
+  previousTracks: Track[];
 };
 
 const Artists: FC<ArtistsProps> = (props) => {

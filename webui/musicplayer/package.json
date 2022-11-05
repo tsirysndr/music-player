@@ -7,6 +7,8 @@
     "@apollo/react-components": "^4.0.0",
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
+    "@styled-icons/evaicons-outline": "^10.46.0",
+    "@styled-icons/evil": "^10.46.0",
     "@styled-icons/ionicons-sharp": "^10.46.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",

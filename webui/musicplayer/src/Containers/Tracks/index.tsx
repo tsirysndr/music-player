@@ -10,7 +10,15 @@ const TracksPage = () => {
   });
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const {
+    play,
+    pause,
+    next,
+    previous,
+    nowPlaying,
+    nextTracks,
+    previousTracks,
+  } = usePlayback();
   const tracks = !loading && data ? data.tracks : [];
   return (
     <>
@@ -34,6 +42,8 @@ const TracksPage = () => {
         onRepeat={() => {}}
         nowPlaying={nowPlaying}
         onPlayTrack={(id, position) => {}}
+        nextTracks={nextTracks}
+        previousTracks={previousTracks}
       />
     </>
   );

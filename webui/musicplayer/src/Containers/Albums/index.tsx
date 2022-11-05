@@ -7,7 +7,15 @@ const AlbumsPage = () => {
   const { data, loading } = useGetAlbumsQuery({
     fetchPolicy: "cache-and-network",
   });
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const {
+    play,
+    pause,
+    next,
+    previous,
+    nowPlaying,
+    nextTracks,
+    previousTracks,
+  } = usePlayback();
   const navigate = useNavigate();
   const albums = !loading && data ? data.albums : [];
   return (
@@ -27,6 +35,8 @@ const AlbumsPage = () => {
       onShuffle={() => {}}
       onRepeat={() => {}}
       nowPlaying={nowPlaying}
+      nextTracks={nextTracks}
+      previousTracks={previousTracks}
     />
   );
 };

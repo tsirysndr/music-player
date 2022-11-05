@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
+import { Track } from "../../Types";
 import ControlBar from "../ControlBar";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
@@ -27,6 +28,8 @@ export type TracksProps = {
   onRepeat: () => void;
   nowPlaying: any;
   onPlayTrack: (id: string, postion?: number) => void;
+  nextTracks: Track[];
+  previousTracks: Track[];
 };
 
 const Tracks: FC<TracksProps> = (props) => {

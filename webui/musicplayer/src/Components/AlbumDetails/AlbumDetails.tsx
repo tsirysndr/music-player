@@ -10,6 +10,8 @@ import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
+import _ from "lodash";
+import { Track } from "../../Types";
 
 const Container = styled.div`
   display: flex;
@@ -132,11 +134,16 @@ export type AlbumDetailsProps = {
   onRepeat: () => void;
   nowPlaying: any;
   onPlayTrack: (id: string, position?: number) => void;
+  nextTracks: Track[];
+  previousTracks: Track[];
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
   const { onBack, onClickLibraryItem, album, nowPlaying, onPlayTrack } = props;
-  const { cover } = useCover(`/covers/${album.cover}`);
+  const coverUrl = _.startsWith(album.cover, "https://")
+    ? album.cover
+    : `/covers/${album.cover}`;
+  const { cover } = useCover(coverUrl);
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />

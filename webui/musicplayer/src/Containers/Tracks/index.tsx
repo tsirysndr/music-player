@@ -22,6 +22,8 @@ const TracksPage = () => {
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
           cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
+          artistId: track.artists[0].id,
+          albumId: track.album.id,
         }))}
         onClickLibraryItem={(item) => navigate(`/${item}`)}
         onPlay={() => play()}

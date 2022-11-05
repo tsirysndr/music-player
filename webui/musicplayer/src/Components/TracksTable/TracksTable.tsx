@@ -3,6 +3,7 @@ import { Play } from "@styled-icons/ionicons-sharp";
 import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
 import _ from "lodash";
 import { FC } from "react";
+import { Link } from "react-router-dom";
 import ContextMenu from "../ContextMenu";
 import Speaker from "../Icons/Speaker";
 import TrackIcon from "../Icons/Track";
@@ -35,6 +36,25 @@ const AlbumCover = styled.img<{ current: boolean }>`
   margin-right: 10px;
   ${({ current }) => `opacity: ${current ? 0.4 : 1};`}
 `;
+
+const convertToLink = (row: any, item: string) => {
+  switch (item) {
+    case "Artist":
+      return (
+        <Link to={`/artists/${_.get(row, "artistId", "")}`}>
+          {_.get(row, _.toLower(item), "")}
+        </Link>
+      );
+    case "Album":
+      return (
+        <Link to={`/albums/${_.get(row, "albumId", "")}`}>
+          {_.get(row, _.toLower(item), "")}
+        </Link>
+      );
+    default:
+      return _.get(row, _.toLower(item), "");
+  }
+};
 
 export type CellProps = {
   current?: string | boolean;
@@ -82,7 +102,7 @@ const Cell: FC<CellProps> = ({
           )}
 
           {item !== "#" && (
-            <div style={{ flex: 1 }}>{_.get(row, _.toLower(item), "")}</div>
+            <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
           )}
         </div>
       )}
@@ -98,7 +118,7 @@ const Cell: FC<CellProps> = ({
               <Speaker color={row.cover ? "#fff" : "#ab28fc"} />
             </div>
           )}
-          <div style={{ flex: 1 }}>{_.get(row, _.toLower(item), "")}</div>
+          <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
         </div>
       )}
       {!current && !isAlbumTracks && item === "Title" && (
@@ -114,11 +134,11 @@ const Cell: FC<CellProps> = ({
           <div onClick={() => onPlayTrack(row.id, index)} className="play">
             <Play size={16} />
           </div>
-          <div className="tracknumber">{_.get(row, _.toLower(item), "")}</div>
+          <div className="tracknumber">{convertToLink(row, item)}</div>
         </>
       )}
       {!current && item !== "#" && (
-        <div style={{ flex: 1 }}>{_.get(row, _.toLower(item), "")}</div>
+        <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
       )}
     </CellWrapper>
   );

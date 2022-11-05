@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
+import { Link } from "react-router-dom";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
@@ -9,6 +10,7 @@ import Shuffle from "../Icons/Shuffle";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
+import AlbumIcon from "../Icons/AlbumCover";
 
 const Container = styled.div`
   display: flex;
@@ -105,6 +107,17 @@ const AlbumCover = styled.img`
   cursor: pointer;
 `;
 
+const NoAlbumCover = styled.div`
+  height: 169px;
+  width: 169px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ddaefb14;
+`;
+
 const AlbumArtist = styled.div`
   color: #828282;
   margin-bottom: 56px;
@@ -185,7 +198,6 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                 onPlayTrack={onPlayTrack}
               />
             </Tracks>
-
             <Row>
               <Title>Albums</Title>
               <SeeMore>See all</SeeMore>
@@ -193,8 +205,17 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
             <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
               {albums.map((item) => (
                 <Cell key={item.id}>
-                  <AlbumCover src={item.cover} />
-                  <AlbumTitle>{item.title}</AlbumTitle>
+                  <Link to={`/albums/${item.id}`}>
+                    {item.cover && <AlbumCover src={item.cover} />}
+                    {!item.cover && (
+                      <NoAlbumCover>
+                        <AlbumIcon size={120} />
+                      </NoAlbumCover>
+                    )}
+                  </Link>
+                  <Link to={`/albums/${item.id}`}>
+                    <AlbumTitle>{item.title}</AlbumTitle>
+                  </Link>
                   <AlbumArtist>{item.artist}</AlbumArtist>
                 </Cell>
               ))}

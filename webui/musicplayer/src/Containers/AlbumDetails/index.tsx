@@ -31,6 +31,7 @@ const AlbumDetailsPage = () => {
             title: track.title,
             artist: track.artists.map((artist) => artist.name).join(", "),
             time: formatTime(track.duration! * 1000),
+            artistId: track.artists[0].id,
           })),
         }
       : { tracks: [] };

@@ -84,3 +84,7 @@ tr:hover td div button {
   overflow: hidden;
   text-overflow: ellipsis;
  }
+
+ a {
+    text-decoration: initial;
+ }

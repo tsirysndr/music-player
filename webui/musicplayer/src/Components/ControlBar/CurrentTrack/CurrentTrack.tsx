@@ -4,6 +4,7 @@ import { ProgressBar } from "baseui/progress-bar";
 import Track from "../../Icons/Track";
 import { useCover } from "../../../Hooks/useCover";
 import { useTimeFormat } from "../../../Hooks/useFormat";
+import { Link } from "react-router-dom";
 
 const Container = styled.div`
   height: 76px;
@@ -55,11 +56,10 @@ const Artist = styled.div`
   text-overflow: ellipsis;
 `;
 
-const AlbumTitle = styled.a`
+const AlbumTitle = styled.span`
   color: rgba(0, 0, 0, 0.542) !important;
   white-space: nowrap;
   text-overflow: ellipsis;
-  text-decoration: initial !important;
 `;
 
 const Title = styled.div`
@@ -127,23 +127,23 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
       )}
       {nowPlaying && nowPlaying!.title && (
         <Container>
-          <a href={`/albums/${nowPlaying!.albumId}`}>
+          <Link to={`/albums/${nowPlaying!.albumId}`}>
             {cover && <AlbumCover src={cover} />}
             {!cover && (
               <NoCover>
                 <Track width={28} height={28} color="#a4a3a3" />
               </NoCover>
             )}
-          </a>
+          </Link>
           <Wrapper>
             <TrackInfo>
               <Title>{nowPlaying?.title}</Title>
               <Artist>
                 <span>{nowPlaying?.artist}</span>
                 <Separator>-</Separator>
-                <AlbumTitle href={`/albums/${nowPlaying!.albumId}`}>
-                  {nowPlaying?.album}
-                </AlbumTitle>
+                <Link to={`/albums/${nowPlaying!.albumId}`}>
+                  <AlbumTitle>{nowPlaying?.album}</AlbumTitle>
+                </Link>
               </Artist>
             </TrackInfo>
             <Row>
@@ -160,7 +160,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
                       style: {
                         marginLeft: 0,
                         marginRight: 0,
-                      }
+                      },
                     },
                     BarProgress: {
                       style: () => ({

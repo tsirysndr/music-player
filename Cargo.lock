@@ -2827,6 +2827,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "rand 0.8.5",
  "sea-orm",
  "tide",
  "tokio",

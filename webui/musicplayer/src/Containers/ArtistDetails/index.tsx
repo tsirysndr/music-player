@@ -20,17 +20,32 @@ const ArtistDetailsPage = () => {
 
   const { formatTime } = useTimeFormat();
   const navigate = useNavigate();
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const {
+    play,
+    pause,
+    next,
+    previous,
+    nowPlaying,
+    nextTracks,
+    previousTracks,
+    playArtistTracks,
+    playNext,
+    playTrackAt,
+    removeTrackAt,
+  } = usePlayback();
   const artist = !loading && data ? data.artist : {};
   const tracks =
     !loading && data
-      ? data.artist.songs.map((track) => ({
+      ? data.artist.songs.map((track, index) => ({
           id: track.id,
           title: track.title,
           artist: track.artists.map((artist) => artist.name).join(", "),
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
           cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
+          artistId: track.artists[0].id,
+          albumId: track.album.id,
+          index,
         }))
       : [];
   const albums =
@@ -56,7 +71,14 @@ const ArtistDetailsPage = () => {
       tracks={tracks}
       albums={albums}
       nowPlaying={nowPlaying}
-      onPlayTrack={(id, position) => {}}
+      nextTracks={nextTracks}
+      previousTracks={previousTracks}
+      onPlayArtistTracks={(artistId, shuffle, position) =>
+        playArtistTracks({ variables: { artistId, position, shuffle } })
+      }
+      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
+      onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
+      onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
     />
   );
 };

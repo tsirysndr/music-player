@@ -59,8 +59,4 @@ impl PlaylistMutation {
     ) -> Result<Playlist, Error> {
         todo!()
     }
-
-    async fn play_playlist(&self, ctx: &Context<'_>, id: ID, shuffle: bool) -> Result<bool, Error> {
-        todo!()
-    }
 }

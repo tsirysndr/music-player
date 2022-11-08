@@ -10,6 +10,8 @@ import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
+import _ from "lodash";
+import { Track } from "../../Types";
 
 const Container = styled.div`
   display: flex;
@@ -131,12 +133,27 @@ export type AlbumDetailsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
-  onPlayTrack: (id: string, position?: number) => void;
+  nextTracks: Track[];
+  previousTracks: Track[];
+  onPlayAlbum: (id: string, shuffle: boolean, position?: number) => void;
+  onPlayNext: (id: string) => void;
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
-  const { onBack, onClickLibraryItem, album, nowPlaying, onPlayTrack } = props;
-  const { cover } = useCover(`/covers/${album.cover}`);
+  const {
+    onBack,
+    onClickLibraryItem,
+    album,
+    nowPlaying,
+    onPlayAlbum,
+    onPlayNext,
+  } = props;
+  const coverUrl = _.startsWith(album.cover, "https://")
+    ? album.cover
+    : `/covers/${album.cover}`;
+  const { cover } = useCover(coverUrl);
   return (
     <Container>
       <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
@@ -163,7 +180,10 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
                   <Tracks>{album.tracks.length} TRACKS</Tracks>
                 </MetadataContainer>
                 <Buttons>
-                  <Button onClick={() => {}} kind="primary">
+                  <Button
+                    onClick={() => onPlayAlbum(album.id, false)}
+                    kind="primary"
+                  >
                     <Label>
                       <Icon>
                         <Play small color="#fff" />
@@ -172,7 +192,10 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
                     </Label>
                   </Button>
                   <Separator />
-                  <Button onClick={() => {}} kind="secondary">
+                  <Button
+                    onClick={() => onPlayAlbum(album.id, true)}
+                    kind="secondary"
+                  >
                     <Label>
                       <Shuffle color="#ab28fc" />
                       <div style={{ marginLeft: 7 }}>Shuffle</div>
@@ -187,7 +210,8 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
               isPlaying={nowPlaying.isPlaying}
               header={["#", "Title", "Artist", "Time"]}
               maxHeight={"initial"}
-              onPlayTrack={onPlayTrack}
+              onPlayTrack={(id, position) => onPlayAlbum(id, false, position)}
+              onPlayNext={onPlayNext}
             />
           </Scrollable>
         </MainContent>

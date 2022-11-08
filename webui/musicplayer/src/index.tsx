@@ -1,5 +1,4 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
@@ -8,6 +7,7 @@ import { Client as Styletron } from "styletron-engine-atomic";
 import { BaseProvider } from "baseui";
 import { theme } from "./Theme";
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
+import { render } from "react-dom";
 
 const uri =
   process.env.NODE_ENV === "development"
@@ -22,11 +22,9 @@ const client = new ApolloClient({
 
 const engine = new Styletron();
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
+const root = document.getElementById("root") as HTMLElement;
 
-root.render(
+render(
   <React.StrictMode>
     <ApolloProvider client={client}>
       <StyletronProvider value={engine}>
@@ -35,7 +33,8 @@ root.render(
         </BaseProvider>
       </StyletronProvider>
     </ApolloProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
+  root
 );
 
 // If you want to start measuring performance in your app, pass a function

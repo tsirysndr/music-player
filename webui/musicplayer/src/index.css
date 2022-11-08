@@ -84,3 +84,31 @@ tr:hover td div button {
   overflow: hidden;
   text-overflow: ellipsis;
  }
+
+ a {
+    color: initial;
+    text-decoration: initial;
+ }
+
+ a:hover {
+  text-decoration: underline;
+ }
+
+ .album-cover-container {
+  position: relative;
+ }
+
+ .album-cover-container .floating-play {
+  display: none;
+  position: absolute;
+  left: 19px;
+  top: 12px;
+ }
+
+ .album-cover-container:hover .floating-play {
+  display: block;
+ }
+
+ .album-cover-container:hover img {
+  opacity: 0.4;
+ }

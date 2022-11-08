@@ -1,13 +1,14 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useState } from "react";
 import Add from "../Icons/Add";
 import Heart from "../Icons/Heart";
 import HeartOutline from "../Icons/HeartOutline";
 import { EllipsisHorizontal } from "@styled-icons/ionicons-sharp";
 import { StatefulPopover } from "baseui/popover";
-import { StatefulMenu } from "baseui/menu";
+import { NestedMenus, StatefulMenu } from "baseui/menu";
 import TrackIcon from "../Icons/Track";
 import { useCover } from "../../Hooks/useCover";
+import NewPlaylistModal from "../Playlists/NewPlaylistModal";
 
 const Container = styled.div`
   display: flex;
@@ -84,12 +85,45 @@ const TrackInfos = styled.div`
   overflow: hidden;
 `;
 
+const ChildMenu: FC<{ onSelect: (item: { label: string }) => void }> = ({
+  onSelect,
+}) => {
+  return (
+    <StatefulMenu
+      items={{
+        __ungrouped: [
+          {
+            label: "Create new playlist",
+          },
+        ],
+        /*
+        RECENT: [
+          {
+            label: "New South",
+          },
+        ],
+        */
+      }}
+      overrides={{
+        List: {
+          style: {
+            boxShadow: "none",
+          },
+        },
+      }}
+      onItemSelect={({ item }) => onSelect(item)}
+    />
+  );
+};
+
 export type ContextMenuProps = {
   liked?: boolean;
   track: any;
+  onPlayNext: (id: string) => void;
 };
 
-const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
+const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
+  const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const { cover } = useCover(track.cover);
   return (
     <Container>
@@ -97,7 +131,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
         <StatefulPopover
           placement="left"
           autoFocus={false}
-          content={() => (
+          content={({ close }) => (
             <div style={{ width: 205 }}>
               <Track>
                 {cover && <AlbumCover src={cover} />}
@@ -111,23 +145,55 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
                   <Artist>{track.artist}</Artist>
                 </TrackInfos>
               </Track>
-              <StatefulMenu
-                overrides={{
-                  List: {
-                    style: {
-                      boxShadow: "none",
+              <NestedMenus>
+                <StatefulMenu
+                  overrides={{
+                    List: {
+                      style: {
+                        boxShadow: "none",
+                      },
                     },
-                  },
-                }}
-                items={[
-                  {
-                    label: "Play Next",
-                  },
-                  {
-                    label: "Add to Playlist",
-                  },
-                ]}
-              />
+                    Option: {
+                      props: {
+                        getChildMenu: (item: { label: string }) => {
+                          if (item.label === "Add to Playlist") {
+                            return (
+                              <ChildMenu
+                                onSelect={(item: { label: string }) => {
+                                  if (item.label === "Create new playlist") {
+                                    setIsNewPlaylistModalOpen(true);
+                                  }
+                                  close();
+                                }}
+                              />
+                            );
+                          }
+                          return null;
+                        },
+                      },
+                    },
+                  }}
+                  items={[
+                    {
+                      id: "1",
+                      label: "Play Next",
+                    },
+                    {
+                      id: "2",
+                      label: "Add to Playlist",
+                    },
+                  ]}
+                  onItemSelect={({ item }) => {
+                    if (item.label === "Add to Playlist") {
+                      return;
+                    }
+                    if (item.label === "Play Next") {
+                      onPlayNext(track.id);
+                    }
+                    close();
+                  }}
+                />
+              </NestedMenus>
             </div>
           )}
           overrides={{
@@ -147,7 +213,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
       <StatefulPopover
         autoFocus={false}
         placement="left"
-        content={() => (
+        content={({ close }) => (
           <div style={{ width: 205 }}>
             <StatefulMenu
               overrides={{
@@ -162,6 +228,10 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
                   label: <div>Create new playlist</div>,
                 },
               ]}
+              onItemSelect={() => {
+                setIsNewPlaylistModalOpen(true);
+                close();
+              }}
             />
           </div>
         )}
@@ -188,6 +258,12 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
           <HeartOutline height={24} width={24} />
         </Icon>
       )}
+      <NewPlaylistModal
+        onClose={() => {
+          setIsNewPlaylistModalOpen(false);
+        }}
+        isOpen={isNewPlaylistModalOpen}
+      />
     </Container>
   );
 };

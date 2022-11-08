@@ -10,8 +10,14 @@ const Search = () => {
             style: {
               height: "36px",
               width: "222px",
-              borderWidth: "0px !important",
-              borderRadius: "5px !important",
+              borderTopWidth: "0px !important",
+              borderBottomWidth: "0px !important",
+              borderLeftWidth: "0px !important",
+              borderRightWidth: "0px !important",
+              borderTopRadius: "5px !important",
+              borderBottomRadius: "5px !important",
+              borderLeftRadius: "5px !important",
+              borderRightRadius: "5px !important",
             },
           },
           Input: {

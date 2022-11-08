@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
+import { Link } from "react-router-dom";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
@@ -9,6 +10,8 @@ import Shuffle from "../Icons/Shuffle";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
+import AlbumIcon from "../Icons/AlbumCover";
+import { Track } from "../../Types";
 
 const Container = styled.div`
   display: flex;
@@ -105,6 +108,17 @@ const AlbumCover = styled.img`
   cursor: pointer;
 `;
 
+const NoAlbumCover = styled.div`
+  height: 169px;
+  width: 169px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ddaefb14;
+`;
+
 const AlbumArtist = styled.div`
   color: #828282;
   margin-bottom: 56px;
@@ -136,12 +150,28 @@ export type ArtistDetailsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
-  onPlayTrack: (id: string, position?: number) => void;
+  nextTracks: Track[];
+  previousTracks: Track[];
+  onPlayArtistTracks: (
+    artistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
+  onPlayNext: (id: string) => void;
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
-  const { onBack, onClickLibraryItem, artist, tracks, albums, onPlayTrack } =
-    props;
+  const {
+    onBack,
+    onClickLibraryItem,
+    artist,
+    tracks,
+    albums,
+    onPlayArtistTracks,
+    onPlayNext,
+  } = props;
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
@@ -156,7 +186,10 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
             </BackButton>
             <Artist>{artist.name}</Artist>
             <Buttons>
-              <Button onClick={() => {}} kind="primary">
+              <Button
+                onClick={() => onPlayArtistTracks(artist.id, false)}
+                kind="primary"
+              >
                 <Label>
                   <Icon>
                     <Play small color="#fff" />
@@ -165,7 +198,10 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                 </Label>
               </Button>
               <Separator />
-              <Button onClick={() => {}} kind="secondary">
+              <Button
+                onClick={() => onPlayArtistTracks(artist.id, true)}
+                kind="secondary"
+              >
                 <Label>
                   <Shuffle color="#ab28fc" />
                   <div style={{ marginLeft: 7 }}>Shuffle</div>
@@ -182,10 +218,12 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                   </Row>
                 }
                 maxHeight={"initial"}
-                onPlayTrack={onPlayTrack}
+                onPlayTrack={(id, position) =>
+                  onPlayArtistTracks(id, false, position)
+                }
+                onPlayNext={onPlayNext}
               />
             </Tracks>
-
             <Row>
               <Title>Albums</Title>
               <SeeMore>See all</SeeMore>
@@ -193,8 +231,17 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
             <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
               {albums.map((item) => (
                 <Cell key={item.id}>
-                  <AlbumCover src={item.cover} />
-                  <AlbumTitle>{item.title}</AlbumTitle>
+                  <Link to={`/albums/${item.id}`}>
+                    {item.cover && <AlbumCover src={item.cover} />}
+                    {!item.cover && (
+                      <NoAlbumCover>
+                        <AlbumIcon size={120} />
+                      </NoAlbumCover>
+                    )}
+                  </Link>
+                  <Link to={`/albums/${item.id}`}>
+                    <AlbumTitle>{item.title}</AlbumTitle>
+                  </Link>
                   <AlbumArtist>{item.artist}</AlbumArtist>
                 </Cell>
               ))}

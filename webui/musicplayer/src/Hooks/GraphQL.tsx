@@ -59,6 +59,8 @@ export type Mutation = {
   next: Scalars['Boolean'];
   pause: Scalars['Boolean'];
   play: Scalars['Boolean'];
+  playAlbum: Scalars['Boolean'];
+  playArtistTracks: Scalars['Boolean'];
   playNext: Scalars['Boolean'];
   playPlaylist: Scalars['Boolean'];
   playTrackAt: Scalars['Boolean'];
@@ -101,6 +103,20 @@ export type MutationDeletePlaylistArgs = {
 };
 
 
+export type MutationPlayAlbumArgs = {
+  id: Scalars['ID'];
+  position?: InputMaybe<Scalars['Int']>;
+  shuffle: Scalars['Boolean'];
+};
+
+
+export type MutationPlayArtistTracksArgs = {
+  id: Scalars['ID'];
+  position?: InputMaybe<Scalars['Int']>;
+  shuffle: Scalars['Boolean'];
+};
+
+
 export type MutationPlayNextArgs = {
   id: Scalars['ID'];
 };
@@ -108,6 +124,7 @@ export type MutationPlayNextArgs = {
 
 export type MutationPlayPlaylistArgs = {
   id: Scalars['ID'];
+  position?: InputMaybe<Scalars['Int']>;
   shuffle: Scalars['Boolean'];
 };
 
@@ -283,6 +300,50 @@ export type CurrentlyPlayingSongQueryVariables = Exact<{ [key: string]: never; }
 
 
 export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } | null } };
+
+export type ClearTracklistMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ClearTracklistMutation = { __typename?: 'Mutation', clearTracklist: boolean };
+
+export type PlayAlbumMutationVariables = Exact<{
+  albumId: Scalars['ID'];
+  position?: InputMaybe<Scalars['Int']>;
+  shuffle: Scalars['Boolean'];
+}>;
+
+
+export type PlayAlbumMutation = { __typename?: 'Mutation', playAlbum: boolean };
+
+export type PlayArtistTracksMutationVariables = Exact<{
+  artistId: Scalars['ID'];
+  position?: InputMaybe<Scalars['Int']>;
+  shuffle: Scalars['Boolean'];
+}>;
+
+
+export type PlayArtistTracksMutation = { __typename?: 'Mutation', playArtistTracks: boolean };
+
+export type PlayTrackAtMutationVariables = Exact<{
+  position: Scalars['Int'];
+}>;
+
+
+export type PlayTrackAtMutation = { __typename?: 'Mutation', playTrackAt: boolean };
+
+export type RemoveTrackAtMutationVariables = Exact<{
+  position: Scalars['Int'];
+}>;
+
+
+export type RemoveTrackAtMutation = { __typename?: 'Mutation', removeTrack: boolean };
+
+export type PlayNextMutationVariables = Exact<{
+  trackId: Scalars['ID'];
+}>;
+
+
+export type PlayNextMutation = { __typename?: 'Mutation', playNext: boolean };
 
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -693,6 +754,195 @@ export function useCurrentlyPlayingSongLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type CurrentlyPlayingSongQueryHookResult = ReturnType<typeof useCurrentlyPlayingSongQuery>;
 export type CurrentlyPlayingSongLazyQueryHookResult = ReturnType<typeof useCurrentlyPlayingSongLazyQuery>;
 export type CurrentlyPlayingSongQueryResult = Apollo.QueryResult<CurrentlyPlayingSongQuery, CurrentlyPlayingSongQueryVariables>;
+export const ClearTracklistDocument = gql`
+    mutation ClearTracklist {
+  clearTracklist
+}
+    `;
+export type ClearTracklistMutationFn = Apollo.MutationFunction<ClearTracklistMutation, ClearTracklistMutationVariables>;
+
+/**
+ * __useClearTracklistMutation__
+ *
+ * To run a mutation, you first call `useClearTracklistMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearTracklistMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearTracklistMutation, { data, loading, error }] = useClearTracklistMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useClearTracklistMutation(baseOptions?: Apollo.MutationHookOptions<ClearTracklistMutation, ClearTracklistMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ClearTracklistMutation, ClearTracklistMutationVariables>(ClearTracklistDocument, options);
+      }
+export type ClearTracklistMutationHookResult = ReturnType<typeof useClearTracklistMutation>;
+export type ClearTracklistMutationResult = Apollo.MutationResult<ClearTracklistMutation>;
+export type ClearTracklistMutationOptions = Apollo.BaseMutationOptions<ClearTracklistMutation, ClearTracklistMutationVariables>;
+export const PlayAlbumDocument = gql`
+    mutation PlayAlbum($albumId: ID!, $position: Int, $shuffle: Boolean!) {
+  playAlbum(id: $albumId, position: $position, shuffle: $shuffle)
+}
+    `;
+export type PlayAlbumMutationFn = Apollo.MutationFunction<PlayAlbumMutation, PlayAlbumMutationVariables>;
+
+/**
+ * __usePlayAlbumMutation__
+ *
+ * To run a mutation, you first call `usePlayAlbumMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePlayAlbumMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [playAlbumMutation, { data, loading, error }] = usePlayAlbumMutation({
+ *   variables: {
+ *      albumId: // value for 'albumId'
+ *      position: // value for 'position'
+ *      shuffle: // value for 'shuffle'
+ *   },
+ * });
+ */
+export function usePlayAlbumMutation(baseOptions?: Apollo.MutationHookOptions<PlayAlbumMutation, PlayAlbumMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PlayAlbumMutation, PlayAlbumMutationVariables>(PlayAlbumDocument, options);
+      }
+export type PlayAlbumMutationHookResult = ReturnType<typeof usePlayAlbumMutation>;
+export type PlayAlbumMutationResult = Apollo.MutationResult<PlayAlbumMutation>;
+export type PlayAlbumMutationOptions = Apollo.BaseMutationOptions<PlayAlbumMutation, PlayAlbumMutationVariables>;
+export const PlayArtistTracksDocument = gql`
+    mutation PlayArtistTracks($artistId: ID!, $position: Int, $shuffle: Boolean!) {
+  playArtistTracks(id: $artistId, position: $position, shuffle: $shuffle)
+}
+    `;
+export type PlayArtistTracksMutationFn = Apollo.MutationFunction<PlayArtistTracksMutation, PlayArtistTracksMutationVariables>;
+
+/**
+ * __usePlayArtistTracksMutation__
+ *
+ * To run a mutation, you first call `usePlayArtistTracksMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePlayArtistTracksMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [playArtistTracksMutation, { data, loading, error }] = usePlayArtistTracksMutation({
+ *   variables: {
+ *      artistId: // value for 'artistId'
+ *      position: // value for 'position'
+ *      shuffle: // value for 'shuffle'
+ *   },
+ * });
+ */
+export function usePlayArtistTracksMutation(baseOptions?: Apollo.MutationHookOptions<PlayArtistTracksMutation, PlayArtistTracksMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PlayArtistTracksMutation, PlayArtistTracksMutationVariables>(PlayArtistTracksDocument, options);
+      }
+export type PlayArtistTracksMutationHookResult = ReturnType<typeof usePlayArtistTracksMutation>;
+export type PlayArtistTracksMutationResult = Apollo.MutationResult<PlayArtistTracksMutation>;
+export type PlayArtistTracksMutationOptions = Apollo.BaseMutationOptions<PlayArtistTracksMutation, PlayArtistTracksMutationVariables>;
+export const PlayTrackAtDocument = gql`
+    mutation PlayTrackAt($position: Int!) {
+  playTrackAt(position: $position)
+}
+    `;
+export type PlayTrackAtMutationFn = Apollo.MutationFunction<PlayTrackAtMutation, PlayTrackAtMutationVariables>;
+
+/**
+ * __usePlayTrackAtMutation__
+ *
+ * To run a mutation, you first call `usePlayTrackAtMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePlayTrackAtMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [playTrackAtMutation, { data, loading, error }] = usePlayTrackAtMutation({
+ *   variables: {
+ *      position: // value for 'position'
+ *   },
+ * });
+ */
+export function usePlayTrackAtMutation(baseOptions?: Apollo.MutationHookOptions<PlayTrackAtMutation, PlayTrackAtMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PlayTrackAtMutation, PlayTrackAtMutationVariables>(PlayTrackAtDocument, options);
+      }
+export type PlayTrackAtMutationHookResult = ReturnType<typeof usePlayTrackAtMutation>;
+export type PlayTrackAtMutationResult = Apollo.MutationResult<PlayTrackAtMutation>;
+export type PlayTrackAtMutationOptions = Apollo.BaseMutationOptions<PlayTrackAtMutation, PlayTrackAtMutationVariables>;
+export const RemoveTrackAtDocument = gql`
+    mutation RemoveTrackAt($position: Int!) {
+  removeTrack(position: $position)
+}
+    `;
+export type RemoveTrackAtMutationFn = Apollo.MutationFunction<RemoveTrackAtMutation, RemoveTrackAtMutationVariables>;
+
+/**
+ * __useRemoveTrackAtMutation__
+ *
+ * To run a mutation, you first call `useRemoveTrackAtMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveTrackAtMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeTrackAtMutation, { data, loading, error }] = useRemoveTrackAtMutation({
+ *   variables: {
+ *      position: // value for 'position'
+ *   },
+ * });
+ */
+export function useRemoveTrackAtMutation(baseOptions?: Apollo.MutationHookOptions<RemoveTrackAtMutation, RemoveTrackAtMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RemoveTrackAtMutation, RemoveTrackAtMutationVariables>(RemoveTrackAtDocument, options);
+      }
+export type RemoveTrackAtMutationHookResult = ReturnType<typeof useRemoveTrackAtMutation>;
+export type RemoveTrackAtMutationResult = Apollo.MutationResult<RemoveTrackAtMutation>;
+export type RemoveTrackAtMutationOptions = Apollo.BaseMutationOptions<RemoveTrackAtMutation, RemoveTrackAtMutationVariables>;
+export const PlayNextDocument = gql`
+    mutation PlayNext($trackId: ID!) {
+  playNext(id: $trackId)
+}
+    `;
+export type PlayNextMutationFn = Apollo.MutationFunction<PlayNextMutation, PlayNextMutationVariables>;
+
+/**
+ * __usePlayNextMutation__
+ *
+ * To run a mutation, you first call `usePlayNextMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePlayNextMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [playNextMutation, { data, loading, error }] = usePlayNextMutation({
+ *   variables: {
+ *      trackId: // value for 'trackId'
+ *   },
+ * });
+ */
+export function usePlayNextMutation(baseOptions?: Apollo.MutationHookOptions<PlayNextMutation, PlayNextMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PlayNextMutation, PlayNextMutationVariables>(PlayNextDocument, options);
+      }
+export type PlayNextMutationHookResult = ReturnType<typeof usePlayNextMutation>;
+export type PlayNextMutationResult = Apollo.MutationResult<PlayNextMutation>;
+export type PlayNextMutationOptions = Apollo.BaseMutationOptions<PlayNextMutation, PlayNextMutationVariables>;
 export const GetTracklistDocument = gql`
     query GetTracklist {
   tracklistTracks {

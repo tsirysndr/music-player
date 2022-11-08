@@ -6,6 +6,7 @@ import ControlBar from "../ControlBar";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import AlbumIcon from "../Icons/AlbumCover";
+import { Track } from "../../Types";
 
 const Container = styled.div`
   display: flex;
@@ -75,6 +76,11 @@ export type AlbumsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
+  nextTracks: Track[];
+  previousTracks: Track[];
+  onPlayNext: (id: string) => void;
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 export type AlbumProps = {

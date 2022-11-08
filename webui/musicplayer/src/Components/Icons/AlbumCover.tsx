@@ -1,10 +1,14 @@
 import * as React from "react";
 
-const SvgComponent: React.FC = (props) => (
+export type AlbumCoverProps = {
+  size?: number;
+};
+
+const AlbumCover: React.FC<AlbumCoverProps> = (props) => (
   <svg
-    height={140}
+    height={props.size!}
     viewBox="0 0 128 128"
-    width={140}
+    width={props.size!}
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
@@ -26,4 +30,8 @@ const SvgComponent: React.FC = (props) => (
   </svg>
 );
 
-export default SvgComponent;
+AlbumCover.defaultProps = {
+  size: 150,
+};
+
+export default AlbumCover;

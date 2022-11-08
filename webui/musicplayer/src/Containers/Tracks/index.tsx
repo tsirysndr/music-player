@@ -10,7 +10,18 @@ const TracksPage = () => {
   });
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const { play, pause, next, previous, nowPlaying } = usePlayback();
+  const {
+    play,
+    pause,
+    next,
+    previous,
+    nowPlaying,
+    nextTracks,
+    previousTracks,
+    playNext,
+    playTrackAt,
+    removeTrackAt,
+  } = usePlayback();
   const tracks = !loading && data ? data.tracks : [];
   return (
     <>
@@ -22,6 +33,8 @@ const TracksPage = () => {
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
           cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
+          artistId: track.artists[0].id,
+          albumId: track.album.id,
         }))}
         onClickLibraryItem={(item) => navigate(`/${item}`)}
         onPlay={() => play()}
@@ -32,6 +45,13 @@ const TracksPage = () => {
         onRepeat={() => {}}
         nowPlaying={nowPlaying}
         onPlayTrack={(id, position) => {}}
+        nextTracks={nextTracks}
+        previousTracks={previousTracks}
+        onPlayNext={(trackId) => playNext({ variables: { trackId } })}
+        onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
+        onRemoveTrackAt={(position) =>
+          removeTrackAt({ variables: { position } })
+        }
       />
     </>
   );

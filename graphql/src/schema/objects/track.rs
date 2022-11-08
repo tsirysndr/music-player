@@ -74,3 +74,16 @@ impl From<Model> for Track {
         }
     }
 }
+
+impl Into<Model> for TrackInput {
+    fn into(self) -> Model {
+        Model {
+            id: self.id.0,
+            title: self.title,
+            uri: self.uri,
+            duration: self.duration,
+            track: self.track_number,
+            ..Default::default()
+        }
+    }
+}

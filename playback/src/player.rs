@@ -402,6 +402,8 @@ impl PlayerInternal {
             PlayerCommand::Clear => self.handle_clear(),
             PlayerCommand::GetTracks => self.handle_get_tracks(),
             PlayerCommand::GetCurrentTrack => self.handle_get_current_track(),
+            PlayerCommand::PlayNext(track) => self.handle_play_next(track),
+            PlayerCommand::RemoveTrack(index) => self.handle_remove_track(index),
         }
         Ok(())
     }
@@ -594,6 +596,14 @@ impl PlayerInternal {
         self.send_event(PlayerEvent::TracklistUpdated { tracks });
     }
 
+    fn handle_play_next(&mut self, track: Track) {
+        self.tracklist.lock().unwrap().insert_next(track);
+    }
+
+    fn handle_remove_track(&mut self, index: usize) {
+        self.tracklist.lock().unwrap().remove_track_at(index);
+    }
+
     fn handle_get_current_track(&mut self) {
         let (track, position) = self.tracklist.lock().unwrap().current_track();
         let is_playing = self.state.is_playing();
@@ -744,6 +754,8 @@ pub enum PlayerCommand {
     Clear,
     GetTracks,
     GetCurrentTrack,
+    RemoveTrack(usize),
+    PlayNext(Track),
 }
 
 #[derive(Debug, Clone)]

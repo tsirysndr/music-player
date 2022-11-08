@@ -16,6 +16,7 @@ const Button: FC<ButtonProps> = ({
   width,
   height,
   borderRadius,
+  onClick,
 }) => {
   return (
     <BaseButton
@@ -25,12 +26,16 @@ const Button: FC<ButtonProps> = ({
           style: {
             width,
             height,
-            borderRadius,
+            borderTopLeftRadius: borderRadius,
+            borderTopRightRadius: borderRadius,
+            borderBottomLeftRadius: borderRadius,
+            borderBottomRightRadius: borderRadius,
             fontSize: "14px",
             fontFamily: "RockfordSansMedium",
           },
         },
       }}
+      onClick={onClick}
     >
       {children}
     </BaseButton>

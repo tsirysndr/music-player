@@ -50,12 +50,6 @@ const Library: FC<LibraryProps> = ({ active, onClickLibraryItem }) => {
       >
         Artists
       </Item>
-      <Item
-        active={active === "play-queue"}
-        onClick={() => onClickLibraryItem("play-queue")}
-      >
-        Play Queue
-      </Item>
     </Container>
   );
 };

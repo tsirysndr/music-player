@@ -2,6 +2,7 @@ import { Client as Styletron } from "styletron-engine-atomic";
 import { Provider as StyletronProvider } from "styletron-react";
 import { LightTheme, BaseProvider } from "baseui";
 import { theme } from "../src/Theme";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import "../src/index.css";
 
 const engine = new Styletron();
@@ -19,7 +20,18 @@ export const parameters = {
   },
 };
 
+const reactRouterDecorator = (Story) => {
+  return (
+    <MemoryRouter>
+      <Routes>
+        <Route path="/*" element={<Story />} />
+      </Routes>
+    </MemoryRouter>
+  );
+};
+
 export const decorators = [
+  reactRouterDecorator,
   (Story) => (
     <StyletronProvider value={engine}>
       <BaseProvider theme={theme}>

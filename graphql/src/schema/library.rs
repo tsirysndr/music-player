@@ -75,18 +75,31 @@ impl LibraryQuery {
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let id = id.to_string();
         let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
             track_entity::Entity::find()
-                .limit(100)
-                .order_by_asc(track_entity::Column::Title)
+                .filter(track_entity::Column::Id.eq(id.clone()))
                 .find_with_related(artist_entity::Entity)
                 .all(db.lock().await.get_connection())
                 .await?;
         if results.len() == 0 {
             return Err(Error::new("Track not found"));
         }
-        let (track, artists) = results.into_iter().next().unwrap();
-        Ok(track_entity::Model { artists, ..track }.into())
+        let track = results[0].0.clone();
+        let album =
+            album_entity::Entity::find_by_id(track.album_id.unwrap_or_default().to_string())
+                .one(db.lock().await.get_connection())
+                .await?;
+        Ok(track_entity::Model {
+            artists: results[0].1.clone(),
+            album: album.unwrap(),
+            id: track.id,
+            title: track.title,
+            duration: track.duration,
+            uri: track.uri,
+            ..Default::default()
+        }
+        .into())
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {

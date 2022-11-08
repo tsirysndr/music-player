@@ -36,7 +36,7 @@ const ArtistDetailsPage = () => {
   const artist = !loading && data ? data.artist : {};
   const tracks =
     !loading && data
-      ? data.artist.songs.map((track) => ({
+      ? data.artist.songs.map((track, index) => ({
           id: track.id,
           title: track.title,
           artist: track.artists.map((artist) => artist.name).join(", "),
@@ -45,6 +45,7 @@ const ArtistDetailsPage = () => {
           cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
           artistId: track.artists[0].id,
           albumId: track.album.id,
+          index,
         }))
       : [];
   const albums =

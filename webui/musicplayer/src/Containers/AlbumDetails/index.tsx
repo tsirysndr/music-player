@@ -37,13 +37,15 @@ const AlbumDetailsPage = () => {
     !loading && data
       ? {
           ...data.album,
-          tracks: data.album.tracks.map((track) => ({
+          tracks: data.album.tracks.map((track, index) => ({
             "#": track.trackNumber,
             id: track.id,
             title: track.title,
             artist: track.artists.map((artist) => artist.name).join(", "),
             time: formatTime(track.duration! * 1000),
             artistId: track.artists[0].id,
+            albumId: data.album.id,
+            index,
           })),
         }
       : { tracks: [] };

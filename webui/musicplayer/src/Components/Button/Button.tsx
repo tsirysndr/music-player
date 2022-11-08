@@ -16,6 +16,7 @@ const Button: FC<ButtonProps> = ({
   width,
   height,
   borderRadius,
+  onClick,
 }) => {
   return (
     <BaseButton
@@ -34,6 +35,7 @@ const Button: FC<ButtonProps> = ({
           },
         },
       }}
+      onClick={onClick}
     >
       {children}
     </BaseButton>

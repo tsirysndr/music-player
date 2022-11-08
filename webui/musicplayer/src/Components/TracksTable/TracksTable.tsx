@@ -123,7 +123,7 @@ const Cell: FC<CellProps> = ({
       )}
       {!current && !isAlbumTracks && item === "Title" && (
         <div
-          onClick={() => onPlayTrack(row.artistId, index)}
+          onClick={() => onPlayTrack(row.artistId, row.index)}
           className="floating-play"
         >
           <Play size={16} color={row.cover ? "#fff" : "#000"} />
@@ -131,7 +131,10 @@ const Cell: FC<CellProps> = ({
       )}
       {!current && item === "#" && (
         <>
-          <div onClick={() => onPlayTrack(row.albumId, index)} className="play">
+          <div
+            onClick={() => onPlayTrack(row.albumId, row.index)}
+            className="play"
+          >
             <Play size={16} />
           </div>
           <div className="tracknumber">{convertToLink(row, item)}</div>

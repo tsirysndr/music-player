@@ -119,9 +119,10 @@ const ChildMenu: FC<{ onSelect: (item: { label: string }) => void }> = ({
 export type ContextMenuProps = {
   liked?: boolean;
   track: any;
+  onPlayNext: (id: string) => void;
 };
 
-const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
+const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
   const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const { cover } = useCover(track.cover);
   return (
@@ -185,6 +186,9 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track }) => {
                   onItemSelect={({ item }) => {
                     if (item.label === "Add to Playlist") {
                       return;
+                    }
+                    if (item.label === "Play Next") {
+                      onPlayNext(track.id);
                     }
                     close();
                   }}

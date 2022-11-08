@@ -14,6 +14,9 @@ const ArtistsPage = () => {
     nowPlaying,
     nextTracks,
     previousTracks,
+    playNext,
+    playTrackAt,
+    removeTrackAt,
   } = usePlayback();
   const artists = !loading && data ? data.artists : [];
   return (
@@ -34,6 +37,9 @@ const ArtistsPage = () => {
       nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
+      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
+      onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
+      onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
     />
   );
 };

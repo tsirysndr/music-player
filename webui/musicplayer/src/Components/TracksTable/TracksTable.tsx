@@ -123,7 +123,7 @@ const Cell: FC<CellProps> = ({
       )}
       {!current && !isAlbumTracks && item === "Title" && (
         <div
-          onClick={() => onPlayTrack(row.id, index)}
+          onClick={() => onPlayTrack(row.artistId, index)}
           className="floating-play"
         >
           <Play size={16} color={row.cover ? "#fff" : "#000"} />
@@ -131,7 +131,7 @@ const Cell: FC<CellProps> = ({
       )}
       {!current && item === "#" && (
         <>
-          <div onClick={() => onPlayTrack(row.id, index)} className="play">
+          <div onClick={() => onPlayTrack(row.albumId, index)} className="play">
             <Play size={16} />
           </div>
           <div className="tracknumber">{convertToLink(row, item)}</div>
@@ -153,6 +153,7 @@ export type TracksTableProps = {
   isPlaying?: boolean;
   maxHeight?: string;
   onPlayTrack: (id: string, position?: number) => void;
+  onPlayNext: (id: string) => void;
 };
 
 const TracksTable: FC<TracksTableProps> = ({
@@ -164,6 +165,7 @@ const TracksTable: FC<TracksTableProps> = ({
   isPlaying,
   maxHeight,
   onPlayTrack,
+  onPlayNext,
 }) => {
   return (
     <TableWrapper>
@@ -246,7 +248,7 @@ const TracksTable: FC<TracksTableProps> = ({
         <TableBuilderColumn header="">
           {(row: any) => (
             <CellWrapper>
-              <ContextMenu track={row} />
+              <ContextMenu track={row} onPlayNext={onPlayNext} />
             </CellWrapper>
           )}
         </TableBuilderColumn>

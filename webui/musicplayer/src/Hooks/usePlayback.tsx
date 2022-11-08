@@ -8,6 +8,11 @@ import {
   useNextMutation,
   usePreviousMutation,
   useGetTracklistQuery,
+  usePlayTrackAtMutation,
+  useRemoveTrackAtMutation,
+  usePlayNextMutation,
+  usePlayAlbumMutation,
+  usePlayArtistTracksMutation,
 } from "./GraphQL";
 
 export const usePlayback = () => {
@@ -22,6 +27,11 @@ export const usePlayback = () => {
   const [pause] = usePauseMutation();
   const [next] = useNextMutation();
   const [previous] = usePreviousMutation();
+  const [playTrackAt] = usePlayTrackAtMutation();
+  const [removeTrackAt] = useRemoveTrackAtMutation();
+  const [playNext] = usePlayNextMutation();
+  const [playAlbum] = usePlayAlbumMutation();
+  const [playArtistTracks] = usePlayArtistTracksMutation();
   const {
     data: queue,
     startPolling: startPollingTracklist,
@@ -90,5 +100,10 @@ export const usePlayback = () => {
     index,
     nextTracks,
     previousTracks,
+    playTrackAt,
+    removeTrackAt,
+    playNext,
+    playAlbum,
+    playArtistTracks,
   };
 };

@@ -28,6 +28,10 @@ const ArtistDetailsPage = () => {
     nowPlaying,
     nextTracks,
     previousTracks,
+    playArtistTracks,
+    playNext,
+    playTrackAt,
+    removeTrackAt,
   } = usePlayback();
   const artist = !loading && data ? data.artist : {};
   const tracks =
@@ -66,9 +70,14 @@ const ArtistDetailsPage = () => {
       tracks={tracks}
       albums={albums}
       nowPlaying={nowPlaying}
-      onPlayTrack={(id, position) => {}}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
+      onPlayArtistTracks={(artistId, shuffle, position) =>
+        playArtistTracks({ variables: { artistId, position, shuffle } })
+      }
+      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
+      onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
+      onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
     />
   );
 };

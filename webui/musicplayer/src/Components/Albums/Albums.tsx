@@ -78,6 +78,9 @@ export type AlbumsProps = {
   nowPlaying: any;
   nextTracks: Track[];
   previousTracks: Track[];
+  onPlayNext: (id: string) => void;
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 export type AlbumProps = {

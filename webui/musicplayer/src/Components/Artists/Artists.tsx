@@ -70,6 +70,9 @@ export type ArtistsProps = {
   nowPlaying: any;
   nextTracks: Track[];
   previousTracks: Track[];
+  onPlayNext: (id: string) => void;
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 const Artists: FC<ArtistsProps> = (props) => {

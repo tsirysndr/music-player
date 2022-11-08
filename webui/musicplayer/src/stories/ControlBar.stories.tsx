@@ -11,7 +11,7 @@ export default {
     onPrevious: { action: "previous" },
     onShuffle: { action: "shuffle" },
     onRepeat: { action: "repeat" },
-    onRemoveTrack: { action: "removeTrack" },
+    onRemoveTrackAt: { action: "removeTrackAt" },
     onPlayTrackAt: { action: "playTrackAt" },
   },
 } as ComponentMeta<typeof ControlBar>;

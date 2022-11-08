@@ -150,14 +150,28 @@ export type ArtistDetailsProps = {
   onShuffle: () => void;
   onRepeat: () => void;
   nowPlaying: any;
-  onPlayTrack: (id: string, position?: number) => void;
   nextTracks: Track[];
   previousTracks: Track[];
+  onPlayArtistTracks: (
+    artistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
+  onPlayNext: (id: string) => void;
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
-  const { onBack, onClickLibraryItem, artist, tracks, albums, onPlayTrack } =
-    props;
+  const {
+    onBack,
+    onClickLibraryItem,
+    artist,
+    tracks,
+    albums,
+    onPlayArtistTracks,
+    onPlayNext,
+  } = props;
   return (
     <Container>
       <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
@@ -172,7 +186,10 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
             </BackButton>
             <Artist>{artist.name}</Artist>
             <Buttons>
-              <Button onClick={() => {}} kind="primary">
+              <Button
+                onClick={() => onPlayArtistTracks(artist.id, false)}
+                kind="primary"
+              >
                 <Label>
                   <Icon>
                     <Play small color="#fff" />
@@ -181,7 +198,10 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                 </Label>
               </Button>
               <Separator />
-              <Button onClick={() => {}} kind="secondary">
+              <Button
+                onClick={() => onPlayArtistTracks(artist.id, true)}
+                kind="secondary"
+              >
                 <Label>
                   <Shuffle color="#ab28fc" />
                   <div style={{ marginLeft: 7 }}>Shuffle</div>
@@ -198,7 +218,10 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                   </Row>
                 }
                 maxHeight={"initial"}
-                onPlayTrack={onPlayTrack}
+                onPlayTrack={(id, position) =>
+                  onPlayArtistTracks(id, false, position)
+                }
+                onPlayNext={onPlayNext}
               />
             </Tracks>
             <Row>

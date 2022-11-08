@@ -107,14 +107,14 @@ export type PlayQueueProps = {
   nextTracks?: Track[];
   currentTrack?: Track;
   onPlayTrackAt: (index: number) => void;
-  onRemoveTrack: (index: number) => void;
+  onRemoveTrackAt: (index: number) => void;
 };
 
 const PlayQueue: FC<PlayQueueProps> = ({
   previousTracks,
   nextTracks,
   onPlayTrackAt,
-  onRemoveTrack,
+  onRemoveTrackAt,
 }) => {
   const [active, setActive] = useState("playqueue");
 
@@ -136,10 +136,10 @@ const PlayQueue: FC<PlayQueueProps> = ({
 
   const _onRemoveTrack = (index: number) => {
     if (active === "playqueue") {
-      onRemoveTrack((previousTracks?.length || 0) + index);
+      onRemoveTrackAt((previousTracks?.length || 0) + index);
       return;
     }
-    onRemoveTrack(index);
+    onRemoveTrackAt(index);
   };
 
   const tracks = active === "playqueue" ? nextTracks! : previousTracks!;

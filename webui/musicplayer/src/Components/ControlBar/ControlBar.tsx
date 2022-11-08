@@ -67,6 +67,8 @@ export type ControlBarProps = {
   onRepeat: () => void;
   nextTracks?: Track[];
   previousTracks?: Track[];
+  onPlayTrackAt: (position: number) => void;
+  onRemoveTrackAt: (position: number) => void;
 };
 
 const ControlBar: FC<ControlBarProps> = (props) => {
@@ -130,13 +132,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
           onOpen={() => setPlayQueueButtonColor("#ab28fc")}
           onClose={() => setPlayQueueButtonColor("#000")}
           placement="bottom"
-          content={() => (
-            <PlayQueue
-              onPlayTrackAt={(x) => {}}
-              onRemoveTrack={(x) => {}}
-              {...props}
-            />
-          )}
+          content={() => <PlayQueue {...props} />}
           overrides={{
             Body: {
               style: {

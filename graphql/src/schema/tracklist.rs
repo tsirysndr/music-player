@@ -162,9 +162,9 @@ impl TracklistMutation {
             id: track.id,
             title: track.title,
             duration: track.duration,
+            uri: track.uri,
             ..Default::default()
-        }
-        .into();
+        };
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();

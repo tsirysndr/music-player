@@ -96,6 +96,7 @@ impl LibraryQuery {
             id: track.id,
             title: track.title,
             duration: track.duration,
+            uri: track.uri,
             ..Default::default()
         }
         .into())

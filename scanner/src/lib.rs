@@ -35,7 +35,7 @@ pub async fn scan_directory(
         {
             match Probe::open(&path)
                 .expect("ERROR: Bad path provided!")
-                .read(true)
+                .read()
             {
                 Ok(tagged_file) => {
                     let tag = match tagged_file.primary_tag() {

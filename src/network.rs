@@ -120,14 +120,6 @@ impl<'a> Network<'a> {
                 title: t.title.clone(),
                 track_number: t.track_number,
                 duration: t.duration,
-                artists: t
-                    .artists
-                    .iter()
-                    .map(|a| Artist {
-                        name: a.name.clone(),
-                        ..Default::default()
-                    })
-                    .collect(),
                 ..Default::default()
             })
             .collect();
@@ -160,14 +152,6 @@ impl<'a> Network<'a> {
                 title: t.title.clone(),
                 track_number: Some(t.track_number),
                 duration: t.duration,
-                artists: t
-                    .artists
-                    .iter()
-                    .map(|a| Artist {
-                        name: a.name.clone(),
-                        ..Default::default()
-                    })
-                    .collect(),
                 album: t.album.as_ref().map(|a| Album {
                     id: a.id.clone(),
                     title: a.title.clone(),

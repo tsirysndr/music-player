@@ -23,10 +23,10 @@ pub async fn auto_scan_music_library() {
 pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::error::LoftyError> {
     scan_directory(move |song, db| {
         async move {
-            let id = format!("{:x}", md5::compute(song.artist.to_string()));
+            let id = format!("{:x}", md5::compute(song.album_artist.to_owned()));
             let item = artist::ActiveModel {
                 id: ActiveValue::set(id),
-                name: ActiveValue::Set(song.artist.clone()),
+                name: ActiveValue::Set(song.album_artist.clone()),
             };
             match item.insert(db.get_connection()).await {
                 Ok(_) => (),
@@ -40,7 +40,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                 artist: ActiveValue::Set(song.artist.clone()),
                 artist_id: ActiveValue::Set(Some(format!(
                     "{:x}",
-                    md5::compute(song.artist.to_string())
+                    md5::compute(song.album_artist.to_owned())
                 ))),
                 year: ActiveValue::Set(song.year),
                 cover: ActiveValue::Set(song.cover.clone()),
@@ -52,6 +52,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
             let id = format!("{:x}", md5::compute(song.uri.as_ref().unwrap()));
             let item = track::ActiveModel {
                 id: ActiveValue::set(id),
+                artist: ActiveValue::Set(song.artist.clone()),
                 title: ActiveValue::Set(song.title.clone()),
                 genre: ActiveValue::Set(song.genre.clone()),
                 year: ActiveValue::Set(song.year),
@@ -68,7 +69,7 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                 ))),
                 artist_id: ActiveValue::Set(Some(format!(
                     "{:x}",
-                    md5::compute(song.artist.to_string())
+                    md5::compute(song.album_artist.to_owned())
                 ))),
             };
 
@@ -88,7 +89,10 @@ pub async fn scan_music_library(enable_log: bool) -> Result<Vec<Song>, lofty::er
                     "{:x}",
                     md5::compute(format!("{}{}", song.artist, song.uri.as_ref().unwrap()))
                 )),
-                artist_id: ActiveValue::Set(format!("{:x}", md5::compute(song.artist.to_string()))),
+                artist_id: ActiveValue::Set(format!(
+                    "{:x}",
+                    md5::compute(song.album_artist.to_owned())
+                )),
                 track_id: ActiveValue::Set(format!(
                     "{:x}",
                     md5::compute(song.uri.as_ref().unwrap())

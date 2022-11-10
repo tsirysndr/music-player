@@ -15,4 +15,5 @@ pub struct Song {
     pub duration: Duration,
     pub uri: Option<String>,
     pub cover: Option<String>,
+    pub album_artist: String,
 }

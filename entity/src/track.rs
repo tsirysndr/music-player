@@ -9,6 +9,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub title: String,
+    pub artist: String,
     pub genre: String,
     pub year: Option<u32>,
     pub track: Option<u32>,

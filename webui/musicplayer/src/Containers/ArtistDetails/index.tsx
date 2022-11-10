@@ -39,7 +39,7 @@ const ArtistDetailsPage = () => {
       ? data.artist.songs.map((track, index) => ({
           id: track.id,
           title: track.title,
-          artist: track.artists.map((artist) => artist.name).join(", "),
+          artist: track.artist,
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
           cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,

@@ -45,7 +45,11 @@ export const usePlayback = () => {
   const nowPlaying = {
     id: playback?.currentlyPlayingSong?.track?.id,
     title: playback?.currentlyPlayingSong?.track?.title,
-    artist: playback?.currentlyPlayingSong?.track?.artist,
+    artist:
+      playback?.currentlyPlayingSong?.track?.artist ||
+      playback?.currentlyPlayingSong?.track?.artists
+        ?.map((artist) => artist.name)
+        .join(", "),
     album: playback?.currentlyPlayingSong?.track?.album?.title,
     isPlaying: playback?.currentlyPlayingSong?.isPlaying,
     duration,

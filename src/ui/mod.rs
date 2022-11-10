@@ -14,8 +14,8 @@ use crate::{
 };
 
 use self::util::{
-    create_artist_string, display_track_progress, get_color, get_percentage_width,
-    get_track_progress_percentage, millis_to_minutes,
+    display_track_progress, get_color, get_percentage_width, get_track_progress_percentage,
+    millis_to_minutes,
 };
 
 pub mod util;
@@ -289,11 +289,7 @@ where
             format: vec![
                 item.track_number.unwrap().to_string(),
                 item.title.clone(),
-                item.artists
-                    .iter()
-                    .map(|a| a.name.to_owned())
-                    .collect::<Vec<String>>()
-                    .join(", "),
+                item.artist.clone(),
                 millis_to_minutes((item.duration * 1000.0) as u128),
             ],
         })
@@ -400,11 +396,7 @@ where
             id: item.id.clone(),
             format: vec![
                 item.title.clone(),
-                item.artists
-                    .iter()
-                    .map(|a| a.name.to_owned())
-                    .collect::<Vec<String>>()
-                    .join(", "),
+                item.artist.clone(),
                 item.album.clone().unwrap_or_default().title,
                 millis_to_minutes((item.duration * 1000.0) as u128),
             ],
@@ -466,11 +458,7 @@ where
             id: item.id.clone(),
             format: vec![
                 item.title.clone(),
-                item.artists
-                    .iter()
-                    .map(|a| a.name.to_owned())
-                    .collect::<Vec<String>>()
-                    .join(", "),
+                item.artist.clone(),
                 item.album.clone().unwrap_or_default().title,
                 millis_to_minutes((item.duration * 1000.0) as u128),
             ],
@@ -628,12 +616,8 @@ where
 
             let track_name = track_item.title.clone();
             let play_bar_text = match track_item.album.clone() {
-                Some(album) => format!(
-                    "{} - {}",
-                    create_artist_string(&track_item.artists),
-                    album.title
-                ),
-                None => create_artist_string(&track_item.artists),
+                Some(album) => format!("{} - {}", track_item.artist, album.title),
+                None => track_item.artist.to_string(),
             };
 
             let lines = Text::from(Span::styled(
@@ -829,11 +813,7 @@ where
             id: item.id.clone(),
             format: vec![
                 item.title.clone(),
-                item.artists
-                    .iter()
-                    .map(|a| a.name.to_owned())
-                    .collect::<Vec<String>>()
-                    .join(", "),
+                item.artist.clone(),
                 item.album.clone().unwrap_or_default().title,
                 millis_to_minutes((item.duration * 1000.0) as u128),
             ],

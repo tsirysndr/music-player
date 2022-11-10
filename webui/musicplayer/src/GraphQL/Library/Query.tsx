@@ -50,6 +50,7 @@ export const GET_ARTIST = gql`
       songs {
         id
         title
+        artist
         artists {
           id
           name
@@ -77,6 +78,7 @@ export const GET_ALBUM = gql`
         id
         trackNumber
         title
+        artist
         artists {
           id
           name

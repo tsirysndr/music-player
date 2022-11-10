@@ -60,6 +60,7 @@ pub mod metadata {
                     track_number: Some(i32::try_from(model.track.unwrap_or_default()).unwrap()),
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
+                    artist: model.artist,
                     ..Default::default()
                 }
             }

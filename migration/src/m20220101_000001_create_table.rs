@@ -46,6 +46,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(ColumnDef::new(Track::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Track::Title).string().not_null())
+                    .col(ColumnDef::new(Track::Artist).string().not_null())
                     .col(ColumnDef::new(Track::Genre).string().not_null())
                     .col(ColumnDef::new(Track::Year).integer())
                     .col(ColumnDef::new(Track::Track).integer())

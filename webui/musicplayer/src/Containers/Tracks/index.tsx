@@ -29,7 +29,7 @@ const TracksPage = () => {
         tracks={tracks.slice(0, 100).map((track) => ({
           id: track.id,
           title: track.title,
-          artist: track.artists.map((artist) => artist.name).join(", "),
+          artist: track.artist,
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
           cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,

@@ -23,6 +23,7 @@ export const TRACK_FRAGMENT = gql`
     id
     trackNumber
     title
+    artist
     duration
   }
 `;

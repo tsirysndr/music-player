@@ -23,6 +23,7 @@ pub struct Track {
     pub uri: String,
     pub artists: Vec<Artist>,
     pub album: Album,
+    pub artist: String,
 }
 
 #[Object]
@@ -58,6 +59,10 @@ impl Track {
     async fn album(&self) -> Album {
         self.album.clone()
     }
+
+    async fn artist(&self) -> &str {
+        &self.artist
+    }
 }
 
 impl From<Model> for Track {
@@ -70,6 +75,7 @@ impl From<Model> for Track {
             track_number: model.track,
             artists: model.artists.into_iter().map(Into::into).collect(),
             album: model.album.into(),
+            artist: model.artist,
             ..Default::default()
         }
     }

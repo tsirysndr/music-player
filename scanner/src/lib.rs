@@ -3,7 +3,7 @@ use std::io::Write;
 use futures::future::BoxFuture;
 use music_player_storage::Database;
 
-use lofty::{Accessor, AudioFile, LoftyError, Probe, Tag};
+use lofty::{Accessor, AudioFile, ItemKey, LoftyError, Probe, Tag};
 use music_player_settings::{read_settings, Settings};
 use types::Song;
 use walkdir::WalkDir;
@@ -62,6 +62,10 @@ pub async fn scan_directory(
                         duration: properties.duration(),
                         uri: Some(path),
                         cover: None,
+                        album_artist: tag
+                            .get_string(&ItemKey::AlbumArtist)
+                            .unwrap_or(tag.artist().unwrap_or("None"))
+                            .to_string(),
                     };
                     let album = song.album.clone();
                     song.cover = extract_and_save_album_cover(tag, &album);

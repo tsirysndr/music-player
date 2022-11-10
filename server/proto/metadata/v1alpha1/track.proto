@@ -16,4 +16,5 @@ message Track {
   optional int32 track_number = 7;
   metadata.v1alpha1.Lyrics lyrics = 8;
   string uri = 9;
+  string artist = 10;
 }

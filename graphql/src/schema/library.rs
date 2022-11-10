@@ -212,6 +212,7 @@ impl LibraryMutation {
                 let item = track_entity::ActiveModel {
                     id: ActiveValue::set(id),
                     title: ActiveValue::Set(song.title.clone()),
+                    artist: ActiveValue::set(song.artist.clone()),
                     genre: ActiveValue::Set(song.genre.clone()),
                     year: ActiveValue::Set(song.year),
                     track: ActiveValue::Set(song.track),

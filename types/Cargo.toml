@@ -10,3 +10,4 @@ description = "The types module of music player"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tantivy = "0.18.1"

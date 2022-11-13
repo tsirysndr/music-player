@@ -10,7 +10,7 @@ use sea_orm::{
 };
 use tokio::sync::Mutex;
 
-use super::objects::{album::Album, artist::Artist, track::Track};
+use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
 
 #[derive(Default)]
 pub struct LibraryQuery;
@@ -97,6 +97,7 @@ impl LibraryQuery {
             title: track.title,
             duration: track.duration,
             uri: track.uri,
+            artist: track.artist,
             ..Default::default()
         }
         .into())
@@ -165,9 +166,18 @@ impl LibraryQuery {
         Ok(album.into())
     }
 
-    async fn search(&self, ctx: &Context<'_>) -> bool {
-        ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        false
+    async fn search(&self, ctx: &Context<'_>, keyword: String) -> Result<SearchResult, Error> {
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = db.lock().await;
+        let indexer = db.get_searcher();
+        let artists = indexer.artist.search(&keyword)?;
+        let albums = indexer.album.search(&keyword)?;
+        let tracks = indexer.track.search(&keyword)?;
+        Ok(SearchResult {
+            artists: artists.into_iter().map(|x| Into::into(x)).collect(),
+            tracks: tracks.into_iter().map(|x| Into::into(x)).collect(),
+            albums: albums.into_iter().map(|x| Into::into(x)).collect(),
+        })
     }
 }
 

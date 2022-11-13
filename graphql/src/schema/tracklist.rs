@@ -163,6 +163,7 @@ impl TracklistMutation {
             title: track.title,
             duration: track.duration,
             uri: track.uri,
+            artist: track.artist,
             ..Default::default()
         };
         let player_cmd = ctx

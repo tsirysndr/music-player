@@ -1,5 +1,6 @@
 use async_graphql::*;
 use music_player_entity::album::Model;
+use music_player_types::types::Album as AlbumType;
 
 use super::track::Track;
 
@@ -59,6 +60,18 @@ impl From<Model> for Album {
             artist: model.artist,
             year: model.year,
             tracks: model.tracks.into_iter().map(Into::into).collect(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<AlbumType> for Album {
+    fn from(album: AlbumType) -> Self {
+        Self {
+            id: ID(album.id),
+            title: album.title,
+            cover: album.cover,
+            artist: album.artist,
             ..Default::default()
         }
     }

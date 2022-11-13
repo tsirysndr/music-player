@@ -79,3 +79,20 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("http_port", default_settings.http_port)?
         .build()
 }
+
+pub fn get_application_directory() -> String {
+    let path = format!(
+        "{}/music-player",
+        dirs::config_dir().unwrap().to_str().unwrap()
+    );
+    let albums = format!("{}/albums", path);
+    let artists = format!("{}/artists", path);
+    let playlists = format!("{}/playlists", path);
+    let tracks = format!("{}/tracks", path);
+    fs::create_dir_all(&albums).unwrap();
+    fs::create_dir_all(&artists).unwrap();
+    fs::create_dir_all(&playlists).unwrap();
+    fs::create_dir_all(&tracks).unwrap();
+
+    path
+}

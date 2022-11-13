@@ -1,11 +1,14 @@
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use music_player_graphql::schema::{Mutation, Query};
+use music_player_settings::get_application_directory;
 use tide::{http::mime, Body, Response, StatusCode};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema = Schema::new(Query::default(), Mutation::default(), EmptySubscription);
     let mut app = tide::new();
+
+    get_application_directory();
 
     app.at("/graphql").post(async_graphql_tide::graphql(schema));
 

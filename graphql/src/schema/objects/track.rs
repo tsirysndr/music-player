@@ -1,5 +1,6 @@
 use async_graphql::*;
 use music_player_entity::track::Model;
+use music_player_types::types::SimplifiedSong as TrackType;
 
 use super::{album::Album, artist::Artist};
 
@@ -89,6 +90,17 @@ impl Into<Model> for TrackInput {
             uri: self.uri,
             duration: self.duration,
             track: self.track_number,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<TrackType> for Track {
+    fn from(song: TrackType) -> Self {
+        Self {
+            id: ID(song.id),
+            title: song.title,
+            artist: song.artist,
             ..Default::default()
         }
     }

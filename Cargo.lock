@@ -3008,6 +3008,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "rand 0.8.5",
  "sea-orm",
  "tide",
@@ -3062,6 +3063,7 @@ dependencies = [
  "music-player-storage",
  "music-player-types",
  "sea-orm",
+ "tokio",
  "walkdir",
 ]
 
@@ -3109,6 +3111,7 @@ dependencies = [
 name = "music-player-storage"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "music-player-settings",
  "music-player-types",
  "sea-orm",
@@ -3128,6 +3131,9 @@ dependencies = [
 [[package]]
 name = "music-player-types"
 version = "0.1.0"
+dependencies = [
+ "tantivy",
+]
 
 [[package]]
 name = "music-player-webui"

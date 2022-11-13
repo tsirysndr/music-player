@@ -1,7 +1,7 @@
+use super::{album::Album, track::Track};
 use async_graphql::*;
 use music_player_entity::artist::Model;
-
-use super::{album::Album, track::Track};
+use music_player_types::types::Artist as ArtistType;
 
 #[derive(Default, Clone)]
 pub struct Artist {
@@ -62,6 +62,15 @@ impl From<Model> for Artist {
             name: model.name,
             albums: model.albums.into_iter().map(Into::into).collect(),
             songs: model.tracks.into_iter().map(Into::into).collect(),
+            ..Default::default()
+        }
+    }
+}
+impl From<ArtistType> for Artist {
+    fn from(artist: ArtistType) -> Self {
+        Self {
+            id: ID(artist.id),
+            name: artist.name,
             ..Default::default()
         }
     }

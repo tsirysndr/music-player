@@ -12,16 +12,16 @@ message Song {
   string title = 2;
   repeated SongArtist artists = 4;
   float duration = 5;
-  optional int32 disc_number = 6;
-  optional int32 track_number = 7;
+  int32 disc_number = 6;
+  int32 track_number = 7;
 }
 
 message Album {
   string id = 1;
   string title = 2;
-  optional string cover = 3;
+  string cover = 3;
   string release_date = 4;
-  optional int32 year = 5;
+  int32 year = 5;
   string artist = 6;
   repeated string genres = 7;
   repeated Song tracks = 8;

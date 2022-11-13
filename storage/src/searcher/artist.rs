@@ -48,14 +48,14 @@ impl ArtistSearcher {
         return self.index.clone();
     }
 
-    pub fn insert(&self, artist: Artist, str_id: &str) -> tantivy::Result<()> {
+    pub fn insert(&self, artist: Artist) -> tantivy::Result<()> {
         let mut index_writer: IndexWriter = self.index.writer(50_000_000).unwrap();
 
         let id = self.schema.get_field("id").unwrap();
         let name = self.schema.get_field("name").unwrap();
 
         let doc: Document = doc!(
-            id => str_id,
+            id => artist.id.clone(),
             name => artist.name.clone(),
         );
 

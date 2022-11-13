@@ -25,12 +25,12 @@ impl Searcher {
         self.track.insert(song, id)
     }
 
-    pub fn insert_artist(&self, artist: Artist, id: &str) -> tantivy::Result<()> {
-        self.artist.insert(artist, id)
+    pub fn insert_artist(&self, artist: Artist) -> tantivy::Result<()> {
+        self.artist.insert(artist)
     }
 
-    pub fn insert_album(&self, album: Album, id: &str) -> tantivy::Result<()> {
-        self.album.insert(album, id)
+    pub fn insert_album(&self, album: Album) -> tantivy::Result<()> {
+        self.album.insert(album)
     }
 
     pub fn search_artist(&self, term: &str) -> tantivy::Result<Vec<Artist>> {

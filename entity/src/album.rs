@@ -1,4 +1,5 @@
-use sea_orm::entity::prelude::*;
+use music_player_types::types::Song;
+use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
@@ -40,3 +41,20 @@ impl Related<super::artist::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl From<&Song> for ActiveModel {
+    fn from(song: &Song) -> Self {
+        let id = format!("{:x}", md5::compute(format!("{}", song.album)));
+        Self {
+            id: ActiveValue::set(id),
+            title: ActiveValue::Set(song.album.clone()),
+            artist: ActiveValue::Set(song.artist.clone()),
+            artist_id: ActiveValue::Set(Some(format!(
+                "{:x}",
+                md5::compute(song.album_artist.to_owned())
+            ))),
+            year: ActiveValue::Set(song.year),
+            cover: ActiveValue::Set(song.cover.clone()),
+        }
+    }
+}

@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, TEXT},
     Document,
@@ -162,5 +163,83 @@ impl From<Document> for SimplifiedSong {
             genre,
             ..Default::default()
         }
+    }
+}
+
+impl From<&Tag> for Song {
+    fn from(tag: &Tag) -> Self {
+        Self {
+            title: tag.title().unwrap_or("None").to_string(),
+            artist: tag.artist().unwrap_or("None").to_string(),
+            album: tag.album().unwrap_or("None").to_string(),
+            genre: tag.genre().unwrap_or("None").to_string(),
+            year: tag.year(),
+            track: tag.track(),
+            album_artist: tag
+                .get_string(&ItemKey::AlbumArtist)
+                .unwrap_or(tag.artist().unwrap_or("None"))
+                .to_string(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&Tag> for Artist {
+    fn from(tag: &Tag) -> Self {
+        let id = format!(
+            "{:x}",
+            md5::compute(
+                tag.get_string(&ItemKey::AlbumArtist)
+                    .unwrap_or(tag.artist().unwrap_or("None"))
+                    .to_string()
+            )
+        );
+        Self {
+            id,
+            name: tag
+                .get_string(&ItemKey::AlbumArtist)
+                .unwrap_or(tag.artist().unwrap_or("None"))
+                .to_string(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&Tag> for Album {
+    fn from(tag: &Tag) -> Self {
+        let id = format!(
+            "{:x}",
+            md5::compute(tag.album().unwrap_or("None").to_string())
+        );
+        let artist_id = Some(format!(
+            "{:x}",
+            md5::compute(
+                tag.get_string(&ItemKey::AlbumArtist)
+                    .unwrap_or(tag.artist().unwrap_or("None"))
+                    .to_string()
+            )
+        ));
+        Self {
+            id,
+            title: tag.album().unwrap_or("None").to_string(),
+            artist: tag
+                .get_string(&ItemKey::AlbumArtist)
+                .unwrap_or(tag.artist().unwrap_or("None"))
+                .to_string(),
+            year: tag.year(),
+            artist_id,
+            ..Default::default()
+        }
+    }
+}
+
+impl Song {
+    pub fn with_properties(&mut self, properties: &FileProperties) -> Self {
+        self.bitrate = properties.audio_bitrate();
+        self.sample_rate = properties.sample_rate();
+        self.bit_depth = properties.bit_depth();
+        self.channels = properties.channels();
+        self.duration = properties.duration();
+        self.clone()
     }
 }

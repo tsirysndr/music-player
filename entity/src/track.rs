@@ -1,4 +1,5 @@
-use sea_orm::entity::prelude::*;
+use music_player_types::types::Song;
+use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
 use crate::{album, artist};
@@ -113,5 +114,33 @@ impl Linked for TrackToPlaylist {
             super::playlist_tracks::Relation::Track.def().rev(),
             super::playlist_tracks::Relation::Playlist.def(),
         ]
+    }
+}
+
+impl From<&Song> for ActiveModel {
+    fn from(song: &Song) -> Self {
+        let id = format!("{:x}", md5::compute(song.uri.as_ref().unwrap()));
+        Self {
+            id: ActiveValue::set(id),
+            artist: ActiveValue::Set(song.artist.clone()),
+            title: ActiveValue::Set(song.title.clone()),
+            genre: ActiveValue::Set(song.genre.clone()),
+            year: ActiveValue::Set(song.year),
+            track: ActiveValue::Set(song.track),
+            bitrate: ActiveValue::Set(song.bitrate),
+            sample_rate: ActiveValue::Set(song.sample_rate),
+            bit_depth: ActiveValue::Set(song.bit_depth),
+            channels: ActiveValue::Set(song.channels),
+            duration: ActiveValue::Set(Some(song.duration.as_secs_f32())),
+            uri: ActiveValue::Set(song.uri.clone().unwrap_or_default()),
+            album_id: ActiveValue::Set(Some(format!(
+                "{:x}",
+                md5::compute(format!("{}", song.album))
+            ))),
+            artist_id: ActiveValue::Set(Some(format!(
+                "{:x}",
+                md5::compute(song.album_artist.to_owned())
+            ))),
+        }
     }
 }

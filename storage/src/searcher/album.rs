@@ -52,7 +52,7 @@ impl AlbumSearcher {
         return self.index.clone();
     }
 
-    pub fn insert(&self, album: Album, str_id: &str) -> tantivy::Result<()> {
+    pub fn insert(&self, album: Album) -> tantivy::Result<()> {
         let mut index_writer: IndexWriter = self.index.writer(50_000_000).unwrap();
 
         let id = self.schema.get_field("id").unwrap();
@@ -62,7 +62,7 @@ impl AlbumSearcher {
         let cover = self.schema.get_field("cover").unwrap();
 
         let doc: Document = doc!(
-            id => str_id,
+            id => album.id.clone(),
             title => album.title.clone(),
             artist => album.artist.clone(),
             year => i64::try_from(album.year.unwrap_or(0)).unwrap(),

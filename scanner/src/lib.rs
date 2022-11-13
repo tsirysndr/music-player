@@ -54,86 +54,42 @@ pub async fn scan_directory(
                     };
 
                     let properties = tagged_file.properties();
+                    let mut song: Song = tag.try_into().unwrap();
+                    song.with_properties(properties);
+                    song.uri = Some(path.clone());
 
-                    let mut song = Song {
-                        title: tag.title().unwrap_or("None").to_string(),
-                        artist: tag.artist().unwrap_or("None").to_string(),
-                        album: tag.album().unwrap_or("None").to_string(),
-                        genre: tag.genre().unwrap_or("None").to_string(),
-                        year: tag.year(),
-                        track: tag.track(),
-                        bitrate: properties.audio_bitrate(),
-                        sample_rate: properties.sample_rate(),
-                        bit_depth: properties.bit_depth(),
-                        channels: properties.channels(),
-                        duration: properties.duration(),
-                        uri: Some(path.clone()),
-                        cover: None,
-                        album_artist: tag
-                            .get_string(&ItemKey::AlbumArtist)
-                            .unwrap_or(tag.artist().unwrap_or("None"))
-                            .to_string(),
-                    };
                     let album = song.album.clone();
                     song.cover = extract_and_save_album_cover(tag, &album);
                     save(&song, &db).await;
                     songs.push(song);
 
-                    let track = Song {
-                        artist: tag
-                            .get_string(&ItemKey::AlbumArtist)
-                            .unwrap_or(tag.artist().unwrap_or("None"))
-                            .to_string(),
-                        title: tag.title().unwrap_or("None").to_string(),
-                        album: tag.album().unwrap_or("None").to_string(),
-                        genre: tag.genre().unwrap_or("None").to_string(),
-                        uri: Some(path.clone()),
-                        ..Default::default()
-                    };
-                    let artist_id = format!(
-                        "{:x}",
-                        md5::compute(
-                            tag.get_string(&ItemKey::AlbumArtist)
-                                .unwrap_or(tag.artist().unwrap_or("None"))
-                                .to_string()
-                        )
-                    );
+                    let mut track: Song = tag.try_into().unwrap();
+                    track.uri = Some(path.clone());
 
-                    let artist = Artist {
-                        name: tag
-                            .get_string(&ItemKey::AlbumArtist)
-                            .unwrap_or(tag.artist().unwrap_or("None"))
-                            .to_string(),
-                        id: artist_id.clone(),
-                        picture: Some("".to_string()),
-                    };
-                    let album_id = format!(
-                        "{:x}",
-                        md5::compute(tag.album().unwrap_or("None").to_string())
-                    );
-                    let album = Album {
-                        title: tag.album().unwrap_or("None").to_string(),
-                        artist: tag
-                            .get_string(&ItemKey::AlbumArtist)
-                            .unwrap_or(tag.artist().unwrap_or("None"))
-                            .to_string(),
-                        cover: extract_and_save_album_cover(tag, &track.album),
-                        id: album_id.clone(),
-                        artist_id: Some(artist_id),
-                        year: tag.year(),
-                    };
-                    let artist_id = format!("{:x}", md5::compute(artist.name.clone()));
+                    let artist: Artist = tag.try_into().unwrap();
+                    let mut album: Album = tag.try_into().unwrap();
+                    album.cover = extract_and_save_album_cover(tag, &album.title);
+
                     let id = format!("{:x}", md5::compute(track.uri.as_ref().unwrap()));
                     let searcher = Arc::clone(&searcher);
-                    thread::spawn(move || {
-                        match searcher.lock() {
-                            Ok(searcher) => {
-                                searcher.insert_artist(artist, &artist_id).unwrap();
-                                searcher.insert_album(album, &album_id).unwrap();
-                                searcher.insert_song(track, &id).unwrap();
-                            }
-                            Err(e) => println!("Error: {:?}", e),
-                        };
+                    thread::spawn(move || match searcher.lock() {
+                        Ok(searcher) => {
+                            match searcher.insert_artist(artist) {
+                                Ok(_) => {}
+                                Err(e) => println!("Error inserting artist: {}", e),
+                            };
+                            match searcher.insert_album(album) {
+                                Ok(_) => {}
+                                Err(e) => println!("Error inserting album: {}", e),
+                            };
+                            match searcher.insert_song(track, &id) {
+                                Ok(_) => {}
+                                Err(e) => println!("Error inserting song: {}", e),
+                            };
+                        }
+                        Err(e) => {
+                            println!("Error: {:?}", e);
+                        }
                     });
                 }
                 Err(e) => println!("ERROR: {}", e),

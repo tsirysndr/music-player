@@ -48,7 +48,7 @@ impl From<&Song> for ActiveModel {
         Self {
             id: ActiveValue::set(id),
             title: ActiveValue::Set(song.album.clone()),
-            artist: ActiveValue::Set(song.artist.clone()),
+            artist: ActiveValue::Set(song.album_artist.clone()),
             artist_id: ActiveValue::Set(Some(format!(
                 "{:x}",
                 md5::compute(song.album_artist.to_owned())

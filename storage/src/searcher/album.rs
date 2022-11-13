@@ -6,7 +6,7 @@ use tantivy::{
     directory::MmapDirectory,
     doc,
     query::{FuzzyTermQuery, PhraseQuery},
-    schema::{Schema, SchemaBuilder, STORED, TEXT},
+    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document, Index, IndexReader, IndexWriter, ReloadPolicy, Term,
 };
 
@@ -22,11 +22,11 @@ impl AlbumSearcher {
         let index_path = format!("{}/albums", get_application_directory());
         let mut schema_builder: SchemaBuilder = Schema::builder();
 
-        schema_builder.add_text_field("id", TEXT | STORED);
+        schema_builder.add_text_field("id", STRING | STORED);
         schema_builder.add_text_field("title", TEXT | STORED);
         schema_builder.add_text_field("artist", TEXT | STORED);
         schema_builder.add_i64_field("year", STORED);
-        schema_builder.add_text_field("cover", TEXT);
+        schema_builder.add_text_field("cover", STRING | STORED);
 
         let schema: Schema = schema_builder.build();
         let dir = MmapDirectory::open(&index_path).unwrap();

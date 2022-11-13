@@ -6,7 +6,7 @@ use tantivy::{
     directory::MmapDirectory,
     doc,
     query::{FuzzyTermQuery, PhraseQuery},
-    schema::{Schema, SchemaBuilder, STORED, TEXT},
+    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document, Index, IndexReader, IndexWriter, ReloadPolicy, Term,
 };
 #[derive(Clone)]
@@ -22,11 +22,13 @@ impl TrackSearcher {
 
         let mut schema_builder: SchemaBuilder = Schema::builder();
 
-        schema_builder.add_text_field("id", TEXT | STORED);
+        schema_builder.add_text_field("id", STRING | STORED);
         schema_builder.add_text_field("title", TEXT | STORED);
         schema_builder.add_text_field("artist", TEXT | STORED);
-        schema_builder.add_text_field("album", TEXT);
+        schema_builder.add_text_field("album", TEXT | STORED);
         schema_builder.add_text_field("genre", TEXT);
+        schema_builder.add_text_field("cover", STRING | STORED);
+        schema_builder.add_i64_field("duration", STORED);
 
         let schema: Schema = schema_builder.build();
         let dir = MmapDirectory::open(&index_path).unwrap();
@@ -60,13 +62,19 @@ impl TrackSearcher {
         let artist = self.schema.get_field("artist").unwrap();
         let album = self.schema.get_field("album").unwrap();
         let genre = self.schema.get_field("genre").unwrap();
+        let cover = self.schema.get_field("cover").unwrap();
+        let duration = self.schema.get_field("duration").unwrap();
+
+        let time = song.duration.as_secs_f32() as i64;
 
         let doc: Document = doc!(
             id => str_id,
             title => song.title.clone(),
             artist => song.artist.clone(),
             album => song.album.clone(),
-            genre => song.genre.clone()
+            genre => song.genre.clone(),
+            cover => song.cover.unwrap_or_default().clone(),
+            duration => time,
         );
 
         index_writer.add_document(doc)?;

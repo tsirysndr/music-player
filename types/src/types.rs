@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use tantivy::{
-    schema::{Schema, SchemaBuilder, STORED, TEXT},
+    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
 };
 
@@ -31,6 +31,8 @@ pub struct SimplifiedSong {
     pub artist: String,
     pub album: String,
     pub genre: String,
+    pub duration: Duration,
+    pub cover: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -54,11 +56,11 @@ impl From<Document> for Album {
     fn from(doc: Document) -> Self {
         let mut schema_builder: SchemaBuilder = Schema::builder();
 
-        let id_field = schema_builder.add_text_field("id", TEXT | STORED);
+        let id_field = schema_builder.add_text_field("id", STRING | STORED);
         let title_field = schema_builder.add_text_field("title", TEXT | STORED);
         let artist_field = schema_builder.add_text_field("artist", TEXT | STORED);
         let year_field = schema_builder.add_i64_field("year", STORED);
-        let cover_field = schema_builder.add_text_field("cover", TEXT);
+        let cover_field = schema_builder.add_text_field("cover", STRING | STORED);
 
         let id = doc
             .get_first(id_field)
@@ -126,11 +128,13 @@ impl From<Document> for SimplifiedSong {
     fn from(doc: Document) -> Self {
         let mut schema_builder: SchemaBuilder = Schema::builder();
 
-        let id_field = schema_builder.add_text_field("id", TEXT | STORED);
+        let id_field = schema_builder.add_text_field("id", STRING | STORED);
         let title_field = schema_builder.add_text_field("title", TEXT | STORED);
         let artist_field = schema_builder.add_text_field("artist", TEXT | STORED);
-        let album_field = schema_builder.add_text_field("album", TEXT);
+        let album_field = schema_builder.add_text_field("album", TEXT | STORED);
         let genre_field = schema_builder.add_text_field("genre", TEXT);
+        let duration_field = schema_builder.add_i64_field("duration", STORED);
+        let cover_field = schema_builder.add_text_field("cover", STRING | STORED);
 
         let id = doc
             .get_first(id_field)
@@ -155,12 +159,22 @@ impl From<Document> for SimplifiedSong {
             Some(genre) => genre.as_text().unwrap().to_string(),
             None => String::from(""),
         };
+        let duration = match doc.get_first(duration_field) {
+            Some(duration) => Duration::from_secs(duration.as_i64().unwrap_or_default() as u64),
+            None => Duration::from_secs(0),
+        };
+        let cover = match doc.get_first(cover_field) {
+            Some(cover) => Some(cover.as_text().unwrap_or_default().to_string()),
+            None => None,
+        };
         Self {
             id,
             title,
             artist,
             album,
             genre,
+            duration,
+            cover,
             ..Default::default()
         }
     }

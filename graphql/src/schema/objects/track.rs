@@ -25,6 +25,7 @@ pub struct Track {
     pub artists: Vec<Artist>,
     pub album: Album,
     pub artist: String,
+    pub cover: Option<String>,
 }
 
 #[Object]
@@ -64,6 +65,10 @@ impl Track {
     async fn artist(&self) -> &str {
         &self.artist
     }
+
+    async fn cover(&self) -> Option<String> {
+        self.cover.clone()
+    }
 }
 
 impl From<Model> for Track {
@@ -101,6 +106,8 @@ impl From<TrackType> for Track {
             id: ID(song.id),
             title: song.title,
             artist: song.artist,
+            duration: Some(song.duration.as_secs_f32()),
+            cover: song.cover,
             ..Default::default()
         }
     }

@@ -59,16 +59,19 @@ pub async fn scan_directory(
                     song.uri = Some(path.clone());
 
                     let album = song.album.clone();
-                    song.cover = extract_and_save_album_cover(tag, &album);
+                    let cover = extract_and_save_album_cover(tag, &album);
+                    song.cover = cover.clone();
                     save(&song, &db).await;
                     songs.push(song);
 
                     let mut track: Song = tag.try_into().unwrap();
                     track.uri = Some(path.clone());
+                    track.cover = cover.clone();
+                    track.with_properties(properties);
 
                     let artist: Artist = tag.try_into().unwrap();
                     let mut album: Album = tag.try_into().unwrap();
-                    album.cover = extract_and_save_album_cover(tag, &album.title);
+                    album.cover = cover.clone();
 
                     let id = format!("{:x}", md5::compute(track.uri.as_ref().unwrap()));
                     let searcher = Arc::clone(&searcher);

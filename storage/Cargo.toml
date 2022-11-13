@@ -1,6 +1,6 @@
 [package]
 name = "music-player-storage"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -10,7 +10,7 @@ description = " The storage module of music player"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-types]
 path = "../types"

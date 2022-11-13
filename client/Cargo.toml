@@ -1,6 +1,6 @@
 [package]
 name = "music-player-client"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -12,11 +12,11 @@ description = "The client library for the music player"
 
 [dependencies.music-player-server]
 path = "../server"
-version = "0.1.6"
+version = "0.1.7"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 futures-util = "0.3.24"

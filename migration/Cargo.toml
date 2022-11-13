@@ -1,6 +1,6 @@
 [package]
 name = "music-player-migration"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -17,7 +17,7 @@ dotenv = "0.15.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.sea-orm-migration]
 version = "^0.9.0"

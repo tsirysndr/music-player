@@ -2923,7 +2923,7 @@ dependencies = [
 
 [[package]]
 name = "music-player"
-version = "0.1.6"
+version = "0.2.0-alpha.0"
 dependencies = [
  "clap",
  "crossterm",
@@ -2962,7 +2962,7 @@ version = "0.1.0"
 
 [[package]]
 name = "music-player-client"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures-util",
  "music-player-server",
@@ -2989,7 +2989,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-entity"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "md5",
  "music-player-types",
@@ -3019,7 +3019,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-migration"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "dotenv",
  "music-player-settings",
@@ -3029,7 +3029,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-playback"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "async-trait",
  "cpal",
@@ -3053,7 +3053,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-scanner"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "dirs",
  "futures",
@@ -3071,7 +3071,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "cuid",
  "futures",
@@ -3099,7 +3099,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-settings"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "config",
  "dirs",
@@ -3111,7 +3111,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-storage"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "itertools",
  "music-player-settings",
@@ -3123,7 +3123,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-tracklist"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "atlist-rs",
  "music-player-entity",

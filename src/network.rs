@@ -150,7 +150,7 @@ impl<'a> Network<'a> {
             .map(|t| Track {
                 id: t.id.clone(),
                 title: t.title.clone(),
-                track_number: Some(t.track_number),
+                track_number: t.track_number,
                 duration: t.duration,
                 album: t.album.as_ref().map(|a| Album {
                     id: a.id.clone(),

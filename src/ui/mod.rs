@@ -287,7 +287,7 @@ where
         .map(|item| TableItem {
             id: item.id.clone(),
             format: vec![
-                item.track_number.unwrap().to_string(),
+                item.track_number.to_string(),
                 item.title.clone(),
                 item.artist.clone(),
                 millis_to_minutes((item.duration * 1000.0) as u128),
@@ -522,7 +522,7 @@ where
             format: vec![
                 item.title.clone(),
                 item.artist.clone(),
-                item.year.unwrap_or_default().to_string(),
+                item.year.to_string(),
             ],
         })
         .collect::<Vec<TableItem>>();

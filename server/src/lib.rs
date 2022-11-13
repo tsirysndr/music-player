@@ -41,9 +41,9 @@ pub mod metadata {
                 Self {
                     id: model.id,
                     title: model.title,
-                    cover: model.cover,
+                    cover: model.cover.unwrap_or_default(),
                     artist: model.artist,
-                    year: Some(i32::try_from(model.year.unwrap_or_default()).unwrap_or_default()),
+                    year: i32::try_from(model.year.unwrap_or_default()).unwrap_or_default(),
                     tracks: model.tracks.into_iter().map(Into::into).collect(),
                     ..Default::default()
                 }
@@ -57,7 +57,7 @@ pub mod metadata {
                     title: model.title,
                     uri: model.uri,
                     duration: model.duration.unwrap_or(0.0),
-                    track_number: Some(i32::try_from(model.track.unwrap_or_default()).unwrap()),
+                    track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
                     artist: model.artist,
@@ -72,7 +72,7 @@ pub mod metadata {
                     id: model.id,
                     title: model.title,
                     duration: model.duration.unwrap_or_default(),
-                    track_number: Some(i32::try_from(model.track.unwrap_or_default()).unwrap()),
+                    track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     ..Default::default()
                 }

@@ -33,7 +33,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "CI=false react-scripts build",
+    "build": "cross-env CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "storybook": "start-storybook -p 6006 -s public",
@@ -86,6 +86,7 @@
     "@storybook/testing-library": "^0.0.13",
     "@types/react-custom-scrollbars": "^4.0.10",
     "babel-plugin-named-exports-order": "^0.0.2",
+    "cross-env": "^7.0.3",
     "msw": "^0.47.4",
     "msw-storybook-addon": "^1.6.3",
     "prop-types": "^15.8.1",

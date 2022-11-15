@@ -4,6 +4,7 @@ import AlbumDetails from "../../Components/AlbumDetails";
 import { useGetAlbumQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { useSearch } from "../../Hooks/useSearch";
 
 const AlbumDetailsPage = () => {
   const params = useParams();
@@ -33,6 +34,7 @@ const AlbumDetailsPage = () => {
     playTrackAt,
     removeTrackAt,
   } = usePlayback();
+  const { onSearch } = useSearch();
   const album =
     !loading && data
       ? {
@@ -70,6 +72,7 @@ const AlbumDetailsPage = () => {
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}
       onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
+      onSearch={(query) => navigate(`/search?q=${query}`)}
     />
   );
 };

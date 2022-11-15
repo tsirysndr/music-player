@@ -81,6 +81,7 @@ export type AlbumsProps = {
   onPlayNext: (id: string) => void;
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
+  onSearch: (query: string) => void;
 };
 
 export type AlbumProps = {
@@ -105,10 +106,10 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 };
 
 const Albums: FC<AlbumsProps> = (props) => {
-  const { albums, onClickAlbum, onClickLibraryItem } = props;
+  const { albums, onClickAlbum } = props;
   return (
     <Container>
-      <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
+      <Sidebar active="albums" {...props} />
       <Content>
         <ControlBar {...props} />
         <Scrollable>

@@ -73,13 +73,14 @@ export type ArtistsProps = {
   onPlayNext: (id: string) => void;
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
+  onSearch: (query: string) => void;
 };
 
 const Artists: FC<ArtistsProps> = (props) => {
-  const { onClickLibraryItem, onClickArtist, artists } = props;
+  const { onClickArtist, artists } = props;
   return (
     <Container>
-      <Sidebar active="artists" onClickLibraryItem={onClickLibraryItem} />
+      <Sidebar active="artists" {...props} />
       <Content>
         <ControlBar {...props} />
         <Scrollable>

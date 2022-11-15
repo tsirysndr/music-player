@@ -1,10 +1,23 @@
 import { Input } from "baseui/input";
+import { FC } from "react";
 
-const Search = () => {
+export type SearchProps = {
+  onSearch: (query: string) => void;
+};
+
+const Search: FC<SearchProps> = ({ onSearch }) => {
+  const handleKeyPress = (
+    event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    if (event.key === "Enter") {
+      onSearch(event.currentTarget.value);
+    }
+  };
   return (
     <>
       <Input
         placeholder="Search"
+        onKeyPress={handleKeyPress}
         overrides={{
           Root: {
             style: {

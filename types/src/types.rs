@@ -33,6 +33,8 @@ pub struct SimplifiedSong {
     pub genre: String,
     pub duration: Duration,
     pub cover: Option<String>,
+    pub artist_id: String,
+    pub album_id: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -82,9 +84,15 @@ impl From<Document> for Album {
             .to_string();
         let year = Some(doc.get_first(year_field).unwrap().as_i64().unwrap() as u32);
         let cover = match doc.get_first(cover_field) {
-            Some(cover) => Some(cover.as_text().unwrap().to_string()),
+            Some(cover) => cover.as_text(),
             None => None,
         };
+        let cover = match cover {
+            Some("") => None,
+            Some(cover) => Some(cover.to_string()),
+            None => None,
+        };
+
         Self {
             id,
             title,
@@ -133,8 +141,10 @@ impl From<Document> for SimplifiedSong {
         let artist_field = schema_builder.add_text_field("artist", TEXT | STORED);
         let album_field = schema_builder.add_text_field("album", TEXT | STORED);
         let genre_field = schema_builder.add_text_field("genre", TEXT);
-        let duration_field = schema_builder.add_i64_field("duration", STORED);
         let cover_field = schema_builder.add_text_field("cover", STRING | STORED);
+        let duration_field = schema_builder.add_i64_field("duration", STORED);
+        let artist_id_field = schema_builder.add_text_field("artist_id", STRING | STORED);
+        let album_id_field = schema_builder.add_text_field("album_id", STRING | STORED);
 
         let id = doc
             .get_first(id_field)
@@ -164,9 +174,26 @@ impl From<Document> for SimplifiedSong {
             None => Duration::from_secs(0),
         };
         let cover = match doc.get_first(cover_field) {
-            Some(cover) => Some(cover.as_text().unwrap_or_default().to_string()),
+            Some(cover) => cover.as_text(),
             None => None,
         };
+        let cover = match cover {
+            Some("") => None,
+            Some(cover) => Some(cover.to_string()),
+            None => None,
+        };
+        let artist_id = doc
+            .get_first(artist_id_field)
+            .unwrap()
+            .as_text()
+            .unwrap()
+            .to_string();
+        let album_id = doc
+            .get_first(album_id_field)
+            .unwrap()
+            .as_text()
+            .unwrap()
+            .to_string();
         Self {
             id,
             title,
@@ -175,6 +202,8 @@ impl From<Document> for SimplifiedSong {
             genre,
             duration,
             cover,
+            artist_id,
+            album_id,
             ..Default::default()
         }
     }

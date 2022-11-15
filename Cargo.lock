@@ -3114,6 +3114,7 @@ name = "music-player-storage"
 version = "0.1.1"
 dependencies = [
  "itertools",
+ "md5",
  "music-player-settings",
  "music-player-types",
  "sea-orm",

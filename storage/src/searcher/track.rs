@@ -29,6 +29,8 @@ impl TrackSearcher {
         schema_builder.add_text_field("genre", TEXT);
         schema_builder.add_text_field("cover", STRING | STORED);
         schema_builder.add_i64_field("duration", STORED);
+        schema_builder.add_text_field("artistId", STRING | STORED);
+        schema_builder.add_text_field("albumId", STRING | STORED);
 
         let schema: Schema = schema_builder.build();
         let dir = MmapDirectory::open(&index_path).unwrap();
@@ -64,6 +66,8 @@ impl TrackSearcher {
         let genre = self.schema.get_field("genre").unwrap();
         let cover = self.schema.get_field("cover").unwrap();
         let duration = self.schema.get_field("duration").unwrap();
+        let artist_id = self.schema.get_field("artistId").unwrap();
+        let album_id = self.schema.get_field("albumId").unwrap();
 
         let time = song.duration.as_secs_f32() as i64;
 
@@ -75,6 +79,8 @@ impl TrackSearcher {
             genre => song.genre.clone(),
             cover => song.cover.unwrap_or_default().clone(),
             duration => time,
+            artist_id => format!("{:x}", md5::compute(song.album_artist.to_owned())),
+            album_id => format!("{:x}", md5::compute(song.album.to_owned()))
         );
 
         index_writer.add_document(doc)?;

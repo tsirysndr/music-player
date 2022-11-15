@@ -188,7 +188,7 @@ export type Query = {
   getVolume: Scalars['Int'];
   playlist: Scalars['Boolean'];
   playlists: Scalars['Boolean'];
-  search: Scalars['Boolean'];
+  search: SearchResult;
   track: Track;
   tracklistTracks: Tracklist;
   tracks: Array<Track>;
@@ -210,15 +210,31 @@ export type QueryGetPlaylistTracksArgs = {
 };
 
 
+export type QuerySearchArgs = {
+  keyword: Scalars['String'];
+};
+
+
 export type QueryTrackArgs = {
   id: Scalars['ID'];
+};
+
+export type SearchResult = {
+  __typename?: 'SearchResult';
+  albums: Array<Album>;
+  artists: Array<Artist>;
+  tracks: Array<Track>;
 };
 
 export type Track = {
   __typename?: 'Track';
   album: Album;
+  albumId: Scalars['String'];
+  albumTitle: Scalars['String'];
   artist: Scalars['String'];
+  artistId: Scalars['String'];
   artists: Array<Artist>;
+  cover?: Maybe<Scalars['String']>;
   discNumber: Scalars['Int'];
   duration?: Maybe<Scalars['Float']>;
   id: Scalars['String'];
@@ -276,6 +292,13 @@ export type GetAlbumQueryVariables = Exact<{
 
 
 export type GetAlbumQuery = { __typename?: 'Query', album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }> }> } };
+
+export type SearchQueryVariables = Exact<{
+  keyword: Scalars['String'];
+}>;
+
+
+export type SearchQuery = { __typename?: 'Query', search: { __typename?: 'SearchResult', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }>, albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null }>, tracks: Array<{ __typename?: 'Track', id: string, title: string, artist: string, duration?: number | null, cover?: string | null, artistId: string, albumId: string, albumTitle: string }> } };
 
 export type NextMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -591,6 +614,61 @@ export function useGetAlbumLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<G
 export type GetAlbumQueryHookResult = ReturnType<typeof useGetAlbumQuery>;
 export type GetAlbumLazyQueryHookResult = ReturnType<typeof useGetAlbumLazyQuery>;
 export type GetAlbumQueryResult = Apollo.QueryResult<GetAlbumQuery, GetAlbumQueryVariables>;
+export const SearchDocument = gql`
+    query Search($keyword: String!) {
+  search(keyword: $keyword) {
+    artists {
+      id
+      name
+      picture
+    }
+    albums {
+      id
+      title
+      artist
+      cover
+    }
+    tracks {
+      id
+      title
+      artist
+      duration
+      cover
+      artistId
+      albumId
+      albumTitle
+    }
+  }
+}
+    `;
+
+/**
+ * __useSearchQuery__
+ *
+ * To run a query within a React component, call `useSearchQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchQuery({
+ *   variables: {
+ *      keyword: // value for 'keyword'
+ *   },
+ * });
+ */
+export function useSearchQuery(baseOptions: Apollo.QueryHookOptions<SearchQuery, SearchQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SearchQuery, SearchQueryVariables>(SearchDocument, options);
+      }
+export function useSearchLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SearchQuery, SearchQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SearchQuery, SearchQueryVariables>(SearchDocument, options);
+        }
+export type SearchQueryHookResult = ReturnType<typeof useSearchQuery>;
+export type SearchLazyQueryHookResult = ReturnType<typeof useSearchLazyQuery>;
+export type SearchQueryResult = Apollo.QueryResult<SearchQuery, SearchQueryVariables>;
 export const NextDocument = gql`
     mutation Next {
   next

@@ -39,7 +39,7 @@ const SearchPage = () => {
         }))}
         albums={results.albums}
         artists={results.artists}
-        onClickAlbum={({ id }) => navigate(`/album/${id}`)}
+        onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
         onClickArtist={({ id }) => navigate(`/artists/${id}`)}
         onClickLibraryItem={(item) => navigate(`/${item}`)}
         onPlay={() => play()}

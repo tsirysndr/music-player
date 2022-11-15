@@ -16,12 +16,13 @@ const Container = styled.div`
 export type SidebarProps = {
   active?: string;
   onClickLibraryItem: (item: string) => void;
+  onSearch: (query: string) => void;
 };
 
 const Sidebar: FC<SidebarProps> = (props) => {
   return (
     <Container>
-      <Search />
+      <Search {...props} />
       <Library {...props} />
       <Playlists />
     </Container>

@@ -4,6 +4,7 @@ import ArtistDetails from "../../Components/ArtistDetails";
 import { useGetArtistQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { useSearch } from "../../Hooks/useSearch";
 
 const ArtistDetailsPage = () => {
   const params = useParams();
@@ -33,6 +34,7 @@ const ArtistDetailsPage = () => {
     playTrackAt,
     removeTrackAt,
   } = usePlayback();
+  const { onSearch } = useSearch();
   const artist = !loading && data ? data.artist : {};
   const tracks =
     !loading && data
@@ -79,6 +81,7 @@ const ArtistDetailsPage = () => {
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}
       onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
+      onSearch={(query) => navigate(`/search?q=${query}`)}
     />
   );
 };

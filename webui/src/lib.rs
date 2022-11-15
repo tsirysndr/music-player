@@ -114,6 +114,7 @@ pub async fn start_webui(
             .route("/albums", web::get().to(index_spa))
             .route("/artists/{_:.*}", web::get().to(index_spa))
             .route("/albums/{_:.*}", web::get().to(index_spa))
+            .route("/search", web::get().to(index_spa))
             .service(dist)
     })
     .bind(addr)?

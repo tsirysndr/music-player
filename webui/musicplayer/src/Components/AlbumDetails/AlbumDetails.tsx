@@ -139,24 +139,18 @@ export type AlbumDetailsProps = {
   onPlayNext: (id: string) => void;
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
+  onSearch: (query: string) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
-  const {
-    onBack,
-    onClickLibraryItem,
-    album,
-    nowPlaying,
-    onPlayAlbum,
-    onPlayNext,
-  } = props;
+  const { onBack, album, nowPlaying, onPlayAlbum, onPlayNext } = props;
   const coverUrl = _.startsWith(album.cover, "https://")
     ? album.cover
     : `/covers/${album.cover}`;
   const { cover } = useCover(coverUrl);
   return (
     <Container>
-      <Sidebar active="albums" onClickLibraryItem={onClickLibraryItem} />
+      <Sidebar active="albums" {...props} />
       <Content>
         <ControlBar {...props} />
         <MainContent displayHeader={false}>

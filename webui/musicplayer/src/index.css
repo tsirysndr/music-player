@@ -112,3 +112,8 @@ tr:hover td div button {
  .album-cover-container:hover img {
   opacity: 0.4;
  }
+
+ [data-baseweb="tab-panel"] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+ }

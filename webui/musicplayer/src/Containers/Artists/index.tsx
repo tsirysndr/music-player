@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import Artists from "../../Components/Artists";
 import { useGetArtistsQuery } from "../../Hooks/GraphQL";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { useSearch } from "../../Hooks/useSearch";
 
 const ArtistsPage = () => {
   const { data, loading } = useGetArtistsQuery();
@@ -18,6 +19,7 @@ const ArtistsPage = () => {
     playTrackAt,
     removeTrackAt,
   } = usePlayback();
+  const { onSearch } = useSearch();
   const artists = !loading && data ? data.artists : [];
   return (
     <Artists
@@ -40,6 +42,7 @@ const ArtistsPage = () => {
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}
       onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
+      onSearch={(query) => navigate(`/search?q=${query}`)}
     />
   );
 };

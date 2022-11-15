@@ -1,14 +1,11 @@
-import { useNavigate } from "react-router-dom";
-import Tracks from "../../Components/Tracks";
-import { useGetTracksQuery } from "../../Hooks/GraphQL";
+import { useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import SearchResults from "../../Components/SearchResults";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { useSearch } from "../../Hooks/useSearch";
 
-const TracksPage = () => {
-  const { data, loading } = useGetTracksQuery({
-    fetchPolicy: "cache-and-network",
-  });
+const SearchPage = () => {
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
   const {
@@ -23,21 +20,27 @@ const TracksPage = () => {
     playTrackAt,
     removeTrackAt,
   } = usePlayback();
-  const { onSearch } = useSearch();
-  const tracks = !loading && data ? data.tracks : [];
+  const [params] = useSearchParams();
+  const { onSearch, results, query } = useSearch();
+  const q = useMemo(() => params.get("q"), [params]);
+
+  useEffect(() => {
+    if (q && q !== null) {
+      onSearch(q);
+    }
+  }, [q]);
+
   return (
     <>
-      <Tracks
-        tracks={tracks.slice(0, 100).map((track) => ({
-          id: track.id,
-          title: track.title,
-          artist: track.artist,
-          album: track.album.title,
-          time: formatTime(track.duration! * 1000),
-          cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
-          artistId: track.artists[0].id,
-          albumId: track.album.id,
+      <SearchResults
+        tracks={results.tracks.map((x) => ({
+          ...x,
+          time: formatTime(x.duration * 1000),
         }))}
+        albums={results.albums}
+        artists={results.artists}
+        onClickAlbum={({ id }) => navigate(`/album/${id}`)}
+        onClickArtist={({ id }) => navigate(`/artists/${id}`)}
         onClickLibraryItem={(item) => navigate(`/${item}`)}
         onPlay={() => play()}
         onPause={() => pause()}
@@ -54,10 +57,10 @@ const TracksPage = () => {
         onRemoveTrackAt={(position) =>
           removeTrackAt({ variables: { position } })
         }
-        onSearch={(query) => navigate(`/search?q=${query}`)}
+        onSearch={onSearch}
       />
     </>
   );
 };
 
-export default TracksPage;
+export default SearchPage;

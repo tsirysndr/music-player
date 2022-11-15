@@ -89,3 +89,31 @@ export const GET_ALBUM = gql`
   }
   ${ALBUM_FRAGMENT}
 `;
+
+export const SEARCH = gql`
+  query Search($keyword: String!) {
+    search(keyword: $keyword) {
+      artists {
+        id
+        name
+        picture
+      }
+      albums {
+        id
+        title
+        artist
+        cover
+      }
+      tracks {
+        id
+        title
+        artist
+        duration
+        cover
+        artistId
+        albumId
+        albumTitle
+      }
+    }
+  }
+`;

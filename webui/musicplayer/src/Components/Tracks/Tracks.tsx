@@ -33,14 +33,14 @@ export type TracksProps = {
   onPlayNext: (id: string) => void;
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
+  onSearch: (query: string) => void;
 };
 
 const Tracks: FC<TracksProps> = (props) => {
-  const { onClickLibraryItem, tracks, nowPlaying, onPlayTrack, onPlayNext } =
-    props;
+  const { tracks, nowPlaying, onPlayTrack, onPlayNext } = props;
   return (
     <Container>
-      <Sidebar active="tracks" onClickLibraryItem={onClickLibraryItem} />
+      <Sidebar active="tracks" {...props} />
       <Content>
         <ControlBar {...props} />
         <MainContent title="Tracks">

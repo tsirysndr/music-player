@@ -2923,7 +2923,7 @@ dependencies = [
 
 [[package]]
 name = "music-player"
-version = "0.2.0-alpha.0"
+version = "0.2.0-alpha.1"
 dependencies = [
  "clap",
  "crossterm",
@@ -2999,7 +2999,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-graphql"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-graphql",
  "async-graphql-tide",
@@ -3071,7 +3071,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "cuid",
  "futures",
@@ -3111,7 +3111,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-storage"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "itertools",
  "md5",
@@ -3124,7 +3124,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-tracklist"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "atlist-rs",
  "music-player-entity",
@@ -3133,7 +3133,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-types"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "lofty",
  "md5",
@@ -3142,7 +3142,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-webui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "actix-cors",
  "actix-files",

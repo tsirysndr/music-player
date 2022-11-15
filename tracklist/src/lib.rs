@@ -92,10 +92,15 @@ impl Tracklist {
 
     pub fn remove_track(&mut self, track: Track) {
         self.tracks.retain(|t| t.id != track.id);
+        self.played.retain(|t| t.id != track.id);
     }
 
     pub fn remove_track_at(&mut self, index: usize) {
-        self.tracks.remove(index);
+        if index >= self.played.len() {
+            self.tracks.remove(index - self.played.len());
+            return;
+        }
+        self.played.remove(index);
     }
 
     pub fn insert(&mut self, index: usize, track: Track) {

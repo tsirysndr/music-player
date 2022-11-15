@@ -11,7 +11,7 @@ description = "Entities for the music player"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 md5 = "0.7.0"

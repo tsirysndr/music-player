@@ -1,6 +1,6 @@
 [package]
 name = "music-player"
-version = "0.2.0-alpha.0"
+version = "0.2.0-alpha.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -36,7 +36,7 @@ path = "src/main.rs"
 
 [dependencies.music-player-server]
 path = "server"
-version = "0.1.7"
+version = "0.1.8"
 
 [dependencies.music-player-playback]
 path = "playback"
@@ -60,7 +60,7 @@ version = "0.1.1"
 
 [dependencies.music-player-storage]
 path = "storage"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies.music-player-addons]
 path = "addons"
@@ -68,7 +68,7 @@ version = "0.1.0"
 
 [dependencies.music-player-tracklist]
 path = "tracklist"
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies.music-player-client]
 path = "client"
@@ -76,7 +76,7 @@ version = "0.1.1"
 
 [dependencies.music-player-webui]
 path = "webui"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-discovery]
 path = "discovery"
@@ -84,11 +84,11 @@ version = "0.1.0"
 
 [dependencies.music-player-graphql]
 path = "graphql"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-types]
 path = "types"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.sea-orm-migration]
 version = "^0.9.0"

@@ -1,6 +1,6 @@
 [package]
 name = "music-player-server"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -25,7 +25,7 @@ version = "0.1.1"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies.music-player-entity]
 path = "../entity"
@@ -33,7 +33,7 @@ version = "0.1.4"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies]
 owo-colors = "3.5.0"

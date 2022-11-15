@@ -1,6 +1,6 @@
 [package]
 name = "music-player-webui"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -11,7 +11,7 @@ description = "The web ui of music player"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies.music-player-graphql]
 path = "../graphql"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-settings]
 path = "../settings"
@@ -19,7 +19,7 @@ version = "0.1.1"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies.music-player-playback]
 path = "../playback"
@@ -27,7 +27,7 @@ version = "0.1.5"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies]
 actix-web = "4.2.1"

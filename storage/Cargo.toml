@@ -1,6 +1,6 @@
 [package]
 name = "music-player-storage"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -14,7 +14,7 @@ version = "0.1.1"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 itertools = "0.10.5"

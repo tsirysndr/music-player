@@ -120,9 +120,15 @@ export type ContextMenuProps = {
   liked?: boolean;
   track: any;
   onPlayNext: (id: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
 };
 
-const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
+const ContextMenu: FC<ContextMenuProps> = ({
+  liked,
+  track,
+  onPlayNext,
+  onCreatePlaylist,
+}) => {
   const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const { cover } = useCover(track.cover);
   return (
@@ -263,6 +269,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
           setIsNewPlaylistModalOpen(false);
         }}
         isOpen={isNewPlaylistModalOpen}
+        onCreatePlaylist={onCreatePlaylist}
       />
     </Container>
   );

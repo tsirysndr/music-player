@@ -161,11 +161,22 @@ export type ArtistDetailsProps = {
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
+  folders: any[];
+  playlists: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
-  const { onBack, artist, tracks, albums, onPlayArtistTracks, onPlayNext } =
-    props;
+  const {
+    onBack,
+    artist,
+    tracks,
+    albums,
+    onPlayArtistTracks,
+    onPlayNext,
+    onCreatePlaylist,
+  } = props;
   return (
     <Container>
       <Sidebar active="artists" {...props} />
@@ -216,6 +227,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                   onPlayArtistTracks(id, false, position)
                 }
                 onPlayNext={onPlayNext}
+                onCreatePlaylist={onCreatePlaylist}
               />
             </Tracks>
             <Row>

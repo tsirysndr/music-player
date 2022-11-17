@@ -3,6 +3,7 @@ import Tracks from "../../Components/Tracks";
 import { useGetTracksQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const TracksPage = () => {
@@ -25,6 +26,13 @@ const TracksPage = () => {
   } = usePlayback();
   const { onSearch } = useSearch();
   const tracks = !loading && data ? data.tracks : [];
+  const {
+    folders,
+    playlists,
+    createFolder,
+    createPlaylist,
+    addTrackToPlaylist,
+  } = usePlaylist();
   return (
     <>
       <Tracks
@@ -55,6 +63,12 @@ const TracksPage = () => {
           removeTrackAt({ variables: { position } })
         }
         onSearch={(query) => navigate(`/search?q=${query}`)}
+        playlists={playlists}
+        folders={folders}
+        onCreateFolder={(name) => createFolder({ variables: { name } })}
+        onCreatePlaylist={(name, description) =>
+          createPlaylist({ variables: { name, description } })
+        }
       />
     </>
   );

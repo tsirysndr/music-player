@@ -4,6 +4,7 @@ import AlbumDetails from "../../Components/AlbumDetails";
 import { useGetAlbumQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const AlbumDetailsPage = () => {
@@ -51,6 +52,13 @@ const AlbumDetailsPage = () => {
           })),
         }
       : { tracks: [] };
+  const {
+    folders,
+    playlists,
+    createFolder,
+    createPlaylist,
+    addTrackToPlaylist,
+  } = usePlaylist();
   return (
     <AlbumDetails
       onBack={() => navigate(-1)}
@@ -73,6 +81,10 @@ const AlbumDetailsPage = () => {
       onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
       onSearch={(query) => navigate(`/search?q=${query}`)}
+      folders={folders}
+      playlists={playlists}
+      onCreateFolder={(name) => createFolder({ variables: { name } })}
+      onCreatePlaylist={(name) => createPlaylist({ variables: { name } })}
     />
   );
 };

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package objects.v1alpha1;
+
+import "objects/v1alpha1/playlist.proto";
+
+message Folder {
+  string id = 1;
+  string name = 2;
+  repeated objects.v1alpha1.Playlist playlists = 3;
+}

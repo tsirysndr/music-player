@@ -9,10 +9,14 @@ use uuid::Uuid;
 
 use crate::{
     api::v1alpha1::{
-        playlist_service_server::PlaylistService, AddItemRequest, AddItemResponse, CreateRequest,
-        CreateResponse, DeleteRequest, DeleteResponse, FindAllRequest, FindAllResponse,
-        GetItemsRequest, GetItemsResponse, GetPlaylistDetailsRequest, GetPlaylistDetailsResponse,
-        RemoveItemRequest, RemoveItemResponse, RenameRequest, RenameResponse,
+        playlist_service_server::PlaylistService, AddItemRequest, AddItemResponse,
+        CreateFolderRequest, CreateFolderResponse, CreateRequest, CreateResponse,
+        DeleteFolderRequest, DeleteFolderResponse, DeleteRequest, DeleteResponse,
+        FindAllFoldersRequest, FindAllFoldersResponse, FindAllRequest, FindAllResponse,
+        GetFolderDetailsRequest, GetFolderDetailsResponse, GetItemsRequest, GetItemsResponse,
+        GetPlaylistDetailsRequest, GetPlaylistDetailsResponse, RemoveItemRequest,
+        RemoveItemResponse, RenameFolderRequest, RenameFolderResponse, RenameRequest,
+        RenameResponse,
     },
     metadata::v1alpha1::Track,
 };
@@ -36,6 +40,7 @@ impl PlaylistService for Playlist {
         let item = playlist::ActiveModel {
             id: ActiveValue::set(Uuid::new_v4().to_string()),
             name: ActiveValue::set(request.get_ref().name.clone()),
+            ..Default::default()
         };
         match item.insert(self.db.lock().await.get_connection()).await {
             Ok(saved) => {
@@ -44,6 +49,7 @@ impl PlaylistService for Playlist {
                         id: ActiveValue::set(Uuid::new_v4().to_string()),
                         playlist_id: ActiveValue::set(saved.id.clone()),
                         track_id: ActiveValue::set(track.id.clone()),
+                        created_at: ActiveValue::set(chrono::Utc::now()),
                     };
                     match item.insert(self.db.lock().await.get_connection()).await {
                         Ok(_) => (),
@@ -182,6 +188,7 @@ impl PlaylistService for Playlist {
             id: ActiveValue::set(Uuid::new_v4().to_string()),
             playlist_id: ActiveValue::set(request.get_ref().id.clone()),
             track_id: ActiveValue::set(request.get_ref().track_id.clone()),
+            created_at: ActiveValue::set(chrono::Utc::now()),
         };
         match item.insert(self.db.lock().await.get_connection()).await {
             Ok(saved) => Ok(tonic::Response::new(AddItemResponse {
@@ -261,5 +268,40 @@ impl PlaylistService for Playlist {
             }
             Err(_) => return Err(tonic::Status::internal("Failed to get playlist")),
         }
+    }
+
+    async fn create_folder(
+        &self,
+        _request: tonic::Request<CreateFolderRequest>,
+    ) -> Result<tonic::Response<CreateFolderResponse>, tonic::Status> {
+        todo!()
+    }
+
+    async fn delete_folder(
+        &self,
+        _request: tonic::Request<DeleteFolderRequest>,
+    ) -> Result<tonic::Response<DeleteFolderResponse>, tonic::Status> {
+        todo!()
+    }
+
+    async fn rename_folder(
+        &self,
+        _request: tonic::Request<RenameFolderRequest>,
+    ) -> Result<tonic::Response<RenameFolderResponse>, tonic::Status> {
+        todo!()
+    }
+
+    async fn get_folder_details(
+        &self,
+        _request: tonic::Request<GetFolderDetailsRequest>,
+    ) -> Result<tonic::Response<GetFolderDetailsResponse>, tonic::Status> {
+        todo!()
+    }
+
+    async fn find_all_folders(
+        &self,
+        _request: tonic::Request<FindAllFoldersRequest>,
+    ) -> Result<tonic::Response<FindAllFoldersResponse>, tonic::Status> {
+        todo!()
     }
 }

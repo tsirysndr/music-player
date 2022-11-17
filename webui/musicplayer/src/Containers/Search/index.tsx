@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import SearchResults from "../../Components/SearchResults";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const SearchPage = () => {
@@ -20,6 +21,13 @@ const SearchPage = () => {
     playTrackAt,
     removeTrackAt,
   } = usePlayback();
+  const {
+    folders,
+    playlists,
+    createFolder,
+    createPlaylist,
+    addTrackToPlaylist,
+  } = usePlaylist();
   const [params] = useSearchParams();
   const { onSearch, results, query } = useSearch();
   const q = useMemo(() => params.get("q"), [params]);
@@ -58,6 +66,12 @@ const SearchPage = () => {
           removeTrackAt({ variables: { position } })
         }
         onSearch={onSearch}
+        folders={folders}
+        playlists={playlists}
+        onCreateFolder={(name) => createFolder({ variables: { name } })}
+        onCreatePlaylist={(name, description) =>
+          createPlaylist({ variables: { name, description } })
+        }
       />
     </>
   );

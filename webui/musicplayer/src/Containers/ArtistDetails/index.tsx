@@ -4,6 +4,7 @@ import ArtistDetails from "../../Components/ArtistDetails";
 import { useGetArtistQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const ArtistDetailsPage = () => {
@@ -59,6 +60,13 @@ const ArtistDetailsPage = () => {
           cover: album.cover ? `/covers/${album.cover}` : undefined,
         }))
       : [];
+  const {
+    folders,
+    playlists,
+    createFolder,
+    createPlaylist,
+    addTrackToPlaylist,
+  } = usePlaylist();
   return (
     <ArtistDetails
       onBack={() => navigate(-1)}
@@ -82,6 +90,12 @@ const ArtistDetailsPage = () => {
       onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
       onSearch={(query) => navigate(`/search?q=${query}`)}
+      folders={folders}
+      playlists={playlists}
+      onCreateFolder={(name) => createFolder({ variables: { name } })}
+      onCreatePlaylist={(name, description) =>
+        createPlaylist({ variables: { name, description } })
+      }
     />
   );
 };

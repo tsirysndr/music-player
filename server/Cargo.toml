@@ -51,6 +51,7 @@ tokio-tungstenite = "0.17.2"
 futures-channel = "0.3.24"
 futures-util = "0.3.24"
 serde = "1.0.145"
+chrono = "0.4.23"
 
 [build-dependencies]
 tonic-build = "0.8"

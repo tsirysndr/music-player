@@ -74,6 +74,10 @@ export type ArtistsProps = {
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
+  folders: any[];
+  playlists: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
 };
 
 const Artists: FC<ArtistsProps> = (props) => {

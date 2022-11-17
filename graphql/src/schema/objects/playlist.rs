@@ -7,6 +7,7 @@ use super::track::Track;
 pub struct Playlist {
     pub id: ID,
     pub name: String,
+    pub description: Option<String>,
     pub tracks: Vec<Track>,
 }
 
@@ -20,6 +21,10 @@ impl Playlist {
         &self.name
     }
 
+    async fn description(&self) -> &Option<String> {
+        &self.description
+    }
+
     async fn tracks(&self) -> &Vec<Track> {
         &self.tracks
     }
@@ -30,6 +35,7 @@ impl From<Model> for Playlist {
         Self {
             id: ID(model.id),
             name: model.name,
+            description: model.description,
             tracks: model.tracks.into_iter().map(Track::from).collect(),
         }
     }

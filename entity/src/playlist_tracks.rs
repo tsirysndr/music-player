@@ -7,6 +7,7 @@ pub struct Model {
     pub id: String,
     pub playlist_id: String,
     pub track_id: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

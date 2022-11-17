@@ -140,10 +140,21 @@ export type AlbumDetailsProps = {
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
+  folders: any[];
+  playlists: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
-  const { onBack, album, nowPlaying, onPlayAlbum, onPlayNext } = props;
+  const {
+    onBack,
+    album,
+    nowPlaying,
+    onPlayAlbum,
+    onPlayNext,
+    onCreatePlaylist,
+  } = props;
   const coverUrl = _.startsWith(album.cover, "https://")
     ? album.cover
     : `/covers/${album.cover}`;
@@ -206,6 +217,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
               maxHeight={"initial"}
               onPlayTrack={(id, position) => onPlayAlbum(id, false, position)}
               onPlayNext={onPlayNext}
+              onCreatePlaylist={onCreatePlaylist}
             />
           </Scrollable>
         </MainContent>

@@ -7,10 +7,12 @@ export type TracksProps = {
   nowPlaying: any;
   onPlayTrack: (id: string, postion?: number) => void;
   onPlayNext: (id: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
 };
 
 const Tracks: FC<TracksProps> = (props) => {
-  const { tracks, nowPlaying, onPlayTrack, onPlayNext } = props;
+  const { tracks, nowPlaying, onPlayTrack, onPlayNext, onCreatePlaylist } =
+    props;
   return (
     <TracksTable
       tracks={tracks}
@@ -18,6 +20,7 @@ const Tracks: FC<TracksProps> = (props) => {
       isPlaying={nowPlaying.isPlaying}
       onPlayTrack={onPlayTrack}
       onPlayNext={onPlayNext}
+      onCreatePlaylist={onCreatePlaylist}
       maxHeight="initial"
     />
   );

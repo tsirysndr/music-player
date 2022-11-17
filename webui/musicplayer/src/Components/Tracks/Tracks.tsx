@@ -19,6 +19,10 @@ const Content = styled.div`
 
 export type TracksProps = {
   tracks: any[];
+  folders: any[];
+  playlists: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
   onClickLibraryItem: (item: string) => void;
   onPlay: () => void;
   onPause: () => void;
@@ -37,7 +41,8 @@ export type TracksProps = {
 };
 
 const Tracks: FC<TracksProps> = (props) => {
-  const { tracks, nowPlaying, onPlayTrack, onPlayNext } = props;
+  const { tracks, nowPlaying, onPlayTrack, onPlayNext, onCreatePlaylist } =
+    props;
   return (
     <Container>
       <Sidebar active="tracks" {...props} />
@@ -50,6 +55,7 @@ const Tracks: FC<TracksProps> = (props) => {
             isPlaying={nowPlaying.isPlaying}
             onPlayTrack={onPlayTrack}
             onPlayNext={onPlayNext}
+            onCreatePlaylist={onCreatePlaylist}
           />
         </MainContent>
       </Content>

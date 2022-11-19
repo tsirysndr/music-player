@@ -58,6 +58,11 @@ const AlbumDetailsPage = () => {
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
+    movePlaylistToFolder,
+    deleteFolder,
+    deletePlaylist,
+    renameFolder,
+    renamePlaylist,
   } = usePlaylist();
   return (
     <AlbumDetails
@@ -85,6 +90,13 @@ const AlbumDetailsPage = () => {
       playlists={playlists}
       onCreateFolder={(name) => createFolder({ variables: { name } })}
       onCreatePlaylist={(name) => createPlaylist({ variables: { name } })}
+      /*onAddTrackToPlaylist={(playlistId, trackId) =>
+        addTrackToPlaylist({ variables: { playlistId, trackId } })
+      }*/
+      onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
+      onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
+      onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
+      onEditPlaylist={(id, name) => renamePlaylist({ variables: { id, name } })}
     />
   );
 };

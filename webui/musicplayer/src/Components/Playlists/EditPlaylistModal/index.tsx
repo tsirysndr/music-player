@@ -10,23 +10,20 @@ import {
 import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-export type NewPlaylistModalProps = {
+export type EditPlaylistModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
+  onEditPlaylist: (name: string, description?: string) => void;
 };
 
-const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
+const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
   onClose,
   isOpen,
-  onCreatePlaylist,
+  onEditPlaylist,
 }) => {
   const { control, handleSubmit, reset } = useForm();
-  const _onCreatePlaylist = (data: any) => {
-    console.log(data);
-    const name = "";
-    const description = "";
-    // onCreatePlaylist(name, description);
+  const _onEditPlaylist = (data: any) => {
+    onEditPlaylist(data.name, data.description);
     onClose();
     reset();
   };
@@ -36,7 +33,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
   };
   return (
     <Modal onClose={_onClose} isOpen={isOpen}>
-      <ModalHeader>Create new playlist</ModalHeader>
+      <ModalHeader>Edit playlist</ModalHeader>
       <ModalBody>
         <Controller
           control={control}
@@ -122,12 +119,10 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
         />
       </ModalBody>
       <ModalFooter>
-        <ModalButton onClick={handleSubmit(_onCreatePlaylist)}>
-          Create New
-        </ModalButton>
+        <ModalButton onClick={handleSubmit(_onEditPlaylist)}>Save</ModalButton>
       </ModalFooter>
     </Modal>
   );
 };
 
-export default NewPlaylistModal;
+export default EditPlaylistModal;

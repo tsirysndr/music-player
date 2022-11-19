@@ -21,7 +21,18 @@ const FolderPage = () => {
     removeTrackAt,
   } = usePlayback();
   const { onSearch } = useSearch();
-  const { folders, playlists, createFolder, createPlaylist } = usePlaylist();
+  const {
+    folders,
+    playlists,
+    createFolder,
+    createPlaylist,
+    addTrackToPlaylist,
+    movePlaylistToFolder,
+    deleteFolder,
+    deletePlaylist,
+    renameFolder,
+    renamePlaylist,
+  } = usePlaylist();
   return (
     <Folder
       onBack={() => navigate(-1)}
@@ -45,6 +56,10 @@ const FolderPage = () => {
       onCreatePlaylist={(name, description) =>
         createPlaylist({ variables: { name, description } })
       }
+      onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
+      onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
+      onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
+      onEditPlaylist={(id, name) => renamePlaylist({ variables: { id, name } })}
     />
   );
 };

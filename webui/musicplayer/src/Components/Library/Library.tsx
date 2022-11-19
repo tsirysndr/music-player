@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
+import { useLocation } from "react-router-dom";
 
 const Title = styled.div`
   font-size: 16px;
@@ -29,23 +30,24 @@ export type LibraryProps = {
 };
 
 const Library: FC<LibraryProps> = ({ active, onClickLibraryItem }) => {
+  const { pathname } = useLocation();
   return (
     <Container>
       <Title>Library</Title>
       <Item
-        active={active === "tracks"}
+        active={pathname.includes("/tracks")}
         onClick={() => onClickLibraryItem("tracks")}
       >
         Tracks
       </Item>
       <Item
-        active={active === "albums"}
+        active={pathname.includes("/albums")}
         onClick={() => onClickLibraryItem("albums")}
       >
         Albums
       </Item>
       <Item
-        active={active === "artists"}
+        active={pathname.includes("/artists")}
         onClick={() => onClickLibraryItem("artists")}
       >
         Artists

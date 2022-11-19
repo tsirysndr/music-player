@@ -4,10 +4,11 @@ import { Button as BaseButton, KIND } from "baseui/button";
 export type ButtonProps = {
   onClick: () => void;
   children: string | JSX.Element;
-  kind?: "primary" | "secondary";
+  kind?: "primary" | "secondary" | "tertiary";
   width?: string;
   height?: string;
   borderRadius?: string;
+  disabled?: boolean;
 };
 
 const Button: FC<ButtonProps> = ({
@@ -17,6 +18,7 @@ const Button: FC<ButtonProps> = ({
   height,
   borderRadius,
   onClick,
+  disabled,
 }) => {
   return (
     <BaseButton
@@ -36,6 +38,7 @@ const Button: FC<ButtonProps> = ({
         },
       }}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </BaseButton>
@@ -47,6 +50,7 @@ Button.defaultProps = {
   width: "141px",
   height: "40px",
   borderRadius: "20px",
+  disabled: false,
 };
 
 export default Button;

@@ -3,6 +3,8 @@ import {
   useAddTrackToPlaylistMutation,
   useCreateFolderMutation,
   useCreatePlaylistMutation,
+  useDeleteFolderMutation,
+  useDeletePlaylistMutation,
   useGetFolderLazyQuery,
   useGetFoldersLazyQuery,
   useGetFoldersQuery,
@@ -10,6 +12,8 @@ import {
   useGetPlaylistsLazyQuery,
   useGetPlaylistsQuery,
   useMovePlaylistToFolderMutation,
+  useRenameFolderMutation,
+  useRenamePlaylistMutation,
 } from "./GraphQL";
 
 export const usePlaylist = () => {
@@ -35,6 +39,10 @@ export const usePlaylist = () => {
   const [createPlaylist] = useCreatePlaylistMutation();
   const [addTrackToPlaylist] = useAddTrackToPlaylistMutation();
   const [movePlaylistToFolder] = useMovePlaylistToFolderMutation();
+  const [deleteFolder] = useDeleteFolderMutation();
+  const [deletePlaylist] = useDeletePlaylistMutation();
+  const [renamePlaylist] = useRenamePlaylistMutation();
+  const [renameFolder] = useRenameFolderMutation();
 
   const playlists = playlistsData?.playlists || [];
   const folders = foldersData?.folders || [];
@@ -64,5 +72,9 @@ export const usePlaylist = () => {
     createPlaylist,
     addTrackToPlaylist,
     movePlaylistToFolder,
+    deleteFolder,
+    deletePlaylist,
+    renamePlaylist,
+    renameFolder,
   };
 };

@@ -10,8 +10,8 @@ import Shuffle from "../Icons/Shuffle";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
-import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
+import { PlayList as PlaylistIcon } from "@styled-icons/remix-fill";
 
 const Container = styled.div`
   display: flex;
@@ -56,8 +56,7 @@ const Artist = styled.div`
 const Buttons = styled.div`
   display: flex;
   flex-direction: row;
-  margin-left: 26px;
-  margin-bottom: 20px;
+  margin-top: 26px;
 `;
 
 const Separator = styled.div`
@@ -74,43 +73,9 @@ const Icon = styled.div`
   margin-top: 6px;
 `;
 
-const Title = styled.div`
-  font-family: RockfordSansBold;
-  font-size: 16px;
-  margin-left: 15px;
-  margin-bottom: 10px;
-  flex: 1;
-`;
-
-const Row = styled.div`
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  margin-right: 50px;
-  margin-left: 10px;
-`;
-
-const SeeMore = styled.div`
-  width: 64px;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.51);
-  cursor: pointer;
-`;
-
-const Tracks = styled.div`
-  margin-bottom: 48px;
-`;
-
-const AlbumCover = styled.img`
-  height: 169px;
-  width: 169px;
-  border-radius: 5px;
-  cursor: pointer;
-`;
-
-const NoAlbumCover = styled.div`
-  height: 169px;
-  width: 169px;
+const NoCover = styled.div`
+  height: 240px;
+  width: 240px;
   border-radius: 5px;
   cursor: pointer;
   display: flex;
@@ -118,26 +83,39 @@ const NoAlbumCover = styled.div`
   align-items: center;
   background-color: #ddaefb14;
 `;
-
-const AlbumArtist = styled.div`
-  color: #828282;
-  margin-bottom: 56px;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
+const Title = styled.div`
+  font-family: RockfordSansBold;
+  font-size: 32px;
+`;
+const Placeholder = styled.div`
+  font-family: RockfordSansRegular;
+  text-align: center;
+  color: rgb(45, 44, 44);
+  margin-top: 50px;
 `;
 
-const AlbumTitle = styled.div`
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
+const PlaylistDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin-left: 26px;
+  height: 240px;
+`;
+
+const PlaylistDetailsWrapper = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+`;
+
+const Header = styled.div`
+  display: flex;
+  flex-direction: row;
+  margin-top: 90px;
+  margin-left: 16px;
 `;
 
 export type PlaylistProps = {
+  playlist: any;
   onBack: () => void;
   onClickLibraryItem: (item: string) => void;
   onPlay: () => void;
@@ -157,10 +135,14 @@ export type PlaylistProps = {
   playlists: any[];
   onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
+  onDeleteFolder: (id: string) => void;
+  onDeletePlaylist: (id: string) => void;
+  onEditFolder: (id: string, name: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
 };
 
 const Playlist: FC<PlaylistProps> = (props) => {
-  const { onBack, onPlayNext, onCreatePlaylist } = props;
+  const { onBack, onPlayNext, onCreatePlaylist, nowPlaying, playlist } = props;
   return (
     <Container>
       <Sidebar active="artists" {...props} />
@@ -173,11 +155,62 @@ const Playlist: FC<PlaylistProps> = (props) => {
                 <ArrowBack />
               </div>
             </BackButton>
+            <Header>
+              <NoCover>
+                <PlaylistIcon size={68} color="#ab28fc" />
+              </NoCover>
+              <PlaylistDetails>
+                <PlaylistDetailsWrapper>
+                  <Title>{playlist.name}</Title>
+                </PlaylistDetailsWrapper>
+                <Buttons>
+                  <Button onClick={() => {}} kind="primary">
+                    <Label>
+                      <Icon>
+                        <Play small color="#fff" />
+                      </Icon>
+                      <div style={{ marginLeft: 7 }}>Play</div>
+                    </Label>
+                  </Button>
+                  <Separator />
+                  <Button onClick={() => {}} kind="secondary">
+                    <Label>
+                      <Shuffle color="#ab28fc" />
+                      <div style={{ marginLeft: 7 }}>Shuffle</div>
+                    </Label>
+                  </Button>
+                </Buttons>
+              </PlaylistDetails>
+            </Header>
+            {true && (
+              <Placeholder>
+                Start building your playlist with tracks by tapping on ‘Add to
+                playlist’ in the option menu.
+              </Placeholder>
+            )}
+            {false && (
+              <TracksTable
+                tracks={[]}
+                currentTrackId={nowPlaying.id}
+                isPlaying={nowPlaying.isPlaying}
+                header={["Title", "Artist", "Album", "Time"]}
+                maxHeight={"initial"}
+                onPlayTrack={(id, position) => {}}
+                onPlayNext={onPlayNext}
+                onCreatePlaylist={onCreatePlaylist}
+              />
+            )}
           </Scrollable>
         </MainContent>
       </Content>
     </Container>
   );
+};
+
+Playlist.defaultProps = {
+  playlist: {
+    name: "Playlist",
+  },
 };
 
 export default Playlist;

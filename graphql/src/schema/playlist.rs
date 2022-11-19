@@ -84,14 +84,27 @@ impl PlaylistMutation {
         ctx: &Context<'_>,
         name: String,
         description: Option<String>,
+        folder_id: Option<ID>,
     ) -> Result<Playlist, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
+        let folder_id = match folder_id {
+            Some(folder_id) => {
+                let folder = folder_entity::Entity::find_by_id(folder_id.to_string())
+                    .one(db.get_connection())
+                    .await?;
+                if folder.is_none() {
+                    return Err(Error::new("Folder not found"));
+                }
+                Some(folder_id.to_string())
+            }
+            None => None,
+        };
         let playlist = playlist_entity::ActiveModel {
             id: ActiveValue::set(cuid().unwrap()),
             name: ActiveValue::Set(name),
             description: ActiveValue::Set(description),
-            folder_id: ActiveValue::Set(None),
+            folder_id: ActiveValue::Set(folder_id),
             created_at: ActiveValue::set(chrono::Utc::now()),
         };
         match playlist.insert(db.get_connection()).await {

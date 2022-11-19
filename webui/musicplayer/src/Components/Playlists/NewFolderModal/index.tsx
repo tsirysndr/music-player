@@ -8,6 +8,7 @@ import {
 } from "baseui/modal";
 import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
+import Button from "../../Button";
 
 export type NewFolderModalProps = {
   isOpen: boolean;
@@ -22,9 +23,7 @@ const NewFolderModal: FC<NewFolderModalProps> = ({
 }) => {
   const { control, handleSubmit, reset } = useForm();
   const _onCreateFolder = (data: any) => {
-    console.log(data);
-    const name = "";
-    // onCreateFolder(name);
+    onCreateFolder(data.name);
     onClose();
     reset();
   };
@@ -79,9 +78,7 @@ const NewFolderModal: FC<NewFolderModalProps> = ({
         />
       </ModalBody>
       <ModalFooter>
-        <ModalButton onClick={handleSubmit(_onCreateFolder)}>
-          Create Folder
-        </ModalButton>
+        <Button onClick={handleSubmit(_onCreateFolder)}>Create Folder</Button>
       </ModalFooter>
     </Modal>
   );

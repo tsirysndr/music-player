@@ -12,6 +12,7 @@ import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
+import { Folder as FolderIcon } from "@styled-icons/bootstrap";
 
 const Container = styled.div`
   display: flex;
@@ -137,6 +138,22 @@ const AlbumTitle = styled.div`
   cursor: pointer;
 `;
 
+const PlaceholderWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 100px);
+  flex-direction: column;
+`;
+
+const Placeholder = styled.div`
+  font-family: RockfordSansRegular;
+  text-align: center;
+  color: rgb(45, 44, 44);
+  margin-top: 50px;
+  margin-bottom: 35px;
+`;
+
 export type FolderProps = {
   onBack: () => void;
   onClickLibraryItem: (item: string) => void;
@@ -157,6 +174,10 @@ export type FolderProps = {
   playlists: any[];
   onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
+  onDeleteFolder: (id: string) => void;
+  onDeletePlaylist: (id: string) => void;
+  onEditFolder: (id: string, name: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
 };
 
 const Folder: FC<FolderProps> = (props) => {
@@ -173,6 +194,11 @@ const Folder: FC<FolderProps> = (props) => {
                 <ArrowBack />
               </div>
             </BackButton>
+            <PlaceholderWrapper>
+              <FolderIcon size={100} color="rgb(70, 70, 70)" />
+              <Placeholder>Start moving playlists to your folder.</Placeholder>
+              <Button onClick={() => {}}>Move Playlists</Button>
+            </PlaceholderWrapper>
           </Scrollable>
         </MainContent>
       </Content>

@@ -12,7 +12,7 @@ description = "The client library for the music player"
 
 [dependencies.music-player-server]
 path = "../server"
-version = "0.1.7"
+version = "0.1.9"
 
 [dependencies.music-player-settings]
 path = "../settings"

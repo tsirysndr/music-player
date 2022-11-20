@@ -15,7 +15,7 @@ version = "0.1.4"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies]
 cpal = "0.14.0"

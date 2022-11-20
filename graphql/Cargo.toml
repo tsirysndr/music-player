@@ -1,6 +1,6 @@
 [package]
 name = "music-player-graphql"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -29,7 +29,7 @@ version = "0.1.2"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"

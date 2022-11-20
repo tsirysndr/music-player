@@ -4,7 +4,6 @@ import { useGetPlaylistQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import { useSearch } from "../../Hooks/useSearch";
 
 const PlaylistPage = () => {
   const params = useParams();
@@ -27,8 +26,9 @@ const PlaylistPage = () => {
     playNext,
     playTrackAt,
     removeTrackAt,
+    playPlaylist,
   } = usePlayback();
-  const { onSearch } = useSearch();
+
   const {
     folders,
     playlists,
@@ -70,7 +70,14 @@ const PlaylistPage = () => {
       onEditPlaylist={(id, name, description) =>
         renamePlaylist({ variables: { id, name } })
       }
+      onAddTrackToPlaylist={(trackId, playlistId) =>
+        addTrackToPlaylist({ variables: { trackId, playlistId } })
+      }
+      onPlayPlaylist={(playlistId, shuffle, position) =>
+        playPlaylist({ variables: { playlistId, position, shuffle } })
+      }
       playlist={data?.playlist}
+      recentPlaylists={playlists}
     />
   );
 };

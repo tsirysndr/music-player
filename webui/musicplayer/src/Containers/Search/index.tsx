@@ -83,6 +83,10 @@ const SearchPage = () => {
         onEditPlaylist={(id, name, description) =>
           renamePlaylist({ variables: { id, name } })
         }
+        onAddTrackToPlaylist={(trackId, playlistId) =>
+          addTrackToPlaylist({ variables: { trackId, playlistId } })
+        }
+        recentPlaylists={playlists}
       />
     </>
   );

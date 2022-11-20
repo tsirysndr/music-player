@@ -35,9 +35,11 @@ export const PLAYLIST_FRAGMENT = gql`
     description
     tracks {
       id
-      trackNumber
       title
+      albumTitle
       artist
+      artistId
+      albumId
       duration
     }
   }

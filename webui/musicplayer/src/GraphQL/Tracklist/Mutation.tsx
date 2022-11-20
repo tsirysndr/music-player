@@ -22,6 +22,12 @@ export const PLAY_ARTIST_TRACKS = gql`
   }
 `;
 
+export const PLAY_PLAYLIST = gql`
+  mutation PlayPlaylist($playlistId: ID!, $position: Int, $shuffle: Boolean!) {
+    playPlaylist(id: $playlistId, position: $position, shuffle: $shuffle)
+  }
+`;
+
 export const PLAY_TRACK_AT = gql`
   mutation PlayTrackAt($position: Int!) {
     playTrackAt(position: $position)

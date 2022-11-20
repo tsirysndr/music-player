@@ -148,6 +148,8 @@ export type AlbumDetailsProps = {
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  recentPlaylists: any[];
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
@@ -158,6 +160,8 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
     onPlayAlbum,
     onPlayNext,
     onCreatePlaylist,
+    onAddTrackToPlaylist,
+    recentPlaylists,
   } = props;
   const coverUrl = _.startsWith(album.cover, "https://")
     ? album.cover
@@ -222,6 +226,8 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
               onPlayTrack={(id, position) => onPlayAlbum(id, false, position)}
               onPlayNext={onPlayNext}
               onCreatePlaylist={onCreatePlaylist}
+              recentPlaylists={recentPlaylists}
+              onAddTrackToPlaylist={onAddTrackToPlaylist}
             />
           </Scrollable>
         </MainContent>

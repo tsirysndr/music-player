@@ -1,12 +1,18 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
+use music_player_entity::{
+    album as album_entity, artist as artist_entity, playlist as playlist_entity,
+    playlist_tracks as playlist_tracks_entity, select_result, track as track_entity,
+};
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
 use rand::seq::SliceRandom;
-use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder};
+use sea_orm::{
+    ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
+    RelationTrait,
+};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use super::objects::{
@@ -290,6 +296,73 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = db.lock().await;
+        let id = id.to_string();
+
+        let result = match playlist_tracks_entity::Entity::find()
+            .filter(playlist_tracks_entity::Column::PlaylistId.eq(id.to_string()))
+            .one(db.get_connection())
+            .await?
+        {
+            Some(_) => {
+                let results = playlist_entity::Entity::find_by_id(id.to_string())
+                    .select_only()
+                    .column(playlist_entity::Column::Id)
+                    .column(playlist_entity::Column::Name)
+                    .column(playlist_entity::Column::Description)
+                    .column_as(artist_entity::Column::Id, "artist_id")
+                    .column_as(artist_entity::Column::Name, "artist_name")
+                    .column_as(album_entity::Column::Id, "album_id")
+                    .column_as(album_entity::Column::Title, "album_title")
+                    .column_as(album_entity::Column::Cover, "album_cover")
+                    .column_as(album_entity::Column::Year, "album_year")
+                    .column_as(track_entity::Column::Id, "track_id")
+                    .column_as(track_entity::Column::Title, "track_title")
+                    .column_as(track_entity::Column::Duration, "track_duration")
+                    .column_as(track_entity::Column::Track, "track_number")
+                    .column_as(track_entity::Column::Artist, "track_artist")
+                    .column_as(track_entity::Column::Uri, "track_uri")
+                    .column_as(track_entity::Column::Genre, "track_genre")
+                    .join_rev(
+                        JoinType::LeftJoin,
+                        playlist_tracks_entity::Entity::belongs_to(playlist_entity::Entity)
+                            .from(playlist_tracks_entity::Column::PlaylistId)
+                            .to(playlist_entity::Column::Id)
+                            .into(),
+                    )
+                    .join(
+                        JoinType::LeftJoin,
+                        playlist_tracks_entity::Relation::Track.def(),
+                    )
+                    .join(JoinType::LeftJoin, track_entity::Relation::Album.def())
+                    .join(JoinType::LeftJoin, track_entity::Relation::Artist.def())
+                    .into_model::<select_result::PlaylistTrack>()
+                    .all(db.get_connection())
+                    .await?;
+
+                if results.len() == 0 {
+                    return Err(Error::new("Playlist not found"));
+                }
+                results
+            }
+            None => {
+                let result = playlist_entity::Entity::find_by_id(id.to_string())
+                    .one(db.get_connection())
+                    .await?;
+                if result.is_none() {
+                    return Err(Error::new("Playlist not found"));
+                }
+                vec![]
+            }
+        };
+
+        let mut tracks: Vec<track_entity::Model> = result.into_iter().map(Into::into).collect();
+
+        if shuffle {
+            tracks.shuffle(&mut rand::thread_rng());
+        }
+
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -297,8 +370,12 @@ impl TracklistMutation {
         player_cmd_tx.send(PlayerCommand::Stop).unwrap();
         player_cmd_tx.send(PlayerCommand::Clear).unwrap();
         player_cmd_tx
-            .send(PlayerCommand::LoadTracklist { tracks: vec![] })
+            .send(PlayerCommand::LoadTracklist { tracks })
             .unwrap();
-        todo!()
+        player_cmd_tx
+            .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
+            .unwrap();
+
+        Ok(true)
     }
 }

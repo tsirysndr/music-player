@@ -66,6 +66,7 @@ export type Mutation = {
   deleteFolder: Folder;
   deletePlaylist: Playlist;
   movePlaylistToFolder: Folder;
+  movePlaylistsToFolder: Folder;
   next: Scalars['Boolean'];
   pause: Scalars['Boolean'];
   play: Scalars['Boolean'];
@@ -111,6 +112,7 @@ export type MutationCreateFolderArgs = {
 
 export type MutationCreatePlaylistArgs = {
   description?: InputMaybe<Scalars['String']>;
+  folderId?: InputMaybe<Scalars['ID']>;
   name: Scalars['String'];
 };
 
@@ -128,6 +130,12 @@ export type MutationDeletePlaylistArgs = {
 export type MutationMovePlaylistToFolderArgs = {
   folderId: Scalars['ID'];
   id: Scalars['ID'];
+};
+
+
+export type MutationMovePlaylistsToFolderArgs = {
+  folderId: Scalars['ID'];
+  ids: Array<Scalars['ID']>;
 };
 
 
@@ -305,7 +313,7 @@ export type ArtistFragmentFragment = { __typename?: 'Artist', id: string, name: 
 
 export type TrackFragmentFragment = { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null };
 
-export type PlaylistFragmentFragment = { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> };
+export type PlaylistFragmentFragment = { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, title: string, albumTitle: string, artist: string, artistId: string, albumId: string, duration?: number | null }> };
 
 export type FolderFragmentFragment = { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
@@ -391,7 +399,7 @@ export type AddTrackToPlaylistMutationVariables = Exact<{
 }>;
 
 
-export type AddTrackToPlaylistMutation = { __typename?: 'Mutation', addTrackToPlaylist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> } };
+export type AddTrackToPlaylistMutation = { __typename?: 'Mutation', addTrackToPlaylist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, title: string, albumTitle: string, artist: string, artistId: string, albumId: string, duration?: number | null }> } };
 
 export type RemoveTrackFromPlaylistMutationVariables = Exact<{
   playlistId: Scalars['ID'];
@@ -399,7 +407,7 @@ export type RemoveTrackFromPlaylistMutationVariables = Exact<{
 }>;
 
 
-export type RemoveTrackFromPlaylistMutation = { __typename?: 'Mutation', removeTrackFromPlaylist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> } };
+export type RemoveTrackFromPlaylistMutation = { __typename?: 'Mutation', removeTrackFromPlaylist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, title: string, albumTitle: string, artist: string, artistId: string, albumId: string, duration?: number | null }> } };
 
 export type RenamePlaylistMutationVariables = Exact<{
   id: Scalars['ID'];
@@ -439,17 +447,25 @@ export type MovePlaylistToFolderMutationVariables = Exact<{
 
 export type MovePlaylistToFolderMutation = { __typename?: 'Mutation', movePlaylistToFolder: { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> } };
 
+export type MovePlaylistsToFolderMutationVariables = Exact<{
+  playlistIds: Array<Scalars['ID']> | Scalars['ID'];
+  folderId: Scalars['ID'];
+}>;
+
+
+export type MovePlaylistsToFolderMutation = { __typename?: 'Mutation', movePlaylistsToFolder: { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> } };
+
 export type GetPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetPlaylistsQuery = { __typename?: 'Query', playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> }> };
+export type GetPlaylistsQuery = { __typename?: 'Query', playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
 export type GetPlaylistQueryVariables = Exact<{
   id: Scalars['ID'];
 }>;
 
 
-export type GetPlaylistQuery = { __typename?: 'Query', playlist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> } };
+export type GetPlaylistQuery = { __typename?: 'Query', playlist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, title: string, albumTitle: string, artist: string, artistId: string, albumId: string, duration?: number | null }> } };
 
 export type GetFoldersQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -485,6 +501,15 @@ export type PlayArtistTracksMutationVariables = Exact<{
 
 
 export type PlayArtistTracksMutation = { __typename?: 'Mutation', playArtistTracks: boolean };
+
+export type PlayPlaylistMutationVariables = Exact<{
+  playlistId: Scalars['ID'];
+  position?: InputMaybe<Scalars['Int']>;
+  shuffle: Scalars['Boolean'];
+}>;
+
+
+export type PlayPlaylistMutation = { __typename?: 'Mutation', playPlaylist: boolean };
 
 export type PlayTrackAtMutationVariables = Exact<{
   position: Scalars['Int'];
@@ -544,9 +569,11 @@ export const PlaylistFragmentFragmentDoc = gql`
   description
   tracks {
     id
-    trackNumber
     title
+    albumTitle
     artist
+    artistId
+    albumId
     duration
   }
 }
@@ -1307,13 +1334,49 @@ export function useMovePlaylistToFolderMutation(baseOptions?: Apollo.MutationHoo
 export type MovePlaylistToFolderMutationHookResult = ReturnType<typeof useMovePlaylistToFolderMutation>;
 export type MovePlaylistToFolderMutationResult = Apollo.MutationResult<MovePlaylistToFolderMutation>;
 export type MovePlaylistToFolderMutationOptions = Apollo.BaseMutationOptions<MovePlaylistToFolderMutation, MovePlaylistToFolderMutationVariables>;
+export const MovePlaylistsToFolderDocument = gql`
+    mutation MovePlaylistsToFolder($playlistIds: [ID!]!, $folderId: ID!) {
+  movePlaylistsToFolder(ids: $playlistIds, folderId: $folderId) {
+    ...FolderFragment
+  }
+}
+    ${FolderFragmentFragmentDoc}`;
+export type MovePlaylistsToFolderMutationFn = Apollo.MutationFunction<MovePlaylistsToFolderMutation, MovePlaylistsToFolderMutationVariables>;
+
+/**
+ * __useMovePlaylistsToFolderMutation__
+ *
+ * To run a mutation, you first call `useMovePlaylistsToFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMovePlaylistsToFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [movePlaylistsToFolderMutation, { data, loading, error }] = useMovePlaylistsToFolderMutation({
+ *   variables: {
+ *      playlistIds: // value for 'playlistIds'
+ *      folderId: // value for 'folderId'
+ *   },
+ * });
+ */
+export function useMovePlaylistsToFolderMutation(baseOptions?: Apollo.MutationHookOptions<MovePlaylistsToFolderMutation, MovePlaylistsToFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<MovePlaylistsToFolderMutation, MovePlaylistsToFolderMutationVariables>(MovePlaylistsToFolderDocument, options);
+      }
+export type MovePlaylistsToFolderMutationHookResult = ReturnType<typeof useMovePlaylistsToFolderMutation>;
+export type MovePlaylistsToFolderMutationResult = Apollo.MutationResult<MovePlaylistsToFolderMutation>;
+export type MovePlaylistsToFolderMutationOptions = Apollo.BaseMutationOptions<MovePlaylistsToFolderMutation, MovePlaylistsToFolderMutationVariables>;
 export const GetPlaylistsDocument = gql`
     query GetPlaylists {
   playlists {
-    ...PlaylistFragment
+    id
+    name
+    description
   }
 }
-    ${PlaylistFragmentFragmentDoc}`;
+    `;
 
 /**
  * __useGetPlaylistsQuery__
@@ -1541,6 +1604,39 @@ export function usePlayArtistTracksMutation(baseOptions?: Apollo.MutationHookOpt
 export type PlayArtistTracksMutationHookResult = ReturnType<typeof usePlayArtistTracksMutation>;
 export type PlayArtistTracksMutationResult = Apollo.MutationResult<PlayArtistTracksMutation>;
 export type PlayArtistTracksMutationOptions = Apollo.BaseMutationOptions<PlayArtistTracksMutation, PlayArtistTracksMutationVariables>;
+export const PlayPlaylistDocument = gql`
+    mutation PlayPlaylist($playlistId: ID!, $position: Int, $shuffle: Boolean!) {
+  playPlaylist(id: $playlistId, position: $position, shuffle: $shuffle)
+}
+    `;
+export type PlayPlaylistMutationFn = Apollo.MutationFunction<PlayPlaylistMutation, PlayPlaylistMutationVariables>;
+
+/**
+ * __usePlayPlaylistMutation__
+ *
+ * To run a mutation, you first call `usePlayPlaylistMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePlayPlaylistMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [playPlaylistMutation, { data, loading, error }] = usePlayPlaylistMutation({
+ *   variables: {
+ *      playlistId: // value for 'playlistId'
+ *      position: // value for 'position'
+ *      shuffle: // value for 'shuffle'
+ *   },
+ * });
+ */
+export function usePlayPlaylistMutation(baseOptions?: Apollo.MutationHookOptions<PlayPlaylistMutation, PlayPlaylistMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PlayPlaylistMutation, PlayPlaylistMutationVariables>(PlayPlaylistDocument, options);
+      }
+export type PlayPlaylistMutationHookResult = ReturnType<typeof usePlayPlaylistMutation>;
+export type PlayPlaylistMutationResult = Apollo.MutationResult<PlayPlaylistMutation>;
+export type PlayPlaylistMutationOptions = Apollo.BaseMutationOptions<PlayPlaylistMutation, PlayPlaylistMutationVariables>;
 export const PlayTrackAtDocument = gql`
     mutation PlayTrackAt($position: Int!) {
   playTrackAt(position: $position)

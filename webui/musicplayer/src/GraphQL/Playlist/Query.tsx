@@ -4,10 +4,11 @@ import { FOLDER_FRAGMENT, PLAYLIST_FRAGMENT } from "../Fragments";
 export const GET_PLAYLISTS = gql`
   query GetPlaylists {
     playlists {
-      ...PlaylistFragment
+      id
+      name
+      description
     }
   }
-  ${PLAYLIST_FRAGMENT}
 `;
 
 export const GET_PLAYLIST = gql`

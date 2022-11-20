@@ -169,6 +169,8 @@ export type ArtistDetailsProps = {
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  recentPlaylists: any[];
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
@@ -180,6 +182,8 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
     onPlayArtistTracks,
     onPlayNext,
     onCreatePlaylist,
+    recentPlaylists,
+    onAddTrackToPlaylist,
   } = props;
   return (
     <Container>
@@ -232,6 +236,8 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                 }
                 onPlayNext={onPlayNext}
                 onCreatePlaylist={onCreatePlaylist}
+                recentPlaylists={recentPlaylists}
+                onAddTrackToPlaylist={onAddTrackToPlaylist}
               />
             </Tracks>
             <Row>

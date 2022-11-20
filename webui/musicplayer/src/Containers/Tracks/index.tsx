@@ -74,12 +74,16 @@ const TracksPage = () => {
         onCreatePlaylist={(name, description) =>
           createPlaylist({ variables: { name, description } })
         }
+        onAddTrackToPlaylist={(playlistId, trackId) =>
+          addTrackToPlaylist({ variables: { playlistId, trackId } })
+        }
         onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
         onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
         onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
         onEditPlaylist={(id, name, description) =>
           renamePlaylist({ variables: { id, name } })
         }
+        recentPlaylists={playlists}
       />
     </>
   );

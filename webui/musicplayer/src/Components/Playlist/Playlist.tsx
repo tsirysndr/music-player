@@ -7,11 +7,12 @@ import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
 import Play from "../Icons/Play";
 import Shuffle from "../Icons/Shuffle";
+import PlaylistIcon from "../Icons/PlaylistAlt";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import { Track } from "../../Types";
-import { PlayList as PlaylistIcon } from "@styled-icons/remix-fill";
+import { useTimeFormat } from "../../Hooks/useFormat";
 
 const Container = styled.div`
   display: flex;
@@ -139,10 +140,38 @@ export type PlaylistProps = {
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  onPlayPlaylist: (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
+  recentPlaylists: any[];
 };
 
 const Playlist: FC<PlaylistProps> = (props) => {
-  const { onBack, onPlayNext, onCreatePlaylist, nowPlaying, playlist } = props;
+  const {
+    onBack,
+    onPlayNext,
+    onCreatePlaylist,
+    onAddTrackToPlaylist,
+    onPlayPlaylist,
+    nowPlaying,
+    playlist,
+    recentPlaylists,
+  } = props;
+  const { formatTime } = useTimeFormat();
+  const tracks =
+    (playlist?.tracks || []).map((track: any) => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      album: track.albumTitle,
+      time: formatTime(track.duration! * 1000),
+      cover: track.cover ? `/covers/${track.cover}` : undefined,
+      artistId: track.artistId,
+      albumId: track.albumId,
+    })) || [];
   return (
     <Container>
       <Sidebar active="artists" {...props} />
@@ -157,14 +186,22 @@ const Playlist: FC<PlaylistProps> = (props) => {
             </BackButton>
             <Header>
               <NoCover>
-                <PlaylistIcon size={68} color="#ab28fc" />
+                <PlaylistIcon
+                  size={48}
+                  color="#ab28fc"
+                  style={{ marginRight: -38, marginTop: 38 }}
+                />
               </NoCover>
               <PlaylistDetails>
                 <PlaylistDetailsWrapper>
                   <Title>{playlist.name}</Title>
                 </PlaylistDetailsWrapper>
                 <Buttons>
-                  <Button onClick={() => {}} kind="primary">
+                  <Button
+                    onClick={() => onPlayPlaylist(playlist.id, false)}
+                    kind="primary"
+                    disabled={!tracks.length}
+                  >
                     <Label>
                       <Icon>
                         <Play small color="#fff" />
@@ -173,7 +210,11 @@ const Playlist: FC<PlaylistProps> = (props) => {
                     </Label>
                   </Button>
                   <Separator />
-                  <Button onClick={() => {}} kind="secondary">
+                  <Button
+                    onClick={() => onPlayPlaylist(playlist.id, true)}
+                    kind="secondary"
+                    disabled={!tracks.length}
+                  >
                     <Label>
                       <Shuffle color="#ab28fc" />
                       <div style={{ marginLeft: 7 }}>Shuffle</div>
@@ -182,22 +223,26 @@ const Playlist: FC<PlaylistProps> = (props) => {
                 </Buttons>
               </PlaylistDetails>
             </Header>
-            {true && (
+            {tracks.length === 0 && (
               <Placeholder>
                 Start building your playlist with tracks by tapping on ‘Add to
                 playlist’ in the option menu.
               </Placeholder>
             )}
-            {false && (
+            {tracks.length > 0 && (
               <TracksTable
-                tracks={[]}
+                tracks={tracks}
                 currentTrackId={nowPlaying.id}
                 isPlaying={nowPlaying.isPlaying}
                 header={["Title", "Artist", "Album", "Time"]}
                 maxHeight={"initial"}
-                onPlayTrack={(id, position) => {}}
+                onPlayTrack={(id, position) =>
+                  onPlayPlaylist(id, false, position)
+                }
                 onPlayNext={onPlayNext}
                 onCreatePlaylist={onCreatePlaylist}
+                recentPlaylists={recentPlaylists}
+                onAddTrackToPlaylist={onAddTrackToPlaylist}
               />
             )}
           </Scrollable>
@@ -214,3 +259,6 @@ Playlist.defaultProps = {
 };
 
 export default Playlist;
+function formatTime(arg0: number) {
+  throw new Error("Function not implemented.");
+}

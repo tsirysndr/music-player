@@ -1,5 +1,5 @@
 use async_graphql::*;
-use music_player_entity::playlist::Model;
+use music_player_entity::{playlist::Model, select_result};
 
 use super::track::Track;
 
@@ -37,6 +37,17 @@ impl From<Model> for Playlist {
             name: model.name,
             description: model.description,
             tracks: model.tracks.into_iter().map(Track::from).collect(),
+        }
+    }
+}
+
+impl From<Vec<select_result::PlaylistTrack>> for Playlist {
+    fn from(result: Vec<select_result::PlaylistTrack>) -> Self {
+        Self {
+            id: ID(result[0].id.clone()),
+            name: result[0].name.clone(),
+            description: result[0].description.clone(),
+            tracks: result.into_iter().map(Track::from).collect(),
         }
     }
 }

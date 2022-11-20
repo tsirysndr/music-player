@@ -3,12 +3,14 @@ use std::sync::Arc;
 use async_graphql::*;
 use cuid::cuid;
 use music_player_entity::{
-    folder as folder_entity, playlist as playlist_entity,
-    playlist_tracks as playlist_tracks_entity, track as track_entity,
+    album as album_entity, artist as artist_entity, folder as folder_entity,
+    playlist as playlist_entity, playlist_tracks as playlist_tracks_entity, select_result,
+    track as track_entity,
 };
 use music_player_storage::Database;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter,
+    QueryOrder, QuerySelect, RelationTrait,
 };
 use tokio::sync::Mutex;
 
@@ -22,17 +24,63 @@ impl PlaylistQuery {
     async fn playlist(&self, ctx: &Context<'_>, id: ID) -> Result<Playlist, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
-        let results: Vec<(playlist_entity::Model, Vec<track_entity::Model>)> =
-            playlist_entity::Entity::find_by_id(id.to_string())
-                .find_with_related(track_entity::Entity)
-                .all(db.get_connection())
-                .await?;
-        if results.len() == 0 {
-            return Err(Error::new("Playlist not found"));
+
+        match playlist_tracks_entity::Entity::find()
+            .filter(playlist_tracks_entity::Column::PlaylistId.eq(id.to_string()))
+            .one(db.get_connection())
+            .await?
+        {
+            Some(_) => {
+                let results = playlist_entity::Entity::find_by_id(id.to_string())
+                    .select_only()
+                    .column(playlist_entity::Column::Id)
+                    .column(playlist_entity::Column::Name)
+                    .column(playlist_entity::Column::Description)
+                    .column_as(artist_entity::Column::Id, "artist_id")
+                    .column_as(artist_entity::Column::Name, "artist_name")
+                    .column_as(album_entity::Column::Id, "album_id")
+                    .column_as(album_entity::Column::Title, "album_title")
+                    .column_as(album_entity::Column::Cover, "album_cover")
+                    .column_as(album_entity::Column::Year, "album_year")
+                    .column_as(track_entity::Column::Id, "track_id")
+                    .column_as(track_entity::Column::Title, "track_title")
+                    .column_as(track_entity::Column::Duration, "track_duration")
+                    .column_as(track_entity::Column::Track, "track_number")
+                    .column_as(track_entity::Column::Artist, "track_artist")
+                    .column_as(track_entity::Column::Uri, "track_uri")
+                    .column_as(track_entity::Column::Genre, "track_genre")
+                    .join_rev(
+                        JoinType::LeftJoin,
+                        playlist_tracks_entity::Entity::belongs_to(playlist_entity::Entity)
+                            .from(playlist_tracks_entity::Column::PlaylistId)
+                            .to(playlist_entity::Column::Id)
+                            .into(),
+                    )
+                    .join(
+                        JoinType::LeftJoin,
+                        playlist_tracks_entity::Relation::Track.def(),
+                    )
+                    .join(JoinType::LeftJoin, track_entity::Relation::Album.def())
+                    .join(JoinType::LeftJoin, track_entity::Relation::Artist.def())
+                    .into_model::<select_result::PlaylistTrack>()
+                    .all(db.get_connection())
+                    .await?;
+
+                if results.len() == 0 {
+                    return Err(Error::new("Playlist not found"));
+                }
+                Ok(results.into())
+            }
+            None => {
+                let result = playlist_entity::Entity::find_by_id(id.to_string())
+                    .one(db.get_connection())
+                    .await?;
+                if result.is_none() {
+                    return Err(Error::new("Playlist not found"));
+                }
+                Ok(result.unwrap().into())
+            }
         }
-        let (mut playlist, tracks) = results[0].clone();
-        playlist.tracks = tracks;
-        Ok(playlist.into())
     }
 
     async fn playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
@@ -293,6 +341,39 @@ impl PlaylistMutation {
                     }
                     None => Err(Error::new("Playlist not found")),
                 }
+            }
+            None => Err(Error::new("Folder not found")),
+        }
+    }
+
+    async fn move_playlists_to_folder(
+        &self,
+        ctx: &Context<'_>,
+        ids: Vec<ID>,
+        folder_id: ID,
+    ) -> Result<Folder, Error> {
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = db.lock().await;
+
+        let folder = folder_entity::Entity::find_by_id(folder_id.to_string())
+            .one(db.get_connection())
+            .await?;
+        match folder {
+            Some(folder) => {
+                for id in ids {
+                    let playlist = playlist_entity::Entity::find_by_id(id.to_string())
+                        .one(db.get_connection())
+                        .await?;
+                    match playlist {
+                        Some(playlist) => {
+                            let mut playlist: playlist_entity::ActiveModel = playlist.into();
+                            playlist.folder_id = ActiveValue::Set(Some(folder.id.clone()));
+                            Ok(playlist.update(db.get_connection()).await?)
+                        }
+                        None => Err(Error::new("Playlist not found")),
+                    }?;
+                }
+                Ok(folder.into())
             }
             None => Err(Error::new("Folder not found")),
         }

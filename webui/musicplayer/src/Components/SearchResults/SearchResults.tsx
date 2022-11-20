@@ -54,6 +54,8 @@ export type SearchResultsProps = {
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  recentPlaylists: any[];
 };
 
 const SearchResults: FC<SearchResultsProps> = (props) => {

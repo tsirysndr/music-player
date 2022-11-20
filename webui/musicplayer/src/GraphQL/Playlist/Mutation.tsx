@@ -79,3 +79,12 @@ export const MOVE_PLAYLIST_TO_FOLDER = gql`
   }
   ${FOLDER_FRAGMENT}
 `;
+
+export const MOVE_PLAYLISTS_TO_FOLDER = gql`
+  mutation MovePlaylistsToFolder($playlistIds: [ID!]!, $folderId: ID!) {
+    movePlaylistsToFolder(ids: $playlistIds, folderId: $folderId) {
+      ...FolderFragment
+    }
+  }
+  ${FOLDER_FRAGMENT}
+`;

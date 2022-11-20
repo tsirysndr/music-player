@@ -25,7 +25,7 @@ const Button: FC<ButtonProps> = ({
       kind={kind}
       overrides={{
         BaseButton: {
-          style: {
+          style: ({ $disabled }) => ({
             width,
             height,
             borderTopLeftRadius: borderRadius,
@@ -34,7 +34,8 @@ const Button: FC<ButtonProps> = ({
             borderBottomRightRadius: borderRadius,
             fontSize: "14px",
             fontFamily: "RockfordSansMedium",
-          },
+            opacity: $disabled ? 0.7 : 1,
+          }),
         },
       }}
       onClick={onClick}

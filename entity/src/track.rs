@@ -2,7 +2,7 @@ use music_player_types::types::Song;
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
-use crate::{album, artist};
+use crate::{album, artist, select_result};
 
 #[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "track")]
@@ -141,6 +141,32 @@ impl From<&Song> for ActiveModel {
                 "{:x}",
                 md5::compute(song.album_artist.to_owned())
             ))),
+        }
+    }
+}
+
+impl From<select_result::PlaylistTrack> for Model {
+    fn from(playlist_track: select_result::PlaylistTrack) -> Self {
+        Self {
+            id: playlist_track.track_id,
+            title: playlist_track.track_title,
+            artist: playlist_track.track_artist,
+            uri: playlist_track.track_uri,
+            album_id: Some(playlist_track.album_id.clone()),
+            artist_id: Some(playlist_track.artist_id.clone()),
+            duration: Some(playlist_track.track_duration),
+            album: album::Model {
+                id: playlist_track.album_id,
+                title: playlist_track.album_title,
+                cover: playlist_track.album_cover,
+                ..Default::default()
+            },
+            artists: vec![artist::Model {
+                id: playlist_track.artist_id,
+                name: playlist_track.artist_name,
+                ..Default::default()
+            }],
+            ..Default::default()
         }
     }
 }

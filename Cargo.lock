@@ -1135,9 +1135,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.22"
+version = "0.4.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
+checksum = "16b0a3d9ed01224b22057780a37bb8c5dbfe1be8ba48678e7bf57ec4b385411f"
 dependencies = [
  "iana-time-zone",
  "js-sys",
@@ -2724,6 +2724,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "maplit"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
+
+[[package]]
 name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2927,6 +2933,7 @@ version = "0.2.0-alpha.1"
 dependencies = [
  "clap",
  "crossterm",
+ "dirs",
  "futures",
  "futures-channel",
  "lofty",
@@ -2950,6 +2957,7 @@ dependencies = [
  "sea-orm",
  "sea-orm-migration",
  "serde_json",
+ "spinners",
  "tabled",
  "tokio",
  "tui",
@@ -2991,6 +2999,7 @@ dependencies = [
 name = "music-player-entity"
 version = "0.1.4"
 dependencies = [
+ "chrono",
  "md5",
  "music-player-types",
  "sea-orm",
@@ -3003,6 +3012,8 @@ version = "0.1.1"
 dependencies = [
  "async-graphql",
  "async-graphql-tide",
+ "chrono",
+ "cuid",
  "md5",
  "music-player-entity",
  "music-player-playback",
@@ -3073,6 +3084,7 @@ dependencies = [
 name = "music-player-server"
 version = "0.1.8"
 dependencies = [
+ "chrono",
  "cuid",
  "futures",
  "futures-channel",
@@ -4712,6 +4724,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "spinners"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08615eea740067d9899969bc2891c68a19c315cb1f66640af9a9ecb91b13bcab"
+dependencies = [
+ "lazy_static",
+ "maplit",
+ "strum",
+]
+
+[[package]]
 name = "sqlformat"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4901,6 +4924,28 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "strum"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+dependencies = [
+ "heck 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
 
 [[package]]
 name = "subtle"

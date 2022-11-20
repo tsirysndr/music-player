@@ -27,3 +27,32 @@ export const TRACK_FRAGMENT = gql`
     duration
   }
 `;
+
+export const PLAYLIST_FRAGMENT = gql`
+  fragment PlaylistFragment on Playlist {
+    id
+    name
+    description
+    tracks {
+      id
+      title
+      albumTitle
+      artist
+      artistId
+      albumId
+      duration
+    }
+  }
+`;
+
+export const FOLDER_FRAGMENT = gql`
+  fragment FolderFragment on Folder {
+    id
+    name
+    playlists {
+      id
+      name
+      description
+    }
+  }
+`;

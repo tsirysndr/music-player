@@ -19,6 +19,14 @@ const Content = styled.div`
 
 export type TracksProps = {
   tracks: any[];
+  folders: any[];
+  playlists: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
+  onDeleteFolder: (id: string) => void;
+  onDeletePlaylist: (id: string) => void;
+  onEditFolder: (id: string, name: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
   onClickLibraryItem: (item: string) => void;
   onPlay: () => void;
   onPause: () => void;
@@ -28,16 +36,26 @@ export type TracksProps = {
   onRepeat: () => void;
   nowPlaying: any;
   onPlayTrack: (id: string, postion?: number) => void;
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
   nextTracks: Track[];
   previousTracks: Track[];
   onPlayNext: (id: string) => void;
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
+  recentPlaylists: any[];
 };
 
 const Tracks: FC<TracksProps> = (props) => {
-  const { tracks, nowPlaying, onPlayTrack, onPlayNext } = props;
+  const {
+    tracks,
+    nowPlaying,
+    onPlayTrack,
+    onPlayNext,
+    onCreatePlaylist,
+    onAddTrackToPlaylist,
+    recentPlaylists,
+  } = props;
   return (
     <Container>
       <Sidebar active="tracks" {...props} />
@@ -50,6 +68,9 @@ const Tracks: FC<TracksProps> = (props) => {
             isPlaying={nowPlaying.isPlaying}
             onPlayTrack={onPlayTrack}
             onPlayNext={onPlayNext}
+            onCreatePlaylist={onCreatePlaylist}
+            recentPlaylists={recentPlaylists}
+            onAddTrackToPlaylist={onAddTrackToPlaylist}
           />
         </MainContent>
       </Content>

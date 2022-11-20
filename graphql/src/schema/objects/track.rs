@@ -1,5 +1,5 @@
 use async_graphql::*;
-use music_player_entity::track::Model;
+use music_player_entity::{select_result, track::Model};
 use music_player_types::types::SimplifiedSong as TrackType;
 
 use super::{album::Album, artist::Artist};
@@ -126,6 +126,30 @@ impl From<TrackType> for Track {
             artist_id: song.artist_id,
             album_id: song.album_id,
             album_title: song.album,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<select_result::PlaylistTrack> for Track {
+    fn from(result: select_result::PlaylistTrack) -> Self {
+        Self {
+            id: ID(result.track_id),
+            title: result.track_title,
+            duration: Some(result.track_duration),
+            track_number: result.track_number,
+            artist: result.track_artist,
+            album_title: result.album_title.clone(),
+            album_id: result.album_id.clone(),
+            artist_id: result.artist_id.clone(),
+            cover: result.album_cover.clone(),
+            album: Album {
+                id: ID(result.album_id),
+                title: result.album_title,
+                cover: result.album_cover,
+                year: result.album_year,
+                ..Default::default()
+            },
             ..Default::default()
         }
     }

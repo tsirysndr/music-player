@@ -1,4 +1,4 @@
-use std::{env, sync::Mutex};
+use std::{env, fs, sync::Mutex};
 
 use clap::ArgMatches;
 use music_player_client::{
@@ -283,6 +283,23 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
     if let Some(_) = matches.subcommand_matches("devices") {
         discover(SERVICE_NAME);
+        return Ok(());
+    }
+
+    if let Some(_) = matches.subcommand_matches("reset") {
+        let path = format!(
+            "{}/music-player",
+            dirs::config_dir().unwrap().to_str().unwrap()
+        );
+        match fs::remove_dir_all(path.clone()) {
+            Ok(_) => {
+                println!("Reset complete ✅ ({})", path.clone());
+                println!("Please restart the application")
+            }
+            Err(e) => {
+                println!("Reset failed ❌ ({})", e.to_string());
+            }
+        }
         return Ok(());
     }
 

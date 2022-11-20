@@ -157,6 +157,9 @@ export type TracksTableProps = {
   maxHeight?: string;
   onPlayTrack: (id: string, position?: number) => void;
   onPlayNext: (id: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  recentPlaylists: any[];
 };
 
 const TracksTable: FC<TracksTableProps> = ({
@@ -169,6 +172,9 @@ const TracksTable: FC<TracksTableProps> = ({
   maxHeight,
   onPlayTrack,
   onPlayNext,
+  onCreatePlaylist,
+  onAddTrackToPlaylist,
+  recentPlaylists,
 }) => {
   return (
     <TableWrapper>
@@ -251,7 +257,13 @@ const TracksTable: FC<TracksTableProps> = ({
         <TableBuilderColumn header="">
           {(row: any) => (
             <CellWrapper>
-              <ContextMenu track={row} onPlayNext={onPlayNext} />
+              <ContextMenu
+                track={row}
+                onPlayNext={onPlayNext}
+                onCreatePlaylist={onCreatePlaylist}
+                recentPlaylists={recentPlaylists}
+                onAddTrackToPlaylist={onAddTrackToPlaylist}
+              />
             </CellWrapper>
           )}
         </TableBuilderColumn>

@@ -5,6 +5,8 @@ import TracksPage from "./Containers/Tracks";
 import AlbumDetailsPage from "./Containers/AlbumDetails";
 import ArtistDetailsPage from "./Containers/ArtistDetails";
 import SearchPage from "./Containers/Search";
+import PlaylistPage from "./Containers/Playlist";
+import FolderPage from "./Containers/Folder";
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
         <Route path="/albums/:id" element={<AlbumDetailsPage />} />
         <Route path="/artists/:id" element={<ArtistDetailsPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/folders/:id" element={<FolderPage />} />
+        <Route path="/playlists/:id" element={<PlaylistPage />} />
       </Routes>
     </BrowserRouter>
   );

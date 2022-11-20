@@ -2,10 +2,7 @@ use futures::future::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_scanner::scan_directory;
 use music_player_storage::Database;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
-    QuerySelect,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

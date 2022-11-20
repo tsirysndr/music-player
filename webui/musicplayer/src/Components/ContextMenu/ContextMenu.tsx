@@ -85,9 +85,10 @@ const TrackInfos = styled.div`
   overflow: hidden;
 `;
 
-const ChildMenu: FC<{ onSelect: (item: { label: string }) => void }> = ({
-  onSelect,
-}) => {
+const ChildMenu: FC<{
+  recentPlaylists: any[];
+  onSelect: (item: { id: string; label: string }) => void;
+}> = ({ onSelect, recentPlaylists }) => {
   return (
     <StatefulMenu
       items={{
@@ -96,13 +97,10 @@ const ChildMenu: FC<{ onSelect: (item: { label: string }) => void }> = ({
             label: "Create new playlist",
           },
         ],
-        /*
-        RECENT: [
-          {
-            label: "New South",
-          },
-        ],
-        */
+        RECENT: recentPlaylists.map((playlist) => ({
+          id: playlist.id,
+          label: <div>{playlist.name}</div>,
+        })),
       }}
       overrides={{
         List: {
@@ -120,9 +118,19 @@ export type ContextMenuProps = {
   liked?: boolean;
   track: any;
   onPlayNext: (id: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
+  onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  recentPlaylists: any[];
 };
 
-const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
+const ContextMenu: FC<ContextMenuProps> = ({
+  liked,
+  track,
+  onPlayNext,
+  onCreatePlaylist,
+  onAddTrackToPlaylist,
+  recentPlaylists,
+}) => {
   const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const { cover } = useCover(track.cover);
   return (
@@ -159,9 +167,15 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
                           if (item.label === "Add to Playlist") {
                             return (
                               <ChildMenu
-                                onSelect={(item: { label: string }) => {
+                                recentPlaylists={recentPlaylists}
+                                onSelect={(item: {
+                                  id: string;
+                                  label: string;
+                                }) => {
                                   if (item.label === "Create new playlist") {
                                     setIsNewPlaylistModalOpen(true);
+                                  } else {
+                                    onAddTrackToPlaylist(item.id, track.id);
                                   }
                                   close();
                                 }}
@@ -225,6 +239,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
               }}
               items={[
                 {
+                  id: "1",
                   label: <div>Create new playlist</div>,
                 },
               ]}
@@ -263,6 +278,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ liked, track, onPlayNext }) => {
           setIsNewPlaylistModalOpen(false);
         }}
         isOpen={isNewPlaylistModalOpen}
+        onCreatePlaylist={onCreatePlaylist}
       />
     </Container>
   );

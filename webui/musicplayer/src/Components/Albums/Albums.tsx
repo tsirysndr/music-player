@@ -82,6 +82,14 @@ export type AlbumsProps = {
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
+  folders: any[];
+  playlists: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
+  onDeleteFolder: (id: string) => void;
+  onDeletePlaylist: (id: string) => void;
+  onEditFolder: (id: string, name: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
 };
 
 export type AlbumProps = {

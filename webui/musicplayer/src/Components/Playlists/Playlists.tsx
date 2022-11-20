@@ -1,10 +1,17 @@
 import styled from "@emotion/styled";
 import { StatefulMenu } from "baseui/menu";
-import { StatefulPopover } from "baseui/popover";
+import { StatefulPopover, Popover } from "baseui/popover";
 import { FC, useState } from "react";
 import AddAlt from "../Icons/AddAlt";
 import NewFolderModal from "./NewFolderModal";
 import NewPlaylistModal from "./NewPlaylistModal";
+import { Folder as FolderIcon } from "@styled-icons/bootstrap";
+import { Link, useParams } from "react-router-dom";
+import FolderContextMenu from "./FolderContextMenu";
+import ContextMenu from "./ContextMenu";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
+import EditPlaylistModal from "./EditPlaylistModal";
+import EditFolderModal from "./EditFolderModal";
 
 const Title = styled.div`
   font-size: 16px;
@@ -40,11 +47,195 @@ const Plus = styled.div`
   width: 28px;
 `;
 
-export type PlaylistProps = {
-  playlists?: any[];
+const FolderItem = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+`;
+
+export type FolderProps = {
+  id: string;
+  folder: any;
+  onDeleteFolder: (id: string) => void;
 };
 
-const Playlists: FC<PlaylistProps> = ({ playlists }) => {
+const Folder: FC<FolderProps> = ({ id, folder, onDeleteFolder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [editFolderModalIsOpen, setEditFolderModalIsOpen] =
+    useState<boolean>(false);
+  const [deleteConfirmationModalIsOpen, setDeleteConfirmationModalIsOpen] =
+    useState<boolean>(false);
+  const [newPlaylistModalIsOpen, setNewPlaylistModalIsOpen] =
+    useState<boolean>(false);
+  const handlers = {
+    Rename: () => setEditFolderModalIsOpen(true),
+    "Delete Folder": () => setDeleteConfirmationModalIsOpen(true),
+    "Create Playlist": () => setNewPlaylistModalIsOpen(true),
+  };
+  return (
+    <>
+      <Popover
+        key={folder.id}
+        placement="rightTop"
+        isOpen={isOpen}
+        autoFocus={false}
+        content={() => (
+          <FolderContextMenu
+            close={() => setIsOpen(false)}
+            folder={folder}
+            handlers={handlers}
+          />
+        )}
+        overrides={{
+          Inner: {
+            style: {
+              backgroundColor: "#fff",
+            },
+          },
+        }}
+      >
+        <Link
+          to={`/folders/${folder.id}`}
+          style={{ textDecoration: "initial" }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setIsOpen(true);
+          }}
+          onBlur={() => setIsOpen(false)}
+        >
+          <FolderItem>
+            <FolderIcon size={18} style={{ marginRight: 10 }} />
+            <Item active={folder.id === id}>{folder.name}</Item>
+          </FolderItem>
+        </Link>
+      </Popover>
+      <EditFolderModal
+        isOpen={editFolderModalIsOpen}
+        onClose={() => setEditFolderModalIsOpen(false)}
+        onEditFolder={() => {}}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmationModalIsOpen}
+        onClose={() => setDeleteConfirmationModalIsOpen(false)}
+        onDelete={() => onDeleteFolder(folder.id)}
+        title={"Delete Folder"}
+        message={
+          "This permanently deletes your folder and all playlists in it."
+        }
+      />
+      <NewPlaylistModal
+        isOpen={newPlaylistModalIsOpen}
+        onClose={() => setNewPlaylistModalIsOpen(false)}
+        onCreatePlaylist={() => {}}
+      />
+    </>
+  );
+};
+
+export type PlaylistProps = {
+  id: string;
+  playlist: any;
+  onDeletePlaylist: (id: string) => void;
+};
+
+const Playlist: FC<PlaylistProps> = ({ playlist, id, onDeletePlaylist }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [editPlaylistModalIsOpen, setEditPlaylistModalIsOpen] =
+    useState<boolean>(false);
+  const [deleteConfirmationModalIsOpen, setDeleteConfirmationModalIsOpen] =
+    useState<boolean>(false);
+  const handlers = {
+    "Play Now": () => {},
+    Shuffle: () => {},
+    "Play Next": () => {},
+    "Add to Playlist": () => {},
+    "Move to Folder": () => {},
+    "Edit Playlist": () => setEditPlaylistModalIsOpen(true),
+    "Delete Playlist": () => setDeleteConfirmationModalIsOpen(true),
+  };
+  return (
+    <>
+      <Popover
+        placement="rightTop"
+        isOpen={isOpen}
+        autoFocus={false}
+        content={() => (
+          <ContextMenu
+            close={() => setIsOpen(false)}
+            playlist={playlist}
+            handlers={handlers}
+          />
+        )}
+        overrides={{
+          Inner: {
+            style: {
+              backgroundColor: "#fff",
+            },
+          },
+        }}
+      >
+        <Link
+          to={`/playlists/${playlist.id}`}
+          style={{ textDecoration: "initial" }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setIsOpen(true);
+          }}
+          onBlur={() => setIsOpen(false)}
+        >
+          <Item
+            active={playlist.id === id}
+            style={
+              {
+                /*marginLeft: 28*/
+              }
+            }
+          >
+            {playlist.name}
+          </Item>
+        </Link>
+      </Popover>
+      <EditPlaylistModal
+        isOpen={editPlaylistModalIsOpen}
+        onClose={() => setEditPlaylistModalIsOpen(false)}
+        onEditPlaylist={() => {}}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmationModalIsOpen}
+        onClose={() => setDeleteConfirmationModalIsOpen(false)}
+        onDelete={() => onDeletePlaylist(playlist.id)}
+        title={"Delete Playlist"}
+        message={`Are you sure you want to delete this playlist?
+
+        This action cannot be undone.`}
+      />
+    </>
+  );
+};
+
+export type PlaylistsProps = {
+  playlists?: any[];
+  folders?: any[];
+  onCreateFolder: (name: string) => void;
+  onCreatePlaylist: (name: string, description?: string) => void;
+  onDeleteFolder: (id: string) => void;
+  onDeletePlaylist: (id: string) => void;
+  onEditFolder: (id: string, name: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
+};
+
+const Playlists: FC<PlaylistsProps> = ({
+  folders,
+  playlists,
+  onCreateFolder,
+  onCreatePlaylist,
+  onDeleteFolder,
+  onDeletePlaylist,
+  onEditFolder,
+  onEditPlaylist,
+}) => {
+  const { id } = useParams();
   const [newFolderModalOpen, setNewFolderModalOpen] = useState(false);
   const [newPlaylistModalOpen, setNewPlaylistModalOpen] = useState(false);
   return (
@@ -102,13 +293,28 @@ const Playlists: FC<PlaylistProps> = ({ playlists }) => {
       <NewFolderModal
         isOpen={newFolderModalOpen}
         onClose={() => setNewFolderModalOpen(false)}
+        onCreateFolder={onCreateFolder}
       />
       <NewPlaylistModal
         isOpen={newPlaylistModalOpen}
         onClose={() => setNewPlaylistModalOpen(false)}
+        onCreatePlaylist={onCreatePlaylist}
       />
-      {playlists?.slice(0, 5).map((playlist) => (
-        <Item key={playlist.id}>{playlist.name}</Item>
+      {folders?.map((folder) => (
+        <Folder
+          key={folder.id}
+          id={id!}
+          folder={folder}
+          onDeleteFolder={onDeleteFolder}
+        />
+      ))}
+      {playlists?.map((playlist) => (
+        <Playlist
+          key={playlist.id}
+          id={id!}
+          playlist={playlist}
+          onDeletePlaylist={onDeletePlaylist}
+        />
       ))}
     </Container>
   );
@@ -116,6 +322,7 @@ const Playlists: FC<PlaylistProps> = ({ playlists }) => {
 
 Playlists.defaultProps = {
   playlists: [],
+  folders: [],
 };
 
 export default Playlists;

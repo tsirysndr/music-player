@@ -1,17 +1,40 @@
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "playlist")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub name: String,
+    pub description: Option<String>,
     #[sea_orm(ignore)]
     pub tracks: Vec<super::track::Model>,
+    pub folder_id: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter)]
+pub enum Relation {
+    Folder,
+}
+
+impl RelationTrait for Relation {
+    fn def(&self) -> RelationDef {
+        match self {
+            Self::Folder => Entity::belongs_to(super::folder::Entity)
+                .from(Column::FolderId)
+                .to(super::folder::Column::Id)
+                .into(),
+        }
+    }
+}
+
+impl Related<super::folder::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Folder.def()
+    }
+}
 
 impl Related<super::track::Entity> for Entity {
     fn to() -> RelationDef {

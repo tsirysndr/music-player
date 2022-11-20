@@ -10,19 +10,47 @@ pub mod server;
 pub mod tracklist;
 pub mod api {
     pub mod v1alpha1 {
+        use music_player_entity::folder;
+
         tonic::include_proto!("music.v1alpha1");
+
+        impl From<folder::Model> for GetFolderDetailsResponse {
+            fn from(model: folder::Model) -> Self {
+                Self {
+                    id: model.id,
+                    name: model.name,
+                    playlists: model.playlists.into_iter().map(Into::into).collect(),
+                    ..Default::default()
+                }
+            }
+        }
     }
 }
 
 pub mod objects {
     pub mod v1alpha1 {
+        use music_player_entity::playlist;
+
         tonic::include_proto!("objects.v1alpha1");
+
+        impl From<playlist::Model> for Playlist {
+            fn from(model: playlist::Model) -> Self {
+                Self {
+                    id: model.id,
+                    name: model.name,
+                    description: model.description.unwrap_or_default(),
+                    tracks: model.tracks.into_iter().map(Into::into).collect(),
+                    ..Default::default()
+                }
+            }
+        }
     }
 }
 
 pub mod metadata {
     pub mod v1alpha1 {
         use music_player_entity::{album, artist, track};
+
         tonic::include_proto!("metadata.v1alpha1");
 
         impl From<artist::Model> for Artist {

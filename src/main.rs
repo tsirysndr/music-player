@@ -30,10 +30,7 @@ use music_player_playback::{
     config::AudioFormat,
     player::{Player, PlayerEvent},
 };
-use music_player_server::{
-    event::{Event, TrackEvent},
-    metadata::v1alpha1::Track,
-};
+use music_player_server::event::{Event, TrackEvent};
 use music_player_server::{
     metadata::v1alpha1::{Album, Artist},
     server::MusicPlayerServer,
@@ -163,6 +160,7 @@ A simple music player written in Rust"#,
             arg!(-p --port <port> "The port to connect to").default_value("50051").required(false)
         ).about("Connect to the server"))
         .subcommand(Command::new("devices").about("List all `music-player` devices on the network"))
+        .subcommand(Command::new("reset").about("Reset the database and clear the config directory"))
 }
 
 #[tokio::main]

@@ -1,6 +1,7 @@
 pub mod album;
 pub mod artist;
 pub mod current_track;
+pub mod folder;
 pub mod lyrics;
 pub mod playlist;
 pub mod search_result;

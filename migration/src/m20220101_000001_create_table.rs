@@ -91,6 +91,16 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Playlist::Name).string().not_null())
+                    .col(ColumnDef::new(Playlist::FolderId).string())
+                    .foreign_key(
+                        ForeignKeyCreateStatement::new()
+                            .name("folder_playlist_id_fkey")
+                            .from_tbl(Playlist::Table)
+                            .from_col(Playlist::FolderId)
+                            .to_tbl(Folder::Table)
+                            .to_col(Folder::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -263,6 +273,13 @@ enum Playlist {
     Table,
     Id,
     Name,
+    FolderId,
+}
+
+#[derive(Iden)]
+enum Folder {
+    Table,
+    Id,
 }
 
 #[derive(Iden)]

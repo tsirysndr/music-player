@@ -3,6 +3,7 @@ syntax = "proto3";
 package music.v1alpha1;
 
 import "metadata/v1alpha1/track.proto";
+import "objects/v1alpha1/playlist.proto";
 
 message CreateRequest {
   string name = 1;
@@ -74,6 +75,46 @@ message GetPlaylistDetailsResponse {
   repeated metadata.v1alpha1.Track tracks = 3;
 }
 
+message CreateFolderRequest {
+  string name = 1;
+}
+
+message CreateFolderResponse {
+  string id = 1;
+  string name = 2;
+}
+
+message RenameFolderRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message RenameFolderResponse {
+  string id = 1;
+  string name = 2;
+}
+
+message DeleteFolderRequest { string id = 1; }
+
+message DeleteFolderResponse {
+  string id = 1;
+  string name = 2;
+}
+
+message FindAllFoldersRequest {}
+
+message FindAllFoldersResponse {
+  repeated GetFolderDetailsResponse folders = 1;
+}
+
+message GetFolderDetailsRequest { string id = 1; }
+
+message GetFolderDetailsResponse {
+  string id = 1;
+  string name = 2;
+  repeated objects.v1alpha1.Playlist playlists = 3;
+}
+
 service PlaylistService {
   rpc Create(CreateRequest) returns (CreateResponse) {}
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
@@ -84,4 +125,10 @@ service PlaylistService {
   rpc FindAll(FindAllRequest) returns (FindAllResponse) {}
   rpc GetPlaylistDetails(GetPlaylistDetailsRequest)
       returns (GetPlaylistDetailsResponse) {}
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse) {}
+  rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse) {}
+  rpc RenameFolder(RenameFolderRequest) returns (RenameFolderResponse) {}
+  rpc FindAllFolders(FindAllFoldersRequest) returns (FindAllFoldersResponse) {}
+  rpc GetFolderDetails(GetFolderDetailsRequest)
+      returns (GetFolderDetailsResponse) {}
 }

@@ -13,6 +13,7 @@ import {
   usePlayNextMutation,
   usePlayAlbumMutation,
   usePlayArtistTracksMutation,
+  usePlayPlaylistMutation,
 } from "./GraphQL";
 
 export const usePlayback = () => {
@@ -32,6 +33,7 @@ export const usePlayback = () => {
   const [playNext] = usePlayNextMutation();
   const [playAlbum] = usePlayAlbumMutation();
   const [playArtistTracks] = usePlayArtistTracksMutation();
+  const [playPlaylist] = usePlayPlaylistMutation();
   const {
     data: queue,
     startPolling: startPollingTracklist,
@@ -107,5 +109,6 @@ export const usePlayback = () => {
     playNext,
     playAlbum,
     playArtistTracks,
+    playPlaylist,
   };
 };

@@ -3,6 +3,7 @@ import Tracks from "../../Components/Tracks";
 import { useGetTracksQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const TracksPage = () => {
@@ -25,6 +26,18 @@ const TracksPage = () => {
   } = usePlayback();
   const { onSearch } = useSearch();
   const tracks = !loading && data ? data.tracks : [];
+  const {
+    folders,
+    playlists,
+    createFolder,
+    createPlaylist,
+    addTrackToPlaylist,
+    movePlaylistToFolder,
+    deleteFolder,
+    deletePlaylist,
+    renameFolder,
+    renamePlaylist,
+  } = usePlaylist();
   return (
     <>
       <Tracks
@@ -55,6 +68,22 @@ const TracksPage = () => {
           removeTrackAt({ variables: { position } })
         }
         onSearch={(query) => navigate(`/search?q=${query}`)}
+        playlists={playlists}
+        folders={folders}
+        onCreateFolder={(name) => createFolder({ variables: { name } })}
+        onCreatePlaylist={(name, description) =>
+          createPlaylist({ variables: { name, description } })
+        }
+        onAddTrackToPlaylist={(playlistId, trackId) =>
+          addTrackToPlaylist({ variables: { playlistId, trackId } })
+        }
+        onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
+        onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
+        onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
+        onEditPlaylist={(id, name, description) =>
+          renamePlaylist({ variables: { id, name } })
+        }
+        recentPlaylists={playlists}
       />
     </>
   );

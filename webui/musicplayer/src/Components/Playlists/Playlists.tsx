@@ -58,9 +58,15 @@ export type FolderProps = {
   id: string;
   folder: any;
   onDeleteFolder: (id: string) => void;
+  onEditFolder: (id: string, name: string) => void;
 };
 
-const Folder: FC<FolderProps> = ({ id, folder, onDeleteFolder }) => {
+const Folder: FC<FolderProps> = ({
+  id,
+  folder,
+  onDeleteFolder,
+  onEditFolder,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editFolderModalIsOpen, setEditFolderModalIsOpen] =
     useState<boolean>(false);
@@ -113,7 +119,8 @@ const Folder: FC<FolderProps> = ({ id, folder, onDeleteFolder }) => {
       <EditFolderModal
         isOpen={editFolderModalIsOpen}
         onClose={() => setEditFolderModalIsOpen(false)}
-        onEditFolder={() => {}}
+        onEditFolder={onEditFolder}
+        folder={folder}
       />
       <DeleteConfirmationModal
         isOpen={deleteConfirmationModalIsOpen}
@@ -137,9 +144,15 @@ export type PlaylistProps = {
   id: string;
   playlist: any;
   onDeletePlaylist: (id: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
 };
 
-const Playlist: FC<PlaylistProps> = ({ playlist, id, onDeletePlaylist }) => {
+const Playlist: FC<PlaylistProps> = ({
+  playlist,
+  id,
+  onDeletePlaylist,
+  onEditPlaylist,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editPlaylistModalIsOpen, setEditPlaylistModalIsOpen] =
     useState<boolean>(false);
@@ -199,7 +212,8 @@ const Playlist: FC<PlaylistProps> = ({ playlist, id, onDeletePlaylist }) => {
       <EditPlaylistModal
         isOpen={editPlaylistModalIsOpen}
         onClose={() => setEditPlaylistModalIsOpen(false)}
-        onEditPlaylist={() => {}}
+        onEditPlaylist={onEditPlaylist}
+        playlist={playlist}
       />
       <DeleteConfirmationModal
         isOpen={deleteConfirmationModalIsOpen}
@@ -306,6 +320,7 @@ const Playlists: FC<PlaylistsProps> = ({
           id={id!}
           folder={folder}
           onDeleteFolder={onDeleteFolder}
+          onEditFolder={onEditFolder}
         />
       ))}
       {playlists?.map((playlist) => (
@@ -314,6 +329,7 @@ const Playlists: FC<PlaylistsProps> = ({
           id={id!}
           playlist={playlist}
           onDeletePlaylist={onDeletePlaylist}
+          onEditPlaylist={onEditPlaylist}
         />
       ))}
     </Container>

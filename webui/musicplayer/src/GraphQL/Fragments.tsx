@@ -40,6 +40,7 @@ export const PLAYLIST_FRAGMENT = gql`
       artist
       artistId
       albumId
+      cover
       duration
     }
   }

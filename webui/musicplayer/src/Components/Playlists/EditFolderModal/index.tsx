@@ -6,23 +6,29 @@ import {
   ModalFooter,
   ModalButton,
 } from "baseui/modal";
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 export type EditFolderModalProps = {
+  folder?: any;
   isOpen: boolean;
   onClose: () => void;
-  onEditFolder: (name: string) => void;
+  onEditFolder: (id: string, name: string) => void;
 };
 
 const EditFolderModal: FC<EditFolderModalProps> = ({
+  folder,
   onClose,
   isOpen,
   onEditFolder,
 }) => {
-  const { control, handleSubmit, reset } = useForm();
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
+      name: folder?.name,
+    },
+  });
   const _onEditFolder = (data: any) => {
-    onEditFolder(data.name);
+    onEditFolder(folder.id, data.name);
     onClose();
     reset();
   };
@@ -30,6 +36,11 @@ const EditFolderModal: FC<EditFolderModalProps> = ({
     onClose();
     reset();
   };
+  useEffect(() => {
+    reset({
+      name: folder?.name,
+    });
+  }, [folder, reset]);
   return (
     <Modal onClose={_onClose} isOpen={isOpen}>
       <ModalHeader>Edit Folder</ModalHeader>
@@ -81,6 +92,12 @@ const EditFolderModal: FC<EditFolderModalProps> = ({
       </ModalFooter>
     </Modal>
   );
+};
+
+EditFolderModal.defaultProps = {
+  folder: {
+    name: "",
+  },
 };
 
 export default EditFolderModal;

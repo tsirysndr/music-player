@@ -7,23 +7,30 @@ import {
   ModalFooter,
   ModalButton,
 } from "baseui/modal";
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 export type EditPlaylistModalProps = {
+  playlist?: any;
   isOpen: boolean;
   onClose: () => void;
-  onEditPlaylist: (name: string, description?: string) => void;
+  onEditPlaylist: (id: string, name: string, description?: string) => void;
 };
 
 const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
+  playlist,
   onClose,
   isOpen,
   onEditPlaylist,
 }) => {
-  const { control, handleSubmit, reset } = useForm();
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
+      name: playlist?.name,
+      description: playlist?.description,
+    },
+  });
   const _onEditPlaylist = (data: any) => {
-    onEditPlaylist(data.name, data.description);
+    onEditPlaylist(playlist.id, data.name, data.description);
     onClose();
     reset();
   };
@@ -31,6 +38,12 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
     onClose();
     reset();
   };
+  useEffect(() => {
+    reset({
+      name: playlist?.name,
+      description: playlist?.description,
+    });
+  }, [playlist, reset]);
   return (
     <Modal onClose={_onClose} isOpen={isOpen}>
       <ModalHeader>Edit playlist</ModalHeader>
@@ -123,6 +136,10 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
       </ModalFooter>
     </Modal>
   );
+};
+
+EditPlaylistModal.defaultProps = {
+  playlist: {},
 };
 
 export default EditPlaylistModal;

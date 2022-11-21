@@ -11,6 +11,7 @@ import {
   useGetPlaylistLazyQuery,
   useGetPlaylistsLazyQuery,
   useGetPlaylistsQuery,
+  useMovePlaylistsToFolderMutation,
   useMovePlaylistToFolderMutation,
   useRenameFolderMutation,
   useRenamePlaylistMutation,
@@ -39,6 +40,7 @@ export const usePlaylist = () => {
   const [createPlaylist] = useCreatePlaylistMutation();
   const [addTrackToPlaylist] = useAddTrackToPlaylistMutation();
   const [movePlaylistToFolder] = useMovePlaylistToFolderMutation();
+  const [movePlaylistsToFolder] = useMovePlaylistsToFolderMutation();
   const [deleteFolder] = useDeleteFolderMutation();
   const [deletePlaylist] = useDeletePlaylistMutation();
   const [renamePlaylist] = useRenamePlaylistMutation();
@@ -72,6 +74,7 @@ export const usePlaylist = () => {
     createPlaylist,
     addTrackToPlaylist,
     movePlaylistToFolder,
+    movePlaylistsToFolder,
     deleteFolder,
     deletePlaylist,
     renamePlaylist,

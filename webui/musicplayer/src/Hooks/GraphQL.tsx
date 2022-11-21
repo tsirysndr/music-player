@@ -470,7 +470,7 @@ export type GetPlaylistQuery = { __typename?: 'Query', playlist: { __typename?: 
 export type GetFoldersQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetFoldersQuery = { __typename?: 'Query', folders: Array<{ __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> }> };
+export type GetFoldersQuery = { __typename?: 'Query', folders: Array<{ __typename?: 'Folder', id: string, name: string }> };
 
 export type GetFolderQueryVariables = Exact<{
   id: Scalars['ID'];
@@ -1443,10 +1443,11 @@ export type GetPlaylistQueryResult = Apollo.QueryResult<GetPlaylistQuery, GetPla
 export const GetFoldersDocument = gql`
     query GetFolders {
   folders {
-    ...FolderFragment
+    id
+    name
   }
 }
-    ${FolderFragmentFragmentDoc}`;
+    `;
 
 /**
  * __useGetFoldersQuery__

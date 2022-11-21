@@ -23,7 +23,8 @@ export const GET_PLAYLIST = gql`
 export const GET_FOLDERS = gql`
   query GetFolders {
     folders {
-      ...FolderFragment
+      id
+      name
     }
   }
   ${FOLDER_FRAGMENT}

@@ -1,11 +1,24 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Folder from "../../Components/Folder";
+import { useGetFolderQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const FolderPage = () => {
+  const params = useParams();
+  const { data, loading, refetch } = useGetFolderQuery({
+    variables: {
+      id: params.id!,
+    },
+    fetchPolicy: "network-only",
+  });
+
+  useEffect(() => {
+    params.id && refetch();
+  }, [params.id, refetch]);
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
   const {
@@ -28,7 +41,7 @@ const FolderPage = () => {
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
-    movePlaylistToFolder,
+    movePlaylistsToFolder,
     deleteFolder,
     deletePlaylist,
     renameFolder,
@@ -64,6 +77,10 @@ const FolderPage = () => {
       onPlayPlaylist={(playlistId, shuffle, position) =>
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
+      onMovePlaylists={(playlistIds, folderId) =>
+        movePlaylistsToFolder({ variables: { playlistIds, folderId } })
+      }
+      folder={data?.folder}
     />
   );
 };

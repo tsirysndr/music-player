@@ -3,9 +3,11 @@ import { FC } from "react";
 
 export type SearchProps = {
   onSearch: (query: string) => void;
+  height?: string;
+  width?: string;
 };
 
-const Search: FC<SearchProps> = ({ onSearch }) => {
+const Search: FC<SearchProps> = ({ onSearch, width, height }) => {
   const handleKeyPress = (
     event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -21,8 +23,8 @@ const Search: FC<SearchProps> = ({ onSearch }) => {
         overrides={{
           Root: {
             style: {
-              height: "36px",
-              width: "222px",
+              height,
+              width,
               borderTopWidth: "0px !important",
               borderBottomWidth: "0px !important",
               borderLeftWidth: "0px !important",
@@ -49,6 +51,11 @@ const Search: FC<SearchProps> = ({ onSearch }) => {
       />
     </>
   );
+};
+
+Search.defaultProps = {
+  height: "36px",
+  width: "222px",
 };
 
 export default Search;

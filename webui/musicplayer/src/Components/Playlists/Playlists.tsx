@@ -86,6 +86,7 @@ const Folder: FC<FolderProps> = ({
         placement="rightTop"
         isOpen={isOpen}
         autoFocus={false}
+        onClickOutside={() => setIsOpen(false)}
         content={() => (
           <FolderContextMenu
             close={() => setIsOpen(false)}
@@ -108,7 +109,6 @@ const Folder: FC<FolderProps> = ({
             e.preventDefault();
             setIsOpen(true);
           }}
-          onBlur={() => setIsOpen(false)}
         >
           <FolderItem>
             <FolderIcon size={18} style={{ marginRight: 10 }} />
@@ -145,6 +145,11 @@ export type PlaylistProps = {
   playlist: any;
   onDeletePlaylist: (id: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  onPlayPlaylist: (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
 };
 
 const Playlist: FC<PlaylistProps> = ({
@@ -152,6 +157,7 @@ const Playlist: FC<PlaylistProps> = ({
   id,
   onDeletePlaylist,
   onEditPlaylist,
+  onPlayPlaylist,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editPlaylistModalIsOpen, setEditPlaylistModalIsOpen] =
@@ -159,8 +165,8 @@ const Playlist: FC<PlaylistProps> = ({
   const [deleteConfirmationModalIsOpen, setDeleteConfirmationModalIsOpen] =
     useState<boolean>(false);
   const handlers = {
-    "Play Now": () => {},
-    Shuffle: () => {},
+    "Play Now": (id: string) => onPlayPlaylist(id, false),
+    Shuffle: (id: string) => onPlayPlaylist(id, true),
     "Play Next": () => {},
     "Add to Playlist": () => {},
     "Move to Folder": () => {},
@@ -173,6 +179,7 @@ const Playlist: FC<PlaylistProps> = ({
         placement="rightTop"
         isOpen={isOpen}
         autoFocus={false}
+        onClickOutside={() => setIsOpen(false)}
         content={() => (
           <ContextMenu
             close={() => setIsOpen(false)}
@@ -195,7 +202,6 @@ const Playlist: FC<PlaylistProps> = ({
             e.preventDefault();
             setIsOpen(true);
           }}
-          onBlur={() => setIsOpen(false)}
         >
           <Item
             active={playlist.id === id}
@@ -237,6 +243,11 @@ export type PlaylistsProps = {
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  onPlayPlaylist: (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
 };
 
 const Playlists: FC<PlaylistsProps> = ({
@@ -248,6 +259,7 @@ const Playlists: FC<PlaylistsProps> = ({
   onDeletePlaylist,
   onEditFolder,
   onEditPlaylist,
+  onPlayPlaylist,
 }) => {
   const { id } = useParams();
   const [newFolderModalOpen, setNewFolderModalOpen] = useState(false);
@@ -330,6 +342,7 @@ const Playlists: FC<PlaylistsProps> = ({
           playlist={playlist}
           onDeletePlaylist={onDeletePlaylist}
           onEditPlaylist={onEditPlaylist}
+          onPlayPlaylist={onPlayPlaylist}
         />
       ))}
     </Container>

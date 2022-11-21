@@ -150,6 +150,11 @@ export type AlbumDetailsProps = {
   onEditPlaylist: (id: string, name: string, description?: string) => void;
   recentPlaylists: any[];
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  onPlayPlaylist: (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {

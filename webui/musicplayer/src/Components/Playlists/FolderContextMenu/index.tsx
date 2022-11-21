@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { Menu } from "baseui/menu";
+import { StatefulMenu } from "baseui/menu";
 import { FC } from "react";
 import { Folder as FolderIcon } from "@styled-icons/bootstrap";
 
@@ -54,7 +54,7 @@ const FolderContextMenu: FC<FolderContextProps> = ({
           <Title>{folder.name}</Title>
         </FolderDetails>
       </Header>
-      <Menu
+      <StatefulMenu
         overrides={{
           List: {
             style: {
@@ -62,11 +62,6 @@ const FolderContextMenu: FC<FolderContextProps> = ({
             },
           },
           ListItem: {
-            props: {
-              onClick: (x: any) => {
-                handlers[x.target.innerText as Label]();
-              },
-            },
             style: () => ({
               ":hover": {
                 backgroundColor: "#f7f7f8",
@@ -88,6 +83,10 @@ const FolderContextMenu: FC<FolderContextProps> = ({
             label: "Create Playlist",
           },
         ]}
+        onItemSelect={({ item }) => {
+          handlers[item.label as Label]();
+          close();
+        }}
       />
     </div>
   );

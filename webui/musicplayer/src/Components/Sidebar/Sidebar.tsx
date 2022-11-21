@@ -25,6 +25,11 @@ export type SidebarProps = {
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
+  onPlayPlaylist: (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
 };
 
 const Sidebar: FC<SidebarProps> = (props) => {

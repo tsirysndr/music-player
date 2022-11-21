@@ -20,6 +20,7 @@ const AlbumsPage = () => {
     playNext,
     playTrackAt,
     removeTrackAt,
+    playPlaylist,
   } = usePlayback();
   const navigate = useNavigate();
   const { onSearch } = useSearch();
@@ -70,6 +71,9 @@ const AlbumsPage = () => {
       onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
       onEditPlaylist={(id, name, description) =>
         renamePlaylist({ variables: { id, name } })
+      }
+      onPlayPlaylist={(playlistId, shuffle, position) =>
+        playPlaylist({ variables: { playlistId, position, shuffle } })
       }
     />
   );

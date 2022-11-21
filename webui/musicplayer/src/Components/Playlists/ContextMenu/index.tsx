@@ -1,9 +1,7 @@
-import { Menu } from "baseui/menu";
-import { FC, useState } from "react";
+import { StatefulMenu } from "baseui/menu";
+import { FC } from "react";
 import { PlayList as PlaylistIcon } from "@styled-icons/remix-fill";
 import styled from "@emotion/styled";
-import EditPlaylistModal from "../EditPlaylistModal";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
 
 const IconWrapper = styled.div`
   height: 40px;
@@ -59,7 +57,7 @@ const ContextMenu: FC<ContextMenuProps> = ({ close, playlist, handlers }) => {
           <Title>{playlist.name}</Title>
         </PlaylistDetails>
       </Header>
-      <Menu
+      <StatefulMenu
         overrides={{
           List: {
             style: {
@@ -67,11 +65,6 @@ const ContextMenu: FC<ContextMenuProps> = ({ close, playlist, handlers }) => {
             },
           },
           ListItem: {
-            props: {
-              onClick: (x: any) => {
-                handlers[x.target.innerText as Label]();
-              },
-            },
             style: () => ({
               ":hover": {
                 backgroundColor: "#f7f7f8",
@@ -109,6 +102,10 @@ const ContextMenu: FC<ContextMenuProps> = ({ close, playlist, handlers }) => {
             label: "Delete Playlist",
           },
         ]}
+        onItemSelect={({ item }) => {
+          handlers[item.label as Label](playlist.id);
+          close();
+        }}
       />
     </div>
   );

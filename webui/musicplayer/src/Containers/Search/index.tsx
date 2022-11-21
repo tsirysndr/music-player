@@ -20,6 +20,7 @@ const SearchPage = () => {
     playNext,
     playTrackAt,
     removeTrackAt,
+    playPlaylist,
   } = usePlayback();
   const {
     folders,
@@ -85,6 +86,9 @@ const SearchPage = () => {
         }
         onAddTrackToPlaylist={(trackId, playlistId) =>
           addTrackToPlaylist({ variables: { trackId, playlistId } })
+        }
+        onPlayPlaylist={(playlistId, shuffle, position) =>
+          playPlaylist({ variables: { playlistId, position, shuffle } })
         }
         recentPlaylists={playlists}
       />

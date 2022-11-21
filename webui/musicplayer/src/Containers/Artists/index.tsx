@@ -19,6 +19,7 @@ const ArtistsPage = () => {
     playNext,
     playTrackAt,
     removeTrackAt,
+    playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
   const artists = !loading && data ? data.artists : [];
@@ -67,6 +68,9 @@ const ArtistsPage = () => {
       onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
       onEditPlaylist={(id, name, description) =>
         renamePlaylist({ variables: { id, name } })
+      }
+      onPlayPlaylist={(playlistId, shuffle, position) =>
+        playPlaylist({ variables: { playlistId, position, shuffle } })
       }
     />
   );

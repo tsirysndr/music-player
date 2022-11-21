@@ -55,6 +55,11 @@ export type SearchResultsProps = {
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
+  onPlayPlaylist: (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => void;
   recentPlaylists: any[];
 };
 

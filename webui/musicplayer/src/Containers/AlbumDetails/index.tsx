@@ -55,7 +55,8 @@ const AlbumDetailsPage = () => {
       : { tracks: [] };
   const {
     folders,
-    playlists,
+    mainPlaylists,
+    recentPlaylists,
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
@@ -88,7 +89,7 @@ const AlbumDetailsPage = () => {
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
       onSearch={(query) => navigate(`/search?q=${query}`)}
       folders={folders}
-      playlists={playlists}
+      playlists={mainPlaylists}
       onCreateFolder={(name) => createFolder({ variables: { name } })}
       onCreatePlaylist={(name) => createPlaylist({ variables: { name } })}
       onAddTrackToPlaylist={(playlistId, trackId) =>
@@ -101,7 +102,7 @@ const AlbumDetailsPage = () => {
       onPlayPlaylist={(playlistId, shuffle, position) =>
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
-      recentPlaylists={playlists}
+      recentPlaylists={recentPlaylists}
     />
   );
 };

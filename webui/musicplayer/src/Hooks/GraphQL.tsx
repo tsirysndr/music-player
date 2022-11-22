@@ -230,8 +230,10 @@ export type Query = {
   getRandom: Scalars['Boolean'];
   getRepeat: Scalars['Boolean'];
   getVolume: Scalars['Int'];
+  mainPlaylists: Array<Playlist>;
   playlist: Playlist;
   playlists: Array<Playlist>;
+  recentPlaylists: Array<Playlist>;
   search: SearchResult;
   track: Track;
   tracklistTracks: Tracklist;
@@ -460,6 +462,16 @@ export type GetPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetPlaylistsQuery = { __typename?: 'Query', playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
+export type GetRecentPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetRecentPlaylistsQuery = { __typename?: 'Query', recentPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
+
+export type GetMainPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetMainPlaylistsQuery = { __typename?: 'Query', mainPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
+
 export type GetPlaylistQueryVariables = Exact<{
   id: Scalars['ID'];
 }>;
@@ -470,7 +482,7 @@ export type GetPlaylistQuery = { __typename?: 'Query', playlist: { __typename?: 
 export type GetFoldersQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetFoldersQuery = { __typename?: 'Query', folders: Array<{ __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> }> };
+export type GetFoldersQuery = { __typename?: 'Query', folders: Array<{ __typename?: 'Folder', id: string, name: string }> };
 
 export type GetFolderQueryVariables = Exact<{
   id: Scalars['ID'];
@@ -1405,6 +1417,78 @@ export function useGetPlaylistsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptio
 export type GetPlaylistsQueryHookResult = ReturnType<typeof useGetPlaylistsQuery>;
 export type GetPlaylistsLazyQueryHookResult = ReturnType<typeof useGetPlaylistsLazyQuery>;
 export type GetPlaylistsQueryResult = Apollo.QueryResult<GetPlaylistsQuery, GetPlaylistsQueryVariables>;
+export const GetRecentPlaylistsDocument = gql`
+    query GetRecentPlaylists {
+  recentPlaylists {
+    id
+    name
+    description
+  }
+}
+    `;
+
+/**
+ * __useGetRecentPlaylistsQuery__
+ *
+ * To run a query within a React component, call `useGetRecentPlaylistsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRecentPlaylistsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetRecentPlaylistsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetRecentPlaylistsQuery(baseOptions?: Apollo.QueryHookOptions<GetRecentPlaylistsQuery, GetRecentPlaylistsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetRecentPlaylistsQuery, GetRecentPlaylistsQueryVariables>(GetRecentPlaylistsDocument, options);
+      }
+export function useGetRecentPlaylistsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetRecentPlaylistsQuery, GetRecentPlaylistsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetRecentPlaylistsQuery, GetRecentPlaylistsQueryVariables>(GetRecentPlaylistsDocument, options);
+        }
+export type GetRecentPlaylistsQueryHookResult = ReturnType<typeof useGetRecentPlaylistsQuery>;
+export type GetRecentPlaylistsLazyQueryHookResult = ReturnType<typeof useGetRecentPlaylistsLazyQuery>;
+export type GetRecentPlaylistsQueryResult = Apollo.QueryResult<GetRecentPlaylistsQuery, GetRecentPlaylistsQueryVariables>;
+export const GetMainPlaylistsDocument = gql`
+    query GetMainPlaylists {
+  mainPlaylists {
+    id
+    name
+    description
+  }
+}
+    `;
+
+/**
+ * __useGetMainPlaylistsQuery__
+ *
+ * To run a query within a React component, call `useGetMainPlaylistsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMainPlaylistsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMainPlaylistsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetMainPlaylistsQuery(baseOptions?: Apollo.QueryHookOptions<GetMainPlaylistsQuery, GetMainPlaylistsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetMainPlaylistsQuery, GetMainPlaylistsQueryVariables>(GetMainPlaylistsDocument, options);
+      }
+export function useGetMainPlaylistsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMainPlaylistsQuery, GetMainPlaylistsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetMainPlaylistsQuery, GetMainPlaylistsQueryVariables>(GetMainPlaylistsDocument, options);
+        }
+export type GetMainPlaylistsQueryHookResult = ReturnType<typeof useGetMainPlaylistsQuery>;
+export type GetMainPlaylistsLazyQueryHookResult = ReturnType<typeof useGetMainPlaylistsLazyQuery>;
+export type GetMainPlaylistsQueryResult = Apollo.QueryResult<GetMainPlaylistsQuery, GetMainPlaylistsQueryVariables>;
 export const GetPlaylistDocument = gql`
     query GetPlaylist($id: ID!) {
   playlist(id: $id) {
@@ -1443,10 +1527,11 @@ export type GetPlaylistQueryResult = Apollo.QueryResult<GetPlaylistQuery, GetPla
 export const GetFoldersDocument = gql`
     query GetFolders {
   folders {
-    ...FolderFragment
+    id
+    name
   }
 }
-    ${FolderFragmentFragmentDoc}`;
+    `;
 
 /**
  * __useGetFoldersQuery__

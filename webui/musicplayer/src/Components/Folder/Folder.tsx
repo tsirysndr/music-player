@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
-import { FC } from "react";
+import { FC, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
@@ -9,10 +9,10 @@ import Play from "../Icons/Play";
 import Shuffle from "../Icons/Shuffle";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
-import TracksTable from "../TracksTable";
-import AlbumIcon from "../Icons/AlbumCover";
+import PlaylistIcon from "../Icons/PlaylistAlt";
 import { Track } from "../../Types";
 import { Folder as FolderIcon } from "@styled-icons/bootstrap";
+import MovePlaylistsModal from "./MovePlaylistsModal";
 
 const Container = styled.div`
   display: flex;
@@ -83,6 +83,15 @@ const Title = styled.div`
   flex: 1;
 `;
 
+const PlaylistName = styled.div`
+  font-size: 14px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+  margin-top: 15px;
+`;
+
 const Row = styled.div`
   display: flex;
   flex-direction: row;
@@ -91,51 +100,15 @@ const Row = styled.div`
   margin-left: 10px;
 `;
 
-const SeeMore = styled.div`
-  width: 64px;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.51);
-  cursor: pointer;
-`;
-
-const Tracks = styled.div`
-  margin-bottom: 48px;
-`;
-
-const AlbumCover = styled.img`
-  height: 169px;
-  width: 169px;
-  border-radius: 5px;
-  cursor: pointer;
-`;
-
-const NoAlbumCover = styled.div`
-  height: 169px;
-  width: 169px;
+const NoPlaylistCover = styled.div`
+  height: 220px;
+  width: 220px;
   border-radius: 5px;
   cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: #ddaefb14;
-`;
-
-const AlbumArtist = styled.div`
-  color: #828282;
-  margin-bottom: 56px;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-`;
-
-const AlbumTitle = styled.div`
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
 `;
 
 const PlaceholderWrapper = styled.div`
@@ -153,6 +126,35 @@ const Placeholder = styled.div`
   margin-top: 50px;
   margin-bottom: 35px;
 `;
+
+const Wrapper = styled.div`
+  margin-top: 34px;
+  margin-left: 10px;
+`;
+
+export type PlaylistProps = {
+  playlist: any;
+};
+
+const Playlist: FC<PlaylistProps> = ({ playlist }) => {
+  return (
+    <>
+      <Link
+        to={`/playlists/${playlist.id}`}
+        style={{ textDecoration: "initial" }}
+      >
+        <NoPlaylistCover>
+          <PlaylistIcon
+            size={48}
+            color="#ab28fc"
+            style={{ marginRight: -38, marginTop: 30 }}
+          />
+        </NoPlaylistCover>
+        <PlaylistName>{playlist.name}</PlaylistName>
+      </Link>
+    </>
+  );
+};
 
 export type FolderProps = {
   onBack: () => void;
@@ -172,6 +174,7 @@ export type FolderProps = {
   onSearch: (query: string) => void;
   folders: any[];
   playlists: any[];
+  mainPlaylists: any[];
   onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
   onDeleteFolder: (id: string) => void;
@@ -183,30 +186,64 @@ export type FolderProps = {
     shuffle: boolean,
     position?: number
   ) => void;
+  onMovePlaylists: (playlistIds: string[], folderId: string) => void;
+  folder?: any;
 };
 
 const Folder: FC<FolderProps> = (props) => {
-  const { onBack, onPlayNext, onCreatePlaylist } = props;
+  const {
+    onPlayNext,
+    onCreatePlaylist,
+    playlists,
+    mainPlaylists,
+    folder,
+    onMovePlaylists,
+  } = props;
+  const [isMovePlaylistsModalOpen, setIsMovePlaylistsModalOpen] =
+    useState(false);
   return (
     <Container>
-      <Sidebar active="artists" {...props} />
+      <Sidebar active="artists" {...props} playlists={mainPlaylists} />
       <Content>
         <ControlBar {...props} />
         <MainContent displayHeader={false}>
           <Scrollable>
-            <BackButton onClick={onBack}>
-              <div style={{ marginTop: 2 }}>
-                <ArrowBack />
-              </div>
-            </BackButton>
-            <PlaceholderWrapper>
-              <FolderIcon size={100} color="rgb(70, 70, 70)" />
-              <Placeholder>Start moving playlists to your folder.</Placeholder>
-              <Button onClick={() => {}}>Move Playlists</Button>
-            </PlaceholderWrapper>
+            {folder?.playlists?.length > 0 && (
+              <Scrollable>
+                <MainContent title="Playlists" placeholder="Filter Playlists">
+                  <Wrapper>
+                    <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
+                      {folder?.playlists.map((item: any) => (
+                        <Cell key={item.id}>
+                          <Playlist playlist={item} />
+                        </Cell>
+                      ))}
+                    </Grid>
+                  </Wrapper>
+                </MainContent>
+              </Scrollable>
+            )}
+            {folder?.playlists?.length === 0 && (
+              <PlaceholderWrapper>
+                <FolderIcon size={100} color="rgb(70, 70, 70)" />
+                <Placeholder>
+                  Start moving playlists to your folder.
+                </Placeholder>
+                <Button onClick={() => setIsMovePlaylistsModalOpen(true)}>
+                  Move Playlists
+                </Button>
+              </PlaceholderWrapper>
+            )}
           </Scrollable>
         </MainContent>
       </Content>
+      <MovePlaylistsModal
+        isOpen={isMovePlaylistsModalOpen}
+        onClose={() => setIsMovePlaylistsModalOpen(false)}
+        onMovePlaylists={onMovePlaylists}
+        playlists={playlists}
+        folderId={folder?.id}
+      />
     </Container>
   );
 };

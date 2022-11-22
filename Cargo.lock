@@ -2929,7 +2929,7 @@ dependencies = [
 
 [[package]]
 name = "music-player"
-version = "0.2.0-alpha.4"
+version = "0.2.0-alpha.5"
 dependencies = [
  "clap",
  "crossterm",
@@ -3154,7 +3154,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-webui"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "actix-cors",
  "actix-files",

@@ -25,6 +25,8 @@ const SearchPage = () => {
   const {
     folders,
     playlists,
+    recentPlaylists,
+    mainPlaylists,
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
@@ -73,7 +75,7 @@ const SearchPage = () => {
         }
         onSearch={onSearch}
         folders={folders}
-        playlists={playlists}
+        playlists={mainPlaylists}
         onCreateFolder={(name) => createFolder({ variables: { name } })}
         onCreatePlaylist={(name, description) =>
           createPlaylist({ variables: { name, description } })
@@ -90,7 +92,7 @@ const SearchPage = () => {
         onPlayPlaylist={(playlistId, shuffle, position) =>
           playPlaylist({ variables: { playlistId, position, shuffle } })
         }
-        recentPlaylists={playlists}
+        recentPlaylists={recentPlaylists}
       />
     </>
   );

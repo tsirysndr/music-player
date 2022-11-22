@@ -8,9 +8,12 @@ import {
   useGetFolderLazyQuery,
   useGetFoldersLazyQuery,
   useGetFoldersQuery,
+  useGetMainPlaylistsQuery,
   useGetPlaylistLazyQuery,
   useGetPlaylistsLazyQuery,
   useGetPlaylistsQuery,
+  useGetRecentPlaylistsQuery,
+  useMovePlaylistsToFolderMutation,
   useMovePlaylistToFolderMutation,
   useRenameFolderMutation,
   useRenamePlaylistMutation,
@@ -27,6 +30,20 @@ export const usePlaylist = () => {
     pollInterval: 1000,
   });
   const {
+    data: recentPlaylistsData,
+    startPolling: startPollingRecentPlaylists,
+    stopPolling: stopPollingRecentPlaylists,
+  } = useGetRecentPlaylistsQuery({
+    pollInterval: 1000,
+  });
+  const {
+    data: mainPlaylistsData,
+    startPolling: startPollingMainPlaylists,
+    stopPolling: stopPollingMainPlaylists,
+  } = useGetMainPlaylistsQuery({
+    pollInterval: 1000,
+  });
+  const {
     data: foldersData,
     startPolling: startPollingFolders,
     stopPolling: stopPollingFolders,
@@ -39,6 +56,7 @@ export const usePlaylist = () => {
   const [createPlaylist] = useCreatePlaylistMutation();
   const [addTrackToPlaylist] = useAddTrackToPlaylistMutation();
   const [movePlaylistToFolder] = useMovePlaylistToFolderMutation();
+  const [movePlaylistsToFolder] = useMovePlaylistsToFolderMutation();
   const [deleteFolder] = useDeleteFolderMutation();
   const [deletePlaylist] = useDeletePlaylistMutation();
   const [renamePlaylist] = useRenamePlaylistMutation();
@@ -46,24 +64,36 @@ export const usePlaylist = () => {
 
   const playlists = playlistsData?.playlists || [];
   const folders = foldersData?.folders || [];
+  const recentPlaylists = recentPlaylistsData?.recentPlaylists || [];
+  const mainPlaylists = mainPlaylistsData?.mainPlaylists || [];
 
   useEffect(() => {
     startPollingPlaylists!(1000);
     startPollingFolders(1000);
+    startPollingMainPlaylists(1000);
+    startPollingRecentPlaylists(1000);
     return () => {
       stopPollingPlaylists();
       stopPollingFolders();
+      stopPollingRecentPlaylists();
+      stopPollingRecentPlaylists();
     };
   }, [
     startPollingFolders,
     startPollingPlaylists,
+    startPollingRecentPlaylists,
+    startPollingMainPlaylists,
     stopPollingFolders,
     stopPollingPlaylists,
+    stopPollingRecentPlaylists,
+    stopPollingMainPlaylists,
   ]);
 
   return {
     playlists,
     folders,
+    recentPlaylists,
+    mainPlaylists,
     getPlaylist,
     getPlaylists,
     getFolder,
@@ -72,6 +102,7 @@ export const usePlaylist = () => {
     createPlaylist,
     addTrackToPlaylist,
     movePlaylistToFolder,
+    movePlaylistsToFolder,
     deleteFolder,
     deletePlaylist,
     renamePlaylist,

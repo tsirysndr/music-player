@@ -30,6 +30,8 @@ const TracksPage = () => {
   const {
     folders,
     playlists,
+    recentPlaylists,
+    mainPlaylists,
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
@@ -69,7 +71,7 @@ const TracksPage = () => {
           removeTrackAt({ variables: { position } })
         }
         onSearch={(query) => navigate(`/search?q=${query}`)}
-        playlists={playlists}
+        playlists={mainPlaylists}
         folders={folders}
         onCreateFolder={(name) => createFolder({ variables: { name } })}
         onCreatePlaylist={(name, description) =>
@@ -87,7 +89,7 @@ const TracksPage = () => {
         onPlayPlaylist={(playlistId, shuffle, position) =>
           playPlaylist({ variables: { playlistId, position, shuffle } })
         }
-        recentPlaylists={playlists}
+        recentPlaylists={recentPlaylists}
       />
     </>
   );

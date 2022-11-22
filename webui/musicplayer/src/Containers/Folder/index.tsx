@@ -38,6 +38,8 @@ const FolderPage = () => {
   const {
     folders,
     playlists,
+    recentPlaylists,
+    mainPlaylists,
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
@@ -66,6 +68,7 @@ const FolderPage = () => {
       onSearch={(query) => navigate(`/search?q=${query}`)}
       folders={folders}
       playlists={playlists}
+      mainPlaylists={mainPlaylists}
       onCreateFolder={(name) => createFolder({ variables: { name } })}
       onCreatePlaylist={(name, description) =>
         createPlaylist({ variables: { name, description } })

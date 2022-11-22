@@ -27,7 +27,7 @@ const AlbumsPage = () => {
   const albums = !loading && data ? data.albums : [];
   const {
     folders,
-    playlists,
+    mainPlaylists,
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
@@ -61,7 +61,7 @@ const AlbumsPage = () => {
       onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
       onSearch={(query) => navigate(`/search?q=${query}`)}
       folders={folders}
-      playlists={playlists}
+      playlists={mainPlaylists}
       onCreateFolder={(name) => createFolder({ variables: { name } })}
       onCreatePlaylist={(name, description) =>
         createPlaylist({ variables: { name, description } })

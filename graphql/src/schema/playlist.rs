@@ -94,6 +94,30 @@ impl PlaylistQuery {
             .map_err(|e| Error::new(e.to_string()))
     }
 
+    async fn main_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = db.lock().await;
+        playlist_entity::Entity::find()
+            .order_by_asc(playlist_entity::Column::Name)
+            .filter(playlist_entity::Column::FolderId.is_null())
+            .all(db.get_connection())
+            .await
+            .map(|playlists| playlists.into_iter().map(Into::into).collect())
+            .map_err(|e| Error::new(e.to_string()))
+    }
+
+    async fn recent_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = db.lock().await;
+        playlist_entity::Entity::find()
+            .order_by_desc(playlist_entity::Column::CreatedAt)
+            .limit(10)
+            .all(db.get_connection())
+            .await
+            .map(|playlists| playlists.into_iter().map(Into::into).collect())
+            .map_err(|e| Error::new(e.to_string()))
+    }
+
     async fn folder(&self, ctx: &Context<'_>, id: ID) -> Result<Folder, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;

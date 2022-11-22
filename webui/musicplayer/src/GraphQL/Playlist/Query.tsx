@@ -11,6 +11,26 @@ export const GET_PLAYLISTS = gql`
   }
 `;
 
+export const GET_RECENT_PLAYLISTS = gql`
+  query GetRecentPlaylists {
+    recentPlaylists {
+      id
+      name
+      description
+    }
+  }
+`;
+
+export const GET_MAIN_PLAYLISTS = gql`
+  query GetMainPlaylists {
+    mainPlaylists {
+      id
+      name
+      description
+    }
+  }
+`;
+
 export const GET_PLAYLIST = gql`
   query GetPlaylist($id: ID!) {
     playlist(id: $id) {

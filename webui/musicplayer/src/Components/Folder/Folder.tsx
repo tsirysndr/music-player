@@ -174,6 +174,7 @@ export type FolderProps = {
   onSearch: (query: string) => void;
   folders: any[];
   playlists: any[];
+  mainPlaylists: any[];
   onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
   onDeleteFolder: (id: string) => void;
@@ -190,13 +191,19 @@ export type FolderProps = {
 };
 
 const Folder: FC<FolderProps> = (props) => {
-  const { onPlayNext, onCreatePlaylist, playlists, folder, onMovePlaylists } =
-    props;
+  const {
+    onPlayNext,
+    onCreatePlaylist,
+    playlists,
+    mainPlaylists,
+    folder,
+    onMovePlaylists,
+  } = props;
   const [isMovePlaylistsModalOpen, setIsMovePlaylistsModalOpen] =
     useState(false);
   return (
     <Container>
-      <Sidebar active="artists" {...props} />
+      <Sidebar active="artists" {...props} playlists={mainPlaylists} />
       <Content>
         <ControlBar {...props} />
         <MainContent displayHeader={false}>

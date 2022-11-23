@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
+use futures_util::Stream;
 use music_player_entity::{
     album as album_entity, artist as artist_entity, playlist as playlist_entity,
     playlist_tracks as playlist_tracks_entity, select_result, track as track_entity,
@@ -15,10 +16,12 @@ use sea_orm::{
 };
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
-use super::objects::{
+use crate::simple_broker::SimpleBroker;
+
+use super::{objects::{
     track::{Track, TrackInput},
     tracklist::Tracklist,
-};
+}, MutationType};
 
 #[derive(Default)]
 pub struct TracklistQuery;
@@ -57,6 +60,7 @@ pub struct TracklistMutation;
 #[Object]
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> Result<Vec<Track>, Error> {
+        let state = ctx.data::<Arc<std::sync::Mutex<TracklistState>>>().unwrap();
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -89,9 +93,20 @@ impl TracklistMutation {
             .lock()
             .unwrap()
             .send(PlayerCommand::LoadTracklist {
-                tracks: vec![track],
+                tracks: vec![track.clone()],
             })
             .unwrap();
+
+        let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
+
+        SimpleBroker::publish(TracklistChanged {
+            tracklist: Tracklist {
+                next_tracks: next_tracks.into_iter().map(Into::into).collect(),
+                previous_tracks: previous_tracks.into_iter().map(Into::into).collect(),
+            },
+            mutation_type: MutationType::Updated,
+            track: Some(track.clone().into()),
+        });
         Ok(vec![])
     }
 
@@ -111,10 +126,19 @@ impl TracklistMutation {
             .unwrap()
             .send(PlayerCommand::Clear)
             .unwrap();
+        SimpleBroker::publish(TracklistChanged {
+            tracklist: Tracklist {
+                next_tracks: vec![],
+                previous_tracks: vec![],
+            },
+            mutation_type: MutationType::Cleared,
+            track: None,
+        });
         Ok(true)
     }
 
     async fn remove_track(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
+        let state = ctx.data::<Arc<std::sync::Mutex<TracklistState>>>().unwrap();
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -123,6 +147,16 @@ impl TracklistMutation {
             .unwrap()
             .send(PlayerCommand::RemoveTrack(position as usize))
             .unwrap();
+
+        let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
+        SimpleBroker::publish(TracklistChanged {
+            tracklist: Tracklist {
+                next_tracks: next_tracks.into_iter().map(Into::into).collect(),
+                previous_tracks: previous_tracks.into_iter().map(Into::into).collect(),
+            },
+            mutation_type: MutationType::Updated,
+            track: None,
+        });
         Ok(true)
     }
 
@@ -377,5 +411,37 @@ impl TracklistMutation {
             .unwrap();
 
         Ok(true)
+    }
+}
+
+#[derive(Clone)]
+struct TracklistChanged {
+    mutation_type: MutationType,
+    tracklist: Tracklist,
+    track: Option<Track>,
+}
+
+#[Object]
+impl TracklistChanged {
+    async fn mutation_type(&self) -> MutationType {
+        self.mutation_type
+    }
+
+    async fn tracklist(&self) -> &Tracklist {
+        &self.tracklist
+    }
+
+    async fn track(&self) -> Option<&Track> {
+        self.track.as_ref()
+    }
+}
+
+#[derive(Default)]
+pub struct TracklistSubscription;
+
+#[Subscription]
+impl TracklistSubscription {
+    async fn tracklist(&self, _id: ID) -> impl Stream<Item = TracklistChanged> {
+        SimpleBroker::<TracklistChanged>::subscribe()
     }
 }

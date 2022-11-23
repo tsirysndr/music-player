@@ -1,11 +1,11 @@
-use async_graphql::MergedObject;
+use async_graphql::{Enum, MergedObject, MergedSubscription};
 
 use self::{
     library::{LibraryMutation, LibraryQuery},
     mixer::{MixerMutation, MixerQuery},
-    playback::{PlaybackMutation, PlaybackQuery},
-    playlist::{PlaylistMutation, PlaylistQuery},
-    tracklist::{TracklistMutation, TracklistQuery},
+    playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
+    playlist::{PlaylistMutation, PlaylistQuery, PlaylistSubscription},
+    tracklist::{TracklistMutation, TracklistQuery, TracklistSubscription},
 };
 
 pub mod addons;
@@ -35,3 +35,20 @@ pub struct Mutation(
     PlaylistMutation,
     TracklistMutation,
 );
+
+#[derive(MergedSubscription, Default)]
+pub struct Subscription(
+    PlaybackSubscription,
+    PlaylistSubscription,
+    TracklistSubscription,
+);
+
+#[derive(Enum, Eq, PartialEq, Copy, Clone)]
+pub enum MutationType {
+    Created,
+    Cleared,
+    Deleted,
+    Renamed,
+    Moved,
+    Updated,
+}

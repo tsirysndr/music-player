@@ -55,6 +55,13 @@ export type Folder = {
   playlists: Array<Playlist>;
 };
 
+export type FolderChanged = {
+  __typename?: 'FolderChanged';
+  folder: Folder;
+  mutationType: MutationType;
+  playlist?: Maybe<Playlist>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   addTrack: Array<Track>;
@@ -207,12 +214,40 @@ export type MutationSetVolumeArgs = {
   volume: Scalars['Int'];
 };
 
+export enum MutationType {
+  Cleared = 'CLEARED',
+  Created = 'CREATED',
+  Deleted = 'DELETED',
+  Moved = 'MOVED',
+  Renamed = 'RENAMED',
+  Updated = 'UPDATED'
+}
+
+export type PlayerState = {
+  __typename?: 'PlayerState';
+  index: Scalars['Int'];
+  isPlaying: Scalars['Boolean'];
+  positionMs: Scalars['Int'];
+};
+
 export type Playlist = {
   __typename?: 'Playlist';
   description?: Maybe<Scalars['String']>;
   id: Scalars['String'];
   name: Scalars['String'];
   tracks: Array<Track>;
+};
+
+export type PlaylistChanged = {
+  __typename?: 'PlaylistChanged';
+  mutationType: MutationType;
+  playlist: Playlist;
+  track?: Maybe<Track>;
+};
+
+export type PositionMilliseconds = {
+  __typename?: 'PositionMilliseconds';
+  positionMs: Scalars['Int'];
 };
 
 export type Query = {
@@ -225,7 +260,7 @@ export type Query = {
   folder: Folder;
   folders: Array<Folder>;
   getNextTrack?: Maybe<Track>;
-  getPlaybackState: Scalars['Boolean'];
+  getPlayerState: PlayerState;
   getPreviousTrack?: Maybe<Track>;
   getRandom: Scalars['Boolean'];
   getRepeat: Scalars['Boolean'];
@@ -277,6 +312,33 @@ export type SearchResult = {
   tracks: Array<Track>;
 };
 
+export type Subscription = {
+  __typename?: 'Subscription';
+  currentlyPlayingSong: Track;
+  folder: FolderChanged;
+  folders: Array<Folder>;
+  playerState: PlayerState;
+  playlist: PlaylistChanged;
+  playlists: Array<Playlist>;
+  trackTimePosition: PositionMilliseconds;
+  tracklist: TracklistChanged;
+};
+
+
+export type SubscriptionFolderArgs = {
+  id: Scalars['ID'];
+};
+
+
+export type SubscriptionPlaylistArgs = {
+  id: Scalars['ID'];
+};
+
+
+export type SubscriptionTracklistArgs = {
+  id: Scalars['ID'];
+};
+
 export type Track = {
   __typename?: 'Track';
   album: Album;
@@ -307,6 +369,13 @@ export type Tracklist = {
   __typename?: 'Tracklist';
   nextTracks: Array<Track>;
   previousTracks: Array<Track>;
+};
+
+export type TracklistChanged = {
+  __typename?: 'TracklistChanged';
+  mutationType: MutationType;
+  track?: Maybe<Track>;
+  tracklist: Tracklist;
 };
 
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
@@ -379,6 +448,21 @@ export type CurrentlyPlayingSongQueryVariables = Exact<{ [key: string]: never; }
 
 
 export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } | null } };
+
+export type PlayerStateChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PlayerStateChangedSubscription = { __typename?: 'Subscription', playerState: { __typename?: 'PlayerState', isPlaying: boolean } };
+
+export type TrackTimePositionChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type TrackTimePositionChangedSubscription = { __typename?: 'Subscription', trackTimePosition: { __typename?: 'PositionMilliseconds', positionMs: number } };
+
+export type CurrentlyPlayingSongChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } };
 
 export type CreatePlaylistMutationVariables = Exact<{
   name: Scalars['String'];
@@ -1039,6 +1123,101 @@ export function useCurrentlyPlayingSongLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type CurrentlyPlayingSongQueryHookResult = ReturnType<typeof useCurrentlyPlayingSongQuery>;
 export type CurrentlyPlayingSongLazyQueryHookResult = ReturnType<typeof useCurrentlyPlayingSongLazyQuery>;
 export type CurrentlyPlayingSongQueryResult = Apollo.QueryResult<CurrentlyPlayingSongQuery, CurrentlyPlayingSongQueryVariables>;
+export const PlayerStateChangedDocument = gql`
+    subscription PlayerStateChanged {
+  playerState {
+    isPlaying
+  }
+}
+    `;
+
+/**
+ * __usePlayerStateChangedSubscription__
+ *
+ * To run a query within a React component, call `usePlayerStateChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePlayerStateChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePlayerStateChangedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function usePlayerStateChangedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<PlayerStateChangedSubscription, PlayerStateChangedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<PlayerStateChangedSubscription, PlayerStateChangedSubscriptionVariables>(PlayerStateChangedDocument, options);
+      }
+export type PlayerStateChangedSubscriptionHookResult = ReturnType<typeof usePlayerStateChangedSubscription>;
+export type PlayerStateChangedSubscriptionResult = Apollo.SubscriptionResult<PlayerStateChangedSubscription>;
+export const TrackTimePositionChangedDocument = gql`
+    subscription TrackTimePositionChanged {
+  trackTimePosition {
+    positionMs
+  }
+}
+    `;
+
+/**
+ * __useTrackTimePositionChangedSubscription__
+ *
+ * To run a query within a React component, call `useTrackTimePositionChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useTrackTimePositionChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTrackTimePositionChangedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useTrackTimePositionChangedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<TrackTimePositionChangedSubscription, TrackTimePositionChangedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<TrackTimePositionChangedSubscription, TrackTimePositionChangedSubscriptionVariables>(TrackTimePositionChangedDocument, options);
+      }
+export type TrackTimePositionChangedSubscriptionHookResult = ReturnType<typeof useTrackTimePositionChangedSubscription>;
+export type TrackTimePositionChangedSubscriptionResult = Apollo.SubscriptionResult<TrackTimePositionChangedSubscription>;
+export const CurrentlyPlayingSongChangedDocument = gql`
+    subscription CurrentlyPlayingSongChanged {
+  currentlyPlayingSong {
+    ...TrackFragment
+    artists {
+      id
+      name
+    }
+    album {
+      id
+      title
+    }
+  }
+}
+    ${TrackFragmentFragmentDoc}`;
+
+/**
+ * __useCurrentlyPlayingSongChangedSubscription__
+ *
+ * To run a query within a React component, call `useCurrentlyPlayingSongChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useCurrentlyPlayingSongChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCurrentlyPlayingSongChangedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCurrentlyPlayingSongChangedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<CurrentlyPlayingSongChangedSubscription, CurrentlyPlayingSongChangedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<CurrentlyPlayingSongChangedSubscription, CurrentlyPlayingSongChangedSubscriptionVariables>(CurrentlyPlayingSongChangedDocument, options);
+      }
+export type CurrentlyPlayingSongChangedSubscriptionHookResult = ReturnType<typeof useCurrentlyPlayingSongChangedSubscription>;
+export type CurrentlyPlayingSongChangedSubscriptionResult = Apollo.SubscriptionResult<CurrentlyPlayingSongChangedSubscription>;
 export const CreatePlaylistDocument = gql`
     mutation CreatePlaylist($name: String!, $description: String) {
   createPlaylist(name: $name, description: $description) {

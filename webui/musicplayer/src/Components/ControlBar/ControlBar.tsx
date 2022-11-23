@@ -85,10 +85,10 @@ const ControlBar: FC<ControlBarProps> = (props) => {
   } = props;
 
   useEffect(() => {
-    if (nowPlaying) {
+    if (!!nowPlaying) {
       setPlayed(nowPlaying.isPlaying!);
     }
-  }, [nowPlaying]);
+  }, [nowPlaying?.isPlaying]);
 
   const handlePlay = () => {
     setPlayed(true);

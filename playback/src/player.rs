@@ -309,6 +309,9 @@ impl Future for PlayerInternal {
                                     position_ms: self.position_ms,
                                     ..playback_state
                                 });
+                            (self.event_broadcaster)(PlayerEvent::TrackTimePosition {
+                                position_ms: packet_position.position_ms,
+                            });
                         } else {
                             // end of track
                             self.state = PlayerState::Stopped;

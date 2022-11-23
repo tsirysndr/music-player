@@ -1,11 +1,16 @@
 use std::sync::Arc;
 
 use async_graphql::*;
+use futures_util::{lock::Mutex, Stream};
 use music_player_playback::player::PlayerCommand;
-use music_player_tracklist::Tracklist;
-use tokio::sync::{mpsc::UnboundedSender, Mutex};
+use music_player_tracklist::{PlaybackState, Tracklist};
+use tokio::sync::mpsc::UnboundedSender;
 
-use super::objects::current_track::CurrentlyPlayingSong;
+use crate::simple_broker::SimpleBroker;
+
+use super::objects::{
+    current_track::CurrentlyPlayingSong, player_state::PlayerState, track::Track,
+};
 
 #[derive(Default)]
 pub struct PlaybackQuery;
@@ -50,7 +55,7 @@ impl PlaybackQuery {
         })
     }
 
-    async fn get_playback_state(&self, ctx: &Context<'_>) -> bool {
+    async fn get_player_state(&self, ctx: &Context<'_>) -> PlayerState {
         let _tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
         todo!()
     }
@@ -131,5 +136,35 @@ impl PlaybackMutation {
             .send(PlayerCommand::Stop)
             .unwrap();
         Ok(true)
+    }
+}
+
+#[derive(Clone)]
+pub struct PositionMilliseconds {
+    pub position_ms: u32,
+}
+
+#[Object]
+impl PositionMilliseconds {
+    async fn position_ms(&self) -> u32 {
+        self.position_ms
+    }
+}
+
+#[derive(Default)]
+pub struct PlaybackSubscription;
+
+#[Subscription]
+impl PlaybackSubscription {
+    async fn player_state(&self) -> impl Stream<Item = PlayerState> {
+        SimpleBroker::<PlayerState>::subscribe()
+    }
+
+    async fn currently_playing_song(&self) -> impl Stream<Item = Track> {
+        SimpleBroker::<Track>::subscribe()
+    }
+
+    async fn track_time_position(&self) -> impl Stream<Item = PositionMilliseconds> {
+        SimpleBroker::<PositionMilliseconds>::subscribe()
     }
 }

@@ -3,15 +3,16 @@ use std::sync::Arc;
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
+    guard,
     http::header::HOST,
     web::{self, Data},
     App, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
-use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
-use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
+use async_graphql::{http::GraphiQLSource, Schema};
+use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use mime_guess::from_path;
 use music_player_graphql::{
-    schema::{Mutation, Query},
+    schema::{Mutation, Query, Subscription},
     MusicPlayerSchema,
 };
 use music_player_playback::player::PlayerCommand;
@@ -44,6 +45,14 @@ async fn index_spa() -> impl Responder {
     handle_embedded_file("index.html")
 }
 
+async fn index_ws(
+    schema: web::Data<MusicPlayerSchema>,
+    req: HttpRequest,
+    payload: web::Payload,
+) -> Result<HttpResponse> {
+    GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
+}
+
 #[actix_web::post("/graphql")]
 async fn index_graphql(
     schema: web::Data<MusicPlayerSchema>,
@@ -67,9 +76,15 @@ async fn index_graphiql(req: HttpRequest) -> Result<HttpResponse> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
     let graphql_endpoint = format!("http://{}:{}/graphql", host, settings.http_port);
+    let ws_endpoint = format!("ws://{}:{}/graphql", host, settings.http_port);
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(GraphiQLSource::build().endpoint(&graphql_endpoint).finish()))
+        .body(
+            GraphiQLSource::build()
+                .endpoint(&graphql_endpoint)
+                .subscription_endpoint(&ws_endpoint)
+                .finish(),
+        ))
 }
 
 #[actix_web::get("/{_:.*}")]
@@ -87,11 +102,15 @@ pub async fn start_webui(
     let addr = format!("0.0.0.0:{}", settings.http_port);
 
     let db = Arc::new(Mutex::new(Database::new().await));
-    let schema = Schema::build(Query::default(), Mutation::default(), EmptySubscription)
-        .data(db)
-        .data(cmd_tx)
-        .data(tracklist)
-        .finish();
+    let schema = Schema::build(
+        Query::default(),
+        Mutation::default(),
+        Subscription::default(),
+    )
+    .data(db)
+    .data(cmd_tx)
+    .data(tracklist)
+    .finish();
     println!("Starting webui at {}", addr.bright_green());
 
     HttpServer::new(move || {
@@ -106,6 +125,12 @@ pub async fn start_webui(
             .wrap(cors)
             .service(index_graphql)
             .service(index_graphiql)
+            .service(
+                web::resource("/graphql")
+                    .guard(guard::Get())
+                    .guard(guard::Header("upgrade", "websocket"))
+                    .to(index_ws),
+            )
             .service(fs::Files::new("/covers", covers_path).show_files_listing())
             .service(index)
             .route("/tracks", web::get().to(index_spa))

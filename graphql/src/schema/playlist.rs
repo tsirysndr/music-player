@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use cuid::cuid;
+use futures_util::Stream;
 use music_player_entity::{
     album as album_entity, artist as artist_entity, folder as folder_entity,
     playlist as playlist_entity, playlist_tracks as playlist_tracks_entity, select_result,
@@ -14,7 +15,12 @@ use sea_orm::{
 };
 use tokio::sync::Mutex;
 
-use super::objects::{folder::Folder, playlist::Playlist};
+use crate::simple_broker::SimpleBroker;
+
+use super::{
+    objects::{folder::Folder, playlist::Playlist, track::Track},
+    MutationType,
+};
 
 #[derive(Default)]
 pub struct PlaylistQuery;
@@ -160,9 +166,10 @@ impl PlaylistMutation {
     ) -> Result<Playlist, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
+        let mut folder: Option<folder_entity::Model> = None;
         let folder_id = match folder_id {
             Some(folder_id) => {
-                let folder = folder_entity::Entity::find_by_id(folder_id.to_string())
+                folder = folder_entity::Entity::find_by_id(folder_id.to_string())
                     .one(db.get_connection())
                     .await?;
                 if folder.is_none() {
@@ -176,11 +183,25 @@ impl PlaylistMutation {
             id: ActiveValue::set(cuid().unwrap()),
             name: ActiveValue::Set(name),
             description: ActiveValue::Set(description),
-            folder_id: ActiveValue::Set(folder_id),
+            folder_id: ActiveValue::Set(folder_id.clone()),
             created_at: ActiveValue::set(chrono::Utc::now()),
         };
         match playlist.insert(db.get_connection()).await {
-            Ok(playlist) => Ok(playlist.into()),
+            Ok(playlist) => {
+                if let Some(folder) = folder {
+                    SimpleBroker::publish(FolderChanged {
+                        folder: folder.into(),
+                        mutation_type: MutationType::Updated,
+                        playlist: Some(playlist.clone().into()),
+                    });
+                }
+                SimpleBroker::publish(PlaylistChanged {
+                    playlist: playlist.clone().into(),
+                    mutation_type: MutationType::Created,
+                    track: None,
+                });
+                Ok(playlist.into())
+            }
             Err(err) => Err(Error::new(err.to_string())),
         }
     }
@@ -195,6 +216,11 @@ impl PlaylistMutation {
         match playlist {
             Some(playlist) => {
                 playlist.clone().delete(db.get_connection()).await?;
+                SimpleBroker::publish(PlaylistChanged {
+                    playlist: playlist.clone().into(),
+                    mutation_type: MutationType::Deleted,
+                    track: None,
+                });
                 Ok(playlist.into())
             }
             None => Err(Error::new("Playlist not found")),
@@ -229,6 +255,11 @@ impl PlaylistMutation {
                             .insert(db.get_connection())
                             .await
                             .map_err(|err| Error::new(err.to_string()))?;
+                        SimpleBroker::publish(PlaylistChanged {
+                            playlist: playlist.clone().into(),
+                            mutation_type: MutationType::Updated,
+                            track: Some(track.clone().into()),
+                        });
                         Ok(playlist.into())
                     }
                     None => Err(Error::new("Playlist not found")),
@@ -262,6 +293,11 @@ impl PlaylistMutation {
             playlist_entity::Entity::find_by_id(playlist_track[position].clone().playlist_id)
                 .one(db.get_connection())
                 .await?;
+        SimpleBroker::publish(PlaylistChanged {
+            playlist: playlist.clone().unwrap().into(),
+            mutation_type: MutationType::Updated,
+            track: None,
+        });
         Ok(playlist.unwrap().into())
     }
 
@@ -282,7 +318,14 @@ impl PlaylistMutation {
         };
         playlist.name = ActiveValue::Set(name);
         match playlist.update(db.get_connection()).await {
-            Ok(playlist) => Ok(playlist.into()),
+            Ok(playlist) => {
+                SimpleBroker::publish(PlaylistChanged {
+                    playlist: playlist.clone().into(),
+                    mutation_type: MutationType::Renamed,
+                    track: None,
+                });
+                Ok(playlist.into())
+            }
             Err(err) => Err(Error::new(err.to_string())),
         }
     }
@@ -296,7 +339,14 @@ impl PlaylistMutation {
             created_at: ActiveValue::set(chrono::Utc::now()),
         };
         match folder.insert(db.get_connection()).await {
-            Ok(folder) => Ok(folder.into()),
+            Ok(folder) => {
+                SimpleBroker::publish(FolderChanged {
+                    folder: folder.clone().into(),
+                    mutation_type: MutationType::Created,
+                    playlist: None,
+                });
+                Ok(folder.into())
+            }
             Err(err) => Err(Error::new(err.to_string())),
         }
     }
@@ -310,6 +360,11 @@ impl PlaylistMutation {
         match folder {
             Some(folder) => {
                 folder.clone().delete(db.get_connection()).await?;
+                SimpleBroker::publish(FolderChanged {
+                    folder: folder.clone().into(),
+                    mutation_type: MutationType::Deleted,
+                    playlist: None,
+                });
                 Ok(folder.into())
             }
             None => Err(Error::new("Folder not found")),
@@ -333,7 +388,14 @@ impl PlaylistMutation {
         };
         folder.name = ActiveValue::Set(name);
         match folder.update(db.get_connection()).await {
-            Ok(folder) => Ok(folder.into()),
+            Ok(folder) => {
+                SimpleBroker::publish(FolderChanged {
+                    folder: folder.clone().into(),
+                    mutation_type: MutationType::Renamed,
+                    playlist: None,
+                });
+                Ok(folder.into())
+            }
             Err(err) => Err(Error::new(err.to_string())),
         }
     }
@@ -356,10 +418,23 @@ impl PlaylistMutation {
                     .await?;
                 match playlist {
                     Some(playlist) => {
+                        let moved_playlist = playlist.clone();
                         let mut playlist: playlist_entity::ActiveModel = playlist.into();
                         playlist.folder_id = ActiveValue::Set(Some(folder.id.clone()));
                         match playlist.update(db.get_connection()).await {
-                            Ok(_) => Ok(folder.into()),
+                            Ok(_) => {
+                                SimpleBroker::publish(PlaylistChanged {
+                                    playlist: moved_playlist.into(),
+                                    mutation_type: MutationType::Moved,
+                                    track: None,
+                                });
+                                SimpleBroker::publish(FolderChanged {
+                                    folder: folder.clone().into(),
+                                    mutation_type: MutationType::Updated,
+                                    playlist: None,
+                                });
+                                Ok(folder.into())
+                            }
                             Err(err) => Err(Error::new(err.to_string())),
                         }
                     }
@@ -390,9 +465,16 @@ impl PlaylistMutation {
                         .await?;
                     match playlist {
                         Some(playlist) => {
+                            let moved_playlist = playlist.clone();
                             let mut playlist: playlist_entity::ActiveModel = playlist.into();
                             playlist.folder_id = ActiveValue::Set(Some(folder.id.clone()));
-                            Ok(playlist.update(db.get_connection()).await?)
+                            let p = playlist.update(db.get_connection()).await?;
+                            SimpleBroker::publish(PlaylistChanged {
+                                playlist: moved_playlist.into(),
+                                mutation_type: MutationType::Moved,
+                                track: None,
+                            });
+                            Ok(p)
                         }
                         None => Err(Error::new("Playlist not found")),
                     }?;
@@ -401,5 +483,71 @@ impl PlaylistMutation {
             }
             None => Err(Error::new("Folder not found")),
         }
+    }
+}
+
+#[derive(Clone)]
+struct FolderChanged {
+    folder: Folder,
+    mutation_type: MutationType,
+    playlist: Option<Playlist>,
+}
+
+#[Object]
+impl FolderChanged {
+    async fn folder(&self) -> &Folder {
+        &self.folder
+    }
+
+    async fn mutation_type(&self) -> MutationType {
+        self.mutation_type
+    }
+
+    async fn playlist(&self) -> Option<&Playlist> {
+        self.playlist.as_ref()
+    }
+}
+
+#[derive(Clone)]
+struct PlaylistChanged {
+    playlist: Playlist,
+    mutation_type: MutationType,
+    track: Option<Track>,
+}
+
+#[Object]
+impl PlaylistChanged {
+    async fn playlist(&self) -> &Playlist {
+        &self.playlist
+    }
+
+    async fn mutation_type(&self) -> MutationType {
+        self.mutation_type
+    }
+
+    async fn track(&self) -> Option<&Track> {
+        self.track.as_ref()
+    }
+}
+
+#[derive(Default)]
+pub struct PlaylistSubscription;
+
+#[Subscription]
+impl PlaylistSubscription {
+    async fn playlists(&self) -> impl Stream<Item = Vec<Playlist>> {
+        SimpleBroker::<Vec<Playlist>>::subscribe()
+    }
+
+    async fn playlist(&self, _id: ID) -> impl Stream<Item = PlaylistChanged> {
+        SimpleBroker::<PlaylistChanged>::subscribe()
+    }
+
+    async fn folders(&self) -> impl Stream<Item = Vec<Folder>> {
+        SimpleBroker::<Vec<Folder>>::subscribe()
+    }
+
+    async fn folder(&self, _id: ID) -> impl Stream<Item = FolderChanged> {
+        SimpleBroker::<FolderChanged>::subscribe()
     }
 }

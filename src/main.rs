@@ -25,6 +25,13 @@ use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
 use music_player_client::{library::LibraryClient, ws_client::WebsocketClient};
 use music_player_discovery::register_services;
+use music_player_graphql::{
+    schema::{
+        objects::{player_state::PlayerState, track::Track},
+        playback::PositionMilliseconds,
+    },
+    simple_broker::SimpleBroker,
+};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -195,6 +202,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     position_ms,
                     is_playing,
                 } => {
+                    if let Some(track) = track.clone() {
+                        SimpleBroker::publish(Track::from(track));
+                        SimpleBroker::publish(PlayerState {
+                            index: position as u32,
+                            position_ms,
+                            is_playing,
+                        });
+                    }
+
                     let track_event = TrackEvent {
                         track,
                         index: position as u32,
@@ -211,14 +227,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 PlayerEvent::TrackTimePosition { position_ms } => {
+                    SimpleBroker::publish(PositionMilliseconds { position_ms });
+                    /*
                     let msg = Event {
-                        event_type: "track_time_position".to_string(),
-                        data: format!("{}", position_ms),
-                    };
-                    for recp in broadcast_recipients {
-                        recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()))
-                            .unwrap();
-                    }
+                            event_type: "track_time_position".to_string(),
+                            data: format!("{}", position_ms),
+                        };
+                        for recp in broadcast_recipients {
+                            recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()))
+                                .unwrap();
+                        }
+                        */
                 }
                 _ => {}
             }

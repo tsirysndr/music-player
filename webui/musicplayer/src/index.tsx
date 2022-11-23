@@ -6,17 +6,46 @@ import { Provider as StyletronProvider } from "styletron-react";
 import { Client as Styletron } from "styletron-engine-atomic";
 import { BaseProvider } from "baseui";
 import { theme } from "./Theme";
-import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
+import {
+  ApolloClient,
+  createHttpLink,
+  InMemoryCache,
+  split,
+  ApolloProvider,
+} from "@apollo/client";
+import { WebSocketLink } from "@apollo/client/link/ws";
 import { render } from "react-dom";
+import { getMainDefinition } from "@apollo/client/utilities";
+import { SubscriptionClient } from "subscriptions-transport-ws";
 
 const uri =
   process.env.NODE_ENV === "development"
     ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
     : // eslint-disable-next-line no-restricted-globals
-      "/graphql";
+      `${origin}/graphql`;
+
+const httpLink = createHttpLink({
+  uri,
+});
+
+const wsLink = new WebSocketLink(
+  new SubscriptionClient(uri.replace("http", "ws"))
+);
+
+const splitLink = split(
+  ({ query }) => {
+    const definition = getMainDefinition(query);
+    return (
+      definition.kind === "OperationDefinition" &&
+      definition.operation === "subscription"
+    );
+  },
+  wsLink,
+  httpLink
+);
 
 const client = new ApolloClient({
-  uri,
+  link: splitLink,
   cache: new InMemoryCache(),
 });
 

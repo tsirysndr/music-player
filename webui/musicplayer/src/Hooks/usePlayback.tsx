@@ -14,6 +14,9 @@ import {
   usePlayAlbumMutation,
   usePlayArtistTracksMutation,
   usePlayPlaylistMutation,
+  useTrackTimePositionChangedSubscription,
+  useCurrentlyPlayingSongChangedSubscription,
+  usePlayerStateChangedSubscription,
 } from "./GraphQL";
 
 export const usePlayback = () => {
@@ -34,6 +37,9 @@ export const usePlayback = () => {
   const [playAlbum] = usePlayAlbumMutation();
   const [playArtistTracks] = usePlayArtistTracksMutation();
   const [playPlaylist] = usePlayPlaylistMutation();
+  const { data: currentlyPlayingSongData } =
+    useCurrentlyPlayingSongChangedSubscription();
+  const { data: playerStateData } = usePlayerStateChangedSubscription();
   const {
     data: queue,
     startPolling: startPollingTracklist,
@@ -41,23 +47,26 @@ export const usePlayback = () => {
   } = useGetTracklistQuery({
     pollInterval: 500,
   });
+  const currentTrack =
+    currentlyPlayingSongData?.currentlyPlayingSong ||
+    playback?.currentlyPlayingSong?.track;
   const index = playback?.currentlyPlayingSong.index;
   const duration = playback?.currentlyPlayingSong?.track?.duration! * 1000;
   const position = playback?.currentlyPlayingSong?.positionMs!;
-  const nowPlaying = {
-    id: playback?.currentlyPlayingSong?.track?.id,
-    title: playback?.currentlyPlayingSong?.track?.title,
+  let nowPlaying = {
+    id: currentTrack?.id,
+    title: currentTrack?.title,
     artist:
-      playback?.currentlyPlayingSong?.track?.artist ||
-      playback?.currentlyPlayingSong?.track?.artists
-        ?.map((artist) => artist.name)
-        .join(", "),
-    album: playback?.currentlyPlayingSong?.track?.album?.title,
-    isPlaying: playback?.currentlyPlayingSong?.isPlaying,
+      currentTrack?.artist ||
+      currentTrack?.artists?.map((artist) => artist.name).join(", "),
+    album: currentTrack?.album?.title,
     duration,
     progress: position,
-    cover: `/covers/${playback?.currentlyPlayingSong?.track?.album?.id}.jpg`,
-    albumId: playback?.currentlyPlayingSong?.track?.album?.id,
+    cover: `/covers/${currentTrack?.album?.id}.jpg`,
+    albumId: currentTrack?.album?.id,
+    isPlaying:
+      playerStateData?.playerState?.isPlaying ||
+      playback?.currentlyPlayingSong?.isPlaying,
   };
   const nextTracks: Track[] =
     queue?.tracklistTracks?.nextTracks?.map((track) => ({
@@ -85,7 +94,6 @@ export const usePlayback = () => {
           ? `/covers/${track.album.cover}`
           : track.album.cover!,
     })) || [];
-
   useEffect(() => {
     startPolling!(1000);
     startPollingTracklist(1000);
@@ -94,7 +102,6 @@ export const usePlayback = () => {
       stopPollingTracklist();
     };
   }, [startPolling, stopPolling, startPollingTracklist, stopPollingTracklist]);
-
   return {
     nowPlaying,
     play,

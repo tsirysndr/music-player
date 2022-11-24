@@ -50,14 +50,14 @@ const ButtonGroup = styled.div`
 
 export type ControlBarProps = {
   nowPlaying?: {
-    album: string;
-    artist: string;
-    title: string;
-    cover: string;
+    album?: string;
+    artist?: string;
+    title?: string;
+    cover?: string;
     duration: number;
     progress: number;
+    albumId?: string;
     isPlaying?: boolean;
-    albumId: string;
   };
   onPlay: () => void;
   onPause: () => void;
@@ -126,7 +126,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
           <Repeat />
         </Button>
       </Controls>
-      <CurrentTrack nowPlaying={nowPlaying} />
+      <CurrentTrack />
       <ButtonGroup>
         <StatefulPopover
           onOpen={() => setPlayQueueButtonColor("#ab28fc")}

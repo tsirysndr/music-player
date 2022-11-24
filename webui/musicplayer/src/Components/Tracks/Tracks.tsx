@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useMemo } from "react";
+import { usePlayback } from "../../Hooks/usePlayback";
 import { Track } from "../../Types";
 import ControlBar from "../ControlBar";
 import MainContent from "../MainContent";
@@ -28,59 +29,52 @@ export type TracksProps = {
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
   onClickLibraryItem: (item: string) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
-  nowPlaying: any;
   onPlayTrack: (id: string, postion?: number) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  nextTracks: Track[];
-  previousTracks: Track[];
-  onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
   recentPlaylists: any[];
 };
 
 const Tracks: FC<TracksProps> = (props) => {
   const {
     tracks,
-    nowPlaying,
     onPlayTrack,
-    onPlayNext,
     onCreatePlaylist,
     onAddTrackToPlaylist,
     recentPlaylists,
   } = props;
-  return (
-    <Container>
-      <Sidebar active="tracks" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <MainContent title="Tracks">
-          <TracksTable
-            tracks={tracks}
-            currentTrackId={nowPlaying.id}
-            isPlaying={nowPlaying.isPlaying}
-            onPlayTrack={onPlayTrack}
-            onPlayNext={onPlayNext}
-            onCreatePlaylist={onCreatePlaylist}
-            recentPlaylists={recentPlaylists}
-            onAddTrackToPlaylist={onAddTrackToPlaylist}
-          />
-        </MainContent>
-      </Content>
-    </Container>
+  const { currentTrackId, isPlaying, playNext, playPlaylist } = usePlayback();
+  const onPlayNext = (trackId: string) => playNext({ variables: { trackId } });
+  const onPlayPlaylist = (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => playPlaylist({ variables: { playlistId, position, shuffle } });
+  const Memoized = useMemo(
+    () => (
+      <Container>
+        <Sidebar active="tracks" {...props} onPlayPlaylist={onPlayPlaylist} />
+        <Content>
+          <ControlBar />
+          <MainContent title="Tracks">
+            <TracksTable
+              tracks={tracks}
+              currentTrackId={currentTrackId}
+              isPlaying={isPlaying}
+              onPlayTrack={onPlayTrack}
+              onPlayNext={onPlayNext}
+              onCreatePlaylist={onCreatePlaylist}
+              recentPlaylists={recentPlaylists}
+              onAddTrackToPlaylist={onAddTrackToPlaylist}
+              maxHeight={"calc(100vh - 98px)"}
+            />
+          </MainContent>
+        </Content>
+      </Container>
+    ),
+    [tracks, currentTrackId, isPlaying]
   );
+  return Memoized;
 };
 
 export default Tracks;

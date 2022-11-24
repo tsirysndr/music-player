@@ -14,16 +14,16 @@ import {
   usePlayAlbumMutation,
   usePlayArtistTracksMutation,
   usePlayPlaylistMutation,
-  useTrackTimePositionChangedSubscription,
   useCurrentlyPlayingSongChangedSubscription,
   usePlayerStateChangedSubscription,
+  useGetPlayerStateQuery,
 } from "./GraphQL";
 
 export const usePlayback = () => {
   const {
     data: playback,
-    startPolling,
-    stopPolling,
+    startPolling: startPollingCurrentSong,
+    stopPolling: stopPollingCurrentSong,
   } = useCurrentlyPlayingSongQuery({
     pollInterval: 500,
   });
@@ -37,6 +37,13 @@ export const usePlayback = () => {
   const [playAlbum] = usePlayAlbumMutation();
   const [playArtistTracks] = usePlayArtistTracksMutation();
   const [playPlaylist] = usePlayPlaylistMutation();
+  const {
+    data: playerStateQueryData,
+    startPolling: startPollingPlayerState,
+    stopPolling: stopPollingPlayerState,
+  } = useGetPlayerStateQuery({
+    pollInterval: 500,
+  });
   const { data: currentlyPlayingSongData } =
     useCurrentlyPlayingSongChangedSubscription();
   const { data: playerStateData } = usePlayerStateChangedSubscription();
@@ -47,12 +54,11 @@ export const usePlayback = () => {
   } = useGetTracklistQuery({
     pollInterval: 500,
   });
+  const isPlaying = playerStateQueryData?.getPlayerState?.isPlaying;
   const currentTrack =
     currentlyPlayingSongData?.currentlyPlayingSong ||
-    playback?.currentlyPlayingSong?.track;
-  const index = playback?.currentlyPlayingSong.index;
-  const duration = playback?.currentlyPlayingSong?.track?.duration! * 1000;
-  const position = playback?.currentlyPlayingSong?.positionMs!;
+    playback?.currentlyPlayingSong;
+  const duration = playback?.currentlyPlayingSong?.duration! * 1000;
   let nowPlaying = {
     id: currentTrack?.id,
     title: currentTrack?.title,
@@ -61,12 +67,9 @@ export const usePlayback = () => {
       currentTrack?.artists?.map((artist) => artist.name).join(", "),
     album: currentTrack?.album?.title,
     duration,
-    progress: position,
     cover: `/covers/${currentTrack?.album?.id}.jpg`,
     albumId: currentTrack?.album?.id,
-    isPlaying:
-      playerStateData?.playerState?.isPlaying ||
-      playback?.currentlyPlayingSong?.isPlaying,
+    isPlaying,
   };
   const nextTracks: Track[] =
     queue?.tracklistTracks?.nextTracks?.map((track) => ({
@@ -95,20 +98,22 @@ export const usePlayback = () => {
           : track.album.cover!,
     })) || [];
   useEffect(() => {
-    startPolling!(1000);
+    startPollingCurrentSong!(1000);
     startPollingTracklist(1000);
+    startPollingPlayerState(1000);
     return () => {
-      stopPolling();
+      stopPollingCurrentSong();
       stopPollingTracklist();
+      stopPollingPlayerState();
     };
-  }, [startPolling, stopPolling, startPollingTracklist, stopPollingTracklist]);
+  });
+
   return {
     nowPlaying,
     play,
     pause,
     next,
     previous,
-    index,
     nextTracks,
     previousTracks,
     playTrackAt,
@@ -117,5 +122,7 @@ export const usePlayback = () => {
     playAlbum,
     playArtistTracks,
     playPlaylist,
+    currentTrackId: nowPlaying.id,
+    isPlaying,
   };
 };

@@ -27,7 +27,13 @@ pub struct PlaylistQuery;
 
 #[Object]
 impl PlaylistQuery {
-    async fn playlist(&self, ctx: &Context<'_>, id: ID) -> Result<Playlist, Error> {
+    async fn playlist(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Playlist, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
 
@@ -68,6 +74,8 @@ impl PlaylistQuery {
                     )
                     .join(JoinType::LeftJoin, track_entity::Relation::Album.def())
                     .join(JoinType::LeftJoin, track_entity::Relation::Artist.def())
+                    .offset(offset.unwrap_or(0))
+                    .limit(limit.unwrap_or(100))
                     .into_model::<select_result::PlaylistTrack>()
                     .all(db.get_connection())
                     .await?;
@@ -89,23 +97,37 @@ impl PlaylistQuery {
         }
     }
 
-    async fn playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
+    async fn playlists(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<Playlist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
         playlist_entity::Entity::find()
             .order_by_asc(playlist_entity::Column::Name)
+            .offset(offset.unwrap_or(0))
+            .limit(limit.unwrap_or(100))
             .all(db.get_connection())
             .await
             .map(|playlists| playlists.into_iter().map(Into::into).collect())
             .map_err(|e| Error::new(e.to_string()))
     }
 
-    async fn main_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
+    async fn main_playlists(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<Playlist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
         playlist_entity::Entity::find()
             .order_by_asc(playlist_entity::Column::Name)
             .filter(playlist_entity::Column::FolderId.is_null())
+            .offset(offset.unwrap_or(0))
+            .limit(limit.unwrap_or(100))
             .all(db.get_connection())
             .await
             .map(|playlists| playlists.into_iter().map(Into::into).collect())
@@ -140,11 +162,18 @@ impl PlaylistQuery {
         Ok(folder.into())
     }
 
-    async fn folders(&self, ctx: &Context<'_>) -> Result<Vec<Folder>, Error> {
+    async fn folders(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<Folder>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
         folder_entity::Entity::find()
             .order_by_asc(folder_entity::Column::Name)
+            .offset(offset.unwrap_or(0))
+            .limit(limit.unwrap_or(100))
             .all(db.get_connection())
             .await
             .map(|folders| folders.into_iter().map(Into::into).collect())

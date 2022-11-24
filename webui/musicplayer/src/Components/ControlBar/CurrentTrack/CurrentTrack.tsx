@@ -100,13 +100,13 @@ const Separator = styled.span`
 
 export type CurrentTrackProps = {
   nowPlaying?: {
-    album: string;
-    artist: string;
-    title: string;
-    cover: string;
+    album?: string;
+    artist?: string;
+    title?: string;
+    cover?: string;
     duration: number;
     progress: number;
-    albumId: string;
+    albumId?: string;
   };
 };
 

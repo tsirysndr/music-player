@@ -7,6 +7,9 @@ import { useSearch } from "../../Hooks/useSearch";
 
 const AlbumsPage = () => {
   const { data, loading } = useGetAlbumsQuery({
+    variables: {
+      limit: 10000,
+    },
     fetchPolicy: "cache-and-network",
   });
   const {
@@ -53,7 +56,6 @@ const AlbumsPage = () => {
       onPrevious={() => previous()}
       onShuffle={() => {}}
       onRepeat={() => {}}
-      nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}

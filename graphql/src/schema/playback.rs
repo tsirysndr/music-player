@@ -17,47 +17,32 @@ pub struct PlaybackQuery;
 
 #[Object]
 impl PlaybackQuery {
-    async fn currently_playing_song(
-        &self,
-        ctx: &Context<'_>,
-    ) -> Result<CurrentlyPlayingSong, Error> {
+    async fn currently_playing_song(&self, ctx: &Context<'_>) -> Result<Option<Track>, Error> {
         let tracklist = ctx.data::<Arc<std::sync::Mutex<Tracklist>>>().unwrap();
-        let (track, index) = tracklist.lock().unwrap().current_track();
+        let (track, _) = tracklist.lock().unwrap().current_track();
+        match track {
+            Some(track) => Ok(Some(Track::from(track))),
+            None => Ok(None),
+        }
+    }
+
+    async fn get_player_state(&self, ctx: &Context<'_>) -> Result<PlayerState, Error> {
+        let tracklist = ctx.data::<Arc<std::sync::Mutex<Tracklist>>>().unwrap();
+        let (_, index) = tracklist.lock().unwrap().current_track();
         let playback_state = tracklist.lock().unwrap().playback_state();
 
-        if track.is_none() {
-            let response = CurrentlyPlayingSong {
-                track: None,
-                index: 0,
-                position_ms: 0,
-                is_playing: false,
-            };
-            return Ok(response);
-        }
-
-        if track.is_none() {
-            let response = CurrentlyPlayingSong {
-                track: None,
-                index: 0,
-                position_ms: 0,
-                is_playing: false,
-            };
-            return Ok(response);
-        }
-
-        let track = track.unwrap();
-
-        Ok(CurrentlyPlayingSong {
-            track: Some(track.into()),
+        Ok(PlayerState {
             index: index as u32,
             position_ms: playback_state.position_ms,
             is_playing: playback_state.is_playing,
         })
     }
 
-    async fn get_player_state(&self, ctx: &Context<'_>) -> PlayerState {
-        let _tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
-        todo!()
+    async fn playback_progress(&self, ctx: &Context<'_>) -> Result<u32, Error> {
+        let tracklist = ctx.data::<Arc<std::sync::Mutex<Tracklist>>>().unwrap();
+        let playback_state = tracklist.lock().unwrap().playback_state();
+
+        Ok(playback_state.position_ms)
     }
 }
 

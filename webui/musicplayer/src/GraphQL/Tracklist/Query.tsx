@@ -34,18 +34,7 @@ export const GET_TRACKLIST = gql`
       }
     }
     currentlyPlayingSong {
-      track {
-        ...TrackFragment
-        artists {
-          name
-        }
-        album {
-          title
-        }
-      }
-      index
-      isPlaying
-      positionMs
+      ...TrackFragment
     }
   }
   ${TRACK_FRAGMENT}

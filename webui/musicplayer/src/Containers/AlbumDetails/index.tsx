@@ -78,7 +78,6 @@ const AlbumDetailsPage = () => {
       onShuffle={() => {}}
       onRepeat={() => {}}
       album={album}
-      nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
       onPlayAlbum={(albumId, shuffle, position) =>

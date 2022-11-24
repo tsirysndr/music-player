@@ -18,10 +18,13 @@ use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use crate::simple_broker::SimpleBroker;
 
-use super::{objects::{
-    track::{Track, TrackInput},
-    tracklist::Tracklist,
-}, MutationType};
+use super::{
+    objects::{
+        track::{Track, TrackInput},
+        tracklist::Tracklist,
+    },
+    MutationType,
+};
 
 #[derive(Default)]
 pub struct TracklistQuery;

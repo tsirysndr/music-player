@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import Tracks from "../../Components/Tracks";
 import { useGetTracksQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
-import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
@@ -12,19 +11,6 @@ const TracksPage = () => {
   });
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const {
-    play,
-    pause,
-    next,
-    previous,
-    nowPlaying,
-    nextTracks,
-    previousTracks,
-    playNext,
-    playTrackAt,
-    removeTrackAt,
-    playPlaylist,
-  } = usePlayback();
   const { onSearch } = useSearch();
   const tracks = !loading && data ? data.tracks : [];
   const {
@@ -55,21 +41,7 @@ const TracksPage = () => {
           albumId: track.album.id,
         }))}
         onClickLibraryItem={(item) => navigate(`/${item}`)}
-        onPlay={() => play()}
-        onPause={() => pause()}
-        onNext={() => next()}
-        onPrevious={() => previous()}
-        onShuffle={() => {}}
-        onRepeat={() => {}}
-        nowPlaying={nowPlaying}
         onPlayTrack={(id, position) => {}}
-        nextTracks={nextTracks}
-        previousTracks={previousTracks}
-        onPlayNext={(trackId) => playNext({ variables: { trackId } })}
-        onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
-        onRemoveTrackAt={(position) =>
-          removeTrackAt({ variables: { position } })
-        }
         onSearch={(query) => navigate(`/search?q=${query}`)}
         playlists={mainPlaylists}
         folders={folders}
@@ -85,9 +57,6 @@ const TracksPage = () => {
         onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
         onEditPlaylist={(id, name, description) =>
           renamePlaylist({ variables: { id, name } })
-        }
-        onPlayPlaylist={(playlistId, shuffle, position) =>
-          playPlaylist({ variables: { playlistId, position, shuffle } })
         }
         recentPlaylists={recentPlaylists}
       />

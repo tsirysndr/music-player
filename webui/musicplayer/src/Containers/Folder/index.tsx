@@ -59,7 +59,6 @@ const FolderPage = () => {
       onPrevious={() => previous()}
       onShuffle={() => {}}
       onRepeat={() => {}}
-      nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}

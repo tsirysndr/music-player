@@ -85,10 +85,18 @@ const NoCover = styled.div`
   align-items: center;
   background-color: #ddaefb14;
 `;
+
 const Title = styled.div`
   font-family: RockfordSansBold;
   font-size: 32px;
 `;
+
+const Tracks = styled.div`
+  margin-top: 25px;
+  font-family: RockfordSansLight;
+  font-size: 14px;
+`;
+
 const Placeholder = styled.div`
   font-family: RockfordSansRegular;
   text-align: center;
@@ -162,88 +170,87 @@ const Playlist: FC<PlaylistProps> = (props) => {
     position?: number
   ) => playPlaylist({ variables: { playlistId, position, shuffle } });
 
-  const Memoized = useMemo(
-    () => (
-      <Container>
-        <Sidebar active="artists" {...props} onPlayPlaylist={onPlayPlaylist} />
-        <Content>
-          <ControlBar />
-          <MainContent displayHeader={false}>
-            <Scrollable>
-              <BackButton onClick={onBack}>
-                <div style={{ marginTop: 2 }}>
-                  <ArrowBack />
-                </div>
-              </BackButton>
-              <Header>
-                <NoCover>
-                  <PlaylistIcon
-                    size={48}
-                    color="#ab28fc"
-                    style={{ marginRight: -38, marginTop: 38 }}
-                  />
-                </NoCover>
-                <PlaylistDetails>
-                  <PlaylistDetailsWrapper>
-                    <Title>{playlist.name}</Title>
-                  </PlaylistDetailsWrapper>
-                  <Buttons>
-                    <Button
-                      onClick={() => onPlayPlaylist(playlist.id, false)}
-                      kind="primary"
-                      disabled={!tracks.length}
-                    >
-                      <Label>
-                        <Icon>
-                          <Play small color="#fff" />
-                        </Icon>
-                        <div style={{ marginLeft: 7 }}>Play</div>
-                      </Label>
-                    </Button>
-                    <Separator />
-                    <Button
-                      onClick={() => onPlayPlaylist(playlist.id, true)}
-                      kind="secondary"
-                      disabled={!tracks.length}
-                    >
-                      <Label>
-                        <Shuffle color="#ab28fc" />
-                        <div style={{ marginLeft: 7 }}>Shuffle</div>
-                      </Label>
-                    </Button>
-                  </Buttons>
-                </PlaylistDetails>
-              </Header>
-              {tracks.length === 0 && (
-                <Placeholder>
-                  Start building your playlist with tracks by tapping on ‘Add to
-                  playlist’ in the option menu.
-                </Placeholder>
-              )}
-              {tracks.length > 0 && (
-                <TracksTable
-                  tracks={tracks}
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
-                  header={["Title", "Artist", "Album", "Time"]}
-                  maxHeight={"calc(100vh - 98px)"}
-                  onPlayTrack={(id, position) =>
-                    onPlayPlaylist(id, false, position)
-                  }
-                  onPlayNext={onPlayNext}
-                  onCreatePlaylist={onCreatePlaylist}
-                  recentPlaylists={recentPlaylists}
-                  onAddTrackToPlaylist={onAddTrackToPlaylist}
+  return (
+    <Container>
+      <Sidebar active="artists" {...props} onPlayPlaylist={onPlayPlaylist} />
+      <Content>
+        <ControlBar />
+        <MainContent displayHeader={false}>
+          <Scrollable>
+            <BackButton onClick={onBack}>
+              <div style={{ marginTop: 2 }}>
+                <ArrowBack />
+              </div>
+            </BackButton>
+            <Header>
+              <NoCover>
+                <PlaylistIcon
+                  size={48}
+                  color="#ab28fc"
+                  style={{ marginRight: -38, marginTop: 38 }}
                 />
-              )}
-            </Scrollable>
-          </MainContent>
-        </Content>
-      </Container>
-    ),
-    [tracks, currentTrackId, isPlaying]
+              </NoCover>
+              <PlaylistDetails>
+                <PlaylistDetailsWrapper>
+                  <div>
+                    <Title>{playlist.name}</Title>
+                    <Tracks>{tracks.length} TRACKS</Tracks>
+                  </div>
+                </PlaylistDetailsWrapper>
+                <Buttons>
+                  <Button
+                    onClick={() => onPlayPlaylist(playlist.id, false)}
+                    kind="primary"
+                    disabled={!tracks.length}
+                  >
+                    <Label>
+                      <Icon>
+                        <Play small color="#fff" />
+                      </Icon>
+                      <div style={{ marginLeft: 7 }}>Play</div>
+                    </Label>
+                  </Button>
+                  <Separator />
+                  <Button
+                    onClick={() => onPlayPlaylist(playlist.id, true)}
+                    kind="secondary"
+                    disabled={!tracks.length}
+                  >
+                    <Label>
+                      <Shuffle color="#ab28fc" />
+                      <div style={{ marginLeft: 7 }}>Shuffle</div>
+                    </Label>
+                  </Button>
+                </Buttons>
+              </PlaylistDetails>
+            </Header>
+            {tracks.length === 0 && (
+              <Placeholder>
+                Start building your playlist with tracks by tapping on ‘Add to
+                playlist’ in the option menu.
+              </Placeholder>
+            )}
+            {tracks.length > 0 && (
+              <TracksTable
+                tracks={tracks}
+                currentTrackId={currentTrackId}
+                isPlaying={isPlaying}
+                header={["Title", "Artist", "Album", "Time"]}
+                maxHeight={"calc(100vh - 98px)"}
+                onPlayTrack={(id, position) =>
+                  onPlayPlaylist(id, false, position)
+                }
+                onPlayNext={onPlayNext}
+                onCreatePlaylist={onCreatePlaylist}
+                recentPlaylists={recentPlaylists}
+                onAddTrackToPlaylist={onAddTrackToPlaylist}
+              />
+            )}
+          </Scrollable>
+        </MainContent>
+      </Content>
+    </Container>
   );
-  return Memoized;
 };
 
 Playlist.defaultProps = {

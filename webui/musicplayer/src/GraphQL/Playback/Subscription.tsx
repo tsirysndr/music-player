@@ -24,10 +24,14 @@ export const CURRENTLY_PLAYING_SONG = gql`
       artists {
         id
         name
+        picture
       }
       album {
         id
         title
+        artist
+        year
+        cover
       }
     }
   }

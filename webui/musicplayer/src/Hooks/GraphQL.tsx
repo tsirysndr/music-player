@@ -512,7 +512,7 @@ export type TrackTimePositionChangedSubscription = { __typename?: 'Subscription'
 export type CurrentlyPlayingSongChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } };
+export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null } } };
 
 export type CreatePlaylistMutationVariables = Exact<{
   name: Scalars['String'];
@@ -689,7 +689,7 @@ export type PlayNextMutation = { __typename?: 'Mutation', playNext: boolean };
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }> }, currentlyPlayingSong?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null } | null };
+export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null } }> }, currentlyPlayingSong?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null } | null };
 
 export const AlbumFragmentFragmentDoc = gql`
     fragment AlbumFragment on Album {
@@ -1323,10 +1323,14 @@ export const CurrentlyPlayingSongChangedDocument = gql`
     artists {
       id
       name
+      picture
     }
     album {
       id
       title
+      artist
+      year
+      cover
     }
   }
 }
@@ -2150,6 +2154,7 @@ export const GetTracklistDocument = gql`
       album {
         id
         title
+        artist
         cover
       }
     }
@@ -2164,6 +2169,7 @@ export const GetTracklistDocument = gql`
       album {
         id
         title
+        artist
         cover
       }
     }

@@ -27,7 +27,8 @@ members = [
     "settings",
     "storage",
     "tracklist",
-    "webui"
+    "webui",
+    "webui/musicplayer/src-tauri"
 ]
 
 [[bin]]

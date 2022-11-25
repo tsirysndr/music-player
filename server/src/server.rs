@@ -68,7 +68,7 @@ impl MusicPlayerServer {
         let addr: SocketAddr = format!("0.0.0.0:{}", settings.port).parse().unwrap();
 
         println!("{}", BANNER.magenta());
-        println!("Server listening on {}", addr.cyan());
+        println!("Server is listening on {}", addr.cyan());
 
         Server::builder()
             .accept_http1(true)
@@ -108,7 +108,7 @@ impl MusicPlayerServer {
 
         let try_socket = TcpListener::bind(addr).await;
         let listener = try_socket.expect("Failed to bind");
-        println!("Websocket server listening on {}", addr.cyan());
+        println!("Websocket server is listening on {}", addr.cyan());
 
         // Let's spawn the handling of each connection in a separate task.
         while let Ok((stream, addr)) = listener.accept().await {

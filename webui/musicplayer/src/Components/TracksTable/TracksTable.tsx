@@ -101,6 +101,12 @@ const convertToLink = (row: any, item: string) => {
   }
 };
 
+const AlbumCoverMemoized: FC<{ cover: string; current: boolean }> = memo(
+  ({ cover, current }) => (
+    <AlbumCover className="album-cover" src={cover} current={!!current} />
+  )
+);
+
 export type CellProps = {
   current?: string | boolean;
   row: any;
@@ -118,7 +124,7 @@ const Cell: FC<CellProps> = ({
   index,
   isAlbumTracks,
 }) => {
-  const AlbumCoverMemoized = useMemo(() => AlbumCover, [row.cover]);
+  const { cover } = row;
   return (
     <CellWrapper>
       {!isAlbumTracks && item === "Title" && !row.cover && (
@@ -127,11 +133,7 @@ const Cell: FC<CellProps> = ({
         </AlbumCoverAlt>
       )}
       {!isAlbumTracks && item === "Title" && row.cover && (
-        <AlbumCoverMemoized
-          className="album-cover"
-          src={row.cover}
-          current={!!current}
-        />
+        <AlbumCoverMemoized cover={cover} current={!!current} />
       )}
       {current && isAlbumTracks && (
         <div style={{ flex: 1 }}>
@@ -351,7 +353,7 @@ const TracksTable: FC<TracksTableProps> = ({
                     width={width}
                   >
                     {({ index, style }) => (
-                      <div style={style}>
+                      <div key={index} style={style}>
                         <TableRow className="tablerow">
                           {header?.map((item, key) => (
                             <Track

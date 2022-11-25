@@ -28,7 +28,7 @@ const MainContent: FC<MainContentProps> = ({
   displayHeader,
 }) => {
   return (
-    <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 98px)" }}>
+    <div style={{ maxHeight: "calc(100vh - 98px)" }}>
       {displayHeader && (
         <Header>
           <Title>{title}</Title>

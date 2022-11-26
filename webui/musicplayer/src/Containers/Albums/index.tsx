@@ -4,6 +4,7 @@ import { useGetAlbumsQuery } from "../../Hooks/GraphQL";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
+import { resourceUriResolver } from "../../ResourceUriResolver";
 
 const AlbumsPage = () => {
   const { data, loading } = useGetAlbumsQuery({
@@ -43,7 +44,7 @@ const AlbumsPage = () => {
         id: album.id,
         title: album.title,
         artist: album.artist,
-        cover: album.cover && `/covers/${album.cover}`,
+        cover: album.cover && resourceUriResolver.resolve(`/covers/${album.cover}`),
       }))}
       onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
       onClickLibraryItem={(item) => navigate(`/${item}`)}

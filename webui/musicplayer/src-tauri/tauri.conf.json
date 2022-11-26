@@ -3,7 +3,8 @@
     "beforeBuildCommand": "yarn build",
     "beforeDevCommand": "yarn tauri:dev",
     "devPath": "http://localhost:3000",
-    "distDir": "../build"
+    "distDir": "../build",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "Music Player",
@@ -11,7 +12,14 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false
+      "path": {
+        "all": true
+      },
+      "protocol": {
+        "all": false,
+        "asset": true,
+        "assetScope": ["$APPLOCALDATA/covers/*"]
+      }
     },
     "bundle": {
       "active": true,
@@ -28,7 +36,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "music-player",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -47,7 +55,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost"
     },
     "updater": {
       "active": false

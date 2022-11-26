@@ -12,6 +12,7 @@ import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
 import _ from "lodash";
 import { Track } from "../../Types";
+import { resourceUriResolver } from "../../ResourceUriResolver";
 
 const Container = styled.div`
   display: flex;
@@ -170,7 +171,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
   } = props;
   const coverUrl = _.startsWith(album.cover, "https://")
     ? album.cover
-    : `/covers/${album.cover}`;
+    : resourceUriResolver.resolve(`/covers/${album.cover}`);
   const { cover } = useCover(coverUrl);
   return (
     <Container>

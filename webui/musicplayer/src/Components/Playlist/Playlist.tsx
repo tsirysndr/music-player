@@ -13,6 +13,7 @@ import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import { Track } from "../../Types";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { resourceUriResolver } from "../../ResourceUriResolver";
 
 const Container = styled.div`
   display: flex;
@@ -168,7 +169,7 @@ const Playlist: FC<PlaylistProps> = (props) => {
       artist: track.artist,
       album: track.albumTitle,
       time: formatTime(track.duration! * 1000),
-      cover: track.cover ? `/covers/${track.cover}` : undefined,
+      cover: track.cover ? resourceUriResolver.resolve(`/covers/${track.cover}`) : undefined,
       artistId: track.artistId,
       albumId: track.albumId,
     })) || [];

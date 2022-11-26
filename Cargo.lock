@@ -423,10 +423,17 @@ checksum = "98161a4e3e2184da77bb14f02184cdd111e83bbbcc9979dfee3c44b9a85f5602"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "async-graphql",
+ "music-player-graphql",
+ "music-player-playback",
+ "music-player-settings",
+ "music-player-storage",
+ "music-player-tracklist",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "tokio",
 ]
 
 [[package]]

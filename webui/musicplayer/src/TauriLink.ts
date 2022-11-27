@@ -19,7 +19,7 @@ function createTauriSubscriptionsLink(): ApolloLink {
         const { invoke, event: { listen, emit } } = window.__TAURI__;
         let token: any;
         try {
-          token = await invoke('execute_graphql_subscription', {
+          token = await invoke("execute_graphql_subscription", {
             request: makeRequest(operation)
           });
         } catch (e) {
@@ -36,8 +36,7 @@ function createTauriSubscriptionsLink(): ApolloLink {
           unsubscribeCallbacks.push(unsubscribe);
 
           const unlisten = await listen(`subscriptions/${token}`, (event: any) => {
-            const result = JSON.parse(event.payload);
-            subscriber.next(result);
+            subscriber.next(event.payload);
           });
           if (subscriber.closed) {
             unlisten();
@@ -63,7 +62,7 @@ function createTauriBasicLink(): ApolloLink {
         const { invoke } = window.__TAURI__;
         let result: any;
         try {
-          result = await invoke('execute_graphql', {
+          result = await invoke("execute_graphql", {
             request: makeRequest(operation)
           });
         } catch (e) {
@@ -84,8 +83,8 @@ export function createTauriLink(): ApolloLink {
     ({ query }) => {
       const definition = getMainDefinition(query);
       return (
-        definition.kind === 'OperationDefinition' &&
-        definition.operation === 'subscription'
+        definition.kind === "OperationDefinition" &&
+        definition.operation === "subscription"
       );
     },
     createTauriSubscriptionsLink(),

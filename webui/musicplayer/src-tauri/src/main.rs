@@ -6,7 +6,7 @@
 use std::{sync::Arc};
 
 use async_graphql::{Response, Request, Schema};
-use futures::{stream::StreamExt, future::Either};
+use futures::{stream::StreamExt, future::Either::{Left, Right}};
 use music_player_graphql::{
   schema::{
     Mutation, Query, Subscription,
@@ -27,7 +27,7 @@ use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ClientSubscriptionEvent { Unsubscribed }
 
 #[tauri::command]
@@ -42,18 +42,18 @@ fn execute_graphql_subscription(
   let cloned_handle = app_handle.clone();
   tokio::spawn(async move {
     let mut combined_stream = futures::stream::select(
-      graphql_stream.map(Either::Left),
-      client_subscription_rx.map(Either::Right)
+      graphql_stream.map(Left),
+      client_subscription_rx.map(Right)
     );
     loop {
       match combined_stream.next().await {
         None => { break; }
-        Some(Either::Right(ClientSubscriptionEvent::Unsubscribed)) => { break; }
-        Some(Either::Left(data)) => {
-          // Needs to be serialized first since Response doesn't implement Clone
+        Some(Right(ClientSubscriptionEvent::Unsubscribed)) => { break; }
+        Some(Left(data)) => {
           cloned_handle.emit_all(
             &format!("subscriptions/{}", token),
-            serde_json::to_string(&data).expect("Failed to serialize streamed result")
+            // Needs to be serialized first since Response doesn't implement Clone
+            serde_json::to_value(&data).unwrap()
           ).ok();
         }
       }

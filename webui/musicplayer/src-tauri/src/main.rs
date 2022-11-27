@@ -6,18 +6,64 @@
 use std::{sync::Arc};
 
 use async_graphql::{Response, Request, Schema};
+use futures::{stream::StreamExt, future::Either};
 use music_player_graphql::{
-  schema::{Mutation, Query, Subscription},
+  schema::{
+    Mutation, Query, Subscription,
+    objects::{player_state::PlayerState, track::Track},
+    playback::PositionMilliseconds,
+  },
+  simple_broker::SimpleBroker,
   MusicPlayerSchema,
 };
 use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink},
-    config::AudioFormat,
-    player::Player,
+  audio_backend::{self, rodio::RodioSink},
+  config::AudioFormat,
+  player::{Player, PlayerEvent},
 };
 use music_player_tracklist::Tracklist;
 use music_player_storage::Database;
+use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
+use uuid::Uuid;
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+enum ClientSubscriptionEvent { Unsubscribed }
+
+#[tauri::command]
+fn execute_graphql_subscription(
+  request: Request,
+  schema: tauri::State<'_, MusicPlayerSchema>,
+  app_handle: tauri::AppHandle
+) -> Result<Uuid, ()> {
+  let token = Uuid::new_v4();
+  let (client_subscription_tx, client_subscription_rx) = futures::channel::mpsc::unbounded();
+  let graphql_stream = schema.execute_stream(request);
+  let cloned_handle = app_handle.clone();
+  tokio::spawn(async move {
+    let mut combined_stream = futures::stream::select(
+      graphql_stream.map(Either::Left),
+      client_subscription_rx.map(Either::Right)
+    );
+    loop {
+      match combined_stream.next().await {
+        None => { break; }
+        Some(Either::Right(ClientSubscriptionEvent::Unsubscribed)) => { break; }
+        Some(Either::Left(data)) => {
+          // Needs to be serialized first since Response doesn't implement Clone
+          cloned_handle.emit_all(
+            &format!("subscriptions/{}", token),
+            serde_json::to_string(&data).expect("Failed to serialize streamed result")
+          ).ok();
+        }
+      }
+    }
+  });
+  app_handle.once_global(format!("unsubscribe/{}", token), move |_| {
+    client_subscription_tx.unbounded_send(ClientSubscriptionEvent::Unsubscribed).ok();
+  });
+  Ok(token)
+}
 
 #[tauri::command]
 async fn execute_graphql(request: Request, schema: tauri::State<'_, MusicPlayerSchema>) -> Result<Response, ()> {
@@ -32,18 +78,41 @@ async fn main() {
   let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
   let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
   let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
+
   let (_, _) = Player::new(
-      move || backend(None, audio_format),
-      move |_| {},
-      Arc::clone(&cmd_tx),
-      Arc::clone(&cmd_rx),
-      tracklist.clone(),
+    move || backend(None, audio_format),
+    move |event| {
+      match event {
+        PlayerEvent::CurrentTrack {
+          track,
+          position,
+          position_ms,
+          is_playing,
+        } => {
+          if let Some(track) = track.clone() {
+            SimpleBroker::publish(Track::from(track));
+            SimpleBroker::publish(PlayerState {
+              index: position as u32,
+              position_ms,
+              is_playing,
+            });
+          }
+        }
+        PlayerEvent::TrackTimePosition { position_ms } => {
+          SimpleBroker::publish(PositionMilliseconds { position_ms });
+        }
+        _ => {}
+      }
+    },
+    Arc::clone(&cmd_tx),
+    Arc::clone(&cmd_rx),
+    tracklist.clone(),
   );
   let db = Arc::new(Mutex::new(Database::new().await));
   let schema: MusicPlayerSchema = Schema::build(
-      Query::default(),
-      Mutation::default(),
-      Subscription::default(),
+    Query::default(),
+    Mutation::default(),
+    Subscription::default(),
   )
     .data(db)
     .data(cmd_tx)
@@ -53,7 +122,7 @@ async fn main() {
   tauri::async_runtime::set(tokio::runtime::Handle::current());
   tauri::Builder::default()
     .manage(schema)
-    .invoke_handler(tauri::generate_handler![execute_graphql])
+    .invoke_handler(tauri::generate_handler![execute_graphql, execute_graphql_subscription])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

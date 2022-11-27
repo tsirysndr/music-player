@@ -424,6 +424,7 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "futures",
  "music-player-graphql",
  "music-player-playback",
  "music-player-settings",
@@ -434,6 +435,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tokio",
+ "uuid 1.2.1",
 ]
 
 [[package]]

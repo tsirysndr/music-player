@@ -1,10 +1,10 @@
-import { ApolloLink, Observable, defaultPrinter, split, Operation } from "@apollo/client";
+import { ApolloLink, Observable, split, Operation } from "@apollo/client";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { print } from "graphql";
 
 function makeRequest(operation: Operation): Record<string, unknown> {
   return {
-    query: defaultPrinter(operation.query, print),
+    query: print(operation.query),
     operationName: operation.operationName,
     variables: operation.variables,
     extensions: operation.extensions,

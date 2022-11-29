@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use music_player_entity::track::Model as Track;
 use rand::seq::SliceRandom;
 

@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: ["master", "chore/tests"]
+    branches: ["master"]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: ["master"]
@@ -26,6 +26,9 @@ jobs:
       - name: Install cargo-llvm-cov
         run: |
           cargo install  cargo-llvm-cov
+
+      - name: Installing needed dependencies
+        run: sudo apt-get install -y libasound2-dev protobuf-compiler
 
       - name: Run cargo-llvm-cov
         run:  cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info

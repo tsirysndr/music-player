@@ -4,7 +4,7 @@ mod tests;
 use music_player_entity::track::Model as Track;
 use rand::seq::SliceRandom;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct PlaybackState {
     pub position_ms: u32,
     pub is_playing: bool,

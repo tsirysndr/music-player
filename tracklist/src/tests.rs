@@ -372,3 +372,72 @@ fn play_track_at() {
     tracklist.play_track_at(2);
     assert_eq!(tracklist.current_track(), (Some(track3), 3));
 }
+
+#[test]
+fn playback_state() {
+    let tracklist = Tracklist::new_empty();
+    assert_eq!(
+        tracklist.playback_state(),
+        PlaybackState {
+            position_ms: 0,
+            is_playing: false,
+        }
+    );
+}
+
+#[test]
+fn set_playback_state() {
+    let mut tracklist = Tracklist::new_empty();
+    let track = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        track: Some(6),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track.clone());
+    assert_eq!(tracklist.len(), 1);
+    let track2 = Track {
+        id: "2a81ab806a5d2bf9cad8917e7f89f1a5".to_owned(),
+        track: Some(6),
+        title: "Wet Dreamz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track2.clone());
+    assert_eq!(tracklist.len(), 2);
+    let track3 = Track {
+        id: "5d7f5f595064177eb70e4c57a5e3ef45".to_owned(),
+        track: Some(9),
+        title: "No Role Modelz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track3.clone());
+    let track4 = Track {
+        id: "e2f90d9be6548928fb55875b9b42f8d8".to_owned(),
+        track: Some(7),
+        title: "St. Tropez".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track4.clone());
+    assert_eq!(tracklist.len(), 4);
+    let track5 = Track {
+        id: "53fc91928a293df6cd9765a5938446eb".to_owned(),
+        track: Some(12),
+        title: "Love Yourz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track5.clone());
+    assert_eq!(tracklist.len(), 5);
+    tracklist.play_track_at(2);
+    let playback_state = PlaybackState {
+        position_ms: 0,
+        is_playing: true,
+    };
+    tracklist.set_playback_state(playback_state.clone());
+    assert_eq!(tracklist.current_track(), (Some(track3), 3));
+    assert_eq!(tracklist.playback_state(), playback_state.clone());
+}

@@ -19,6 +19,7 @@ pub struct Settings {
     pub device_name: String,
     pub device_id: String,
     pub http_port: u16,
+    pub tauri_enable_graphql_server: bool,
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
@@ -51,6 +52,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         device_name: "Music Player".to_string(),
         device_id,
         http_port: 5053,
+        tauri_enable_graphql_server: false,
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -77,6 +79,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("device_name", default_settings.device_name)?
         .set_default("device_id", default_settings.device_id)?
         .set_default("http_port", default_settings.http_port)?
+        .set_default("tauri_enable_graphql_server", default_settings.tauri_enable_graphql_server)?
         .build()
 }
 

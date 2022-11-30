@@ -3,7 +3,7 @@
   windows_subsystem = "windows"
 )]
 
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use async_graphql::{Response, Request, Schema};
 use futures::{stream::StreamExt, future::Either::{Left, Right}};
@@ -22,10 +22,15 @@ use music_player_playback::{
   player::{Player, PlayerEvent},
 };
 use music_player_tracklist::Tracklist;
+use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
+
+mod graphql_server;
+
+use graphql_server::run_graphql_server;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ClientSubscriptionEvent { Unsubscribed }
@@ -118,6 +123,12 @@ async fn main() {
     .data(cmd_tx)
     .data(tracklist)
     .finish();
+
+  let config = read_settings().unwrap();
+  let settings = config.try_deserialize::<Settings>().unwrap();
+  if settings.tauri_enable_graphql_server {
+    tokio::spawn(run_graphql_server(schema.clone()));
+  }
 
   tauri::async_runtime::set(tokio::runtime::Handle::current());
   tauri::Builder::default()

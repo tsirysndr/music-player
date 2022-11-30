@@ -1,7 +1,10 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     fs::{self, File},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use config::{Config, ConfigError};
@@ -32,6 +35,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
 
     let device_id = format!("{:x}", md5::compute(Uuid::new_v4().to_string()));
 
+    let mut tmp = PathBuf::new();
+    tmp.push("/tmp");
+
     let default_settings = Settings {
         database_url: format!("sqlite:{}/music-player.sqlite3", path),
         port: 5051,
@@ -46,7 +52,11 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             "musicbrainz".to_string(),
             "lastfm".to_string(),
         ]),
-        music_directory: dirs::audio_dir().unwrap().to_str().unwrap().to_string(),
+        music_directory: dirs::audio_dir()
+            .unwrap_or(tmp)
+            .to_str()
+            .unwrap()
+            .to_string(),
         host: "0.0.0.0".to_string(),
         device_name: "Music Player".to_string(),
         device_id,

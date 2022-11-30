@@ -13,6 +13,12 @@
    <a href="https://crates.io/crates/music-player" target="_blank">
     <img src="https://img.shields.io/crates/dr/music-player" />
   </a>
+  <a href="https://codecov.io/gh/tsirysndr/music-player" target="_blank">
+    <img src="https://codecov.io/gh/tsirysndr/music-player/branch/chore/tests/graph/badge.svg?token=" />
+  </a>
+  <a href="https://github.com/tsirysndr/music-player/actions/workflows/ci.yml" target="_blank">
+    <img src="https://github.com/tsirysndr/music-player/actions/workflows/ci.yml/badge.svg" />
+  </a>
    <a href="https://github.com/tsirysndr/music-player/actions/workflows/release.yml" target="_blank">
     <img alt="release" src="https://github.com/tsirysndr/music-player/actions/workflows/release.yml/badge.svg" />
   </a>

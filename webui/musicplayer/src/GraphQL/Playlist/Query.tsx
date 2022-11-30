@@ -2,8 +2,8 @@ import { gql } from "@apollo/client";
 import { FOLDER_FRAGMENT, PLAYLIST_FRAGMENT } from "../Fragments";
 
 export const GET_PLAYLISTS = gql`
-  query GetPlaylists {
-    playlists {
+  query GetPlaylists($limit: Int, $offset: Int) {
+    playlists(limit: $limit, offset: $offset) {
       id
       name
       description
@@ -22,8 +22,8 @@ export const GET_RECENT_PLAYLISTS = gql`
 `;
 
 export const GET_MAIN_PLAYLISTS = gql`
-  query GetMainPlaylists {
-    mainPlaylists {
+  query GetMainPlaylists($limit: Int, $offset: Int) {
+    mainPlaylists(limit: $limit, offset: $offset) {
       id
       name
       description
@@ -32,8 +32,8 @@ export const GET_MAIN_PLAYLISTS = gql`
 `;
 
 export const GET_PLAYLIST = gql`
-  query GetPlaylist($id: ID!) {
-    playlist(id: $id) {
+  query GetPlaylist($id: ID!, $limit: Int, $offset: Int) {
+    playlist(id: $id, limit: $limit, offset: $offset) {
       ...PlaylistFragment
     }
   }

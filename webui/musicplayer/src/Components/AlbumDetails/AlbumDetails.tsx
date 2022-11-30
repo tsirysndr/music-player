@@ -12,6 +12,7 @@ import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
 import _ from "lodash";
 import { Track } from "../../Types";
+import { usePlayback } from "../../Hooks/usePlayback";
 
 const Container = styled.div`
   display: flex;
@@ -132,7 +133,6 @@ export type AlbumDetailsProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
-  nowPlaying: any;
   nextTracks: Track[];
   previousTracks: Track[];
   onPlayAlbum: (id: string, shuffle: boolean, position?: number) => void;
@@ -161,13 +161,13 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
   const {
     onBack,
     album,
-    nowPlaying,
     onPlayAlbum,
     onPlayNext,
     onCreatePlaylist,
     onAddTrackToPlaylist,
     recentPlaylists,
   } = props;
+  const { currentTrackId, isPlaying } = usePlayback();
   const coverUrl = _.startsWith(album.cover, "https://")
     ? album.cover
     : `/covers/${album.cover}`;
@@ -176,7 +176,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
     <Container>
       <Sidebar active="albums" {...props} />
       <Content>
-        <ControlBar {...props} />
+        <ControlBar />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>
@@ -224,10 +224,10 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
             </Album>
             <TracksTable
               tracks={album.tracks.map((track: any) => ({ ...track, cover }))}
-              currentTrackId={nowPlaying.id}
-              isPlaying={nowPlaying.isPlaying}
+              currentTrackId={currentTrackId}
+              isPlaying={isPlaying}
               header={["#", "Title", "Artist", "Time"]}
-              maxHeight={"initial"}
+              maxHeight={"calc(100vh - 98px)"}
               onPlayTrack={(id, position) => onPlayAlbum(id, false, position)}
               onPlayNext={onPlayNext}
               onCreatePlaylist={onCreatePlaylist}

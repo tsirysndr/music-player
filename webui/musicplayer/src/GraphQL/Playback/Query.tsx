@@ -1,24 +1,41 @@
 import { gql } from "@apollo/client";
-import { TRACK_FRAGMENT } from "../Fragments";
 
 export const GET_CURRENTLY_PLAYING = gql`
   query CurrentlyPlayingSong {
     currentlyPlayingSong {
-      track {
-        ...TrackFragment
-        artists {
-          id
-          name
-        }
-        album {
-          id
-          title
-        }
+      id
+      trackNumber
+      title
+      artist
+      duration
+      album {
+        id
+        title
+        artist
+        year
+        cover
       }
-      index
-      isPlaying
-      positionMs
+      artist
+      artists {
+        id
+        name
+        picture
+      }
     }
   }
-  ${TRACK_FRAGMENT}
+`;
+
+export const GET_PLAYER_STATE = gql`
+  query GetPlayerState {
+    getPlayerState {
+      isPlaying
+      index
+    }
+  }
+`;
+
+export const GET_PLAYBACK_PROGRESS = gql`
+  query GetPlaybackProgress {
+    playbackProgress
+  }
 `;

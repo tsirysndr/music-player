@@ -15,7 +15,7 @@ export const useCover = (coverUrl?: string) => {
   };
 
   useEffect(() => {
-    if (coverUrl) {
+    if (coverUrl && !coverUrl.includes("undefined.jpg")) {
       fetch(coverUrl)
         .then((res) => {
           if (

@@ -146,6 +146,7 @@ impl From<select_result::PlaylistTrack> for Track {
             album: Album {
                 id: ID(result.album_id),
                 title: result.album_title,
+                artist: result.album_artist,
                 cover: result.album_cover,
                 year: result.album_year,
                 ..Default::default()

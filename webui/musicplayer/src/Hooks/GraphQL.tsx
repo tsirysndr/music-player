@@ -40,14 +40,6 @@ export type Artist = {
   website: Scalars['String'];
 };
 
-export type CurrentlyPlayingSong = {
-  __typename?: 'CurrentlyPlayingSong';
-  index: Scalars['Int'];
-  isPlaying: Scalars['Boolean'];
-  positionMs: Scalars['Int'];
-  track?: Maybe<Track>;
-};
-
 export type Folder = {
   __typename?: 'Folder';
   id: Scalars['String'];
@@ -256,7 +248,7 @@ export type Query = {
   albums: Array<Album>;
   artist: Artist;
   artists: Array<Artist>;
-  currentlyPlayingSong: CurrentlyPlayingSong;
+  currentlyPlayingSong?: Maybe<Track>;
   folder: Folder;
   folders: Array<Folder>;
   getNextTrack?: Maybe<Track>;
@@ -266,6 +258,7 @@ export type Query = {
   getRepeat: Scalars['Boolean'];
   getVolume: Scalars['Int'];
   mainPlaylists: Array<Playlist>;
+  playbackProgress: Scalars['Int'];
   playlist: Playlist;
   playlists: Array<Playlist>;
   recentPlaylists: Array<Playlist>;
@@ -281,8 +274,20 @@ export type QueryAlbumArgs = {
 };
 
 
+export type QueryAlbumsArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
+
 export type QueryArtistArgs = {
   id: Scalars['ID'];
+};
+
+
+export type QueryArtistsArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -291,8 +296,28 @@ export type QueryFolderArgs = {
 };
 
 
+export type QueryFoldersArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type QueryMainPlaylistsArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
+
 export type QueryPlaylistArgs = {
   id: Scalars['ID'];
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type QueryPlaylistsArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -303,6 +328,12 @@ export type QuerySearchArgs = {
 
 export type QueryTrackArgs = {
   id: Scalars['ID'];
+};
+
+
+export type QueryTracksArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 export type SearchResult = {
@@ -388,17 +419,26 @@ export type PlaylistFragmentFragment = { __typename?: 'Playlist', id: string, na
 
 export type FolderFragmentFragment = { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
-export type GetAlbumsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetAlbumsQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetAlbumsQuery = { __typename?: 'Query', albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> }> };
 
-export type GetArtistsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetArtistsQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetArtistsQuery = { __typename?: 'Query', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }> };
 
-export type GetTracksQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetTracksQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetTracksQuery = { __typename?: 'Query', tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null } }> };
@@ -447,7 +487,17 @@ export type PreviousMutation = { __typename?: 'Mutation', previous: boolean };
 export type CurrentlyPlayingSongQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } | null } };
+export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null }, artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }> } | null };
+
+export type GetPlayerStateQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetPlayerStateQuery = { __typename?: 'Query', getPlayerState: { __typename?: 'PlayerState', isPlaying: boolean, index: number } };
+
+export type GetPlaybackProgressQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetPlaybackProgressQuery = { __typename?: 'Query', playbackProgress: number };
 
 export type PlayerStateChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
@@ -462,7 +512,7 @@ export type TrackTimePositionChangedSubscription = { __typename?: 'Subscription'
 export type CurrentlyPlayingSongChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } };
+export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null } } };
 
 export type CreatePlaylistMutationVariables = Exact<{
   name: Scalars['String'];
@@ -541,7 +591,10 @@ export type MovePlaylistsToFolderMutationVariables = Exact<{
 
 export type MovePlaylistsToFolderMutation = { __typename?: 'Mutation', movePlaylistsToFolder: { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> } };
 
-export type GetPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetPlaylistsQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetPlaylistsQuery = { __typename?: 'Query', playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
@@ -551,13 +604,18 @@ export type GetRecentPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetRecentPlaylistsQuery = { __typename?: 'Query', recentPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
-export type GetMainPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetMainPlaylistsQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetMainPlaylistsQuery = { __typename?: 'Query', mainPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
 export type GetPlaylistQueryVariables = Exact<{
   id: Scalars['ID'];
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 }>;
 
 
@@ -631,7 +689,7 @@ export type PlayNextMutation = { __typename?: 'Mutation', playNext: boolean };
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }> }, currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
+export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null } }> }, currentlyPlayingSong?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null } | null };
 
 export const AlbumFragmentFragmentDoc = gql`
     fragment AlbumFragment on Album {
@@ -687,8 +745,8 @@ export const FolderFragmentFragmentDoc = gql`
 }
     `;
 export const GetAlbumsDocument = gql`
-    query GetAlbums {
-  albums {
+    query GetAlbums($limit: Int, $offset: Int) {
+  albums(limit: $limit, offset: $offset) {
     ...AlbumFragment
     tracks {
       ...TrackFragment
@@ -710,6 +768,8 @@ ${TrackFragmentFragmentDoc}`;
  * @example
  * const { data, loading, error } = useGetAlbumsQuery({
  *   variables: {
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -725,8 +785,8 @@ export type GetAlbumsQueryHookResult = ReturnType<typeof useGetAlbumsQuery>;
 export type GetAlbumsLazyQueryHookResult = ReturnType<typeof useGetAlbumsLazyQuery>;
 export type GetAlbumsQueryResult = Apollo.QueryResult<GetAlbumsQuery, GetAlbumsQueryVariables>;
 export const GetArtistsDocument = gql`
-    query GetArtists {
-  artists {
+    query GetArtists($limit: Int, $offset: Int) {
+  artists(limit: $limit, offset: $offset) {
     ...ArtistFragment
   }
 }
@@ -744,6 +804,8 @@ export const GetArtistsDocument = gql`
  * @example
  * const { data, loading, error } = useGetArtistsQuery({
  *   variables: {
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -759,8 +821,8 @@ export type GetArtistsQueryHookResult = ReturnType<typeof useGetArtistsQuery>;
 export type GetArtistsLazyQueryHookResult = ReturnType<typeof useGetArtistsLazyQuery>;
 export type GetArtistsQueryResult = Apollo.QueryResult<GetArtistsQuery, GetArtistsQueryVariables>;
 export const GetTracksDocument = gql`
-    query GetTracks {
-  tracks {
+    query GetTracks($limit: Int, $offset: Int) {
+  tracks(limit: $limit, offset: $offset) {
     ...TrackFragment
     artists {
       id
@@ -786,6 +848,8 @@ ${AlbumFragmentFragmentDoc}`;
  * @example
  * const { data, loading, error } = useGetTracksQuery({
  *   variables: {
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -1079,23 +1143,27 @@ export type PreviousMutationOptions = Apollo.BaseMutationOptions<PreviousMutatio
 export const CurrentlyPlayingSongDocument = gql`
     query CurrentlyPlayingSong {
   currentlyPlayingSong {
-    track {
-      ...TrackFragment
-      artists {
-        id
-        name
-      }
-      album {
-        id
-        title
-      }
+    id
+    trackNumber
+    title
+    artist
+    duration
+    album {
+      id
+      title
+      artist
+      year
+      cover
     }
-    index
-    isPlaying
-    positionMs
+    artist
+    artists {
+      id
+      name
+      picture
+    }
   }
 }
-    ${TrackFragmentFragmentDoc}`;
+    `;
 
 /**
  * __useCurrentlyPlayingSongQuery__
@@ -1123,6 +1191,73 @@ export function useCurrentlyPlayingSongLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type CurrentlyPlayingSongQueryHookResult = ReturnType<typeof useCurrentlyPlayingSongQuery>;
 export type CurrentlyPlayingSongLazyQueryHookResult = ReturnType<typeof useCurrentlyPlayingSongLazyQuery>;
 export type CurrentlyPlayingSongQueryResult = Apollo.QueryResult<CurrentlyPlayingSongQuery, CurrentlyPlayingSongQueryVariables>;
+export const GetPlayerStateDocument = gql`
+    query GetPlayerState {
+  getPlayerState {
+    isPlaying
+    index
+  }
+}
+    `;
+
+/**
+ * __useGetPlayerStateQuery__
+ *
+ * To run a query within a React component, call `useGetPlayerStateQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPlayerStateQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPlayerStateQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetPlayerStateQuery(baseOptions?: Apollo.QueryHookOptions<GetPlayerStateQuery, GetPlayerStateQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPlayerStateQuery, GetPlayerStateQueryVariables>(GetPlayerStateDocument, options);
+      }
+export function useGetPlayerStateLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPlayerStateQuery, GetPlayerStateQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPlayerStateQuery, GetPlayerStateQueryVariables>(GetPlayerStateDocument, options);
+        }
+export type GetPlayerStateQueryHookResult = ReturnType<typeof useGetPlayerStateQuery>;
+export type GetPlayerStateLazyQueryHookResult = ReturnType<typeof useGetPlayerStateLazyQuery>;
+export type GetPlayerStateQueryResult = Apollo.QueryResult<GetPlayerStateQuery, GetPlayerStateQueryVariables>;
+export const GetPlaybackProgressDocument = gql`
+    query GetPlaybackProgress {
+  playbackProgress
+}
+    `;
+
+/**
+ * __useGetPlaybackProgressQuery__
+ *
+ * To run a query within a React component, call `useGetPlaybackProgressQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPlaybackProgressQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPlaybackProgressQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetPlaybackProgressQuery(baseOptions?: Apollo.QueryHookOptions<GetPlaybackProgressQuery, GetPlaybackProgressQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPlaybackProgressQuery, GetPlaybackProgressQueryVariables>(GetPlaybackProgressDocument, options);
+      }
+export function useGetPlaybackProgressLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPlaybackProgressQuery, GetPlaybackProgressQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPlaybackProgressQuery, GetPlaybackProgressQueryVariables>(GetPlaybackProgressDocument, options);
+        }
+export type GetPlaybackProgressQueryHookResult = ReturnType<typeof useGetPlaybackProgressQuery>;
+export type GetPlaybackProgressLazyQueryHookResult = ReturnType<typeof useGetPlaybackProgressLazyQuery>;
+export type GetPlaybackProgressQueryResult = Apollo.QueryResult<GetPlaybackProgressQuery, GetPlaybackProgressQueryVariables>;
 export const PlayerStateChangedDocument = gql`
     subscription PlayerStateChanged {
   playerState {
@@ -1188,10 +1323,14 @@ export const CurrentlyPlayingSongChangedDocument = gql`
     artists {
       id
       name
+      picture
     }
     album {
       id
       title
+      artist
+      year
+      cover
     }
   }
 }
@@ -1561,8 +1700,8 @@ export type MovePlaylistsToFolderMutationHookResult = ReturnType<typeof useMoveP
 export type MovePlaylistsToFolderMutationResult = Apollo.MutationResult<MovePlaylistsToFolderMutation>;
 export type MovePlaylistsToFolderMutationOptions = Apollo.BaseMutationOptions<MovePlaylistsToFolderMutation, MovePlaylistsToFolderMutationVariables>;
 export const GetPlaylistsDocument = gql`
-    query GetPlaylists {
-  playlists {
+    query GetPlaylists($limit: Int, $offset: Int) {
+  playlists(limit: $limit, offset: $offset) {
     id
     name
     description
@@ -1582,6 +1721,8 @@ export const GetPlaylistsDocument = gql`
  * @example
  * const { data, loading, error } = useGetPlaylistsQuery({
  *   variables: {
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -1633,8 +1774,8 @@ export type GetRecentPlaylistsQueryHookResult = ReturnType<typeof useGetRecentPl
 export type GetRecentPlaylistsLazyQueryHookResult = ReturnType<typeof useGetRecentPlaylistsLazyQuery>;
 export type GetRecentPlaylistsQueryResult = Apollo.QueryResult<GetRecentPlaylistsQuery, GetRecentPlaylistsQueryVariables>;
 export const GetMainPlaylistsDocument = gql`
-    query GetMainPlaylists {
-  mainPlaylists {
+    query GetMainPlaylists($limit: Int, $offset: Int) {
+  mainPlaylists(limit: $limit, offset: $offset) {
     id
     name
     description
@@ -1654,6 +1795,8 @@ export const GetMainPlaylistsDocument = gql`
  * @example
  * const { data, loading, error } = useGetMainPlaylistsQuery({
  *   variables: {
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -1669,8 +1812,8 @@ export type GetMainPlaylistsQueryHookResult = ReturnType<typeof useGetMainPlayli
 export type GetMainPlaylistsLazyQueryHookResult = ReturnType<typeof useGetMainPlaylistsLazyQuery>;
 export type GetMainPlaylistsQueryResult = Apollo.QueryResult<GetMainPlaylistsQuery, GetMainPlaylistsQueryVariables>;
 export const GetPlaylistDocument = gql`
-    query GetPlaylist($id: ID!) {
-  playlist(id: $id) {
+    query GetPlaylist($id: ID!, $limit: Int, $offset: Int) {
+  playlist(id: $id, limit: $limit, offset: $offset) {
     ...PlaylistFragment
   }
 }
@@ -1689,6 +1832,8 @@ export const GetPlaylistDocument = gql`
  * const { data, loading, error } = useGetPlaylistQuery({
  *   variables: {
  *      id: // value for 'id'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
  *   },
  * });
  */
@@ -2009,6 +2154,7 @@ export const GetTracklistDocument = gql`
       album {
         id
         title
+        artist
         cover
       }
     }
@@ -2023,23 +2169,13 @@ export const GetTracklistDocument = gql`
       album {
         id
         title
+        artist
         cover
       }
     }
   }
   currentlyPlayingSong {
-    track {
-      ...TrackFragment
-      artists {
-        name
-      }
-      album {
-        title
-      }
-    }
-    index
-    isPlaying
-    positionMs
+    ...TrackFragment
   }
 }
     ${TrackFragmentFragmentDoc}`;

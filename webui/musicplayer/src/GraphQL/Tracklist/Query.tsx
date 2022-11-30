@@ -15,6 +15,7 @@ export const GET_TRACKLIST = gql`
         album {
           id
           title
+          artist
           cover
         }
       }
@@ -29,23 +30,13 @@ export const GET_TRACKLIST = gql`
         album {
           id
           title
+          artist
           cover
         }
       }
     }
     currentlyPlayingSong {
-      track {
-        ...TrackFragment
-        artists {
-          name
-        }
-        album {
-          title
-        }
-      }
-      index
-      isPlaying
-      positionMs
+      ...TrackFragment
     }
   }
   ${TRACK_FRAGMENT}

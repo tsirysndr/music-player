@@ -149,7 +149,6 @@ export type ArtistDetailsProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
-  nowPlaying: any;
   nextTracks: Track[];
   previousTracks: Track[];
   onPlayArtistTracks: (
@@ -194,7 +193,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
     <Container>
       <Sidebar active="artists" {...props} />
       <Content>
-        <ControlBar {...props} />
+        <ControlBar />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>
@@ -229,13 +228,8 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
             <Tracks>
               <TracksTable
                 tracks={tracks}
-                title={
-                  <Row>
-                    <Title>Tracks</Title>
-                    <SeeMore>See all</SeeMore>
-                  </Row>
-                }
-                maxHeight={"initial"}
+                title={<Title>Tracks</Title>}
+                maxHeight={"calc(100vh - 98px)"}
                 onPlayTrack={(id, position) =>
                   onPlayArtistTracks(id, false, position)
                 }
@@ -245,10 +239,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
                 onAddTrackToPlaylist={onAddTrackToPlaylist}
               />
             </Tracks>
-            <Row>
-              <Title>Albums</Title>
-              <SeeMore>See all</SeeMore>
-            </Row>
+            <Title>Albums</Title>
             <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
               {albums.map((item) => (
                 <Cell key={item.id}>

@@ -14,7 +14,6 @@ const SearchPage = () => {
     pause,
     next,
     previous,
-    nowPlaying,
     nextTracks,
     previousTracks,
     playNext,
@@ -64,7 +63,6 @@ const SearchPage = () => {
         onPrevious={() => previous()}
         onShuffle={() => {}}
         onRepeat={() => {}}
-        nowPlaying={nowPlaying}
         onPlayTrack={(id, position) => {}}
         nextTracks={nextTracks}
         previousTracks={previousTracks}

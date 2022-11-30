@@ -6,7 +6,11 @@ import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
 
 const ArtistsPage = () => {
-  const { data, loading } = useGetArtistsQuery();
+  const { data, loading } = useGetArtistsQuery({
+    variables: {
+      limit: 10000,
+    },
+  });
   const navigate = useNavigate();
   const {
     play,
@@ -51,7 +55,6 @@ const ArtistsPage = () => {
       onPrevious={() => previous()}
       onShuffle={() => {}}
       onRepeat={() => {}}
-      nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}

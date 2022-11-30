@@ -87,7 +87,6 @@ const ArtistDetailsPage = () => {
       artist={artist}
       tracks={tracks}
       albums={albums}
-      nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
       onPlayArtistTracks={(artistId, shuffle, position) =>

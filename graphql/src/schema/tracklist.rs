@@ -18,10 +18,13 @@ use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use crate::simple_broker::SimpleBroker;
 
-use super::{objects::{
-    track::{Track, TrackInput},
-    tracklist::Tracklist,
-}, MutationType};
+use super::{
+    objects::{
+        track::{Track, TrackInput},
+        tracklist::Tracklist,
+    },
+    MutationType,
+};
 
 #[derive(Default)]
 pub struct TracklistQuery;
@@ -349,6 +352,7 @@ impl TracklistMutation {
                     .column_as(artist_entity::Column::Name, "artist_name")
                     .column_as(album_entity::Column::Id, "album_id")
                     .column_as(album_entity::Column::Title, "album_title")
+                    .column_as(album_entity::Column::Artist, "album_artist")
                     .column_as(album_entity::Column::Cover, "album_cover")
                     .column_as(album_entity::Column::Year, "album_year")
                     .column_as(track_entity::Column::Id, "track_id")

@@ -17,6 +17,7 @@ pub mod select_result {
         pub description: Option<String>,
         pub album_id: String,
         pub album_title: String,
+        pub album_artist: String,
         pub album_cover: Option<String>,
         pub album_year: Option<u32>,
         pub artist_id: String,

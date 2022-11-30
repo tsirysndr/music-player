@@ -1,12 +1,19 @@
 import styled from "@emotion/styled";
 import { Play } from "@styled-icons/ionicons-sharp";
-import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
-import _ from "lodash";
-import { FC } from "react";
+
+import _, { max } from "lodash";
+import { FC, memo, useMemo } from "react";
 import { Link } from "react-router-dom";
 import ContextMenu from "../ContextMenu";
 import Speaker from "../Icons/Speaker";
 import TrackIcon from "../Icons/Track";
+import { FixedSizeList as List } from "react-window";
+import InfiniteLoader from "react-window-infinite-loader";
+import AutoSizer from "react-virtualized-auto-sizer";
+
+const LOADING = 1;
+const LOADED = 2;
+let itemStatusMap: any = {};
 
 const TableWrapper = styled.div`
   margin-top: 31px;
@@ -27,14 +34,52 @@ const CellWrapper = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
+  padding-right: 20px;
   height: 45px;
 `;
 
-const AlbumCover = styled.img<{ current: boolean }>`
+const AlbumCoverDefault = styled.img<{ current: boolean }>`
   height: 43px;
   width: 43px;
   margin-right: 10px;
   ${({ current }) => `opacity: ${current ? 0.4 : 1};`}
+`;
+
+const Table = styled.div`
+  overflow-y: auto;
+`;
+
+const TableRow = styled.div`
+  display: flex;
+`;
+
+const TableHead = styled.div`
+  display: flex;
+  flex-direction: row;
+  padding: 16px;
+`;
+
+const TableCell = styled.div`
+  flex: 1;
+  font-size: 14px;
+  padding: 16px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+`;
+type AlbumCoverProps = {
+  src: string;
+  current: boolean;
+  className?: string;
+};
+
+const AlbumCover: FC<AlbumCoverProps> = memo((props) => (
+  <AlbumCoverDefault {...props} />
+));
+
+const TableHeadCell = styled.div`
+  flex: 1;
 `;
 
 const convertToLink = (row: any, item: string) => {
@@ -56,6 +101,12 @@ const convertToLink = (row: any, item: string) => {
   }
 };
 
+const AlbumCoverMemoized: FC<{ cover: string; current: boolean }> = memo(
+  ({ cover, current }) => (
+    <AlbumCover className="album-cover" src={cover} current={!!current} />
+  )
+);
+
 export type CellProps = {
   current?: string | boolean;
   row: any;
@@ -73,6 +124,7 @@ const Cell: FC<CellProps> = ({
   index,
   isAlbumTracks,
 }) => {
+  const { cover } = row;
   return (
     <CellWrapper>
       {!isAlbumTracks && item === "Title" && !row.cover && (
@@ -81,33 +133,36 @@ const Cell: FC<CellProps> = ({
         </AlbumCoverAlt>
       )}
       {!isAlbumTracks && item === "Title" && row.cover && (
-        <AlbumCover
-          className="album-cover"
-          src={row.cover}
-          current={!!current}
-        />
+        <AlbumCoverMemoized cover={cover} current={!!current} />
       )}
       {current && isAlbumTracks && (
-        <div>
+        <div style={{ flex: 1 }}>
           {item === "#" && (
-            <div
-              style={{
-                position: "absolute",
-                left: isAlbumTracks ? 20 : 37,
-                marginTop: -11,
-              }}
-            >
-              <Speaker color="#ab28fc" />
-            </div>
+            <>
+              <div
+                style={{
+                  position: "absolute",
+                  left: isAlbumTracks ? 10 : 20,
+                  marginTop: -11,
+                }}
+              >
+                <Speaker color="#ab28fc" />
+              </div>
+              <div style={{ width: 20 }}></div>
+            </>
           )}
 
           {item !== "#" && (
-            <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
+            <div
+              style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}
+            >
+              {convertToLink(row, item)}
+            </div>
           )}
         </div>
       )}
       {current && !isAlbumTracks && (
-        <div>
+        <div style={{ flex: 1 }}>
           {item === "Title" && (
             <div
               style={{
@@ -118,7 +173,11 @@ const Cell: FC<CellProps> = ({
               <Speaker color={row.cover ? "#fff" : "#ab28fc"} />
             </div>
           )}
-          <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
+          <div
+            style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}
+          >
+            {convertToLink(row, item)}
+          </div>
         </div>
       )}
       {!current && !isAlbumTracks && item === "Title" && (
@@ -141,9 +200,50 @@ const Cell: FC<CellProps> = ({
         </>
       )}
       {!current && item !== "#" && (
-        <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
+        <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+          {convertToLink(row, item)}
+        </div>
       )}
     </CellWrapper>
+  );
+};
+
+const Track: FC<any> = ({
+  row,
+  item,
+  currentIndex,
+  currentTrackId,
+  isPlaying,
+  index,
+  header,
+  onPlayTrack,
+}) => {
+  const current =
+    (item === "Title" || item === "#") &&
+    ((currentIndex && currentIndex === row.index) ||
+      (currentTrackId && row.id === currentTrackId)) &&
+    isPlaying;
+  return (
+    <TableCell
+      style={{
+        maxWidth: item === "Time" ? "100px" : "initial",
+        flex:
+          item === "Time" || item === "#"
+            ? "initial"
+            : item === "Title"
+            ? 1
+            : 0.6,
+      }}
+    >
+      <Cell
+        current={current}
+        row={row}
+        item={item}
+        index={index}
+        onPlayTrack={onPlayTrack}
+        isAlbumTracks={header.includes("#")}
+      />
+    </TableCell>
   );
 };
 
@@ -176,9 +276,125 @@ const TracksTable: FC<TracksTableProps> = ({
   onAddTrackToPlaylist,
   recentPlaylists,
 }) => {
+  const isItemLoaded = (index: number) => !!itemStatusMap[index];
+  const loadMoreItems: (
+    startIndex: number,
+    stopIndex: number
+  ) => void | Promise<any> = (startIndex: number, stopIndex: number) => {
+    console.log(">> loadMoreItems", startIndex, stopIndex);
+    for (let index = startIndex; index <= stopIndex; index++) {
+      itemStatusMap[index] = LOADING;
+    }
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        for (let index = startIndex; index <= stopIndex; index++) {
+          itemStatusMap[index] = LOADED;
+        }
+        // resolve();
+      }, 2500)
+    );
+  };
   return (
     <TableWrapper>
       {title}
+
+      <Table
+        style={{
+          maxHeight,
+          marginLeft: "10px",
+          width: "calc(100vw - 272px)",
+        }}
+      >
+        <TableHead>
+          {header?.map((column, index) => (
+            <TableHeadCell
+              key={index}
+              style={{
+                color: "rgba(0, 0, 0, 0.54)",
+                border: "none",
+                width:
+                  column === "#"
+                    ? "70px"
+                    : column === "Time"
+                    ? "50px"
+                    : "initial",
+                flex:
+                  column === "Time" || column === "#"
+                    ? "initial"
+                    : column === "Title"
+                    ? 0.97
+                    : 0.6,
+                paddingLeft:
+                  column !== "#" && column !== "Title" ? 40 : "initial",
+              }}
+            >
+              {column}
+            </TableHeadCell>
+          ))}
+          <TableHeadCell style={{ flex: 0.5 }}></TableHeadCell>
+        </TableHead>
+
+        <div style={{ height: maxHeight }}>
+          <AutoSizer>
+            {({ height, width }) => (
+              <InfiniteLoader
+                isItemLoaded={isItemLoaded}
+                itemCount={tracks.length}
+                loadMoreItems={loadMoreItems}
+              >
+                {({ onItemsRendered, ref }) => (
+                  <List
+                    className="List"
+                    height={height}
+                    itemCount={tracks.length}
+                    itemSize={78}
+                    onItemsRendered={onItemsRendered}
+                    ref={ref}
+                    width={width}
+                  >
+                    {({ index, style }) => (
+                      <div key={index} style={style}>
+                        <TableRow className="tablerow">
+                          {header?.map((item, key) => (
+                            <Track
+                              key={key}
+                              row={tracks[index]}
+                              item={item}
+                              currentIndex={currentIndex}
+                              currentTrackId={currentTrackId}
+                              isPlaying={isPlaying}
+                              index={index}
+                              header={header}
+                              onPlayTrack={onPlayTrack}
+                            />
+                          ))}
+                          <TableCell
+                            style={{
+                              flex: 0.4,
+                            }}
+                          >
+                            <CellWrapper>
+                              <ContextMenu
+                                track={tracks[index]}
+                                onPlayNext={onPlayNext}
+                                onCreatePlaylist={onCreatePlaylist}
+                                recentPlaylists={recentPlaylists}
+                                onAddTrackToPlaylist={onAddTrackToPlaylist}
+                              />
+                            </CellWrapper>
+                          </TableCell>
+                        </TableRow>
+                      </div>
+                    )}
+                  </List>
+                )}
+              </InfiniteLoader>
+            )}
+          </AutoSizer>
+        </div>
+      </Table>
+
+      {/*
       <TableBuilder
         data={tracks}
         overrides={{
@@ -268,6 +484,7 @@ const TracksTable: FC<TracksTableProps> = ({
           )}
         </TableBuilderColumn>
       </TableBuilder>
+  */}
     </TableWrapper>
   );
 };

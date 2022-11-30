@@ -165,7 +165,6 @@ export type FolderProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
-  nowPlaying: any;
   nextTracks: Track[];
   previousTracks: Track[];
   onPlayNext: (id: string) => void;
@@ -205,7 +204,7 @@ const Folder: FC<FolderProps> = (props) => {
     <Container>
       <Sidebar active="artists" {...props} playlists={mainPlaylists} />
       <Content>
-        <ControlBar {...props} />
+        <ControlBar />
         <MainContent displayHeader={false}>
           <Scrollable>
             {folder?.playlists?.length > 0 && (

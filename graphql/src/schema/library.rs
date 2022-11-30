@@ -17,11 +17,17 @@ pub struct LibraryQuery;
 
 #[Object]
 impl LibraryQuery {
-    async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
+    async fn tracks(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<Track>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
             track_entity::Entity::find()
-                .limit(100)
+                .offset(offset.unwrap_or(0))
+                .limit(limit.unwrap_or(100))
                 .order_by_asc(track_entity::Column::Title)
                 .find_with_related(artist_entity::Entity)
                 .all(db.lock().await.get_connection())
@@ -54,20 +60,34 @@ impl LibraryQuery {
             .collect())
     }
 
-    async fn artists(&self, ctx: &Context<'_>) -> Result<Vec<Artist>, Error> {
+    async fn artists(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<Artist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = artist_entity::Entity::find()
             .order_by_asc(artist_entity::Column::Name)
+            .offset(offset.unwrap_or(0))
+            .limit(limit.unwrap_or(100))
             .all(db.lock().await.get_connection())
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
     }
 
-    async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>, Error> {
+    async fn albums(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<Album>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = album_entity::Entity::find()
             .order_by_asc(album_entity::Column::Title)
+            .offset(offset.unwrap_or(0))
+            .limit(limit.unwrap_or(100))
             .all(db.lock().await.get_connection())
             .await?;
         Ok(results.into_iter().map(Into::into).collect())

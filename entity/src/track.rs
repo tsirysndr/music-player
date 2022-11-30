@@ -159,11 +159,12 @@ impl From<select_result::PlaylistTrack> for Model {
                 id: playlist_track.album_id,
                 title: playlist_track.album_title,
                 cover: playlist_track.album_cover,
+                artist: playlist_track.artist_name.clone(),
                 ..Default::default()
             },
             artists: vec![artist::Model {
                 id: playlist_track.artist_id,
-                name: playlist_track.artist_name,
+                name: playlist_track.artist_name.clone(),
                 ..Default::default()
             }],
             ..Default::default()

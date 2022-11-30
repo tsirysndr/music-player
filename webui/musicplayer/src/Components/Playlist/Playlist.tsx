@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
@@ -13,6 +13,7 @@ import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import { Track } from "../../Types";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { usePlayback } from "../../Hooks/usePlayback";
 
 const Container = styled.div`
   display: flex;
@@ -84,10 +85,18 @@ const NoCover = styled.div`
   align-items: center;
   background-color: #ddaefb14;
 `;
+
 const Title = styled.div`
   font-family: RockfordSansBold;
   font-size: 32px;
 `;
+
+const Tracks = styled.div`
+  margin-top: 25px;
+  font-family: RockfordSansLight;
+  font-size: 14px;
+`;
+
 const Placeholder = styled.div`
   font-family: RockfordSansRegular;
   text-align: center;
@@ -119,18 +128,6 @@ export type PlaylistProps = {
   playlist: any;
   onBack: () => void;
   onClickLibraryItem: (item: string) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
-  nowPlaying: any;
-  nextTracks: Track[];
-  previousTracks: Track[];
-  onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
   onSearch: (query: string) => void;
   folders: any[];
   playlists: any[];
@@ -141,22 +138,14 @@ export type PlaylistProps = {
   onEditFolder: (id: string, name: string) => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
   recentPlaylists: any[];
 };
 
 const Playlist: FC<PlaylistProps> = (props) => {
   const {
     onBack,
-    onPlayNext,
     onCreatePlaylist,
     onAddTrackToPlaylist,
-    onPlayPlaylist,
-    nowPlaying,
     playlist,
     recentPlaylists,
   } = props;
@@ -172,11 +161,20 @@ const Playlist: FC<PlaylistProps> = (props) => {
       artistId: track.artistId,
       albumId: track.albumId,
     })) || [];
+
+  const { currentTrackId, isPlaying, playNext, playPlaylist } = usePlayback();
+  const onPlayNext = (trackId: string) => playNext({ variables: { trackId } });
+  const onPlayPlaylist = (
+    playlistId: string,
+    shuffle: boolean,
+    position?: number
+  ) => playPlaylist({ variables: { playlistId, position, shuffle } });
+
   return (
     <Container>
-      <Sidebar active="artists" {...props} />
+      <Sidebar active="artists" {...props} onPlayPlaylist={onPlayPlaylist} />
       <Content>
-        <ControlBar {...props} />
+        <ControlBar />
         <MainContent displayHeader={false}>
           <Scrollable>
             <BackButton onClick={onBack}>
@@ -194,7 +192,10 @@ const Playlist: FC<PlaylistProps> = (props) => {
               </NoCover>
               <PlaylistDetails>
                 <PlaylistDetailsWrapper>
-                  <Title>{playlist.name}</Title>
+                  <div>
+                    <Title>{playlist.name}</Title>
+                    <Tracks>{tracks.length} TRACKS</Tracks>
+                  </div>
                 </PlaylistDetailsWrapper>
                 <Buttons>
                   <Button
@@ -232,10 +233,10 @@ const Playlist: FC<PlaylistProps> = (props) => {
             {tracks.length > 0 && (
               <TracksTable
                 tracks={tracks}
-                currentTrackId={nowPlaying.id}
-                isPlaying={nowPlaying.isPlaying}
+                currentTrackId={currentTrackId}
+                isPlaying={isPlaying}
                 header={["Title", "Artist", "Album", "Time"]}
-                maxHeight={"initial"}
+                maxHeight={"calc(100vh - 98px)"}
                 onPlayTrack={(id, position) =>
                   onPlayPlaylist(id, false, position)
                 }

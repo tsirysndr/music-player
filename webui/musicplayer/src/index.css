@@ -54,33 +54,37 @@ code {
 .floating-play {
   display: none;
   position: absolute;
-  left: 40px;
+  left: 30px;
 }
 
-tr:hover td div .play {
+.tablerow:hover {
+  background-color: #f5f5f5;
+}
+
+.tablerow:hover div div .play {
   cursor: pointer;
   display: block;
 }
 
-tr:hover td div .floating-play {
+.tablerow:hover div div .floating-play {
   cursor: pointer;
   display: block;
 }
 
 
-tr:hover td div .tracknumber {
+.tablerow:hover div div .tracknumber {
  display: none;
 }
 
-tr:hover td div .album-cover {
+.tablerow:hover div div .album-cover {
   opacity: 0.4;
  }
 
-tr:hover td div button {
+ .tablerow:hover div div button {
   color: #000;
  }
 
- tr td div div {
+ .tablerow div div div {
   overflow: hidden;
   text-overflow: ellipsis;
  }
@@ -116,4 +120,8 @@ tr:hover td div button {
  [data-baseweb="tab-panel"] {
   padding-left: 0 !important;
   padding-right: 0 !important;
+ }
+
+ .tracknumber {
+  min-width: 20px;
  }

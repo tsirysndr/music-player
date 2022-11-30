@@ -38,7 +38,6 @@ export type SearchResultsProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
-  nowPlaying: any;
   onPlayTrack: (id: string, postion?: number) => void;
   nextTracks: Track[];
   previousTracks: Track[];
@@ -65,12 +64,12 @@ export type SearchResultsProps = {
 
 const SearchResults: FC<SearchResultsProps> = (props) => {
   const [activeKey, setActiveKey] = useState<React.Key>(0);
-  const { tracks, nowPlaying, onPlayTrack, onPlayNext } = props;
+  const { tracks, onPlayTrack, onPlayNext } = props;
   return (
     <Container>
       <Sidebar active={""} {...props} />
       <Content>
-        <ControlBar {...props} />
+        <ControlBar />
         <div>
           <Tabs
             activeKey={activeKey}

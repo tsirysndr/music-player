@@ -67,7 +67,6 @@ export type ArtistsProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
-  nowPlaying: any;
   nextTracks: Track[];
   previousTracks: Track[];
   onPlayNext: (id: string) => void;
@@ -95,7 +94,7 @@ const Artists: FC<ArtistsProps> = (props) => {
     <Container>
       <Sidebar active="artists" {...props} />
       <Content>
-        <ControlBar {...props} />
+        <ControlBar />
         <Scrollable>
           <MainContent title="Artists" placeholder="Filter Artists">
             <Wrapper>

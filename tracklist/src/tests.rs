@@ -174,3 +174,27 @@ fn remove_track_at() {
     tracklist.remove_track_at(0);
     assert_eq!(tracklist.len(), 0);
 }
+
+#[test]
+fn insert() {
+    let mut tracklist = Tracklist::new_empty();
+    let track = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        track: Some(6),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track.clone());
+    assert_eq!(tracklist.len(), 1);
+    let track2 = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        track: Some(6),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.insert(0, track2.clone());
+    assert_eq!(tracklist.len(), 2);
+    assert_eq!(tracklist.tracks[0], track2);
+}

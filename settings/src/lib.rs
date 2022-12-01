@@ -2,6 +2,7 @@
 mod tests;
 
 use std::{
+    env,
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
@@ -91,10 +92,12 @@ pub fn read_settings() -> Result<Config, ConfigError> {
 }
 
 pub fn get_application_directory() -> String {
-    let path = format!(
-        "{}/music-player",
-        dirs::config_dir().unwrap().to_str().unwrap()
-    );
+    let path = env::var("MUSIC_PLAYER_APPLICATION_DIRECTORY").unwrap_or_else(|_| {
+        format!(
+            "{}/music-player",
+            dirs::config_dir().unwrap().to_str().unwrap()
+        )
+    });
     let albums = format!("{}/albums", path);
     let artists = format!("{}/artists", path);
     let playlists = format!("{}/playlists", path);

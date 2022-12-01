@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use searcher::Searcher;
 
 use music_player_settings::{read_settings, Settings};

@@ -1,5 +1,4 @@
 use music_player_types::types::{Album, Artist, SimplifiedSong, Song};
-use tantivy::{DocAddress, Document};
 
 pub mod album;
 pub mod artist;

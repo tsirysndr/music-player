@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::{fs::File, path::Path};
 
 use music_player_settings::{read_settings, Settings};

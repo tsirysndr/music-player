@@ -33,6 +33,7 @@ jobs:
       - name: Run cargo-llvm-cov
         run:  |
           cp -r fixtures/audio /tmp
+          sudo cp fixtures/asound.conf /etc
           cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov

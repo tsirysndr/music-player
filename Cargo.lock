@@ -3077,6 +3077,7 @@ dependencies = [
  "md5",
  "mime_guess",
  "music-player-entity",
+ "music-player-migration",
  "music-player-settings",
  "music-player-storage",
  "music-player-types",

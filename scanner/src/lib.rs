@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     io::Write,
     sync::{Arc, Mutex},

@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 pub mod addon;
 pub mod album;
 pub mod artist;
@@ -10,7 +13,7 @@ pub mod track;
 pub mod select_result {
     use sea_orm::FromQueryResult;
 
-    #[derive(Debug, FromQueryResult)]
+    #[derive(Debug, FromQueryResult, Clone)]
     pub struct PlaylistTrack {
         pub id: String,
         pub name: String,

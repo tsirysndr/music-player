@@ -31,7 +31,9 @@ jobs:
         run: sudo apt-get install -y libasound2-dev protobuf-compiler
 
       - name: Run cargo-llvm-cov
-        run:  cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
+        run:  |
+          cp -r fixtures/audio /tmp
+          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2

@@ -2952,7 +2952,6 @@ dependencies = [
  "music-player-tracklist",
  "music-player-types",
  "music-player-webui",
- "ndk-sys 0.4.1+23.1.7779620",
  "owo-colors",
  "parking_lot 0.12.1",
  "sea-orm",

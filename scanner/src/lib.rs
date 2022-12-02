@@ -14,7 +14,7 @@ use music_player_storage::{
 };
 use music_player_types::types::{Album, Artist, Song};
 
-use lofty::{Accessor, AudioFile, ItemKey, LoftyError, Probe, Tag};
+use lofty::{AudioFile, LoftyError, Probe, Tag};
 use music_player_settings::{read_settings, Settings};
 use walkdir::WalkDir;
 
@@ -28,6 +28,14 @@ pub async fn scan_directory(
 
     let mut songs: Vec<Song> = Vec::new();
 
+    let supported_formats = vec![
+        "audio/mpeg",
+        "audio/mp4",
+        // "audio/ogg",
+        "audio/m4a",
+        "audio/aac",
+    ];
+
     for entry in WalkDir::new(settings.music_directory)
         .follow_links(true)
         .into_iter()
@@ -37,12 +45,7 @@ pub async fn scan_directory(
         let guess = mime_guess::from_path(&path);
         let mime = guess.first_or_octet_stream();
 
-        if mime == "audio/mpeg"
-            || mime == "audio/mp4"
-           // || mime == "audio/ogg"
-            || mime == "audio/m4a"
-            || mime == "audio/aac"
-        {
+        if supported_formats.iter().any(|x| x.to_owned() == mime) {
             match Probe::open(&path)
                 .expect("ERROR: Bad path provided!")
                 .read()

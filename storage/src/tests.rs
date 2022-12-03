@@ -1,6 +1,3 @@
-use super::searcher::album::AlbumSearcher;
-use super::searcher::artist::ArtistSearcher;
-use super::searcher::track::TrackSearcher;
 use super::*;
 use music_player_types::types::{Album, Artist, Song};
 use sea_orm::{ConnectionTrait, DbBackend};

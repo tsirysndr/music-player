@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use async_graphql::Schema;
 use schema::{Mutation, Query, Subscription};
 

@@ -39,6 +39,13 @@ version = "0.1.5"
 path = "../types"
 version = "0.1.1"
 
+[dev-dependencies.music-player-migration]
+path = "../migration"
+version = "0.1.4"
+
+[dev-dependencies]
+ctor = "0.1.26"
+
 [dependencies]
 async-graphql = "4.0.15"
 tide = "0.16.0"

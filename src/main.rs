@@ -5,7 +5,7 @@ use std::{
     net::SocketAddr,
     sync::{self, mpsc, Arc},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use app::{ActiveBlock, App, CurrentlyPlaybackContext, RouteId};
@@ -499,6 +499,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                     _ => {}
                 }
             }
+            thread::sleep(Duration::from_millis(10));
         });
     }
 }

@@ -14,6 +14,7 @@ use std::{
     sync::Arc,
     task::{Context, Poll},
     thread,
+    time::Duration,
 };
 use symphonia::core::{errors::Error, io::MediaSourceStream, probe::Hint};
 use tokio::{
@@ -335,6 +336,7 @@ impl Future for PlayerInternal {
                     }
                 };
             }
+            thread::sleep(Duration::from_millis(10));
         }
     }
 }

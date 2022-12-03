@@ -2,6 +2,15 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Tauri
+
+This directory is also configured as a [Tauri](tauri.app/) project. Refer to https://tauri.app/v1/guides/getting-started/prerequisites for system level prerequisites. To run the application in dev mode:
+
+```sh
+cargo install tauri-cli
+cargo tauri dev
+```
+
 ## Available Scripts
 
 In the project directory, you can run:

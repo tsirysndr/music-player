@@ -12,40 +12,49 @@ import {
   InMemoryCache,
   split,
   ApolloProvider,
+  ApolloLink,
 } from "@apollo/client";
 import { WebSocketLink } from "@apollo/client/link/ws";
 import { render } from "react-dom";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { SubscriptionClient } from "subscriptions-transport-ws";
+import { createTauriLink } from "./TauriLink";
 
-const uri =
-  process.env.NODE_ENV === "development"
-    ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
-    : // eslint-disable-next-line no-restricted-globals
-      `${origin}/graphql`;
+let link: ApolloLink;
 
-const httpLink = createHttpLink({
-  uri,
-});
+if (process.env.REACT_APP_NATIVE_WRAPPER === 'tauri') {
+  link = createTauriLink();
+} else {
+  const uri =
+    process.env.NODE_ENV === "development"
+      ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
+      : // eslint-disable-next-line no-restricted-globals
+        `${origin}/graphql`;
 
-const wsLink = new WebSocketLink(
-  new SubscriptionClient(uri.replace("http", "ws"))
-);
-
-const splitLink = split(
-  ({ query }) => {
-    const definition = getMainDefinition(query);
-    return (
-      definition.kind === "OperationDefinition" &&
-      definition.operation === "subscription"
-    );
-  },
-  wsLink,
-  httpLink
-);
+  const httpLink = createHttpLink({
+    uri,
+  });
+  
+  const wsLink = new WebSocketLink(
+    new SubscriptionClient(uri.replace("http", "ws"))
+  );
+  
+  const splitLink = split(
+    ({ query }) => {
+      const definition = getMainDefinition(query);
+      return (
+        definition.kind === "OperationDefinition" &&
+        definition.operation === "subscription"
+      );
+    },
+    wsLink,
+    httpLink
+  );
+  link = splitLink;
+}
 
 const client = new ApolloClient({
-  link: splitLink,
+  link,
   cache: new InMemoryCache(),
 });
 

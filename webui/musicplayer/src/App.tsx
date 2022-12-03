@@ -7,8 +7,23 @@ import ArtistDetailsPage from "./Containers/ArtistDetails";
 import SearchPage from "./Containers/Search";
 import PlaylistPage from "./Containers/Playlist";
 import FolderPage from "./Containers/Folder";
+import { useEffect, useState } from "react";
+import { resourceUriResolver } from "./ResourceUriResolver";
+
+const hasNativeWrapper = !!process.env.REACT_APP_NATIVE_WRAPPER;
 
 function App() {
+  const [ready, setReady] = useState(!hasNativeWrapper);
+  useEffect(() => {
+    async function initializeForNativeWrapper() {
+      if (!ready) {
+        await resourceUriResolver.initializeForNativeWrapper()
+        setReady(true);
+      }
+    }
+    initializeForNativeWrapper();
+  }, [ready]);
+  if (!ready) return null;
   return (
     <BrowserRouter>
       <Routes>

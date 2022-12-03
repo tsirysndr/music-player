@@ -6,6 +6,7 @@ import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
+import { resourceUriResolver } from "../../ResourceUriResolver";
 
 const ArtistDetailsPage = () => {
   const params = useParams();
@@ -46,7 +47,7 @@ const ArtistDetailsPage = () => {
           artist: track.artist,
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
-          cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
+          cover: track.album.cover ? resourceUriResolver.resolve(`/covers/${track.album.cover}`) : undefined,
           artistId: track.artists[0].id,
           albumId: track.album.id,
           index,
@@ -58,7 +59,7 @@ const ArtistDetailsPage = () => {
           id: album.id,
           title: album.title,
           artist: album.artist,
-          cover: album.cover ? `/covers/${album.cover}` : undefined,
+          cover: album.cover ? resourceUriResolver.resolve(`/covers/${album.cover}`) : undefined,
         }))
       : [];
   const {

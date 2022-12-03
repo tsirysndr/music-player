@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchLazyQuery } from "./GraphQL";
 import { Album, Artist, Track } from "../Types";
+import { resourceUriResolver } from "../ResourceUriResolver";
 
 export const useSearch = () => {
   const [query, setQuery] = useState("");
@@ -30,14 +31,14 @@ export const useSearch = () => {
       albums:
         data?.search.albums.map((x) => ({
           ...x,
-          cover: x.cover ? `/covers/${x.cover}` : undefined,
+          cover: x.cover ? resourceUriResolver.resolve(`/covers/${x.cover}`) : undefined,
           year: 0,
         })) || [],
       artists: data?.search.artists || [],
       tracks:
         data?.search.tracks.map((x) => ({
           ...x,
-          cover: x.cover ? `/covers/${x.cover}` : undefined,
+          cover: x.cover ? resourceUriResolver.resolve(`/covers/${x.cover}`) : undefined,
           duration: x.duration!,
           album: x.albumTitle,
           artistId: x.artistId,

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { useEffect } from "react";
+import { resourceUriResolver } from "../ResourceUriResolver";
 import { Track } from "../Types";
 import {
   useCurrentlyPlayingSongQuery,
@@ -62,7 +63,7 @@ export const usePlayback = () => {
     album: currentTrack?.album?.title,
     duration,
     progress: position,
-    cover: `/covers/${currentTrack?.album?.id}.jpg`,
+    cover: resourceUriResolver.resolve(`/covers/${currentTrack?.album?.id}.jpg`),
     albumId: currentTrack?.album?.id,
     isPlaying:
       playerStateData?.playerState?.isPlaying ||
@@ -78,7 +79,7 @@ export const usePlayback = () => {
       artistId: _.get(track, "artists.0.id", ""),
       cover:
         track.album.cover && !_.startsWith(track.album.cover, "https://")
-          ? `/covers/${track.album.cover}`
+          ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
           : track.album.cover!,
     })) || [];
   const previousTracks: Track[] =
@@ -91,7 +92,7 @@ export const usePlayback = () => {
       artistId: _.get(track, "artists.0.id", ""),
       cover:
         track.album.cover && !_.startsWith(track.album.cover, "https://")
-          ? `/covers/${track.album.cover}`
+          ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
           : track.album.cover!,
     })) || [];
   useEffect(() => {

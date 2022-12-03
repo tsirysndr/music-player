@@ -5,6 +5,7 @@ import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
+import { resourceUriResolver } from "../../ResourceUriResolver";
 
 const TracksPage = () => {
   const { data, loading } = useGetTracksQuery({
@@ -50,7 +51,7 @@ const TracksPage = () => {
           artist: track.artist,
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
-          cover: track.album.cover ? `/covers/${track.album.cover}` : undefined,
+          cover: track.album.cover ? resourceUriResolver.resolve(`/covers/${track.album.cover}`) : undefined,
           artistId: track.artists[0].id,
           albumId: track.album.id,
         }))}

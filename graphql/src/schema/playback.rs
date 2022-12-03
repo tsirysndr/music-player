@@ -56,7 +56,7 @@ impl PlaybackQuery {
     }
 
     async fn get_player_state(&self, ctx: &Context<'_>) -> PlayerState {
-        let _tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
+        let _tracklist = ctx.data::<Arc<std::sync::Mutex<Tracklist>>>().unwrap();
         todo!()
     }
 }

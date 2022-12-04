@@ -3762,6 +3762,7 @@ dependencies = [
 name = "music-player-discovery"
 version = "0.1.0"
 dependencies = [
+ "async-stream 0.3.3",
  "env_logger",
  "futures-util",
  "libmdns",

@@ -1,4 +1,9 @@
-use mdns_sd::{ServiceDaemon, ServiceEvent};
+#[cfg(test)]
+mod tests;
+
+use async_stream::stream;
+use futures_util::Stream;
+use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
 use owo_colors::OwoColorize;
 use std::thread;
 
@@ -68,21 +73,25 @@ pub fn register(name: &str, port: u16) {
     }
 }
 
-pub fn discover(service_name: &str) {
+pub fn discover(service_name: &str) -> impl Stream<Item = ServiceInfo> {
     let mdns = ServiceDaemon::new().unwrap();
     let receiver = mdns.browse(&service_name).expect("Failed to browse");
-    while let Ok(event) = receiver.recv() {
-        match event {
-            ServiceEvent::ServiceResolved(info) => {
-                println!(
-                    "{} - {} - {:?} - port: {}",
-                    info.get_fullname().bright_green(),
-                    info.get_hostname().to_lowercase(),
-                    info.get_addresses(),
-                    info.get_port()
-                );
+
+    stream! {
+        while let Ok(event) = receiver.recv() {
+            match event {
+                ServiceEvent::ServiceResolved(info) => {
+                    println!(
+                        "{} - {} - {:?} - port: {}",
+                        info.get_fullname().bright_green(),
+                        info.get_hostname().to_lowercase(),
+                        info.get_addresses(),
+                        info.get_port()
+                    );
+                    yield info;
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 }

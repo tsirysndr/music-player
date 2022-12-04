@@ -15,6 +15,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
         with:
@@ -25,7 +35,7 @@ jobs:
 
       - name: Install cargo-llvm-cov
         run: |
-          cargo install  cargo-llvm-cov
+          if type cargo-llvm-cov >/dev/null 2>&1; then echo "cargo-llvm-cov is already installed"; else cargo install cargo-llvm-cov ; fi
 
       - name: Installing needed dependencies
         run: sudo apt-get install -y libasound2-dev protobuf-compiler
@@ -34,6 +44,11 @@ jobs:
         run:  |
           cp -r fixtures/audio /tmp
           sudo cp fixtures/asound.conf /etc
+          cd migration && DATABASE_URL=sqlite:///tmp/music-player.sqlite3 cargo run && cd ..
+          export MUSIC_PLAYER_APPLICATION_DIRECTORY=/tmp
+          export MUSIC_PLAYER_MUSIC_DIRECTORY=/tmp/audio
+          export MUSIC_PLAYER_DATABASE_URL=sqlite:///tmp/music-player.sqlite3
+          cargo run -- scan
           cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov

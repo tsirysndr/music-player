@@ -1,6 +1,7 @@
 use async_graphql::*;
 use music_player_entity::{select_result, track::Model};
 use music_player_types::types::SimplifiedSong as TrackType;
+use serde::Serialize;
 
 use super::{album::Album, artist::Artist};
 
@@ -14,7 +15,7 @@ pub struct TrackInput {
     pub uri: String,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize)]
 pub struct Track {
     pub id: ID,
     pub title: String,

@@ -95,3 +95,15 @@ pub async fn new_folder(schema: MusicPlayerSchema) -> String {
         .await;
     resp.data.into_json().unwrap()["createFolder"]["id"].to_string()
 }
+
+pub async fn play_album(schema: MusicPlayerSchema) {
+    schema
+        .execute(
+            r#"
+              mutation PlayAlbum {
+                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+              }
+            "#,
+        )
+        .await;
+}

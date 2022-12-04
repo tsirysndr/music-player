@@ -29,6 +29,15 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Installing Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -63,7 +72,6 @@ jobs:
           ln -s $GITHUB_WORKSPACE/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar $GITHUB_WORKSPACE/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-ar
           ln -s $GITHUB_WORKSPACE/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar $GITHUB_WORKSPACE/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/arm-linux-androideabi-ar
           ln -s $GITHUB_WORKSPACE/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar $GITHUB_WORKSPACE/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-ar
-      - uses: Swatinem/rust-cache@v2
       - name: Installing needed dependencies
         run: sudo apt-get install -y libasound2-dev protobuf-compiler clang lldb lld
       - name: Installing needed Ubuntu arm dependencies

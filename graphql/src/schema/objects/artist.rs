@@ -2,8 +2,9 @@ use super::{album::Album, track::Track};
 use async_graphql::*;
 use music_player_entity::artist::Model;
 use music_player_types::types::Artist as ArtistType;
+use serde::Serialize;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize)]
 pub struct Artist {
     pub id: ID,
     pub name: String,

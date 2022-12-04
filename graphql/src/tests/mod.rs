@@ -27,16 +27,6 @@ pub mod playback;
 pub mod playlist;
 pub mod tracklist;
 
-#[cfg(test)]
-#[ctor::ctor]
-fn initialize() {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-    runtime.block_on(setup_database());
-}
-
 pub async fn setup_schema() -> (
     MusicPlayerSchema,
     Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
@@ -51,6 +41,13 @@ pub async fn setup_schema() -> (
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
+
+    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
+    env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
+    env::set_var(
+        "MUSIC_PLAYER_DATABASE_URL",
+        "sqlite:///tmp/music-player.sqlite3",
+    );
 
     let db = Arc::new(Mutex::new(Database::new().await));
     (
@@ -71,45 +68,30 @@ pub async fn setup_schema() -> (
     )
 }
 
-async fn setup_database() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
-    env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
-    env::set_var(
-        "MUSIC_PLAYER_DATABASE_URL",
-        "sqlite:///tmp/music-player.sqlite3",
-    );
-    env::set_var("DATABASE_URL", "sqlite:///tmp/music-player.sqlite3");
-
-    migration::run().await;
-    scan_directory(move |song, db| {
-        async move {
-            let item: artist::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
+pub async fn new_playlist(schema: MusicPlayerSchema) -> String {
+    let resp = schema
+        .execute(
+            r#"
+        mutation {
+            createPlaylist(name: "New Playlist") {
+                id
             }
+        }"#,
+        )
+        .await;
+    resp.data.into_json().unwrap()["createPlaylist"]["id"].to_string()
+}
 
-            let item: album::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
+pub async fn new_folder(schema: MusicPlayerSchema) -> String {
+    let resp = schema
+        .execute(
+            r#"
+        mutation {
+            createFolder(name: "New Folder") {
+                id
             }
-
-            let item: track::ActiveModel = song.try_into().unwrap();
-
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
-
-            let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
-        }
-        .boxed()
-    })
-    .await
-    .unwrap_or_default();
+        }"#,
+        )
+        .await;
+    resp.data.into_json().unwrap()["createFolder"]["id"].to_string()
 }

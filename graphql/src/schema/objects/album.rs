@@ -1,10 +1,11 @@
 use async_graphql::*;
 use music_player_entity::album::Model;
 use music_player_types::types::Album as AlbumType;
+use serde::Serialize;
 
 use super::track::Track;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize)]
 pub struct Album {
     pub id: ID,
     pub title: String,

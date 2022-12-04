@@ -18,7 +18,15 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Installing needed dependencies
         run: sudo apt-get install -y libasound2-dev protobuf-compiler
       - name: Build webui

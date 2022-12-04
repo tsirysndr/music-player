@@ -60,3 +60,4 @@ futures-util = "0.3.25"
 futures-channel = "0.3.25"
 once_cell = "1.16.0"
 slab = "0.4.7"
+serde = { version = "1.0.148", features = ["serde_derive"] }

@@ -15,7 +15,7 @@ use music_player_storage::{
 use music_player_types::types::{Album, Artist, Song};
 
 use lofty::{AudioFile, LoftyError, Probe, Tag};
-use music_player_settings::{read_settings, Settings};
+use music_player_settings::{get_application_directory, read_settings, Settings};
 use walkdir::WalkDir;
 
 pub async fn scan_directory(
@@ -111,10 +111,7 @@ pub async fn scan_directory(
 fn extract_and_save_album_cover(tag: &Tag, album: &str) -> Option<String> {
     let pictures = tag.pictures();
     if pictures.len() > 0 {
-        let covers_path = format!(
-            "{}/music-player/covers",
-            dirs::config_dir().unwrap().to_str().unwrap()
-        );
+        let covers_path = format!("{}/covers", get_application_directory());
         let picture = &pictures[0];
         let album = md5::compute(album.as_bytes());
         let filename = format!("{}/{:x}", covers_path, album);

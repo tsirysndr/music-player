@@ -1,0 +1,123 @@
+on:
+  release:
+    types: [created]
+#on:
+#  push:
+#    branches: ["master"]
+#  pull_request:
+#    # The branches below must be a subset of the branches above
+#    branches: ["master"]
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install dependencies (mac) only)
+        if: matrix.platform == 'macos-latest'
+        run: brew install protobuf
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev protobuf-compiler
+      - name: Install dependencies (windows only)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          choco install protoc
+          choco install checksum
+      - name: Install Node Modules
+        run: |
+          cd webui/musicplayer
+          npm install -g yarn
+          yarn install --network-timeout 1000000000
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install aarch64-apple-darwin toolchain
+        if: matrix.platform == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin
+      - name: Build App
+        run: |
+          cd webui/musicplayer
+          npx @tauri-apps/cli build
+      - name:  Build App (macos arch64-apple-darwin)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          cd webui/musicplayer
+          npx @tauri-apps/cli build --target aarch64-apple-darwin
+      - name: List files
+        if: matrix.platform == 'ubuntu-20.04' || matrix.platform == 'macos-latest'
+        run: |
+          ls target/release/bundle/*
+      - name: List files (windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          dir target\release\bundle
+          dir target\release\bundle\*
+      - name: Create archive (macos)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          cd target/release/bundle
+          tar -czvf music-player-desktop_${{ env.RELEASE_VERSION }}_x86_64-apple-darwin.tar.gz "macos/Music Player.app"
+          shasum -a 256 music-player-desktop__${{ env.RELEASE_VERSION }}_x86_64-apple-darwin.tar.gz > music-player_${{ env.RELEASE_VERSION }}_x86_64-apple-darwin.tar.gz.sha256
+          mv dmg/Music\ Player*.dmg dmg/Music_Player_${{ env.RELEASE_VERSION }}_x64.dmg
+          shasum -a 256 dmg/Music_Player_${{ env.RELEASE_VERSION }}_x64.dmg > dmg/Music_Player_${{ env.RELEASE_VERSION }}_x64.dmg.sha256
+      - name: Releasing artifacts (macos)
+        if: matrix.platform == 'macos-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/bundle/music-player-desktop_x86_64-apple-darwin.tar.gz
+            target/release/bundle/music-player_x86_64-apple-darwin.tar.gz.sha256
+            target/release/bundle/dmg/Music_Player_${{ env.RELEASE_VERSION }}_x64.dmg
+            target/release/bundle/dmg/Music_Player_${{ env.RELEASE_VERSION }}_x64.dmg.sha256
+      - name: Hash files (ubuntu)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+           mv target/release/bundle/appimage/music-player*.AppImage target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage
+           mv target/release/bundle/deb/music-player*.deb target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb
+           shasum -a 256 target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage > target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage.sha256
+           shasum -a 256 target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb > target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb.sha256 
+      - name: Releasing artifacts (ubuntu)
+        if: matrix.platform == 'ubuntu-20.04'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage
+            target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage.sha256
+            target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb
+            target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb.sha256
+      - name: Hash files (windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+           move target/release/bundle/msi/Music*.msi target/release/bundle/msi/Music_Player_${{ env.RELEASE_VERSION }}_x64_en-US.msi
+           checksum -t sha256  -f="target/release/bundle/msi/Music_Player_${{ env.RELEASE_VERSION }}_x64_en-US.msi" > target/release/bundle/msi/Music_Player_${{ env.RELEASE_VERSION }}_x64_en-US.msi.sha256
+      - name: Releasing artifacts (windows)
+        if: matrix.platform == 'windows-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/bundle/msi/Music_Player_${{ env.RELEASE_VERSION }}_x64_en-US.msi
+            target/release/bundle/msi/Music_Player_${{ env.RELEASE_VERSION }}_x64_en-US.msi.sha256
+        

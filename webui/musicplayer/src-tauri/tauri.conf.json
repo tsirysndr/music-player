@@ -1,6 +1,6 @@
 {
   "build": {
-    "beforeBuildCommand": "yarn build",
+    "beforeBuildCommand": "yarn tauri:build",
     "beforeDevCommand": "yarn tauri:dev",
     "devPath": "http://localhost:3000",
     "distDir": "../build",
@@ -18,7 +18,9 @@
       "protocol": {
         "all": false,
         "asset": true,
-        "assetScope": ["$APPLOCALDATA/covers/*"]
+        "assetScope": [
+          "$APPLOCALDATA/covers/*"
+        ]
       }
     },
     "bundle": {
@@ -55,7 +57,7 @@
       }
     },
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost"
+      "csp": "img-src 'self' asset: https://asset.localhost"
     },
     "updater": {
       "active": false

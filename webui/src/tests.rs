@@ -20,6 +20,7 @@ async fn start_webui() {
         "MUSIC_PLAYER_DATABASE_URL",
         "sqlite:///tmp/music-player.sqlite3",
     );
+    env::set_var("MUSIC_PLAYER_HTTP_PORT", "5054");
 
     scan_music_directory().await;
 
@@ -52,7 +53,7 @@ async fn start_webui() {
     thread::sleep(Duration::from_secs(2));
 
     let client: Client = Config::new()
-        .set_base_url(Url::parse("http://localhost:5053").unwrap())
+        .set_base_url(Url::parse("http://localhost:5054").unwrap())
         .try_into()
         .unwrap();
 
@@ -62,13 +63,9 @@ async fn start_webui() {
     let res = client.get("/graphiql").await.unwrap();
     assert_eq!(res.status(), 200);
 
-    let payload = r#"{
-      "operationName": "IntrospectionQuery"
-      "query": "\n    query IntrospectionQuery {\n      __schema {\n        \n        queryType { name }\n        mutationType { name }\n        subscriptionType { name }\n        types {\n          ...FullType\n        }\n        directives {\n          name\n          description\n          \n          locations\n          args {\n            ...InputValue\n          }\n        }\n      }\n    }\n\n    fragment FullType on __Type {\n      kind\n      name\n      description\n      \n      fields(includeDeprecated: true) {\n        name\n        description\n        args {\n          ...InputValue\n        }\n        type {\n          ...TypeRef\n        }\n        isDeprecated\n        deprecationReason\n      }\n      inputFields {\n        ...InputValue\n      }\n      interfaces {\n        ...TypeRef\n      }\n      enumValues(includeDeprecated: true) {\n        name\n        description\n        isDeprecated\n        deprecationReason\n      }\n      possibleTypes {\n        ...TypeRef\n      }\n    }\n\n    fragment InputValue on __InputValue {\n      name\n      description\n      type { ...TypeRef }\n      defaultValue\n      \n      \n    }\n\n    fragment TypeRef on __Type {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n                ofType {\n                  kind\n                  name\n                  ofType {\n                    kind\n                    name\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  "
-    }"#;
-
-    let res = surf::post("http://localhost:5053/graphql")
-        .header("Accept", "application/json")
+    let payload = "{\"query\":\"\\n    query IntrospectionQuery {\\n      __schema {\\n        \\n        queryType { name }\\n        mutationType { name }\\n        subscriptionType { name }\\n        types {\\n          ...FullType\\n        }\\n        directives {\\n          name\\n          description\\n          \\n          locations\\n          args {\\n            ...InputValue\\n          }\\n        }\\n      }\\n    }\\n\\n    fragment FullType on __Type {\\n      kind\\n      name\\n      description\\n      \\n      fields(includeDeprecated: true) {\\n        name\\n        description\\n        args {\\n          ...InputValue\\n        }\\n        type {\\n          ...TypeRef\\n        }\\n        isDeprecated\\n        deprecationReason\\n      }\\n      inputFields {\\n        ...InputValue\\n      }\\n      interfaces {\\n        ...TypeRef\\n      }\\n      enumValues(includeDeprecated: true) {\\n        name\\n        description\\n        isDeprecated\\n        deprecationReason\\n      }\\n      possibleTypes {\\n        ...TypeRef\\n      }\\n    }\\n\\n    fragment InputValue on __InputValue {\\n      name\\n      description\\n      type { ...TypeRef }\\n      defaultValue\\n      \\n      \\n    }\\n\\n    fragment TypeRef on __Type {\\n      kind\\n      name\\n      ofType {\\n        kind\\n        name\\n        ofType {\\n          kind\\n          name\\n          ofType {\\n            kind\\n            name\\n            ofType {\\n              kind\\n              name\\n              ofType {\\n                kind\\n                name\\n                ofType {\\n                  kind\\n                  name\\n                  ofType {\\n                    kind\\n                    name\\n                  }\\n                }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  \",\"operationName\":\"IntrospectionQuery\"}";
+    let res = surf::post("http://localhost:5054/graphql")
+        .header("Content-Type", "application/json")
         .body(payload)
         .await
         .unwrap();
@@ -88,13 +85,13 @@ async fn start_webui() {
     assert_eq!(res.status(), 200);
 
     let res = client
-        .get("/albums/216ccc791352fbbffc11268b984db19a")
+        .get("/artists/f16ccc791352fbbffc11268b984db19a")
         .await
         .unwrap();
     assert_eq!(res.status(), 200);
 
     let res = client
-        .get("/tracks/dd77dd0ea2de5208e4987001a59ba8e4")
+        .get("/albums/216ccc791352fbbffc11268b984db19a")
         .await
         .unwrap();
     assert_eq!(res.status(), 200);

@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 pub mod addons;
 pub mod core;
 pub mod event;

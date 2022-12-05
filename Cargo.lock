@@ -3706,7 +3706,7 @@ dependencies = [
 
 [[package]]
 name = "music-player"
-version = "0.2.0-alpha.7"
+version = "0.2.0-alpha.8"
 dependencies = [
  "clap",
  "crossterm",

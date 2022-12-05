@@ -41,6 +41,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "cross-env CI=false react-scripts build",
+    "tauri:build": "cross-env CI=false  BROWSER=none REACT_APP_NATIVE_WRAPPER=tauri react-scripts build",
     "tauri:dev": "cross-env BROWSER=none REACT_APP_NATIVE_WRAPPER=tauri react-scripts start",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

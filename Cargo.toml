@@ -1,6 +1,6 @@
 [package]
 name = "music-player"
-version = "0.2.0-alpha.6"
+version = "0.2.0-alpha.7"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -37,11 +37,11 @@ path = "src/main.rs"
 
 [dependencies.music-player-server]
 path = "server"
-version = "0.1.9"
+version = "0.1.10"
 
 [dependencies.music-player-playback]
 path = "playback"
-version = "0.1.6"
+version = "0.1.7"
 
 [dependencies.music-player-scanner]
 path = "scanner"
@@ -81,11 +81,11 @@ version = "0.1.7"
 
 [dependencies.music-player-discovery]
 path = "discovery"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.music-player-graphql]
 path = "graphql"
-version = "0.1.3"
+version = "0.1.4"
 
 [dependencies.music-player-types]
 path = "types"

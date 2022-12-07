@@ -3,7 +3,6 @@ use std::sync::Arc;
 use futures_util::FutureExt;
 use tokio::sync::oneshot;
 use tonic::transport::Server;
-use tungstenite::http::response;
 
 use crate::{
     api::v1alpha1::{
@@ -143,9 +142,27 @@ async fn get_tracks() {
     let mut client = LibraryServiceClient::connect(url).await.unwrap();
     let request = tonic::Request::new(GetTracksRequest {});
     let response = client.get_tracks(request).await.unwrap();
+    let response = response.into_inner();
 
-    assert_eq!(response.into_inner().tracks.len(), 2);
-
+    assert_eq!(response.tracks.len(), 2);
+    assert_eq!(response.tracks[0].id, "dd77dd0ea2de5208e4987001a59ba8e4");
+    assert_eq!(response.tracks[0].title, "Fire Squad");
+    assert_eq!(response.tracks[0].artist, "J. Cole");
+    assert_eq!(response.tracks[0].duration, 288.238);
+    assert_eq!(response.tracks[0].track_number, 6);
+    assert_eq!(
+        response.tracks[0].uri,
+        "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a"
+    );
+    assert_eq!(response.tracks[1].id, "3ac1f1651b6ef6d5f3f55b711e3bfcd1");
+    assert_eq!(response.tracks[1].title, "Wet Dreamz");
+    assert_eq!(response.tracks[1].artist, "J. Cole");
+    assert_eq!(response.tracks[1].duration, 239.381);
+    assert_eq!(response.tracks[1].track_number, 3);
+    assert_eq!(
+        response.tracks[1].uri,
+        "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a"
+    );
     tx.send(()).unwrap();
     jh.await.unwrap();
 }

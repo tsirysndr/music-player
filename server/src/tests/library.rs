@@ -7,7 +7,8 @@ use tonic::transport::Server;
 use crate::{
     api::v1alpha1::{
         library_service_client::LibraryServiceClient, library_service_server::LibraryServiceServer,
-        GetAlbumsRequest, GetArtistsRequest, GetTracksRequest,
+        GetAlbumDetailsRequest, GetAlbumsRequest, GetArtistDetailsRequest, GetArtistsRequest,
+        GetTrackDetailsRequest, GetTracksRequest,
     },
     library::Library,
 };
@@ -184,8 +185,22 @@ async fn get_track_details() {
     });
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let _client = LibraryServiceClient::connect(url).await.unwrap();
-
+    let mut client = LibraryServiceClient::connect(url).await.unwrap();
+    let request = tonic::Request::new(GetTrackDetailsRequest {
+        id: "3ac1f1651b6ef6d5f3f55b711e3bfcd1".to_owned(),
+    });
+    let response = client.get_track_details(request).await.unwrap();
+    let response = response.into_inner();
+    let track = response.track.unwrap();
+    assert_eq!(track.id, "3ac1f1651b6ef6d5f3f55b711e3bfcd1");
+    assert_eq!(track.title, "Wet Dreamz");
+    assert_eq!(track.artist, "J. Cole");
+    assert_eq!(track.duration, 239.381);
+    assert_eq!(track.track_number, 3);
+    assert_eq!(
+        track.uri,
+        "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a"
+    );
     tx.send(()).unwrap();
     jh.await.unwrap();
 }
@@ -210,7 +225,17 @@ async fn get_album_details() {
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let _client = LibraryServiceClient::connect(url).await.unwrap();
+    let mut client = LibraryServiceClient::connect(url).await.unwrap();
+    let request = tonic::Request::new(GetAlbumDetailsRequest {
+        id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+    });
+    let response = client.get_album_details(request).await.unwrap();
+    let response = response.into_inner();
+    let album = response.album.unwrap();
+    assert_eq!(album.id, "216ccc791352fbbffc11268b984db19a");
+    assert_eq!(album.title, "2014 Forest Hills Drive");
+    assert_eq!(album.artist, "J. Cole");
+    assert_eq!(album.year, 2014);
 
     tx.send(()).unwrap();
     jh.await.unwrap();
@@ -233,7 +258,15 @@ async fn get_artist_details() {
     });
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let _client = LibraryServiceClient::connect(url).await.unwrap();
+    let mut client = LibraryServiceClient::connect(url).await.unwrap();
+    let request = tonic::Request::new(GetArtistDetailsRequest {
+        id: "b03cc90c455d92d8e9a0ce331e6de54d".to_owned(),
+    });
+    let response = client.get_artist_details(request).await.unwrap();
+    let response = response.into_inner();
+    let artist = response.artist.unwrap();
+    assert_eq!(artist.id, "b03cc90c455d92d8e9a0ce331e6de54d");
+    assert_eq!(artist.name, "J. Cole");
 
     tx.send(()).unwrap();
     jh.await.unwrap();

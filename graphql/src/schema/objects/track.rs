@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use super::{album::Album, artist::Artist};
 
-#[derive(InputObject, Clone)]
+#[derive(InputObject, Default, Clone)]
 pub struct TrackInput {
     pub id: ID,
     pub title: String,

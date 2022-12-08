@@ -43,6 +43,9 @@ impl From<Model> for Playlist {
 
 impl From<Vec<select_result::PlaylistTrack>> for Playlist {
     fn from(result: Vec<select_result::PlaylistTrack>) -> Self {
+        if result.len() == 0 {
+            return Self::default();
+        }
         Self {
             id: ID(result[0].id.clone()),
             name: result[0].name.clone(),

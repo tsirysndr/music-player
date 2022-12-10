@@ -55,7 +55,7 @@ jobs:
           export MUSIC_PLAYER_DATABASE_URL=sqlite:///tmp/music-player.sqlite3
           export MUSIC_PLAYER_PORT=5040
           cargo run -- scan
-          npx concurrently --raw --kill-others "cd server && cargo run" "sleep 3 && cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info"
+          npx concurrently -s "last" --raw --kill-others "cd server && cargo run" "sleep 3 && cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2

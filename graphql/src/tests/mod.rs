@@ -1,17 +1,13 @@
 use std::{env, sync::Arc};
 
 use async_graphql::Schema;
-use futures_util::FutureExt;
-use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink, Sink},
     config::AudioFormat,
     player::PlayerCommand,
 };
-use music_player_scanner::scan_directory;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
-use sea_orm::ActiveModelTrait;
 use tokio::sync::{
     mpsc::{UnboundedReceiver, UnboundedSender},
     Mutex,
@@ -23,6 +19,7 @@ use crate::{
 };
 
 pub mod library;
+pub mod objects;
 pub mod playback;
 pub mod playlist;
 pub mod tracklist;

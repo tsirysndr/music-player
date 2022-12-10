@@ -73,6 +73,7 @@ impl From<AlbumType> for Album {
             title: album.title,
             cover: album.cover,
             artist: album.artist,
+            year: album.year,
             ..Default::default()
         }
     }

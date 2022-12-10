@@ -90,7 +90,10 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("device_name", default_settings.device_name)?
         .set_default("device_id", default_settings.device_id)?
         .set_default("http_port", default_settings.http_port)?
-        .set_default("tauri_enable_graphql_server", default_settings.tauri_enable_graphql_server)?
+        .set_default(
+            "tauri_enable_graphql_server",
+            default_settings.tauri_enable_graphql_server,
+        )?
         .build()
 }
 
@@ -105,10 +108,12 @@ pub fn get_application_directory() -> String {
     let artists = format!("{}/artists", path);
     let playlists = format!("{}/playlists", path);
     let tracks = format!("{}/tracks", path);
+    let covers = format!("{}/covers", path);
     fs::create_dir_all(&albums).unwrap();
     fs::create_dir_all(&artists).unwrap();
     fs::create_dir_all(&playlists).unwrap();
     fs::create_dir_all(&tracks).unwrap();
+    fs::create_dir_all(&covers).unwrap();
 
     path
 }

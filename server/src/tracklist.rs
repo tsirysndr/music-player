@@ -18,7 +18,7 @@ use crate::{
         PlayTrackAtRequest, PlayTrackAtResponse, RemoveTrackRequest, RemoveTrackResponse,
         SetRepeatRequest, SetRepeatResponse, ShuffleRequest, ShuffleResponse,
     },
-    metadata::v1alpha1::{Album, Artist, Track},
+    metadata::v1alpha1::Track,
 };
 
 pub struct Tracklist {
@@ -72,7 +72,8 @@ impl TracklistService for Tracklist {
             .unwrap()
             .send(PlayerCommand::LoadTracklist {
                 tracks: vec![track],
-            });
+            })
+            .unwrap();
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }

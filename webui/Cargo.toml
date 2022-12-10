@@ -29,6 +29,20 @@ version = "0.1.7"
 path = "../tracklist"
 version = "0.1.5"
 
+[dev-dependencies.music-player-entity]
+path = "../entity"
+version = "0.1.5"
+
+[dev-dependencies.music-player-scanner]
+path = "../scanner"
+version = "0.1.5"
+
+[dev-dependencies]
+futures-util = "0.3.25"
+serde_json = "1.0.89"
+surf = "2.3.2"
+sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+
 [dependencies]
 actix-web = "4.2.1"
 async-graphql = "4.0.15"

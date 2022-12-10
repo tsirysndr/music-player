@@ -148,4 +148,9 @@ impl Tracklist {
     pub fn set_playback_state(&mut self, playback_state: PlaybackState) {
         self.playback_state = playback_state;
     }
+
+    pub fn stop(&mut self) {
+        self.current_track = None;
+        self.playback_state.is_playing = false;
+    }
 }

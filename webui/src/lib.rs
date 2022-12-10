@@ -1,19 +1,22 @@
 #[cfg(test)]
 mod tests;
 
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
+    error::ErrorNotFound,
     guard,
     http::header::HOST,
     web::{self, Data},
-    App, HttpRequest, HttpResponse, HttpServer, Responder, Result,
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
 use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
+use fs::NamedFile;
 use mime_guess::from_path;
+use music_player_entity::track as track_entity;
 use music_player_graphql::{
     schema::{Mutation, Query, Subscription},
     MusicPlayerSchema,
@@ -24,8 +27,8 @@ use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
+use sea_orm::EntityTrait;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
-
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]
 struct Asset;
@@ -46,6 +49,23 @@ async fn index() -> impl Responder {
 
 async fn index_spa() -> impl Responder {
     handle_embedded_file("index.html")
+}
+
+async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<NamedFile, Error> {
+    let id = req.match_info().get("id").unwrap();
+    let mut path = PathBuf::new();
+
+    let track = track_entity::Entity::find_by_id(id.to_owned())
+        .one(db.lock().await.get_connection())
+        .await
+        .unwrap();
+
+    if let Some(track) = track {
+        path.push(track.uri);
+        Ok(NamedFile::open(path)?)
+    } else {
+        Err(ErrorNotFound("Track not found".to_string()))
+    }
 }
 
 async fn index_ws(
@@ -110,7 +130,7 @@ pub async fn start_webui(
         Mutation::default(),
         Subscription::default(),
     )
-    .data(db)
+    .data(Arc::clone(&db))
     .data(cmd_tx)
     .data(tracklist)
     .finish();
@@ -124,6 +144,7 @@ pub async fn start_webui(
             dirs::config_dir().unwrap().to_str().unwrap()
         );
         App::new()
+            .app_data(Data::new(Arc::clone(&db)))
             .app_data(Data::new(schema.clone()))
             .wrap(cors)
             .service(index_graphql)
@@ -144,6 +165,7 @@ pub async fn start_webui(
             .route("/folders/{_:.*}", web::get().to(index_spa))
             .route("/playlists/{_:.*}", web::get().to(index_spa))
             .route("/search", web::get().to(index_spa))
+            .route("/tracks/{id}", web::get().to(index_file))
             .service(dist)
     })
     .bind(addr)?

@@ -29,7 +29,7 @@ version = "0.1.7"
 path = "../tracklist"
 version = "0.1.5"
 
-[dev-dependencies.music-player-entity]
+[dependencies.music-player-entity]
 path = "../entity"
 version = "0.1.5"
 
@@ -57,3 +57,4 @@ serde = { version = "1.0.145", features = ["serde_derive"] }
 tokio = { version = "1.21.2", features = ["full"] }
 parking_lot = "0.12.1"
 actix-cors = "0.6.3"
+sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }

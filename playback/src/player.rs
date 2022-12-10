@@ -541,14 +541,7 @@ impl PlayerInternal {
     fn handle_player_stop(&mut self) {
         self.ensure_sink_stopped(false);
         self.state = PlayerState::Stopped;
-        let playback_state = self.tracklist.lock().unwrap().playback_state();
-        self.tracklist
-            .lock()
-            .unwrap()
-            .set_playback_state(PlaybackState {
-                is_playing: false,
-                ..playback_state
-            });
+        self.tracklist.lock().unwrap().stop();
     }
 
     fn handle_pause(&mut self) {

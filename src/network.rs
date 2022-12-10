@@ -3,6 +3,7 @@ use music_player_client::{
     ws_client::WebsocketClient,
 };
 use music_player_server::metadata::v1alpha1::{Album, Artist, Track};
+use music_player_settings::{read_settings, Settings};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
 
@@ -38,11 +39,14 @@ pub struct Network<'a> {
 
 impl<'a> Network<'a> {
     pub async fn new(app: &'a Arc<Mutex<App>>) -> Result<Network<'a>, Box<dyn std::error::Error>> {
-        let library = LibraryClient::new().await?;
-        let playback = PlaybackClient::new().await?;
-        let tracklist = TracklistClient::new().await?;
-        let playlist = PlaybackClient::new().await?;
-        let ws = WebsocketClient::new().await;
+        let config = read_settings().unwrap();
+        let settings = config.try_deserialize::<Settings>().unwrap();
+
+        let library = LibraryClient::new(settings.port).await?;
+        let playback = PlaybackClient::new(settings.port).await?;
+        let tracklist = TracklistClient::new(settings.port).await?;
+        let playlist = PlaybackClient::new(settings.port).await?;
+        let _ws = WebsocketClient::new().await;
         Ok(Network {
             app,
             library,

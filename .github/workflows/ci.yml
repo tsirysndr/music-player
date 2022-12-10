@@ -15,6 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -48,8 +53,9 @@ jobs:
           export MUSIC_PLAYER_APPLICATION_DIRECTORY=/tmp
           export MUSIC_PLAYER_MUSIC_DIRECTORY=/tmp/audio
           export MUSIC_PLAYER_DATABASE_URL=sqlite:///tmp/music-player.sqlite3
+          export MUSIC_PLAYER_PORT=5040
           cargo run -- scan
-          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
+          npx concurrently --raw --kill-others "cd server && cargo run" "sleep 3 && cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2

@@ -42,6 +42,7 @@ use music_player_server::{
     metadata::v1alpha1::{Album, Artist},
     server::MusicPlayerServer,
 };
+use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
@@ -505,7 +506,9 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
 }
 
 async fn connect_to_server() -> bool {
-    match LibraryClient::new().await {
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+    match LibraryClient::new(settings.port).await {
         Ok(_) => true,
         Err(_) => false,
     }

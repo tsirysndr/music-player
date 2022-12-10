@@ -2102,6 +2102,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "envtestkit"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ea14546e99a5b0e76a883df8ff5531ae2e5f1cd484c88531142ac9bfb11542f"
+dependencies = [
+ "lazy_static",
+ "parking_lot 0.11.2",
+]
+
+[[package]]
 name = "erased-serde"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3844,12 +3854,17 @@ version = "0.1.0"
 name = "music-player-client"
 version = "0.1.1"
 dependencies = [
+ "envtestkit",
  "futures-util",
+ "music-player-playback",
  "music-player-server",
  "music-player-settings",
+ "music-player-storage",
+ "music-player-tracklist",
  "tokio",
  "tokio-tungstenite",
  "tonic",
+ "tonic-web",
  "url",
 ]
 

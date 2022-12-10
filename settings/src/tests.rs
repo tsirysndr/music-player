@@ -8,6 +8,7 @@ fn read_settings() {
     env::remove_var("MUSIC_PLAYER_APPLICATION_DIRECTORY");
     env::remove_var("MUSIC_PLAYER_MUSIC_DIRECTORY");
     env::remove_var("MUSIC_PLAYER_DATABASE_URL");
+    env::remove_var("MUSIC_PLAYER_PORT");
     let settings = super::read_settings().unwrap();
     let mut tmp = PathBuf::new();
     tmp.push("/tmp");
@@ -39,6 +40,7 @@ fn read_settings() {
         "MUSIC_PLAYER_DATABASE_URL",
         "sqlite:///tmp/music-player.sqlite3",
     );
+    env::set_var("MUsIC_PLAYER_PORT", "5040");
 }
 
 #[test]

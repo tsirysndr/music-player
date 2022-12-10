@@ -441,3 +441,21 @@ fn set_playback_state() {
     assert_eq!(tracklist.current_track(), (Some(track3), 3));
     assert_eq!(tracklist.playback_state(), playback_state.clone());
 }
+
+#[test]
+fn stop() {
+    let mut tracklist = Tracklist::new_empty();
+    let track = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        track: Some(6),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    tracklist.add_track(track.clone());
+    assert_eq!(tracklist.len(), 1);
+    tracklist.next_track();
+    assert_eq!(tracklist.current_track(), (Some(track), 1));
+    tracklist.stop();
+    assert_eq!(tracklist.current_track(), (None, 1));
+}

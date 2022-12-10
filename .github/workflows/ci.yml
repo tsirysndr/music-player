@@ -57,7 +57,7 @@ jobs:
           cargo run -- scan
           cd server && cargo run &
           sleep 3
-          cd .. && cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
+          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2

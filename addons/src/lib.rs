@@ -1,10 +1,3 @@
-pub mod datpiff;
-pub mod deezer;
-pub mod genius;
-pub mod local;
-pub mod myvazo;
-pub mod tononkira;
-
 pub trait Addon {
     fn name(&self) -> &str;
     fn version(&self) -> &str;

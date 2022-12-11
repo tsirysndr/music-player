@@ -31,6 +31,22 @@ members = [
     "webui/musicplayer/src-tauri"
 ]
 
+exclude = [
+  "addons/airplay",
+  "addons/chromecast",
+  "addons/datpiff",
+  "addons/deezer",
+  "addons/genius",
+  "addons/lastfm",
+  "addons/local",
+  "addons/musicbrainz",
+  "addons/myvazo",
+  "addons/soundcloud",
+  "addons/spotify",
+  "addons/youtube",
+  "addons/tidal",
+]
+
 [[bin]]
 name = "music-player"
 path = "src/main.rs"

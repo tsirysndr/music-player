@@ -1,8 +1,10 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useState } from "react";
 import Library from "../Library";
 import Playlists from "../Playlists";
 import Search from "../Search";
+import { PlugConnected } from "@styled-icons/fluentui-system-regular";
+import ConnectModal from "./ConnectModal";
 
 const Container = styled.div`
   height: calc(100vh - 30px);
@@ -11,6 +13,20 @@ const Container = styled.div`
   padding-right: 20px;
   min-width: 222px;
   overflow-y: auto;
+`;
+
+const ConnectButton = styled.button`
+  border: none;
+  background-color: #ab28fc0d;
+  height: 32px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  bottom: 0;
+  left: 0;
 `;
 
 export type SidebarProps = {
@@ -33,11 +49,19 @@ export type SidebarProps = {
 };
 
 const Sidebar: FC<SidebarProps> = (props) => {
+  const [openConnectModal, setOpenConnectModal] = useState(false);
   return (
     <Container>
       <Search {...props} />
       <Library {...props} />
       <Playlists {...props} />
+      <ConnectButton onClick={() => setOpenConnectModal(true)}>
+        <PlugConnected size={20} color="#ab28fc" />
+      </ConnectButton>
+      <ConnectModal
+        isOpen={openConnectModal}
+        onClose={() => setOpenConnectModal(false)}
+      />
     </Container>
   );
 };

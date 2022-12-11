@@ -1,12 +1,6 @@
 import { Input } from "baseui/input";
 import { Textarea } from "baseui/textarea";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
-} from "baseui/modal";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "baseui/modal";
 import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
 import Button from "../../Button";

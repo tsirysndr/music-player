@@ -8,3 +8,4 @@ pub mod playlist;
 pub mod search_result;
 pub mod track;
 pub mod tracklist;
+pub mod device;

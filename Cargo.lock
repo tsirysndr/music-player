@@ -3987,6 +3987,8 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "md5",
+ "mdns-sd",
+ "music-player-discovery",
  "music-player-entity",
  "music-player-migration",
  "music-player-playback",

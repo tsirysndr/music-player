@@ -1,6 +1,7 @@
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 
 use self::{
+    devices::{DevicesMutation, DevicesQuery},
     library::{LibraryMutation, LibraryQuery},
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
@@ -10,6 +11,7 @@ use self::{
 
 pub mod addons;
 pub mod core;
+pub mod devices;
 pub mod history;
 pub mod library;
 pub mod mixer;
@@ -20,6 +22,7 @@ pub mod tracklist;
 
 #[derive(MergedObject, Default)]
 pub struct Query(
+    DevicesQuery,
     LibraryQuery,
     MixerQuery,
     PlaybackQuery,
@@ -29,6 +32,7 @@ pub struct Query(
 
 #[derive(MergedObject, Default)]
 pub struct Mutation(
+    DevicesMutation,
     LibraryMutation,
     MixerMutation,
     PlaybackMutation,

@@ -102,6 +102,17 @@ const Remove = styled.button`
   border: none;
 `;
 
+const Placeholder = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding-left: 20px;
+  padding-right: 20px;
+  font-size: 14px;
+`;
+
 export type PlayQueueProps = {
   previousTracks?: Track[];
   nextTracks?: Track[];
@@ -189,6 +200,16 @@ const PlayQueue: FC<PlayQueueProps> = ({
             </Remove>
           </ListItem>
         ))}
+        {tracks.length === 0 && active === "playqueue" && (
+          <Placeholder>
+            No upcoming tracks. Add some to your play queue.
+          </Placeholder>
+        )}
+        {tracks.length === 0 && active === "history" && (
+          <Placeholder>
+            No history. Play some tracks to see them here.
+          </Placeholder>
+        )}
       </List>
     </Container>
   );

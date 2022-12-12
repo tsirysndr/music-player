@@ -61,6 +61,7 @@ const Sidebar: FC<SidebarProps> = (props) => {
       <ConnectModal
         isOpen={openConnectModal}
         onClose={() => setOpenConnectModal(false)}
+        devices={[]}
       />
     </Container>
   );

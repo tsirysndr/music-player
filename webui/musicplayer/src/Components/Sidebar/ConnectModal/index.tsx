@@ -5,6 +5,7 @@ import { MusicPlayer } from "@styled-icons/bootstrap";
 import { Kodi } from "@styled-icons/simple-icons";
 import styled from "@emotion/styled";
 import { css } from "@emotion/react";
+import { Device } from "../../../Types/Device";
 
 const List = styled.ul`
   padding: 0;
@@ -25,8 +26,15 @@ const Icon = styled.div`
     `}
 `;
 
+const Placeholder = styled.div`
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 export type ArtworkProps = {
-  icon?: "kodi" | "musicplayer";
+  icon?: "kodi" | "music-player";
   color?: string;
 };
 
@@ -40,56 +48,45 @@ const Artwork: FC<ArtworkProps> = ({ icon, color }) => {
 };
 
 Artwork.defaultProps = {
-  icon: "musicplayer",
+  icon: "music-player",
 };
 
 export type ConnectModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  devices: Device[];
 };
 
-const ConnectModal: FC<ConnectModalProps> = ({ onClose, isOpen }) => {
+const ConnectModal: FC<ConnectModalProps> = ({ onClose, isOpen, devices }) => {
   return (
     <Modal onClose={onClose} isOpen={isOpen}>
       <ModalHeader>Connect to</ModalHeader>
       <ModalBody>
         <List className="connect-list">
-          <ListItem
-            artwork={() => <Artwork />}
-            overrides={{
-              Content: {
-                style: {
-                  borderBottom: "none",
+          {devices.map((device) => (
+            <ListItem
+              artwork={() => (
+                <Artwork
+                  icon={device.type}
+                  color={device.name === "kodi" ? "#28cbfc17" : undefined}
+                />
+              )}
+              overrides={{
+                Content: {
+                  style: {
+                    borderBottom: "none",
+                  },
                 },
-              },
-            }}
-          >
-            <ListItemLabel children={"MacbookPro 1"} />
-          </ListItem>
-          <ListItem
-            artwork={() => <Artwork icon="kodi" color="#28cbfc17" />}
-            overrides={{
-              Content: {
-                style: {
-                  borderBottom: "none",
-                },
-              },
-            }}
-          >
-            <ListItemLabel children={"MacbookPro 2"} />
-          </ListItem>
-          <ListItem
-            artwork={() => <Artwork />}
-            overrides={{
-              Content: {
-                style: {
-                  borderBottom: "none",
-                },
-              },
-            }}
-          >
-            <ListItemLabel children={"MacbookPro 3"} />
-          </ListItem>
+              }}
+            >
+              <ListItemLabel children={device.name} />
+            </ListItem>
+          ))}
+          {devices.length === 0 && (
+            <Placeholder>
+              No devices found. Start Music Player on other devices to connect.
+            </Placeholder>
+          )}
         </List>
       </ModalBody>
     </Modal>

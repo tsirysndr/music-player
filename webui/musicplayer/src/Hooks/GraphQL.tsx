@@ -27,6 +27,11 @@ export type Album = {
   year?: Maybe<Scalars['Int']>;
 };
 
+export enum App {
+  MusicPlayer = 'MUSIC_PLAYER',
+  Xbmc = 'XBMC'
+}
+
 export type Artist = {
   __typename?: 'Artist';
   albums: Array<Album>;
@@ -46,6 +51,17 @@ export type CurrentlyPlayingSong = {
   isPlaying: Scalars['Boolean'];
   positionMs: Scalars['Int'];
   track?: Maybe<Track>;
+};
+
+export type Device = {
+  __typename?: 'Device';
+  app: Scalars['String'];
+  host: Scalars['String'];
+  id: Scalars['String'];
+  isConnected: Scalars['Boolean'];
+  name: Scalars['String'];
+  port: Scalars['Int'];
+  service: Scalars['String'];
 };
 
 export type Folder = {
@@ -68,10 +84,12 @@ export type Mutation = {
   addTrackToPlaylist: Playlist;
   addTracks: Scalars['Boolean'];
   clearTracklist: Scalars['Boolean'];
+  connectToDevice: Device;
   createFolder: Folder;
   createPlaylist: Playlist;
   deleteFolder: Folder;
   deletePlaylist: Playlist;
+  disconnectFromDevice: Device;
   movePlaylistToFolder: Folder;
   movePlaylistsToFolder: Folder;
   next: Scalars['Boolean'];
@@ -112,6 +130,11 @@ export type MutationAddTracksArgs = {
 };
 
 
+export type MutationConnectToDeviceArgs = {
+  id: Scalars['ID'];
+};
+
+
 export type MutationCreateFolderArgs = {
   name: Scalars['String'];
 };
@@ -130,6 +153,11 @@ export type MutationDeleteFolderArgs = {
 
 
 export type MutationDeletePlaylistArgs = {
+  id: Scalars['ID'];
+};
+
+
+export type MutationDisconnectFromDeviceArgs = {
   id: Scalars['ID'];
 };
 
@@ -265,6 +293,7 @@ export type Query = {
   getRandom: Scalars['Boolean'];
   getRepeat: Scalars['Boolean'];
   getVolume: Scalars['Int'];
+  listDevices: Array<Device>;
   mainPlaylists: Array<Playlist>;
   playlist: Playlist;
   playlists: Array<Playlist>;
@@ -288,6 +317,11 @@ export type QueryArtistArgs = {
 
 export type QueryFolderArgs = {
   id: Scalars['ID'];
+};
+
+
+export type QueryListDevicesArgs = {
+  filter?: InputMaybe<App>;
 };
 
 
@@ -317,6 +351,7 @@ export type Subscription = {
   currentlyPlayingSong: Track;
   folder: FolderChanged;
   folders: Array<Folder>;
+  onNewDevice: Device;
   playerState: PlayerState;
   playlist: PlaylistChanged;
   playlists: Array<Playlist>;
@@ -377,6 +412,11 @@ export type TracklistChanged = {
   track?: Maybe<Track>;
   tracklist: Tracklist;
 };
+
+export type OnNewDeviceSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnNewDeviceSubscription = { __typename?: 'Subscription', onNewDevice: { __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number } };
 
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
 
@@ -686,6 +726,40 @@ export const FolderFragmentFragmentDoc = gql`
   }
 }
     `;
+export const OnNewDeviceDocument = gql`
+    subscription OnNewDevice {
+  onNewDevice {
+    id
+    app
+    name
+    service
+    host
+    port
+  }
+}
+    `;
+
+/**
+ * __useOnNewDeviceSubscription__
+ *
+ * To run a query within a React component, call `useOnNewDeviceSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnNewDeviceSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnNewDeviceSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnNewDeviceSubscription(baseOptions?: Apollo.SubscriptionHookOptions<OnNewDeviceSubscription, OnNewDeviceSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<OnNewDeviceSubscription, OnNewDeviceSubscriptionVariables>(OnNewDeviceDocument, options);
+      }
+export type OnNewDeviceSubscriptionHookResult = ReturnType<typeof useOnNewDeviceSubscription>;
+export type OnNewDeviceSubscriptionResult = Apollo.SubscriptionResult<OnNewDeviceSubscription>;
 export const GetAlbumsDocument = gql`
     query GetAlbums {
   albums {

@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { FC } from "react";
 import { Track } from "../../Types";
+import { Device } from "../../Types/Device";
 import ControlBar from "../ControlBar";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
@@ -49,6 +50,7 @@ export type TracksProps = {
     position?: number
   ) => void;
   recentPlaylists: any[];
+  devices: Device[];
 };
 
 const Tracks: FC<TracksProps> = (props) => {

@@ -13,6 +13,7 @@ import AlbumIcon from "../Icons/AlbumCover";
 import _ from "lodash";
 import { Track } from "../../Types";
 import { resourceUriResolver } from "../../ResourceUriResolver";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   display: flex;
@@ -156,6 +157,7 @@ export type AlbumDetailsProps = {
     shuffle: boolean,
     position?: number
   ) => void;
+  devices: Device[];
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {

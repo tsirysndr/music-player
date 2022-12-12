@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlbumDetails from "../../Components/AlbumDetails";
 import { useGetAlbumQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
@@ -9,6 +10,7 @@ import { useSearch } from "../../Hooks/useSearch";
 
 const AlbumDetailsPage = () => {
   const params = useParams();
+  const { devices } = useDevices();
   const { data, loading, refetch } = useGetAlbumQuery({
     variables: {
       id: params.id!,
@@ -60,7 +62,6 @@ const AlbumDetailsPage = () => {
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
-    movePlaylistToFolder,
     deleteFolder,
     deletePlaylist,
     renameFolder,
@@ -103,6 +104,7 @@ const AlbumDetailsPage = () => {
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
       recentPlaylists={recentPlaylists}
+      devices={devices}
     />
   );
 };

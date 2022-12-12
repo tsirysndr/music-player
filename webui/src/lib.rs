@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-use std::{path::PathBuf, sync::Arc};
-
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
@@ -18,6 +16,7 @@ use fs::NamedFile;
 use mime_guess::from_path;
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
+    scan_devices,
     schema::{Mutation, Query, Subscription},
     MusicPlayerSchema,
 };
@@ -28,6 +27,7 @@ use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
 use sea_orm::EntityTrait;
+use std::{path::PathBuf, sync::Arc, thread};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]
@@ -125,6 +125,9 @@ pub async fn start_webui(
     let addr = format!("0.0.0.0:{}", settings.http_port);
 
     let db = Arc::new(Mutex::new(Database::new().await));
+
+    let devices = scan_devices().await.unwrap();
+
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -133,6 +136,7 @@ pub async fn start_webui(
     .data(Arc::clone(&db))
     .data(cmd_tx)
     .data(tracklist)
+    .data(devices)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
 

@@ -34,15 +34,15 @@ const Placeholder = styled.div`
 `;
 
 export type ArtworkProps = {
-  icon?: "kodi" | "music-player";
+  icon?: string;
   color?: string;
 };
 
 const Artwork: FC<ArtworkProps> = ({ icon, color }) => {
   return (
     <Icon color={color}>
-      {icon !== "kodi" && <MusicPlayer size={20} color="#28fce3" />}
-      {icon === "kodi" && <Kodi size={20} color="#28cbfc" />}
+      {icon !== "xbmc" && <MusicPlayer size={20} color="#28fce3" />}
+      {icon === "xbmc" && <Kodi size={20} color="#28cbfc" />}
     </Icon>
   );
 };
@@ -68,7 +68,7 @@ const ConnectModal: FC<ConnectModalProps> = ({ onClose, isOpen, devices }) => {
               artwork={() => (
                 <Artwork
                   icon={device.type}
-                  color={device.name === "kodi" ? "#28cbfc17" : undefined}
+                  color={device.name === "xbmc" ? "#28cbfc17" : undefined}
                 />
               )}
               overrides={{

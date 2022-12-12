@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Artists from "../../Components/Artists";
 import { useGetArtistsQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
@@ -22,6 +23,7 @@ const ArtistsPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
+  const { devices } = useDevices();
   const artists = !loading && data ? data.artists : [];
   const {
     folders,
@@ -73,6 +75,7 @@ const ArtistsPage = () => {
       onPlayPlaylist={(playlistId, shuffle, position) =>
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
+      devices={devices}
     />
   );
 };

@@ -1,7 +1,7 @@
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 
 use self::{
-    devices::{DevicesMutation, DevicesQuery},
+    devices::{DevicesMutation, DevicesQuery, DevicesSubscription},
     library::{LibraryMutation, LibraryQuery},
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
@@ -45,6 +45,7 @@ pub struct Subscription(
     PlaybackSubscription,
     PlaylistSubscription,
     TracklistSubscription,
+    DevicesSubscription,
 );
 
 #[derive(Enum, Eq, PartialEq, Copy, Clone)]

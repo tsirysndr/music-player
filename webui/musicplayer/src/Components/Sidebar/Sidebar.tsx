@@ -5,6 +5,7 @@ import Playlists from "../Playlists";
 import Search from "../Search";
 import { PlugConnected } from "@styled-icons/fluentui-system-regular";
 import ConnectModal from "./ConnectModal";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   height: calc(100vh - 30px);
@@ -46,6 +47,7 @@ export type SidebarProps = {
     shuffle: boolean,
     position?: number
   ) => void;
+  devices: Device[];
 };
 
 const Sidebar: FC<SidebarProps> = (props) => {
@@ -61,7 +63,7 @@ const Sidebar: FC<SidebarProps> = (props) => {
       <ConnectModal
         isOpen={openConnectModal}
         onClose={() => setOpenConnectModal(false)}
-        devices={[]}
+        devices={props.devices}
       />
     </Container>
   );

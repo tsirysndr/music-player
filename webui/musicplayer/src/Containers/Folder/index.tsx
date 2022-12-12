@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Folder from "../../Components/Folder";
 import { useGetFolderQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
@@ -35,6 +36,7 @@ const FolderPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
+  const { devices } = useDevices();
   const {
     folders,
     playlists,
@@ -84,6 +86,7 @@ const FolderPage = () => {
         movePlaylistsToFolder({ variables: { playlistIds, folderId } })
       }
       folder={data?.folder}
+      devices={devices}
     />
   );
 };

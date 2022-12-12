@@ -4144,6 +4144,7 @@ dependencies = [
  "dirs",
  "futures-util",
  "mime_guess",
+ "music-player-discovery",
  "music-player-entity",
  "music-player-graphql",
  "music-player-playback",

@@ -8,6 +8,7 @@ import Tracks from "./Tracks";
 import Albums from "./Albums";
 import Artists from "./Artists";
 import Playlists from "./Playlists";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   display: flex;
@@ -61,6 +62,7 @@ export type SearchResultsProps = {
     position?: number
   ) => void;
   recentPlaylists: any[];
+  devices: Device[];
 };
 
 const SearchResults: FC<SearchResultsProps> = (props) => {

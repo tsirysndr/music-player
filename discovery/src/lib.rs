@@ -4,12 +4,12 @@ mod tests;
 use async_stream::stream;
 use futures_util::Stream;
 use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
-use owo_colors::OwoColorize;
 use std::thread;
 
 use music_player_settings::{read_settings, Settings};
 
 pub const SERVICE_NAME: &'static str = "_music-player._tcp.local.";
+pub const XBMC_SERVICE_NAME: &'static str = "_xbmc-jsonrpc-h._tcp.local.";
 
 pub struct MdnsResponder {
     responder: libmdns::Responder,
@@ -81,13 +81,6 @@ pub fn discover(service_name: &str) -> impl Stream<Item = ServiceInfo> {
         while let Ok(event) = receiver.recv() {
             match event {
                 ServiceEvent::ServiceResolved(info) => {
-                    println!(
-                        "{} - {} - {:?} - port: {}",
-                        info.get_fullname().bright_green(),
-                        info.get_hostname().to_lowercase(),
-                        info.get_addresses(),
-                        info.get_port()
-                    );
                     yield info;
                 }
                 _ => {}

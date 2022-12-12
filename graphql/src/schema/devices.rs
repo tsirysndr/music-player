@@ -5,40 +5,40 @@ use std::{
 
 use async_graphql::*;
 
-use futures_util::StreamExt;
+use futures_util::{Stream, StreamExt};
 use mdns_sd::ServiceInfo;
-use music_player_discovery::{discover, SERVICE_NAME};
+use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
 
-use super::objects::device::Device;
+use crate::simple_broker::SimpleBroker;
+
+use super::objects::device::{App, Device};
 
 #[derive(Default)]
 pub struct DevicesQuery;
 
 #[Object]
 impl DevicesQuery {
-    async fn list_devices(&self, ctx: &Context<'_>) -> Result<Vec<Device>, Error> {
-        let discovered: Mutex<Vec<ServiceInfo>> = Mutex::new(vec![]);
-        let discovered: Arc<Mutex<Vec<ServiceInfo>>> = Arc::new(discovered);
-        let cloned_discovered = Arc::clone(&discovered);
-        thread::spawn(move || {
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-                    let services = discover(SERVICE_NAME);
-                    tokio::pin!(services);
-                    while let Some(info) = services.next().await {
-                        discovered.lock().unwrap().push(info);
-                    }
-                });
-        });
+    async fn list_devices(
+        &self,
+        ctx: &Context<'_>,
+        filter: Option<App>,
+    ) -> Result<Vec<Device>, Error> {
+        let devices = ctx.data::<Arc<Mutex<Vec<Device>>>>().unwrap();
+        let devices = devices.lock().unwrap().clone();
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        let devices = match filter {
+            Some(App::MusicPlayer) => devices
+                .into_iter()
+                .filter(|device| device.app == "music-player")
+                .collect(),
+            Some(App::XBMC) => devices
+                .into_iter()
+                .filter(|device| device.app == "xbmc")
+                .collect(),
+            None => devices,
+        };
 
-        let devices = cloned_discovered
-            .lock()
-            .unwrap()
+        let devices = devices
             .iter()
             .map(|srv| Device::from(srv.clone()))
             .collect();
@@ -57,5 +57,23 @@ impl DevicesMutation {
 
     async fn disconnect_from_device(&self, ctx: &Context<'_>, id: ID) -> Result<Device, Error> {
         todo!()
+    }
+}
+
+#[derive(Default)]
+pub struct DevicesSubscription;
+
+#[Subscription]
+impl DevicesSubscription {
+    async fn on_new_device(&self, ctx: &Context<'_>) -> impl Stream<Item = Device> {
+        let devices = ctx.data::<Arc<Mutex<Vec<Device>>>>().unwrap();
+        let devices = devices.lock().unwrap().clone();
+        thread::spawn(move || {
+            thread::sleep(std::time::Duration::from_secs(1));
+            devices.into_iter().for_each(|device| {
+                SimpleBroker::<Device>::publish(device);
+            });
+        });
+        SimpleBroker::<Device>::subscribe()
     }
 }

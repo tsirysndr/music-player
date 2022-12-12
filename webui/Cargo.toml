@@ -37,6 +37,10 @@ version = "0.1.5"
 path = "../scanner"
 version = "0.1.5"
 
+[dependencies.music-player-discovery]
+path = "../discovery"
+version = "0.1.1"
+
 [dev-dependencies]
 futures-util = "0.3.25"
 serde_json = "1.0.89"
@@ -57,3 +61,4 @@ serde = { version = "1.0.145", features = ["serde_derive"] }
 tokio = { version = "1.21.2", features = ["full"] }
 actix-cors = "0.6.3"
 sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+futures-util = "0.3.25"

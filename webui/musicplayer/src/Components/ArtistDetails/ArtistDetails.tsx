@@ -12,6 +12,7 @@ import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   display: flex;
@@ -176,6 +177,7 @@ export type ArtistDetailsProps = {
     shuffle: boolean,
     position?: number
   ) => void;
+  devices: Device[];
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Tracks from "../../Components/Tracks";
 import { useGetTracksQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
@@ -27,6 +28,7 @@ const TracksPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
+  const { devices } = useDevices();
   const tracks = !loading && data ? data.tracks : [];
   const {
     folders,
@@ -51,7 +53,9 @@ const TracksPage = () => {
           artist: track.artist,
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
-          cover: track.album.cover ? resourceUriResolver.resolve(`/covers/${track.album.cover}`) : undefined,
+          cover: track.album.cover
+            ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
+            : undefined,
           artistId: track.artists[0].id,
           albumId: track.album.id,
         }))}
@@ -91,6 +95,7 @@ const TracksPage = () => {
           playPlaylist({ variables: { playlistId, position, shuffle } })
         }
         recentPlaylists={recentPlaylists}
+        devices={devices}
       />
     </>
   );

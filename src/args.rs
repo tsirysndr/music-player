@@ -1,6 +1,7 @@
 use std::{env, fs, sync::Mutex};
 
 use clap::ArgMatches;
+use futures::StreamExt;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
@@ -286,7 +287,17 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("devices") {
-        discover(SERVICE_NAME);
+        let services = discover(SERVICE_NAME);
+        tokio::pin!(services);
+        while let Some(info) = services.next().await {
+            println!(
+                "{} - {} - {:?} - port: {}",
+                info.get_fullname().bright_green(),
+                info.get_hostname().to_lowercase(),
+                info.get_addresses(),
+                info.get_port()
+            );
+        }
         return Ok(());
     }
 

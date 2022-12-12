@@ -40,25 +40,7 @@ impl DevicesQuery {
             .lock()
             .unwrap()
             .iter()
-            .map(|info| Device {
-                id: ID::from(
-                    info.get_fullname()
-                        .replace(SERVICE_NAME, "")
-                        .split("-")
-                        .collect::<Vec<&str>>()[1]
-                        .to_owned(),
-                ),
-                name: info
-                    .get_fullname()
-                    .replace(SERVICE_NAME, "")
-                    .replace(".", "")
-                    .to_owned(),
-                host: info.get_hostname().to_owned(),
-                port: info.get_port().to_owned(),
-                service: info.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
-                app: "music-player".to_owned(),
-                is_connected: false,
-            })
+            .map(|srv| Device::from(srv.clone()))
             .collect();
         Ok(devices)
     }

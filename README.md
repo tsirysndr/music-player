@@ -88,8 +88,6 @@ Or download the latest release for your platform [here](https://github.com/tsiry
 - `Linux`: [music-player_v0.2.0-alpha.8_amd64.deb](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.8/music-player_v0.2.0-alpha.8_amd64.deb)
 - `Windows`: [Music_Player_x64_en-US.msi](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.8/Music_Player_x64_en-US.msi)
 
-[Other version...](https://github.com/tsirysndr/music-player/releases)
-
 **Latest (CLI):**
 
 - `Mac`: arm64: [music-player_v0.2.0-alpha.8_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.8/music-player_v0.2.0-alpha.8_aarch64-apple-darwin.tar.gz) intel: [music-player_v0.2.0-alpha.8_x86_64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.8/music-player_v0.2.0-alpha.8_x86_64-apple-darwin.tar.gz)

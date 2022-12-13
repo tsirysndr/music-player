@@ -413,6 +413,11 @@ export type TracklistChanged = {
   tracklist: Tracklist;
 };
 
+export type ListDevicesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ListDevicesQuery = { __typename?: 'Query', listDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number }> };
+
 export type OnNewDeviceSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -726,6 +731,45 @@ export const FolderFragmentFragmentDoc = gql`
   }
 }
     `;
+export const ListDevicesDocument = gql`
+    query ListDevices {
+  listDevices {
+    id
+    app
+    name
+    service
+    host
+    port
+  }
+}
+    `;
+
+/**
+ * __useListDevicesQuery__
+ *
+ * To run a query within a React component, call `useListDevicesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useListDevicesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useListDevicesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useListDevicesQuery(baseOptions?: Apollo.QueryHookOptions<ListDevicesQuery, ListDevicesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ListDevicesQuery, ListDevicesQueryVariables>(ListDevicesDocument, options);
+      }
+export function useListDevicesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ListDevicesQuery, ListDevicesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ListDevicesQuery, ListDevicesQueryVariables>(ListDevicesDocument, options);
+        }
+export type ListDevicesQueryHookResult = ReturnType<typeof useListDevicesQuery>;
+export type ListDevicesLazyQueryHookResult = ReturnType<typeof useListDevicesLazyQuery>;
+export type ListDevicesQueryResult = Apollo.QueryResult<ListDevicesQuery, ListDevicesQueryVariables>;
 export const OnNewDeviceDocument = gql`
     subscription OnNewDevice {
   onNewDevice {

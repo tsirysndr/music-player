@@ -1,11 +1,12 @@
 import _ from "lodash";
 import { useEffect, useState } from "react";
 import { Device } from "../Types/Device";
-import { useOnNewDeviceSubscription } from "./GraphQL";
+import { useListDevicesQuery, useOnNewDeviceSubscription } from "./GraphQL";
 
 export const useDevices = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const { data } = useOnNewDeviceSubscription();
+  const { data: listDevicesData } = useListDevicesQuery();
 
   useEffect(() => {
     if (
@@ -27,8 +28,20 @@ export const useDevices = () => {
         )
       );
     }
+    if (listDevicesData?.listDevices && listDevicesData.listDevices.length) {
+      setDevices(
+        _.uniqBy(
+          listDevicesData.listDevices.map((x) => ({
+            id: x.id,
+            type: x.app,
+            name: x.name,
+          })),
+          "id"
+        )
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [data, listDevicesData]);
 
   return { devices };
 };

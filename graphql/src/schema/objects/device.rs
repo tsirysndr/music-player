@@ -74,19 +74,19 @@ impl From<ServiceInfo> for Device {
         }
 
         if srv.get_fullname().contains(SERVICE_NAME) {
+            let device_id = srv
+                .get_fullname()
+                .replace(SERVICE_NAME, "")
+                .split("-")
+                .collect::<Vec<&str>>()[1]
+                .replace(".", "")
+                .to_owned();
             return Self {
-                id: ID::from(
-                    srv.get_fullname()
-                        .replace(SERVICE_NAME, "")
-                        .split("-")
-                        .collect::<Vec<&str>>()[1]
-                        .replace(".", "")
-                        .to_owned(),
-                ),
+                id: ID::from(device_id.clone()),
                 name: srv
-                    .get_fullname()
-                    .replace(SERVICE_NAME, "")
-                    .replace(".", "")
+                    .get_properties()
+                    .get("device_name")
+                    .unwrap_or(&device_id.clone())
                     .to_owned(),
                 host: srv
                     .get_hostname()

@@ -26,11 +26,15 @@ impl MdnsResponder {
     }
 
     pub fn register_service(&mut self, name: &str, port: u16) {
+        let config = read_settings().unwrap();
+        let settings = config.try_deserialize::<Settings>().unwrap();
+        let device_name = format!("device_name={}", settings.device_name);
+
         self.svc.push(self.responder.register(
             "_music-player._tcp".to_owned(),
             name.to_owned(),
             port,
-            &["path=/"],
+            &["path=/", device_name.as_str()],
         ));
     }
 }
@@ -60,12 +64,16 @@ pub fn register(name: &str, port: u16) {
     builder.init();
     */
 
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+    let device_name = format!("device_name={}", settings.device_name);
+
     let responder = libmdns::Responder::new().unwrap();
     let _svc = responder.register(
         "_music-player._tcp".to_owned(),
         name.to_owned(),
         port,
-        &["path=/"],
+        &["path=/", device_name.as_str()],
     );
 
     loop {

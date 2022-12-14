@@ -16,6 +16,7 @@ description = "An extensible music player daemon written in Rust"
 
 members = [
     "addons",
+    "addons/airplay",
     "client",
     "discovery",
     "entity",
@@ -32,7 +33,6 @@ members = [
 ]
 
 exclude = [
-  "addons/airplay",
   "addons/chromecast",
   "addons/datpiff",
   "addons/deezer",

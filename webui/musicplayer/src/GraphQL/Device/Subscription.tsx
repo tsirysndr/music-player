@@ -9,6 +9,7 @@ export const NEW_DEVICE = gql`
       service
       host
       port
+      isConnected
     }
   }
 `;

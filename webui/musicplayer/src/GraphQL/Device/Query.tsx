@@ -9,6 +9,7 @@ export const LIST_DEVICES = gql`
       service
       host
       port
+      isConnected
     }
   }
 `;

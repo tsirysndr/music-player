@@ -22,6 +22,7 @@ export const useDevices = () => {
               id: data.onNewDevice.id,
               type: data.onNewDevice.app,
               name: data.onNewDevice.name,
+              isConnected: data.onNewDevice.isConnected,
             },
           ],
           "id"
@@ -35,6 +36,7 @@ export const useDevices = () => {
             id: x.id,
             type: x.app,
             name: x.name,
+            isConnected: x.isConnected,
           })),
           "id"
         )

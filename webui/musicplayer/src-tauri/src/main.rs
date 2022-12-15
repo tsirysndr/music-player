@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::{Request, Response, Schema};
 use futures::{
@@ -13,7 +13,7 @@ use futures::{
 use music_player_graphql::{
     scan_devices,
     schema::{
-        objects::{player_state::PlayerState, track::Track},
+        objects::{device::Device, player_state::PlayerState, track::Track},
         playback::PositionMilliseconds,
         Mutation, Query, Subscription,
     },
@@ -95,6 +95,8 @@ async fn main() {
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
+    let connected_device: HashMap<String, Device> = HashMap::new();
+    let connected_device = Arc::new(std::sync::Mutex::new(connected_device));
     let devices = scan_devices().await.unwrap();
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
@@ -137,6 +139,7 @@ async fn main() {
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
+    .data(connected_device)
     .finish();
 
     let config = read_settings().unwrap();

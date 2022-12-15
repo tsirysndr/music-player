@@ -16,11 +16,13 @@ const Container = styled.div`
   overflow-y: auto;
 `;
 
-const ConnectButton = styled.button`
+const ConnectButton = styled.button<{
+  connected?: boolean;
+}>`
   border: none;
-  background-color: #ab28fc0d;
+  background-color: #fef2f8;
   height: 32px;
-  width: 40px;
+  ${(props) => (props.connected ? "width: 272px;" : "40px")}
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,6 +30,15 @@ const ConnectButton = styled.button`
   position: absolute;
   bottom: 0;
   left: 0;
+  overflow: hidden;
+`;
+
+const ConnectText = styled.span`
+  font-size: 13.5px;
+  color: #eb2f96;
+  flex: 1;
+  font-family: RockfordSansRegular;
+  text-overflow: ellipsis;
 `;
 
 export type SidebarProps = {
@@ -52,13 +63,18 @@ export type SidebarProps = {
 
 const Sidebar: FC<SidebarProps> = (props) => {
   const [openConnectModal, setOpenConnectModal] = useState(false);
+  const connected = false;
   return (
     <Container>
       <Search {...props} />
       <Library {...props} />
       <Playlists {...props} />
-      <ConnectButton onClick={() => setOpenConnectModal(true)}>
-        <PlugConnected size={20} color="#ab28fc" />
+      <ConnectButton
+        onClick={() => setOpenConnectModal(true)}
+        connected={connected}
+      >
+        <PlugConnected size={20} color="#eb2f96" />
+        {connected && <ConnectText>Music Player (Macbook Pro)</ConnectText>}
       </ConnectButton>
       <ConnectModal
         isOpen={openConnectModal}

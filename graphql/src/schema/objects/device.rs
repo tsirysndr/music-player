@@ -105,3 +105,22 @@ impl From<ServiceInfo> for Device {
         }
     }
 }
+
+pub trait Connected {
+    fn is_connected(&self, current: Option<&Device>) -> Self;
+}
+
+impl Connected for Device {
+    fn is_connected(&self, current: Option<&Device>) -> Self {
+        match current {
+            Some(current) => Self {
+                is_connected: self.id == current.id,
+                ..self.clone()
+            },
+            None => Self {
+                is_connected: false,
+                ..self.clone()
+            },
+        }
+    }
+}

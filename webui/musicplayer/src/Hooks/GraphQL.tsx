@@ -284,6 +284,7 @@ export type Query = {
   albums: Array<Album>;
   artist: Artist;
   artists: Array<Artist>;
+  connectedDevice: Device;
   currentlyPlayingSong: CurrentlyPlayingSong;
   folder: Folder;
   folders: Array<Folder>;
@@ -416,12 +417,12 @@ export type TracklistChanged = {
 export type ListDevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ListDevicesQuery = { __typename?: 'Query', listDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number }> };
+export type ListDevicesQuery = { __typename?: 'Query', listDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean }> };
 
 export type OnNewDeviceSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type OnNewDeviceSubscription = { __typename?: 'Subscription', onNewDevice: { __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number } };
+export type OnNewDeviceSubscription = { __typename?: 'Subscription', onNewDevice: { __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean } };
 
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
 
@@ -740,6 +741,7 @@ export const ListDevicesDocument = gql`
     service
     host
     port
+    isConnected
   }
 }
     `;
@@ -779,6 +781,7 @@ export const OnNewDeviceDocument = gql`
     service
     host
     port
+    isConnected
   }
 }
     `;

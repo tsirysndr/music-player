@@ -11,8 +11,9 @@ export const theme = createLightTheme(
       buttonSecondaryFill: "rgba(171, 40, 252, 0.052)",
       buttonSecondaryText: "#ab28fc",
       buttonSecondaryHover: "rgba(171, 40, 252, 0.107)",
-      buttonTertiaryText: "#ab28fc",
-      buttonTertiaryHover: "rgba(171, 40, 252, 0.052)",
+      buttonTertiaryText: "#fff",
+      buttonTertiaryFill: "#000",
+      buttonTertiaryHover: "#0000009700044",
     },
   }
 );

@@ -6,6 +6,7 @@ import { Kodi } from "@styled-icons/simple-icons";
 import styled from "@emotion/styled";
 import { css } from "@emotion/react";
 import { Device } from "../../../Types/Device";
+import { Button, SHAPE, SIZE } from "baseui/button";
 
 const List = styled.ul`
   padding: 0;
@@ -79,6 +80,19 @@ const ConnectModal: FC<ConnectModalProps> = ({ onClose, isOpen, devices }) => {
                   },
                 },
               }}
+              endEnhancer={() => (
+                <>
+                  {device.isConnected && (
+                    <Button
+                      size={SIZE.compact}
+                      shape={SHAPE.pill}
+                      kind="tertiary"
+                    >
+                      Disconnect
+                    </Button>
+                  )}
+                </>
+              )}
             >
               <ListItemLabel children={device.name} />
             </ListItem>

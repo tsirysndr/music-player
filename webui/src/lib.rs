@@ -17,17 +17,18 @@ use mime_guess::from_path;
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
     scan_devices,
-    schema::{objects::device::Device, Mutation, Query, Subscription},
+    schema::{Mutation, Query, Subscription},
     MusicPlayerSchema,
 };
 use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
+use music_player_types::types::Device;
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
 use sea_orm::EntityTrait;
-use std::{collections::HashMap, path::PathBuf, sync::Arc, thread};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]

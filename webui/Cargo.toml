@@ -41,6 +41,10 @@ version = "0.1.5"
 path = "../discovery"
 version = "0.1.1"
 
+[dependencies.music-player-types]
+path = "../types"
+version = "0.1.1"
+
 [dev-dependencies]
 futures-util = "0.3.25"
 serde_json = "1.0.89"

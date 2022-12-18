@@ -13,7 +13,7 @@ use futures::{
 use music_player_graphql::{
     scan_devices,
     schema::{
-        objects::{device::Device, player_state::PlayerState, track::Track},
+        objects::{ player_state::PlayerState, track::Track},
         playback::PositionMilliseconds,
         Mutation, Query, Subscription,
     },
@@ -31,6 +31,7 @@ use music_player_tracklist::Tracklist;
 use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
+use music_player_types::types::Device;
 
 mod graphql_server;
 

@@ -3,7 +3,8 @@ mod tests;
 use async_graphql::Schema;
 use futures_util::StreamExt;
 use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
-use schema::{objects::device::Device, Mutation, Query, Subscription};
+use music_player_types::types::Device;
+use schema::{Mutation, Query, Subscription};
 use std::{sync::Arc, thread};
 
 use crate::simple_broker::SimpleBroker;

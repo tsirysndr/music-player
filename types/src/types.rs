@@ -1,6 +1,8 @@
-use std::time::Duration;
+use std::{fmt, time::Duration};
 
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
+use mdns_sd::ServiceInfo;
+use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
 use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
@@ -286,3 +288,94 @@ impl Song {
         self.clone()
     }
 }
+
+#[derive(Default, Clone)]
+pub struct Device {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub service: String,
+    pub app: String,
+    pub is_connected: bool,
+}
+
+impl From<ServiceInfo> for Device {
+    fn from(srv: ServiceInfo) -> Self {
+        if srv.get_fullname().contains("xbmc") {
+            return Self {
+                id: srv.get_fullname().to_owned(),
+                name: srv
+                    .get_fullname()
+                    .replace(XBMC_SERVICE_NAME, "")
+                    .replace(".", "")
+                    .to_owned(),
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                port: srv.get_port(),
+                service: srv.get_fullname().to_owned(),
+                app: "xbmc".to_owned(),
+                is_connected: false,
+            };
+        }
+
+        if srv.get_fullname().contains(SERVICE_NAME) {
+            let device_id = srv
+                .get_fullname()
+                .replace(SERVICE_NAME, "")
+                .split("-")
+                .collect::<Vec<&str>>()[1]
+                .replace(".", "")
+                .to_owned();
+            return Self {
+                id: device_id.clone(),
+                name: srv
+                    .get_properties()
+                    .get("device_name")
+                    .unwrap_or(&device_id.clone())
+                    .to_owned(),
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                port: srv.get_port(),
+                service: srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
+                app: "music-player".to_owned(),
+                is_connected: false,
+            };
+        }
+
+        Self {
+            ..Default::default()
+        }
+    }
+}
+
+pub trait Connected {
+    fn is_connected(&self, current: Option<&Device>) -> Self;
+}
+
+impl Connected for Device {
+    fn is_connected(&self, current: Option<&Device>) -> Self {
+        match current {
+            Some(current) => Self {
+                is_connected: self.id == current.id,
+                ..self.clone()
+            },
+            None => Self {
+                is_connected: false,
+                ..self.clone()
+            },
+        }
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct Track {}
+
+#[derive(Default, Clone)]
+pub struct Playlist {}

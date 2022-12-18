@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 use super::{Addon, StreamingAddon};
 
 pub struct DatPiff {
@@ -47,7 +49,7 @@ impl Addon for DatPiff {
 }
 
 impl StreamingAddon for DatPiff {
-    fn stream(&self, url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn stream(&self, url: &str) -> Result<(), Error> {
         todo!("Implement DatPiff::stream");
     }
 }

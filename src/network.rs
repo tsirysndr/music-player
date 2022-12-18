@@ -6,6 +6,7 @@ use music_player_server::api::metadata::v1alpha1::{Album, Track};
 use music_player_settings::{read_settings, Settings};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
+use anyhow::Error;
 
 use crate::app::{AlbumTable, App, ArtistTable, CurrentlyPlaybackContext, TrackTable};
 
@@ -38,14 +39,14 @@ pub struct Network<'a> {
 }
 
 impl<'a> Network<'a> {
-    pub async fn new(app: &'a Arc<Mutex<App>>) -> Result<Network<'a>, Box<dyn std::error::Error>> {
+    pub async fn new(app: &'a Arc<Mutex<App>>) -> Result<Network<'a>, Error> {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();
 
-        let library = LibraryClient::new(settings.port).await?;
-        let playback = PlaybackClient::new(settings.port).await?;
-        let tracklist = TracklistClient::new(settings.port).await?;
-        let playlist = PlaybackClient::new(settings.port).await?;
+        let library = LibraryClient::new(settings.host.clone(), settings.port).await?;
+        let playback = PlaybackClient::new(settings.host.clone(), settings.port).await?;
+        let tracklist = TracklistClient::new(settings.host.clone(), settings.port).await?;
+        let playlist = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         let _ws = WebsocketClient::new().await;
         Ok(Network {
             app,
@@ -58,7 +59,7 @@ impl<'a> Network<'a> {
     pub async fn handle_network_event(
         &mut self,
         io_event: IoEvent,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Error> {
         match io_event {
             IoEvent::PlayTrack(track_id) => self.play_track(track_id).await,
             IoEvent::NextTrack => self.next_track().await,
@@ -79,20 +80,20 @@ impl<'a> Network<'a> {
         }
     }
 
-    async fn play_track(&mut self, track_id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn play_track(&mut self, track_id: String) -> Result<(), Error> {
         self.tracklist.add(&track_id).await?;
         Ok(())
     }
 
-    async fn next_track(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn next_track(&mut self) -> Result<(), Error> {
         self.playback.next().await
     }
 
-    async fn previous_track(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn previous_track(&mut self) -> Result<(), Error> {
         self.playback.prev().await
     }
 
-    async fn get_tracks(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_tracks(&mut self) -> Result<(), Error> {
         let tracks = self.library.songs().await?;
         let mut app = self.app.lock().await;
         app.track_table = TrackTable {
@@ -102,7 +103,7 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_albums(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_albums(&mut self) -> Result<(), Error> {
         let albums = self.library.albums().await?;
         let mut app = self.app.lock().await;
         app.album_table = AlbumTable {
@@ -112,7 +113,7 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_album(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_album(&mut self, id: String) -> Result<(), Error> {
         let album = self.library.album(&id).await?;
         let mut app = self.app.lock().await;
         let tracks = album
@@ -134,7 +135,7 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_artists(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_artists(&mut self) -> Result<(), Error> {
         let artists = self.library.artists().await?;
         let mut app = self.app.lock().await;
         app.artist_table = ArtistTable {
@@ -144,7 +145,7 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_artist(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_artist(&mut self, id: String) -> Result<(), Error> {
         let artist = self.library.artist(&id).await?;
         let mut app = self.app.lock().await;
         let tracks = artist
@@ -171,7 +172,7 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_play_queue(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_play_queue(&mut self) -> Result<(), Error> {
         let (played_tracks, next_tracks) = self.tracklist.list().await?;
         let mut app = self.app.lock().await;
         app.track_table = TrackTable {
@@ -181,23 +182,23 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_album_tracks(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_album_tracks(&mut self, id: String) -> Result<(), Error> {
         todo!()
     }
 
-    async fn add_item_to_queue(&mut self, id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn add_item_to_queue(&mut self, id: String) -> Result<(), Error> {
         todo!()
     }
 
-    async fn shuffle(&mut self, enable: bool) -> Result<(), Box<dyn std::error::Error>> {
+    async fn shuffle(&mut self, enable: bool) -> Result<(), Error> {
         todo!()
     }
 
-    async fn repeat(&mut self, enable: bool) -> Result<(), Box<dyn std::error::Error>> {
+    async fn repeat(&mut self, enable: bool) -> Result<(), Error> {
         todo!()
     }
 
-    async fn get_current_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn get_current_playback(&mut self) -> Result<(), Error> {
         let (track, index, position_ms, is_playing) = self.playback.current().await?;
         let mut app = self.app.lock().await;
         app.instant_since_last_current_playback_poll = Instant::now();
@@ -210,7 +211,7 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn toggle_playback(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn toggle_playback(&mut self) -> Result<(), Error> {
         let (_, _, _, is_playing) = self.playback.current().await?;
         if is_playing {
             return self.playback.pause().await;
@@ -218,7 +219,7 @@ impl<'a> Network<'a> {
         self.playback.play().await
     }
 
-    async fn play_track_at(&mut self, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+    async fn play_track_at(&mut self, index: usize) -> Result<(), Error> {
         self.tracklist.play_track_at(index).await
     }
 }

@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::{futures_util::FutureExt, *};
+use music_player_addons::local::Local;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_scanner::scan_directory;
 use music_player_storage::Database;
@@ -8,9 +9,15 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
     QuerySelect,
 };
+use std::sync::Mutex as StdMutex;
 use tokio::sync::Mutex;
 
-use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
+use super::{
+    connect_to_current_device,
+    objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track},
+};
+
+use music_player_types::types::Device;
 
 #[derive(Default)]
 pub struct LibraryQuery;
@@ -18,6 +25,12 @@ pub struct LibraryQuery;
 #[Object]
 impl LibraryQuery {
     async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
+            .unwrap();
+        let connected_device = connected_device.lock().unwrap().clone();
+        let _local = connect_to_current_device(connected_device).await?;
+
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
             track_entity::Entity::find()
@@ -55,6 +68,10 @@ impl LibraryQuery {
     }
 
     async fn artists(&self, ctx: &Context<'_>) -> Result<Vec<Artist>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
+            .unwrap();
+        let connected_device = connected_device.lock().unwrap().clone();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = artist_entity::Entity::find()
             .order_by_asc(artist_entity::Column::Name)
@@ -65,6 +82,10 @@ impl LibraryQuery {
     }
 
     async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
+            .unwrap();
+        let connected_device = connected_device.lock().unwrap().clone();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = album_entity::Entity::find()
             .order_by_asc(album_entity::Column::Title)
@@ -74,6 +95,10 @@ impl LibraryQuery {
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
+            .unwrap();
+        let connected_device = connected_device.lock().unwrap().clone();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let id = id.to_string();
         let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
@@ -104,6 +129,10 @@ impl LibraryQuery {
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
+            .unwrap();
+        let connected_device = connected_device.lock().unwrap().clone();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let id = id.to_string();
         let result = artist_entity::Entity::find_by_id(id.clone())
@@ -143,6 +172,10 @@ impl LibraryQuery {
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
+            .unwrap();
+        let connected_device = connected_device.lock().unwrap().clone();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let result = album_entity::Entity::find_by_id(id.to_string())
             .one(db.lock().await.get_connection())

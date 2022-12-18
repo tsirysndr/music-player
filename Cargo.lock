@@ -432,6 +432,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "serde",
  "serde_json",
  "tauri",
@@ -3895,6 +3896,7 @@ dependencies = [
 name = "music-player"
 version = "0.2.0-alpha.8"
 dependencies = [
+ "anyhow",
  "clap",
  "crossterm",
  "dirs",
@@ -3930,11 +3932,19 @@ dependencies = [
 [[package]]
 name = "music-player-addons"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "music-player-client",
+ "music-player-types",
+ "surf",
+]
 
 [[package]]
 name = "music-player-client"
 version = "0.1.1"
 dependencies = [
+ "anyhow",
  "envtestkit",
  "futures-util",
  "music-player-playback",
@@ -3979,6 +3989,7 @@ dependencies = [
 name = "music-player-graphql"
 version = "0.1.4"
 dependencies = [
+ "anyhow",
  "async-graphql",
  "async-graphql-tide",
  "chrono",
@@ -3988,6 +3999,7 @@ dependencies = [
  "futures-util",
  "md5",
  "mdns-sd",
+ "music-player-addons",
  "music-player-discovery",
  "music-player-entity",
  "music-player-migration",
@@ -4129,6 +4141,8 @@ version = "0.1.1"
 dependencies = [
  "lofty",
  "md5",
+ "mdns-sd",
+ "music-player-discovery",
  "tantivy",
 ]
 
@@ -4152,6 +4166,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "owo-colors",
  "rust-embed",
  "sea-orm",

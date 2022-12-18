@@ -1,4 +1,9 @@
+use std::collections::HashMap;
+
+use anyhow::{anyhow, Error};
 use async_graphql::{Enum, MergedObject, MergedSubscription};
+use music_player_addons::local::Local;
+use music_player_types::types::Device;
 
 use self::{
     devices::{DevicesMutation, DevicesQuery, DevicesSubscription},
@@ -56,4 +61,15 @@ pub enum MutationType {
     Renamed,
     Moved,
     Updated,
+}
+
+pub async fn connect_to_current_device(devices: HashMap<String, Device>) -> Result<Local, Error> {
+    match devices.get("current_device") {
+        Some(current_device) => {
+            let mut local: Local = current_device.clone().into();
+            local.connect().await?;
+            Ok(local)
+        }
+        None => Err(anyhow!("No device connected")),
+    }
 }

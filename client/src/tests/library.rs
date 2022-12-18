@@ -5,7 +5,8 @@ use crate::library::LibraryClient;
 #[tokio::test]
 async fn album() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
-    let mut client = LibraryClient::new(port.parse().unwrap()).await?;
+    let host = env::var("MUSIC_PLAYER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
     let response = client.album("216ccc791352fbbffc11268b984db19a").await?;
     let response = response.unwrap();
     assert_eq!(response.id, "216ccc791352fbbffc11268b984db19a");
@@ -18,7 +19,8 @@ async fn album() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn albums() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
-    let mut client = LibraryClient::new(port.parse().unwrap()).await?;
+    let host = "0.0.0.0".to_owned();
+    let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
     let response = client.albums().await?;
     assert_eq!(response.len(), 1);
     assert_eq!(response[0].id, "216ccc791352fbbffc11268b984db19a");
@@ -31,7 +33,8 @@ async fn albums() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn artist() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
-    let mut client = LibraryClient::new(port.parse().unwrap()).await?;
+    let host = env::var("MUSIC_PLAYER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
     let response = client.artist("b03cc90c455d92d8e9a0ce331e6de54d").await?;
     let response = response.unwrap();
     assert_eq!(response.id, "b03cc90c455d92d8e9a0ce331e6de54d");
@@ -42,7 +45,8 @@ async fn artist() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn artists() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
-    let mut client = LibraryClient::new(port.parse().unwrap()).await?;
+    let host = env::var("MUSIC_PLAYER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
     let response = client.artists().await?;
     assert_eq!(response.len(), 1);
     assert_eq!(response[0].id, "b03cc90c455d92d8e9a0ce331e6de54d");
@@ -53,7 +57,8 @@ async fn artists() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn songs() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
-    let mut client = LibraryClient::new(port.parse().unwrap()).await?;
+    let host = env::var("MUSIC_PLAYER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
     let response = client.songs().await?;
     assert_eq!(response.len(), 2);
     assert_eq!(response[0].id, "dd77dd0ea2de5208e4987001a59ba8e4");

@@ -40,4 +40,5 @@ tokio-tungstenite = "0.17.2"
 tonic = "0.8.1"
 url = "2.3.1"
 tokio = { version = "1.21.2", features = ["full"] }
+anyhow = "1.0.67"
 

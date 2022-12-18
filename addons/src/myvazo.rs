@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 use super::{Addon, StreamingAddon};
 
 pub struct MyVazo {
@@ -47,7 +49,7 @@ impl Addon for MyVazo {
 }
 
 impl StreamingAddon for MyVazo {
-    fn stream(&self, url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn stream(&self, url: &str) -> Result<(), Error> {
         todo!("Implement MyVazo::stream");
     }
 }

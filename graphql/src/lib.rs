@@ -16,7 +16,7 @@ pub type MusicPlayerSchema = Schema<Query, Mutation, Subscription>;
 
 pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dyn std::error::Error>>
 {
-    let devices = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let devices: Arc<std::sync::Mutex<Vec<Device>>> = Arc::new(std::sync::Mutex::new(Vec::new()));
     let mp_devices = Arc::clone(&devices);
     let xbmc_devices = Arc::clone(&devices);
     thread::spawn(move || {
@@ -25,8 +25,16 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
             tokio::pin!(services);
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             while let Some(info) = services.next().await {
-                mp_devices.lock().unwrap().push(Device::from(info.clone()));
-                SimpleBroker::<Device>::publish(Device::from(info.clone()));
+                let device = Device::from(info.clone());
+                let mut mp_devices = mp_devices.lock().unwrap();
+                if mp_devices
+                    .iter()
+                    .find(|d| d.id == device.id && d.service == device.service)
+                    .is_none()
+                {
+                    mp_devices.push(device.clone());
+                    SimpleBroker::<Device>::publish(device.clone());
+                }
             }
         });
     });

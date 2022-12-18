@@ -14,6 +14,7 @@ use tokio::sync::{
 };
 
 use crate::{
+    scan_devices,
     schema::{Mutation, Query, Subscription},
     MusicPlayerSchema,
 };
@@ -38,6 +39,7 @@ pub async fn setup_schema() -> (
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
+    let devices = scan_devices().await.unwrap();
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
@@ -56,6 +58,7 @@ pub async fn setup_schema() -> (
         .data(db)
         .data(Arc::clone(&cmd_tx))
         .data(Arc::clone(&tracklist))
+        .data(devices)
         .finish(),
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

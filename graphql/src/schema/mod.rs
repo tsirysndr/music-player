@@ -63,13 +63,15 @@ pub enum MutationType {
     Updated,
 }
 
-pub async fn connect_to_current_device(devices: HashMap<String, Device>) -> Result<Local, Error> {
+pub async fn connect_to_current_device(
+    devices: HashMap<String, Device>,
+) -> Result<Option<Local>, Error> {
     match devices.get("current_device") {
         Some(current_device) => {
             let mut local: Local = current_device.clone().into();
             local.connect().await?;
-            Ok(local)
+            Ok(Some(local))
         }
-        None => Err(anyhow!("No device connected")),
+        None => Ok(None),
     }
 }

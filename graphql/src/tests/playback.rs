@@ -64,7 +64,7 @@ async fn currently_playing_song() {
         )
         .await;
 
-    thread::sleep(Duration::from_secs(1));
+    thread::sleep(Duration::from_secs(2));
 
     let resp = schema
         .execute(

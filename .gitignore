@@ -2,3 +2,25 @@
 .vscode
 development.sqlite3
 node_modules/
+vendor/
+cargo/
+
+# Created by https://www.toptal.com/developers/gitignore/api/bazel
+# Edit at https://www.toptal.com/developers/gitignore?templates=bazel
+
+### Bazel ###
+# gitignore template for Bazel build system
+# website: https://bazel.build/
+
+# Ignore all bazel-* symlinks. There is no full list since this can change
+# based on the name of the directory bazel is cloned into.
+/bazel-*
+
+# Directories for the Bazel IntelliJ plugin containing the generated
+# IntelliJ project files and plugin configuration. Seperate directories are
+# for the IntelliJ, Android Studio and CLion versions of the plugin.
+/.ijwb/
+/.aswb/
+/.clwb/
+
+# End of https://www.toptal.com/developers/gitignore/api/bazel

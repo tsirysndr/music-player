@@ -55,6 +55,5 @@ dirs = "4.0.0"
 serde_derive = "1.0.145"
 serde = { version = "1.0.145", features = ["serde_derive"] }
 tokio = { version = "1.21.2", features = ["full"] }
-parking_lot = "0.12.1"
 actix-cors = "0.6.3"
 sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }

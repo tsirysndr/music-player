@@ -1,0 +1,49 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "music_player_graphql",
+    srcs = [
+      "src/schema/objects/album.rs",
+      "src/schema/objects/artist.rs",
+      "src/schema/objects/current_track.rs",
+      "src/schema/objects/folder.rs",
+      "src/schema/objects/lyrics.rs",
+      "src/schema/objects/mod.rs",
+      "src/schema/objects/player_state.rs",
+      "src/schema/objects/playlist.rs",
+      "src/schema/objects/search_result.rs",
+      "src/schema/objects/track.rs",
+      "src/schema/objects/tracklist.rs",
+      "src/schema/addons.rs",
+      "src/schema/core.rs",
+      "src/schema/history.rs",
+      "src/schema/library.rs",
+      "src/schema/mixer.rs",
+      "src/schema/mod.rs",
+      "src/schema/playback.rs",
+      "src/schema/playlist.rs",
+      "src/schema/tracklist.rs",
+      "src/lib.rs",
+      "src/simple_broker.rs",
+    ],
+    deps = [
+      "//playback:music_player_playback",
+      "//scanner:music_player_scanner",
+      "//settings:music_player_settings",
+      "//storage:music_player_storage",
+      "//entity:music_player_entity",
+      "//tracklist:music_player_tracklist",
+      "//types:music_player_types",
+      "@crate_index//:async-graphql",
+      "@crate_index//:rand",
+      "@crate_index//:chrono",
+      "@crate_index//:serde",
+      "@crate_index//:cuid",
+      "@crate_index//:slab",
+      "@crate_index//:futures-util",
+      "@crate_index//:once_cell",
+    ] + all_crate_deps(),
+)

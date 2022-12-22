@@ -1,4 +1,4 @@
-use music_player_server::api::v1alpha1::playlist_service_client::PlaylistServiceClient;
+use music_player_server::api::music::v1alpha1::playlist_service_client::PlaylistServiceClient;
 use music_player_settings::{read_settings, Settings};
 use tonic::transport::Channel;
 

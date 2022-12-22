@@ -1,9 +1,9 @@
-use music_player_server::{
-    api::v1alpha1::{
+use music_player_server::api::{
+    metadata::v1alpha1::{Album, Artist, Track},
+    music::v1alpha1::{
         library_service_client::LibraryServiceClient, GetAlbumDetailsRequest, GetAlbumsRequest,
         GetArtistDetailsRequest, GetArtistsRequest, GetTracksRequest,
     },
-    metadata::v1alpha1::{Album, Artist, Track},
 };
 use music_player_settings::{read_settings, Settings};
 use tonic::transport::Channel;

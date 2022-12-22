@@ -1,9 +1,9 @@
-use music_player_server::{
-    api::v1alpha1::{
+use music_player_server::api::{
+    metadata::v1alpha1::Track,
+    music::v1alpha1::{
         tracklist_service_client::TracklistServiceClient, AddTrackRequest, ClearTracklistRequest,
         GetTracklistTracksRequest, PlayTrackAtRequest, RemoveTrackRequest,
     },
-    metadata::v1alpha1::Track,
 };
 use music_player_settings::{read_settings, Settings};
 use tonic::transport::Channel;

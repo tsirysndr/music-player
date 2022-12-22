@@ -3,15 +3,15 @@ use music_player_tracklist::Tracklist as TracklistState;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{
-    api::v1alpha1::{
+use crate::api::{
+    metadata::v1alpha1::{Album, Artist, Track},
+    music::v1alpha1::{
         playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
         GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
         GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
         PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
         SeekResponse, StopRequest, StopResponse,
     },
-    metadata::v1alpha1::{Album, Artist, Track},
 };
 
 pub struct Playback {

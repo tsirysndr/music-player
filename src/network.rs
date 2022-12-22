@@ -2,7 +2,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, tracklist::TracklistClient,
     ws_client::WebsocketClient,
 };
-use music_player_server::metadata::v1alpha1::{Album, Artist, Track};
+use music_player_server::api::metadata::v1alpha1::{Album, Track};
 use music_player_settings::{read_settings, Settings};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;

@@ -20,6 +20,7 @@ rust_library(
       "//tracklist:music_player_tracklist",
       "//entity:music_player_entity",
       "//scanner:music_player_scanner",
+      "//types:music_player_types",
       "@crate_index//:actix-web",
       "@crate_index//:async-graphql",
       "@crate_index//:async-graphql-actix-web",

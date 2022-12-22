@@ -9,6 +9,7 @@ rust_library(
       "src/datpiff.rs",
       "src/deezer.rs",
       "src/genius.rs",
+      "src/kodi.rs",
       "src/lastfm.rs",
       "src/lib.rs",
       "src/local.rs",
@@ -16,5 +17,11 @@ rust_library(
       "src/myvazo.rs",
       "src/tononkira.rs",
       ],
-      deps = all_crate_deps(),
+      deps = [
+        "//client:music_player_client",
+        "//types:music_player_types",
+      ] + all_crate_deps(),
+      proc_macro_deps = [
+        "@crate_index//:async-trait",
+      ],
 )

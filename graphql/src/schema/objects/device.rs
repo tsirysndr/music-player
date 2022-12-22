@@ -1,5 +1,4 @@
 use async_graphql::*;
-use mdns_sd::ServiceInfo;
 use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
 use music_player_types::types;
 use serde::Serialize;

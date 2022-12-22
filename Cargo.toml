@@ -98,6 +98,7 @@ members = [
     "settings",
     "storage",
     "tracklist",
+    "types",
     "webui",
     "webui/musicplayer/src-tauri"
 ]

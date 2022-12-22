@@ -1,18 +1,28 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//cargo:crates.bzl", "all_crate_deps")
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
-    name = "webui_lib",
+    name = "music_player_webui",
     srcs = ["src/lib.rs"],
+    data = [
+        ":musicplayer/build",
+    ],
     deps = [
-      "//graphql:graphql_lib",
-      "//settings:settings_lib",
-      "//storage:storage_lib",
-      "//playback:playback_lib",
-      "//tracklist:tracklist_lib",
-      "//entity:entity_lib",
-      "//scanner:scanner_lib",
+      "//graphql:music_player_graphql",
+      "//settings:music_player_settings",
+      "//storage:music_player_storage",
+      "//playback:music_player_playback",
+      "//tracklist:music_player_tracklist",
+      "//entity:music_player_entity",
+      "//scanner:music_player_scanner",
+      "@crate_index//:actix-web",
+      "@crate_index//:async-graphql",
+      "@crate_index//:async-graphql-actix-web",
+      "@crate_index//:mime_guess",
+      "@crate_index//:rust-embed",
+      "@crate_index//:actix-files",
+      "@crate_index//:actix-cors",
     ] + all_crate_deps(),
 )

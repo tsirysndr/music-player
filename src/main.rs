@@ -38,10 +38,7 @@ use music_player_playback::{
     player::{Player, PlayerEvent},
 };
 use music_player_server::event::{Event, TrackEvent};
-use music_player_server::{
-    metadata::v1alpha1::{Album, Artist},
-    server::MusicPlayerServer,
-};
+use music_player_server::server::MusicPlayerServer;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;

@@ -1,4 +1,4 @@
-load("//cargo:crates.bzl", "all_crate_deps")
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 rust_binary(
@@ -30,19 +30,19 @@ rust_binary(
       "src/user_config.rs",
     ],
     deps = [
-      "//addons:addons_lib",
-      "//client:client_lib",
-      "//discovery:discovery_lib",
-      "//entity:entity_lib",
-      "//graphql:graphql_lib",
-      "//migration:migration_lib",
-      "//playback:playback_lib",
-      "//scanner:scanner_lib",
-      "//server:server_lib",
-      "//settings:settings_lib",
-      "//storage:storage_lib",
-      "//tracklist:tracklist_lib",
-      "//types:types_lib",
-      "//webui:webui_lib",
+      "//addons:music_player_addons",
+      "//client:music_player_client",
+      "//discovery:music_player_discovery",
+      "//entity:music_player_entity",
+      "//graphql:music_player_graphql",
+      "//migration:migration",
+      "//playback:music_player_playback",
+      "//scanner:music_player_scanner",
+      "//server:music_player_server",
+      "//settings:music_player_settings",
+      "//storage:music_player_storage",
+      "//tracklist:music_player_tracklist",
+      "//types:music_player_types",
+      "//webui:music_player_webui",
     ] + all_crate_deps(),
 )

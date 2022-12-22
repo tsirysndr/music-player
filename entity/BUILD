@@ -1,10 +1,10 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//cargo:crates.bzl", "all_crate_deps")
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
-    name = "entity_lib",
+    name = "music_player_entity",
     srcs = [
       "src/addon.rs", 
       "src/album.rs",
@@ -16,5 +16,10 @@ rust_library(
       "src/playlist.rs",
       "src/track.rs",
     ],
-    deps = ["//types:types_lib"] + all_crate_deps(),
+    deps = [
+      "//types:music_player_types",
+      "@crate_index//:serde",
+      "@crate_index//:chrono",
+      "@crate_index//:md5"
+      ] + all_crate_deps(),
 )

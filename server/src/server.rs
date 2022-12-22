@@ -20,7 +20,7 @@ use crate::{
     playback::Playback, playlist::Playlist, tracklist::Tracklist,
 };
 
-use crate::api::v1alpha1::{
+use crate::api::music::v1alpha1::{
     addons_service_server::AddonsServiceServer, core_service_server::CoreServiceServer,
     history_service_server::HistoryServiceServer, library_service_server::LibraryServiceServer,
     mixer_service_server::MixerServiceServer, playback_service_server::PlaybackServiceServer,

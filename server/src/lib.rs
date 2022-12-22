@@ -12,10 +12,14 @@ pub mod playlist;
 pub mod server;
 pub mod tracklist;
 pub mod api {
-    pub mod v1alpha1 {
+    #[path = ""]
+    pub mod music {
         use music_player_entity::folder;
 
-        tonic::include_proto!("music.v1alpha1");
+        use self::v1alpha1::GetFolderDetailsResponse;
+
+        #[path = "music.v1alpha1.rs"]
+        pub mod v1alpha1;
 
         impl From<folder::Model> for GetFolderDetailsResponse {
             fn from(model: folder::Model) -> Self {
@@ -28,13 +32,14 @@ pub mod api {
             }
         }
     }
-}
 
-pub mod objects {
-    pub mod v1alpha1 {
+    #[path = ""]
+    pub mod objects {
+        use self::v1alpha1::Playlist;
         use music_player_entity::playlist;
 
-        tonic::include_proto!("objects.v1alpha1");
+        #[path = "objects.v1alpha1.rs"]
+        pub mod v1alpha1;
 
         impl From<playlist::Model> for Playlist {
             fn from(model: playlist::Model) -> Self {
@@ -48,13 +53,15 @@ pub mod objects {
             }
         }
     }
-}
 
-pub mod metadata {
-    pub mod v1alpha1 {
+    #[path = ""]
+    pub mod metadata {
         use music_player_entity::{album, artist, track};
 
-        tonic::include_proto!("metadata.v1alpha1");
+        use self::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
+
+        #[path = "metadata.v1alpha1.rs"]
+        pub mod v1alpha1;
 
         impl From<artist::Model> for Artist {
             fn from(model: artist::Model) -> Self {

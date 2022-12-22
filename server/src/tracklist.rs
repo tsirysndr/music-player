@@ -7,8 +7,9 @@ use music_player_tracklist::Tracklist as TracklistState;
 use sea_orm::EntityTrait;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
-use crate::{
-    api::v1alpha1::{
+use crate::api::{
+    metadata::v1alpha1::Track,
+    music::v1alpha1::{
         tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
         AddTracksRequest, AddTracksResponse, ClearTracklistRequest, ClearTracklistResponse,
         FilterTracklistRequest, FilterTracklistResponse, GetNextTrackRequest, GetNextTrackResponse,
@@ -18,7 +19,6 @@ use crate::{
         PlayTrackAtRequest, PlayTrackAtResponse, RemoveTrackRequest, RemoveTrackResponse,
         SetRepeatRequest, SetRepeatResponse, ShuffleRequest, ShuffleResponse,
     },
-    metadata::v1alpha1::Track,
 };
 
 pub struct Tracklist {

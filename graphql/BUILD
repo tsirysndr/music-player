@@ -1,10 +1,10 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//cargo:crates.bzl", "all_crate_deps")
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
-    name = "graphql_lib",
+    name = "music_player_graphql",
     srcs = [
       "src/schema/objects/album.rs",
       "src/schema/objects/artist.rs",
@@ -30,12 +30,20 @@ rust_library(
       "src/simple_broker.rs",
     ],
     deps = [
-      "//playback:playback_lib",
-      "//scanner:scanner_lib",
-      "//settings:settings_lib",
-      "//storage:storage_lib",
-      "//entity:entity_lib",
-      "//tracklist:tracklist_lib",
-      "//types:types_lib",
+      "//playback:music_player_playback",
+      "//scanner:music_player_scanner",
+      "//settings:music_player_settings",
+      "//storage:music_player_storage",
+      "//entity:music_player_entity",
+      "//tracklist:music_player_tracklist",
+      "//types:music_player_types",
+      "@crate_index//:async-graphql",
+      "@crate_index//:rand",
+      "@crate_index//:chrono",
+      "@crate_index//:serde",
+      "@crate_index//:cuid",
+      "@crate_index//:slab",
+      "@crate_index//:futures-util",
+      "@crate_index//:once_cell",
     ] + all_crate_deps(),
 )

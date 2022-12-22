@@ -1,4 +1,4 @@
-use music_player_server::metadata::v1alpha1::Artist;
+use music_player_server::api::metadata::v1alpha1::Artist;
 use tui::style::Style;
 
 use crate::{app::App, user_config::Theme};

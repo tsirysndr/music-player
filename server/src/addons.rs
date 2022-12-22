@@ -3,11 +3,13 @@ use std::sync::Arc;
 use music_player_storage::Database;
 use tokio::sync::Mutex;
 
-use crate::api::v1alpha1::{
-    addons_service_server::AddonsService, GetAddonDetailsRequest, GetAddonDetailsResponse,
-    GetAddonsRequest, GetAddonsResponse, SetAddonEnabledRequest, SetAddonEnabledResponse,
+use crate::api::music::v1alpha1::addons_service_server::AddonsService;
+use crate::api::music::v1alpha1::{
+    GetAddonDetailsRequest, GetAddonDetailsResponse, GetAddonsRequest, GetAddonsResponse,
+    SetAddonEnabledRequest, SetAddonEnabledResponse,
 };
-use crate::objects::v1alpha1::Addon;
+
+use crate::api::objects::v1alpha1::Addon;
 
 pub struct Addons {
     db: Arc<Mutex<Database>>,

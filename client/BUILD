@@ -1,10 +1,10 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//cargo:crates.bzl", "all_crate_deps")
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
-    name = "client_lib",
+    name = "music_player_client",
     srcs = [
       "src/lib.rs",
       "src/library.rs",
@@ -14,10 +14,17 @@ rust_library(
       "src/ws_client.rs",
     ],
     deps = [
-      "//server:server_lib",
-      "//settings:settings_lib",
-      "//playback:playback_lib",
-      "//storage:storage_lib",
-      "//tracklist:tracklist_lib",
+      "//server:music_player_server",
+      "//settings:music_player_settings",
+      "//playback:music_player_playback",
+      "//storage:music_player_storage",
+      "//tracklist:music_player_tracklist",
+      "@crate_index//:tonic",
+      "@crate_index//:futures-util",
+      "@crate_index//:url",
+      "@crate_index//:serde",
+      "@crate_index//:tokio-tungstenite",
+      "@crate_index//:tungstenite",
+      "@crate_index//:tokio",
     ] + all_crate_deps(),
 )

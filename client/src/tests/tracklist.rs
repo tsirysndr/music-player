@@ -3,7 +3,7 @@ use std::sync::Arc;
 use futures_util::FutureExt;
 use music_player_playback::player::Player;
 use music_player_server::{
-    api::v1alpha1::{
+    api::music::v1alpha1::{
         playback_service_server::PlaybackServiceServer,
         tracklist_service_server::TracklistServiceServer,
     },

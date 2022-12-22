@@ -1,8 +1,8 @@
 use std::{sync::mpsc::Sender, time::Instant};
 
-use music_player_server::{
-    api::v1alpha1::GetCurrentlyPlayingSongResponse,
+use music_player_server::api::{
     metadata::v1alpha1::{Album, Artist, Track},
+    music::v1alpha1::GetCurrentlyPlayingSongResponse,
 };
 use tui::layout::Rect;
 

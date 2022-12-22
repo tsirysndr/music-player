@@ -6,13 +6,13 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilte
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::api::v1alpha1::{
+use crate::api::metadata::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
+use crate::api::music::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
     GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
-use crate::metadata::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
 
 pub struct Library {
     db: Arc<Mutex<Database>>,

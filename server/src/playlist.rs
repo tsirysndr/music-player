@@ -7,8 +7,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{
-    api::v1alpha1::{
+use crate::api::{
+    metadata::v1alpha1::Track,
+    music::v1alpha1::{
         playlist_service_server::PlaylistService, AddItemRequest, AddItemResponse,
         CreateFolderRequest, CreateFolderResponse, CreateRequest, CreateResponse,
         DeleteFolderRequest, DeleteFolderResponse, DeleteRequest, DeleteResponse,
@@ -18,7 +19,6 @@ use crate::{
         RemoveItemResponse, RenameFolderRequest, RenameFolderResponse, RenameRequest,
         RenameResponse,
     },
-    metadata::v1alpha1::Track,
 };
 
 pub struct Playlist {

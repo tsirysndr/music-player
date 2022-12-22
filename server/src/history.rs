@@ -3,7 +3,7 @@ use std::sync::Arc;
 use music_player_storage::Database;
 use tokio::sync::Mutex;
 
-use crate::api::v1alpha1::{
+use crate::api::music::v1alpha1::{
     history_service_server::HistoryService, GetHistoryRequest, GetHistoryResponse,
 };
 

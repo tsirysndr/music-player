@@ -9,6 +9,13 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "rules_cc",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.4/rules_cc-0.0.4.tar.gz"],
+    sha256 = "af6cc82d87db94585bceeda2561cb8a9d55ad435318ccb4ddfee18a43580fb5d",
+    strip_prefix = "rules_cc-0.0.4",
+)
+
 # To find additional information on this release or newer ones visit:
 # https://github.com/bazelbuild/rules_rust/releases
 http_archive(
@@ -49,6 +56,12 @@ nixpkgs_cc_configure(
     name = "nixpkgs_config_cc",
     repository = "@nixpkgs",
 )
+
+load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies", "rules_cc_toolchains")
+
+rules_cc_dependencies()
+
+rules_cc_toolchains()
 
 load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl", "nixpkgs_package")
 

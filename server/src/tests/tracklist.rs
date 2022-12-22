@@ -6,13 +6,14 @@ use tokio::sync::oneshot;
 use tonic::transport::Server;
 
 use crate::{
-    api::v1alpha1::{
-        tracklist_service_client::TracklistServiceClient,
-        tracklist_service_server::TracklistServiceServer, AddTrackRequest,
-        GetTracklistTracksRequest,
+    api::{
+        metadata::v1alpha1::Track,
+        music::v1alpha1::{
+            tracklist_service_client::TracklistServiceClient,
+            tracklist_service_server::TracklistServiceServer, AddTrackRequest,
+            GetTracklistTracksRequest,
+        },
     },
-    metadata::v1alpha1::Track,
-    playback::Playback,
     tracklist::Tracklist,
 };
 

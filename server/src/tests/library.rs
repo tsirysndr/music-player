@@ -5,7 +5,7 @@ use tokio::sync::oneshot;
 use tonic::transport::Server;
 
 use crate::{
-    api::v1alpha1::{
+    api::music::v1alpha1::{
         library_service_client::LibraryServiceClient, library_service_server::LibraryServiceServer,
         GetAlbumDetailsRequest, GetAlbumsRequest, GetArtistDetailsRequest, GetArtistsRequest,
         GetTrackDetailsRequest, GetTracksRequest,

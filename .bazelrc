@@ -4,3 +4,4 @@ build --remote_cache=grpcs://remote.buildbuddy.io
 build --noremote_upload_local_results # Uploads logs & artifacts without writing to cache
 build --remote_timeout=3600
 build --remote_header=x-buildbuddy-api-key=I5gSTxNI5ZvfXkxbkVgz
+build --workspace_status_command=$(pwd)/workspace_status.sh

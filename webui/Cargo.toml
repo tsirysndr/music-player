@@ -49,7 +49,7 @@ async-graphql = "4.0.15"
 async-graphql-actix-web = "4.0.15"
 mime_guess = "2.0.4"
 owo-colors = "3.5.0"
-rust-embed = { version = "6.4.1", features = ["actix"] }
+rust-embed = { version = "6.4.1", features = ["debug-embed", "actix"] }
 actix-files = "0.6.2"
 dirs = "4.0.0"
 serde_derive = "1.0.145"

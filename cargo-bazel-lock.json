@@ -29233,6 +29233,7 @@
         "crate_features": [
           "actix",
           "actix-web",
+          "debug-embed",
           "mime_guess"
         ],
         "deps": {
@@ -29298,6 +29299,9 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": [
+          "debug-embed"
+        ],
         "deps": {
           "common": [
             {
@@ -29355,6 +29359,9 @@
       "common_attrs": {
         "compile_data_glob": [
           "**"
+        ],
+        "crate_features": [
+          "debug-embed"
         ],
         "deps": {
           "common": [

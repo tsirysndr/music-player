@@ -6,9 +6,12 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "music_player_webui",
     srcs = ["src/lib.rs"],
-    data = [
-        ":musicplayer/build",
-    ],
+    compile_data = glob([
+        "musicplayer/build/**",
+    ]),
+    data = glob([
+        "musicplayer/build/**",
+    ]),
     deps = [
       "//graphql:music_player_graphql",
       "//settings:music_player_settings",

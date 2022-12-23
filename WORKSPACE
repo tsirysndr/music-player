@@ -156,6 +156,9 @@ crates_repository(
                 "@libnghttp2.dev//:libnghttp2",
             ],
         )],
+        "rust-embed": [crate.annotation(
+            crate_features = ["debug-embed", "actix"]
+        )]
     },
     cargo_lockfile = "//:Cargo.lock",
     lockfile = "//:cargo-bazel-lock.json",

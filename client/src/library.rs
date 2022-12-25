@@ -25,8 +25,8 @@ impl LibraryClient {
         Ok(response.into_inner().album)
     }
 
-    pub async fn albums(&mut self) -> Result<Vec<Album>, Error> {
-        let request = tonic::Request::new(GetAlbumsRequest {});
+    pub async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
+        let request = tonic::Request::new(GetAlbumsRequest { offset, limit });
         let response = self.client.get_albums(request).await?;
         Ok(response.into_inner().albums.into_iter().collect())
     }
@@ -37,14 +37,14 @@ impl LibraryClient {
         Ok(response.into_inner().artist)
     }
 
-    pub async fn artists(&mut self) -> Result<Vec<Artist>, Error> {
-        let request = tonic::Request::new(GetArtistsRequest {});
+    pub async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
+        let request = tonic::Request::new(GetArtistsRequest { offset, limit });
         let response = self.client.get_artists(request).await?;
         Ok(response.into_inner().artists.into_iter().collect())
     }
 
-    pub async fn songs(&mut self) -> Result<Vec<Track>, Error> {
-        let request = tonic::Request::new(GetTracksRequest {});
+    pub async fn songs(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
+        let request = tonic::Request::new(GetTracksRequest { offset, limit });
         let response = self.client.get_tracks(request).await?;
         Ok(response.into_inner().tracks.into_iter().collect())
     }

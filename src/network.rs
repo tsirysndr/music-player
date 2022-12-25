@@ -1,3 +1,4 @@
+use anyhow::Error;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, tracklist::TracklistClient,
     ws_client::WebsocketClient,
@@ -6,7 +7,6 @@ use music_player_server::api::metadata::v1alpha1::{Album, Track};
 use music_player_settings::{read_settings, Settings};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
-use anyhow::Error;
 
 use crate::app::{AlbumTable, App, ArtistTable, CurrentlyPlaybackContext, TrackTable};
 
@@ -56,10 +56,7 @@ impl<'a> Network<'a> {
             playlist,
         })
     }
-    pub async fn handle_network_event(
-        &mut self,
-        io_event: IoEvent,
-    ) -> Result<(), Error> {
+    pub async fn handle_network_event(&mut self, io_event: IoEvent) -> Result<(), Error> {
         match io_event {
             IoEvent::PlayTrack(track_id) => self.play_track(track_id).await,
             IoEvent::NextTrack => self.next_track().await,
@@ -94,7 +91,7 @@ impl<'a> Network<'a> {
     }
 
     async fn get_tracks(&mut self) -> Result<(), Error> {
-        let tracks = self.library.songs().await?;
+        let tracks = self.library.songs(0, 10000).await?;
         let mut app = self.app.lock().await;
         app.track_table = TrackTable {
             tracks,
@@ -104,7 +101,7 @@ impl<'a> Network<'a> {
     }
 
     async fn get_albums(&mut self) -> Result<(), Error> {
-        let albums = self.library.albums().await?;
+        let albums = self.library.albums(0, 10000).await?;
         let mut app = self.app.lock().await;
         app.album_table = AlbumTable {
             albums,
@@ -136,7 +133,7 @@ impl<'a> Network<'a> {
     }
 
     async fn get_artists(&mut self) -> Result<(), Error> {
-        let artists = self.library.artists().await?;
+        let artists = self.library.artists(0, 10000).await?;
         let mut app = self.app.lock().await;
         app.artist_table = ArtistTable {
             artists,

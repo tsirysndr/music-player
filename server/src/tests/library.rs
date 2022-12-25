@@ -82,7 +82,10 @@ async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut client = LibraryServiceClient::connect(url).await.unwrap();
 
-    let request = tonic::Request::new(GetArtistsRequest {});
+    let request = tonic::Request::new(GetArtistsRequest {
+        offset: 0,
+        limit: 10,
+    });
     let response = client.get_artists(request).await?;
     let response = response.into_inner();
 
@@ -112,7 +115,10 @@ async fn get_albums() {
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     let mut client = LibraryServiceClient::connect(url).await.unwrap();
-    let request = tonic::Request::new(GetAlbumsRequest {});
+    let request = tonic::Request::new(GetAlbumsRequest {
+        offset: 0,
+        limit: 10,
+    });
     let response = client.get_albums(request).await.unwrap();
     let response = response.into_inner();
     assert_eq!(response.albums.len(), 1);
@@ -141,7 +147,10 @@ async fn get_tracks() {
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     let mut client = LibraryServiceClient::connect(url).await.unwrap();
-    let request = tonic::Request::new(GetTracksRequest {});
+    let request = tonic::Request::new(GetTracksRequest {
+        offset: 0,
+        limit: 10,
+    });
     let response = client.get_tracks(request).await.unwrap();
     let response = response.into_inner();
 

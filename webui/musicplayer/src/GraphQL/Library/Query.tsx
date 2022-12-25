@@ -2,8 +2,8 @@ import gql from "graphql-tag";
 import { ALBUM_FRAGMENT, ARTIST_FRAGMENT, TRACK_FRAGMENT } from "../Fragments";
 
 export const GET_ALBUMS = gql`
-  query GetAlbums {
-    albums {
+  query GetAlbums($offset: Int, $limit: Int) {
+    albums(offset: $offset, limit: $limit) {
       ...AlbumFragment
       tracks {
         ...TrackFragment
@@ -15,8 +15,8 @@ export const GET_ALBUMS = gql`
 `;
 
 export const GET_ARTISTS = gql`
-  query GetArtists {
-    artists {
+  query GetArtists($offset: Int, $limit: Int) {
+    artists(offset: $offset, limit: $limit) {
       ...ArtistFragment
     }
   }
@@ -24,8 +24,8 @@ export const GET_ARTISTS = gql`
 `;
 
 export const GET_TRACKS = gql`
-  query GetTracks {
-    tracks {
+  query GetTracks($offset: Int, $limit: Int) {
+    tracks(offset: $offset, limit: $limit) {
       ...TrackFragment
       artists {
         id

@@ -894,7 +894,12 @@ pub struct SearchRequest {
 pub struct SearchResponse {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetAlbumsRequest {}
+pub struct GetAlbumsRequest {
+    #[prost(int32, tag = "1")]
+    pub limit: i32,
+    #[prost(int32, tag = "2")]
+    pub offset: i32,
+}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetAlbumsResponse {
@@ -903,7 +908,12 @@ pub struct GetAlbumsResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetArtistsRequest {}
+pub struct GetArtistsRequest {
+    #[prost(int32, tag = "1")]
+    pub limit: i32,
+    #[prost(int32, tag = "2")]
+    pub offset: i32,
+}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetArtistsResponse {
@@ -912,7 +922,12 @@ pub struct GetArtistsResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetTracksRequest {}
+pub struct GetTracksRequest {
+    #[prost(int32, tag = "1")]
+    pub limit: i32,
+    #[prost(int32, tag = "2")]
+    pub offset: i32,
+}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetTracksResponse {

@@ -14,15 +14,24 @@ message SearchRequest { string query = 1; }
 
 message SearchResponse {}
 
-message GetAlbumsRequest {}
+message GetAlbumsRequest {
+    int32 limit = 1;
+    int32 offset = 2;
+}
 
 message GetAlbumsResponse { repeated metadata.v1alpha1.Album albums = 1; }
 
-message GetArtistsRequest {}
+message GetArtistsRequest {
+    int32 limit = 1;
+    int32 offset = 2;
+}
 
 message GetArtistsResponse { repeated metadata.v1alpha1.Artist artists = 1; }
 
-message GetTracksRequest {}
+message GetTracksRequest {
+    int32 limit = 1;
+    int32 offset = 2;
+}
 
 message GetTracksResponse { repeated metadata.v1alpha1.Track tracks = 1; }
 

@@ -24,7 +24,12 @@ pub struct LibraryQuery;
 
 #[Object]
 impl LibraryQuery {
-    async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
+    async fn tracks(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Track>, Error> {
         let connected_device = ctx
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
@@ -32,7 +37,9 @@ impl LibraryQuery {
         let local = connect_to_current_device(connected_device).await?;
 
         if let Some(mut local) = local {
-            local.tracks().await?;
+            local
+                .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
+                .await?;
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -44,7 +51,12 @@ impl LibraryQuery {
         Ok(results.into_iter().map(Into::into).collect())
     }
 
-    async fn artists(&self, ctx: &Context<'_>) -> Result<Vec<Artist>, Error> {
+    async fn artists(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Artist>, Error> {
         let connected_device = ctx
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
@@ -52,7 +64,9 @@ impl LibraryQuery {
         let local = connect_to_current_device(connected_device).await?;
 
         if let Some(mut local) = local {
-            local.artists().await?;
+            local
+                .artists(offset.unwrap_or(0), limit.unwrap_or(100))
+                .await?;
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -64,14 +78,21 @@ impl LibraryQuery {
         Ok(results.into_iter().map(Into::into).collect())
     }
 
-    async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>, Error> {
+    async fn albums(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Album>, Error> {
         let connected_device = ctx
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
         let local = connect_to_current_device(connected_device).await?;
         if let Some(mut local) = local {
-            local.albums().await?;
+            local
+                .albums(offset.unwrap_or(0), limit.unwrap_or(100))
+                .await?;
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();

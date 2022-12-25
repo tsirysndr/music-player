@@ -7,6 +7,12 @@ rust_library(
     name = "music_player_storage",
     srcs = [
       "src/lib.rs",
+      "src/repo/mod.rs",
+      "src/repo/album.rs",
+      "src/repo/artist.rs",
+      "src/repo/track.rs",
+      "src/repo/playlist.rs",
+      "src/repo/folder.rs",
       "src/searcher/album.rs",
       "src/searcher/artist.rs",
       "src/searcher/mod.rs",
@@ -15,6 +21,7 @@ rust_library(
     deps = [
       "//settings:music_player_settings",
       "//types:music_player_types",
+      "//entity:music_player_entity",
       "@crate_index//:tantivy",
       "@crate_index//:itertools",
     ] + all_crate_deps(),

@@ -1,12 +1,14 @@
 use futures::future::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_scanner::scan_directory;
+use music_player_storage::repo::album::AlbumRepository;
+use music_player_storage::repo::artist::ArtistRepository;
+use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder};
+use sea_orm::ActiveModelTrait;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::api::metadata::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
 use crate::api::music::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
@@ -78,11 +80,11 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetArtistsRequest>,
     ) -> Result<tonic::Response<GetArtistsResponse>, tonic::Status> {
-        let results = artist::Entity::find()
-            .order_by_asc(artist::Column::Name)
-            .all(self.db.lock().await.get_connection())
+        let results = ArtistRepository::new(&self.db.lock().await.get_connection())
+            .find_all()
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let response = GetArtistsResponse {
             artists: results.into_iter().map(Into::into).collect(),
         };
@@ -93,11 +95,11 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetAlbumsRequest>,
     ) -> Result<tonic::Response<GetAlbumsResponse>, tonic::Status> {
-        let results = album::Entity::find()
-            .order_by_asc(album::Column::Title)
-            .all(self.db.lock().await.get_connection())
+        let results = AlbumRepository::new(&self.db.lock().await.get_connection())
+            .find_all()
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
         let response = GetAlbumsResponse {
             albums: results.into_iter().map(Into::into).collect(),
         };
@@ -108,38 +110,13 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<GetTracksRequest>,
     ) -> Result<tonic::Response<GetTracksResponse>, tonic::Status> {
-        let results: Vec<(track::Model, Vec<artist::Model>)> = track::Entity::find()
-            .order_by_asc(track::Column::Title)
-            .find_with_related(artist::Entity)
-            .all(self.db.lock().await.get_connection())
+        let tracks = TrackRepository::new(&self.db.lock().await.get_connection())
+            .find_all(100)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        let albums: Vec<(track::Model, Option<album::Model>)> = track::Entity::find()
-            .order_by_asc(track::Column::Title)
-            .find_also_related(album::Entity)
-            .all(self.db.lock().await.get_connection())
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        let albums: Vec<Option<album::Model>> = albums
-            .into_iter()
-            .map(|(_track, album)| album.clone())
-            .collect();
-        let mut albums = albums.into_iter();
 
         let response = GetTracksResponse {
-            tracks: results
-                .into_iter()
-                .map(|(track, artists)| {
-                    let album = albums.next().unwrap().unwrap();
-                    Track {
-                        artists: artists.into_iter().map(Into::into).collect(),
-                        album: Some(album.into()),
-                        ..track.into()
-                    }
-                })
-                .collect(),
+            tracks: tracks.into_iter().map(Into::into).collect(),
         };
         Ok(tonic::Response::new(response))
     }
@@ -149,26 +126,11 @@ impl LibraryService for Library {
         request: tonic::Request<GetTrackDetailsRequest>,
     ) -> Result<tonic::Response<GetTrackDetailsResponse>, tonic::Status> {
         let id = request.into_inner().id;
-        let result: Vec<(track::Model, Vec<artist::Model>)> = track::Entity::find_by_id(id.clone())
-            .find_with_related(artist::Entity)
-            .all(self.db.lock().await.get_connection())
+
+        let track = TrackRepository::new(&self.db.lock().await.get_connection())
+            .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        if result.len() == 0 {
-            return Err(tonic::Status::not_found("Track not found"));
-        }
-
-        let (mut track, artists) = result.into_iter().next().unwrap();
-        track.artists = artists;
-
-        let result: Vec<(track::Model, Option<album::Model>)> =
-            track::Entity::find_by_id(id.clone())
-                .find_also_related(album::Entity)
-                .all(self.db.lock().await.get_connection())
-                .await
-                .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let (_, album) = result.into_iter().next().unwrap();
-        track.album = album.unwrap();
 
         Ok(tonic::Response::new(GetTrackDetailsResponse {
             track: Some(track.into()),
@@ -179,27 +141,11 @@ impl LibraryService for Library {
         &self,
         request: tonic::Request<GetAlbumDetailsRequest>,
     ) -> Result<tonic::Response<GetAlbumDetailsResponse>, tonic::Status> {
-        let result: Vec<(album::Model, Vec<track::Model>)> =
-            album::Entity::find_by_id(request.into_inner().id)
-                .find_with_related(track::Entity)
-                .order_by_asc(track::Column::Track)
-                .all(self.db.lock().await.get_connection())
-                .await
-                .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        if result.len() == 0 {
-            return Err(tonic::Status::not_found("Album not found"));
-        }
-        let (mut album, mut tracks) = result.into_iter().next().unwrap();
-
-        for track in &mut tracks {
-            track.artists = track
-                .find_related(artist::Entity)
-                .all(self.db.lock().await.get_connection())
-                .await
-                .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        }
-
-        album.tracks = tracks;
+        let id = request.into_inner().id;
+        let album = AlbumRepository::new(&self.db.lock().await.get_connection())
+            .find(&id)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         Ok(tonic::Response::new(GetAlbumDetailsResponse {
             album: Some(album.into()),
@@ -211,38 +157,9 @@ impl LibraryService for Library {
         request: tonic::Request<GetArtistDetailsRequest>,
     ) -> Result<tonic::Response<GetArtistDetailsResponse>, tonic::Status> {
         let id = request.into_inner().id;
-        let result = artist::Entity::find_by_id(id.clone())
-            .one(self.db.lock().await.get_connection())
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
-        if result.is_none() {
-            return Err(tonic::Status::not_found("Artist not found"));
-        }
-
-        let mut artist = result.unwrap();
-        let results: Vec<(track::Model, Option<album::Model>)> = track::Entity::find()
-            .filter(track::Column::ArtistId.eq(id.to_owned()))
-            .order_by_asc(track::Column::Title)
-            .find_also_related(album::Entity)
-            .all(self.db.lock().await.get_connection())
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        artist.tracks = results
-            .into_iter()
-            .map(|(track, album)| {
-                let mut track = track;
-                track.artists = vec![artist.clone()];
-                track.album = album.unwrap();
-                track
-            })
-            .collect();
-
-        artist.albums = album::Entity::find()
-            .filter(album::Column::ArtistId.eq(id.clone()))
-            .order_by_asc(album::Column::Title)
-            .all(self.db.lock().await.get_connection())
+        let artist = ArtistRepository::new(&self.db.lock().await.get_connection())
+            .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 

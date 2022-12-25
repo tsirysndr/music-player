@@ -1,5 +1,5 @@
 {
-  "checksum": "4b5eb0e8e8cd7be6107f124e103dbd771acd57320365b497ce8641d9f2cbe68e",
+  "checksum": "cba69585cf10d283c0f48699ece574f792589921f4f2a1785ee9b23ee94820d7",
   "crates": {
     "Inflector 0.11.4": {
       "name": "Inflector",
@@ -2967,7 +2967,7 @@
               "target": "async_graphql_value"
             },
             {
-              "id": "pest 2.5.1",
+              "id": "pest 2.5.2",
               "target": "pest"
             },
             {
@@ -18193,7 +18193,7 @@
         "deps": {
           "common": [
             {
-              "id": "pest 2.5.1",
+              "id": "pest 2.5.2",
               "target": "pest"
             },
             {
@@ -18207,7 +18207,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "pest_derive 2.5.1",
+              "id": "pest_derive 2.5.2",
               "target": "pest_derive"
             }
           ],
@@ -22188,6 +22188,10 @@
         "deps": {
           "common": [
             {
+              "id": "anyhow 1.0.68",
+              "target": "anyhow"
+            },
+            {
               "id": "itertools 0.10.5",
               "target": "itertools"
             },
@@ -25105,13 +25109,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "pest 2.5.1": {
+    "pest 2.5.2": {
       "name": "pest",
-      "version": "2.5.1",
+      "version": "2.5.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/pest/2.5.1/download",
-          "sha256": "cc8bed3549e0f9b0a2a78bf7c0018237a2cdf085eecbbc048e52612438e4e9d0"
+          "url": "https://crates.io/api/v1/crates/pest/2.5.2/download",
+          "sha256": "0f6e86fb9e7026527a0d46bc308b841d73170ef8f443e1807f6ef88526a816d4"
         }
       },
       "targets": [
@@ -25152,17 +25156,17 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "2.5.1"
+        "version": "2.5.2"
       },
       "license": "MIT/Apache-2.0"
     },
-    "pest_derive 2.5.1": {
+    "pest_derive 2.5.2": {
       "name": "pest_derive",
-      "version": "2.5.1",
+      "version": "2.5.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/pest_derive/2.5.1/download",
-          "sha256": "cdc078600d06ff90d4ed238f0119d84ab5d43dbaad278b0e33a8820293b32344"
+          "url": "https://crates.io/api/v1/crates/pest_derive/2.5.2/download",
+          "sha256": "96504449aa860c8dcde14f9fba5c58dc6658688ca1fe363589d6327b8662c603"
         }
       },
       "targets": [
@@ -25191,28 +25195,28 @@
         "deps": {
           "common": [
             {
-              "id": "pest 2.5.1",
+              "id": "pest 2.5.2",
               "target": "pest"
             },
             {
-              "id": "pest_generator 2.5.1",
+              "id": "pest_generator 2.5.2",
               "target": "pest_generator"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "2.5.1"
+        "version": "2.5.2"
       },
       "license": "MIT/Apache-2.0"
     },
-    "pest_generator 2.5.1": {
+    "pest_generator 2.5.2": {
       "name": "pest_generator",
-      "version": "2.5.1",
+      "version": "2.5.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/pest_generator/2.5.1/download",
-          "sha256": "28a1af60b1c4148bb269006a750cff8e2ea36aff34d2d96cf7be0b14d1bed23c"
+          "url": "https://crates.io/api/v1/crates/pest_generator/2.5.2/download",
+          "sha256": "798e0220d1111ae63d66cb66a5dcb3fc2d986d520b98e49e1852bfdb11d7c5e7"
         }
       },
       "targets": [
@@ -25240,11 +25244,11 @@
         "deps": {
           "common": [
             {
-              "id": "pest 2.5.1",
+              "id": "pest 2.5.2",
               "target": "pest"
             },
             {
-              "id": "pest_meta 2.5.1",
+              "id": "pest_meta 2.5.2",
               "target": "pest_meta"
             },
             {
@@ -25263,17 +25267,17 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "2.5.1"
+        "version": "2.5.2"
       },
       "license": "MIT/Apache-2.0"
     },
-    "pest_meta 2.5.1": {
+    "pest_meta 2.5.2": {
       "name": "pest_meta",
-      "version": "2.5.1",
+      "version": "2.5.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/pest_meta/2.5.1/download",
-          "sha256": "fec8605d59fc2ae0c6c1aefc0c7c7a9769732017c0ce07f7a9cfffa7b4404f20"
+          "url": "https://crates.io/api/v1/crates/pest_meta/2.5.2/download",
+          "sha256": "984298b75898e30a843e278a9f2452c31e349a073a0ce6fd950a12a74464e065"
         }
       },
       "targets": [
@@ -25302,14 +25306,14 @@
               "target": "once_cell"
             },
             {
-              "id": "pest 2.5.1",
+              "id": "pest 2.5.2",
               "target": "pest"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "2.5.1"
+        "version": "2.5.2"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -31490,7 +31494,7 @@
         "deps": {
           "common": [
             {
-              "id": "pest 2.5.1",
+              "id": "pest 2.5.2",
               "target": "pest"
             }
           ],

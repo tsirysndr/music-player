@@ -1,5 +1,5 @@
 use super::{Addon, Browseable, Player, StreamingAddon};
-use anyhow::Error;
+use anyhow::{Error, Ok};
 use async_trait::async_trait;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
@@ -85,8 +85,9 @@ impl Browseable for Local {
     }
 
     async fn tracks(&mut self) -> Result<Vec<Track>, Error> {
-        self.client.as_mut().unwrap().library.songs().await?;
-        todo!()
+        let response = self.client.as_mut().unwrap().library.songs().await?;
+        println!("{:?}", response);
+        Ok(vec![])
     }
 
     async fn album(&mut self, id: &str) -> Result<Album, Error> {

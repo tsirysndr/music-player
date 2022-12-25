@@ -1,3 +1,4 @@
+use anyhow::Error;
 use music_player_server::api::{
     metadata::v1alpha1::{Album, Artist, Track},
     music::v1alpha1::{
@@ -6,7 +7,6 @@ use music_player_server::api::{
     },
 };
 use tonic::transport::Channel;
-use anyhow::Error;
 
 pub struct LibraryClient {
     client: LibraryServiceClient<Channel>,

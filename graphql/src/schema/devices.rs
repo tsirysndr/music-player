@@ -74,10 +74,9 @@ impl DevicesMutation {
         let connected_device = ctx
             .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
             .unwrap();
-        match devices
-            .into_iter()
-            .find(|device| device.id == id.to_string())
-        {
+        match devices.into_iter().find(|device| {
+            device.id == id.to_string() && (device.service == "grpc" || device.app == "xbmc")
+        }) {
             Some(device) => {
                 connected_device.lock().unwrap().insert(
                     "current_device".to_string(),

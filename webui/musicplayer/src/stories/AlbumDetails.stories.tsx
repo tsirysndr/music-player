@@ -203,4 +203,5 @@ Default.args = {
     )();
   },
   nowPlaying: {},
+  devices: [],
 };

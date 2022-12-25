@@ -95,4 +95,5 @@ Default.args = {
       "Default"
     )();
   },
+  devices: [],
 };

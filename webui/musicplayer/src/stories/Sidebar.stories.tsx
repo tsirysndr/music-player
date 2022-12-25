@@ -10,4 +10,6 @@ const Template: ComponentStory<typeof Sidebar> = (args: any) => (
   <Sidebar {...args} />
 );
 
-export const Default = Template.bind({});
+export const Default = Template.bind({
+  devices: [],
+});

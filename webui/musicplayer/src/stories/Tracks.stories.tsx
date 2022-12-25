@@ -47,4 +47,5 @@ Default.args = {
     )();
   },
   nowPlaying: {},
+  devices: [],
 };

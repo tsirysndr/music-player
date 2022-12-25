@@ -65,4 +65,5 @@ Default.args = {
       name: "Oasis",
     },
   ],
+  devices: [],
 };

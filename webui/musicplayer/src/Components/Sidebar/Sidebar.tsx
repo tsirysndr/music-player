@@ -87,6 +87,7 @@ const Sidebar: FC<SidebarProps> = (props) => {
 
 Sidebar.defaultProps = {
   active: "tracks",
+  devices: [],
 };
 
 export default Sidebar;

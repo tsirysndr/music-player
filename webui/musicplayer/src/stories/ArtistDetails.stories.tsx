@@ -71,4 +71,5 @@ Default.args = {
       "Default"
     )();
   },
+  devices: [],
 };

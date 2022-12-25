@@ -108,4 +108,8 @@ const ConnectModal: FC<ConnectModalProps> = ({ onClose, isOpen, devices }) => {
   );
 };
 
+ConnectModal.defaultProps = {
+  devices: [],
+};
+
 export default ConnectModal;

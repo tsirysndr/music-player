@@ -49,6 +49,10 @@ impl LibraryClient {
         Ok(response.into_inner().tracks.into_iter().collect())
     }
 
+    pub async fn song(&mut self, id: &str) -> Result<Option<Track>, Error> {
+        todo!()
+    }
+
     pub async fn search(&mut self, query: &str) -> Result<(), Error> {
         todo!()
     }

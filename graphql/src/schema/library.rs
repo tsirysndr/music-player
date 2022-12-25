@@ -34,10 +34,10 @@ impl LibraryQuery {
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
-        let local = connect_to_current_device(connected_device).await?;
+        let source_device = connect_to_current_device(connected_device).await?;
 
-        if let Some(mut local) = local {
-            local
+        if let Some(mut source_device) = source_device {
+            source_device
                 .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
         }
@@ -61,10 +61,10 @@ impl LibraryQuery {
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
-        let local = connect_to_current_device(connected_device).await?;
+        let source_device = connect_to_current_device(connected_device).await?;
 
-        if let Some(mut local) = local {
-            local
+        if let Some(mut source_device) = source_device {
+            source_device
                 .artists(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
         }
@@ -88,9 +88,9 @@ impl LibraryQuery {
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
-        let local = connect_to_current_device(connected_device).await?;
-        if let Some(mut local) = local {
-            local
+        let source_device = connect_to_current_device(connected_device).await?;
+        if let Some(mut source_device) = source_device {
+            source_device
                 .albums(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
         }
@@ -109,10 +109,10 @@ impl LibraryQuery {
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
-        let local = connect_to_current_device(connected_device).await?;
+        let source_device = connect_to_current_device(connected_device).await?;
         let id = id.to_string();
-        if let Some(mut local) = local {
-            local.track(&id).await?;
+        if let Some(mut source_device) = source_device {
+            source_device.track(&id).await?;
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -129,10 +129,10 @@ impl LibraryQuery {
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
-        let local = connect_to_current_device(connected_device).await?;
+        let source_device = connect_to_current_device(connected_device).await?;
         let id = id.to_string();
-        if let Some(mut local) = local {
-            local.artist(&id).await?;
+        if let Some(mut source_device) = source_device {
+            source_device.artist(&id).await?;
         }
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
@@ -148,10 +148,10 @@ impl LibraryQuery {
             .data::<Arc<StdMutex<HashMap<String, Device>>>>()
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
-        let local = connect_to_current_device(connected_device).await?;
+        let source_device = connect_to_current_device(connected_device).await?;
         let id = id.to_string();
-        if let Some(mut local) = local {
-            local.album(&id).await?;
+        if let Some(mut source_device) = source_device {
+            source_device.album(&id).await?;
         }
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 

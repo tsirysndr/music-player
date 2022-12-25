@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Error};
 use async_graphql::{Enum, MergedObject, MergedSubscription};
-use music_player_addons::local::Local;
+use music_player_addons::{local::Local, Browseable};
 use music_player_types::types::Device;
 
 use self::{
@@ -65,12 +65,12 @@ pub enum MutationType {
 
 pub async fn connect_to_current_device(
     devices: HashMap<String, Device>,
-) -> Result<Option<Local>, Error> {
+) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
     match devices.get("current_device") {
         Some(current_device) => {
             let mut local: Local = current_device.clone().into();
             local.connect().await?;
-            Ok(Some(local))
+            Ok(Some(Box::new(local)))
         }
         None => Ok(None),
     }

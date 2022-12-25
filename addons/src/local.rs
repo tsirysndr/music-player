@@ -75,23 +75,27 @@ impl StreamingAddon for Local {
 #[async_trait]
 impl Browseable for Local {
     async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
-        self.client
+        let response = self
+            .client
             .as_mut()
             .unwrap()
             .library
             .albums(offset, limit)
             .await?;
-        todo!()
+        println!("{:?}", response);
+        Ok(vec![])
     }
 
     async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
-        self.client
+        let response = self
+            .client
             .as_mut()
             .unwrap()
             .library
             .artists(offset, limit)
             .await?;
-        todo!()
+        println!("{:?}", response);
+        Ok(vec![])
     }
 
     async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
@@ -117,6 +121,7 @@ impl Browseable for Local {
     }
 
     async fn track(&mut self, id: &str) -> Result<Track, Error> {
+        self.client.as_mut().unwrap().library.song(id).await?;
         todo!()
     }
 }

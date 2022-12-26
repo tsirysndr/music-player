@@ -8,7 +8,7 @@ pub struct PlaylistClient {
 
 impl PlaylistClient {
     pub async fn new(host: String, port: u16) -> Result<Self, Error> {
-        let url = format!("http://{}:{}", host, port);
+        let url = format!("tcp://{}:{}", host, port);
         let client = PlaylistServiceClient::connect(url).await?;
         Ok(Self { client })
     }

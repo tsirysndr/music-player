@@ -37,6 +37,7 @@ pub mod api {
     pub mod objects {
         use self::v1alpha1::Playlist;
         use music_player_entity::playlist;
+        use music_player_types::types;
 
         #[path = "objects.v1alpha1.rs"]
         pub mod v1alpha1;
@@ -52,11 +53,23 @@ pub mod api {
                 }
             }
         }
+
+        impl Into<types::Playlist> for Playlist {
+            fn into(self) -> types::Playlist {
+                types::Playlist {
+                    id: self.id,
+                    name: self.name,
+                    description: Some(self.description),
+                    tracks: self.tracks.into_iter().map(Into::into).collect(),
+                }
+            }
+        }
     }
 
     #[path = ""]
     pub mod metadata {
         use music_player_entity::{album, artist, track};
+        use music_player_types::types;
 
         use self::v1alpha1::{Album, Artist, ArtistSong, Song, SongArtist, Track};
 
@@ -137,6 +150,73 @@ pub mod api {
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
                     ..Default::default()
+                }
+            }
+        }
+
+        impl Into<types::Track> for Track {
+            fn into(self) -> types::Track {
+                types::Track {
+                    id: self.id,
+                    title: self.title,
+                    uri: self.uri,
+                    duration: Some(self.duration),
+                    track_number: Some(u32::try_from(self.track_number).unwrap_or_default()),
+                    disc_number: u32::try_from(self.disc_number).unwrap_or_default(),
+                    artists: self.artists.into_iter().map(Into::into).collect(),
+                    artist: self.artist,
+                    album: match self.album {
+                        Some(album) => Some(album.into()),
+                        None => None,
+                    },
+                }
+            }
+        }
+
+        impl Into<types::Artist> for Artist {
+            fn into(self) -> types::Artist {
+                types::Artist {
+                    id: self.id,
+                    name: self.name,
+                    picture: Some(self.picture),
+                }
+            }
+        }
+
+        impl Into<types::Artist> for SongArtist {
+            fn into(self) -> types::Artist {
+                types::Artist {
+                    id: self.id,
+                    name: self.name,
+                    ..Default::default()
+                }
+            }
+        }
+
+        impl Into<types::Track> for Song {
+            fn into(self) -> types::Track {
+                types::Track {
+                    id: self.id,
+                    title: self.title,
+                    duration: Some(self.duration),
+                    track_number: Some(u32::try_from(self.track_number).unwrap_or_default()),
+                    disc_number: u32::try_from(self.disc_number).unwrap_or_default(),
+                    artists: self.artists.into_iter().map(Into::into).collect(),
+                    ..Default::default()
+                }
+            }
+        }
+
+        impl Into<types::Album> for Album {
+            fn into(self) -> types::Album {
+                types::Album {
+                    id: self.id,
+                    title: self.title,
+                    cover: Some(self.cover),
+                    artist: self.artist.clone(),
+                    year: Some(u32::try_from(self.year).unwrap_or_default()),
+                    artist_id: Some(format!("{:x}", md5::compute(self.artist.as_str()))),
+                    tracks: self.tracks.into_iter().map(Into::into).collect(),
                 }
             }
         }

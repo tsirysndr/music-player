@@ -27,6 +27,7 @@ rust_library(
       "//settings:music_player_settings",
       "//storage:music_player_storage",
       "//entity:music_player_entity",
+      "//types:music_player_types",
       "//tracklist:music_player_tracklist",
       "@crate_index//:tonic",
       "@crate_index//:tonic-web",

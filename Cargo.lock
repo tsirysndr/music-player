@@ -1241,9 +1241,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.13.0"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa0e3586af56b3bfa51fca452bd56e8dbbbd5d8d81cbf0b7e4e35b695b537eb8"
+checksum = "497049e9477329f8f6a559972ee42e117487d01d1e8c2cc9f836ea6fa23a9e1a"
 dependencies = [
  "serde",
  "toml",
@@ -4087,6 +4087,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "owo-colors",
  "prost",
  "sea-orm",
@@ -4160,6 +4161,7 @@ dependencies = [
  "dirs",
  "futures-util",
  "mime_guess",
+ "music-player-addons",
  "music-player-discovery",
  "music-player-entity",
  "music-player-graphql",

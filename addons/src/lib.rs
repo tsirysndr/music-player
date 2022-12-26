@@ -46,3 +46,33 @@ pub trait Player {
     async fn previous(&mut self) -> Result<(), Error>;
     async fn seek(&mut self, position: u32) -> Result<(), Error>;
 }
+
+pub struct CurrentDevice {
+    pub source: Option<Box<dyn Browseable + Send>>,
+    pub receiver: Option<Box<dyn Player + Send>>,
+}
+
+impl CurrentDevice {
+    pub fn new() -> Self {
+        Self {
+            source: None,
+            receiver: None,
+        }
+    }
+
+    pub fn set_source(&mut self, source: Box<dyn Browseable + Send>) {
+        self.source = Some(source);
+    }
+
+    pub fn clear_source(&mut self) {
+        self.source = None;
+    }
+
+    pub fn set_receiver(&mut self, receiver: Box<dyn Player + Send>) {
+        self.receiver = Some(receiver);
+    }
+
+    pub fn clear_receiver(&mut self) {
+        self.receiver = None;
+    }
+}

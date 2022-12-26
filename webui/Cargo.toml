@@ -45,6 +45,10 @@ version = "0.1.1"
 path = "../types"
 version = "0.1.1"
 
+[dependencies.music-player-addons]
+path = "../addons"
+version = "0.1.0"
+
 [dev-dependencies]
 futures-util = "0.3.25"
 serde_json = "1.0.89"

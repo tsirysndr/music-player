@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 use music_player_addons::{local::Local, Browseable};
 use music_player_types::types::Device;
@@ -74,4 +74,10 @@ pub async fn connect_to_current_device(
         }
         None => Ok(None),
     }
+}
+
+pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
+    let mut local: Local = device.clone().into();
+    local.connect().await?;
+    Ok(Some(Box::new(local)))
 }

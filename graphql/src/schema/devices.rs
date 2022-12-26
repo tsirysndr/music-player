@@ -7,12 +7,17 @@ use std::{
 use async_graphql::*;
 
 use futures_util::Stream;
+use music_player_addons::CurrentDevice;
+use tokio::sync::Mutex as TokioMutex;
 
 use crate::simple_broker::SimpleBroker;
 
 use music_player_types::types::{self, Connected};
 
-use super::objects::device::{App, Device};
+use super::{
+    connect_to, connect_to_current_device,
+    objects::device::{App, Device},
+};
 
 #[derive(Default)]
 pub struct DevicesQuery;
@@ -74,14 +79,30 @@ impl DevicesMutation {
         let connected_device = ctx
             .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
             .unwrap();
+        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let mut io_device = io_device.lock().await;
+
         match devices.into_iter().find(|device| {
             device.id == id.to_string() && (device.service == "grpc" || device.app == "xbmc")
         }) {
             Some(device) => {
-                connected_device.lock().unwrap().insert(
-                    "current_device".to_string(),
+                let current_device =
+                    types::Device::from(device.clone()).is_connected(Some(&device.clone()));
+                connected_device
+                    .lock()
+                    .unwrap()
+                    .insert("current_device".to_string(), current_device.clone());
+
+                let source = connect_to(
                     types::Device::from(device.clone()).is_connected(Some(&device.clone())),
-                );
+                )
+                .await?;
+
+                match source {
+                    Some(source) => io_device.set_source(source),
+                    None => return Err(Error::new("No source found")),
+                }
+
                 Ok(types::Device::from(device.clone())
                     .is_connected(Some(&device.clone()))
                     .into())
@@ -94,8 +115,14 @@ impl DevicesMutation {
         let connected_device = ctx
             .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
             .unwrap();
-        match connected_device.lock().unwrap().remove("current_device") {
-            Some(device) => Ok(Some(device.clone().into())),
+        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let mut io_device = io_device.lock().await;
+        let mut connected_device = connected_device.lock().unwrap();
+        match connected_device.remove("current_device") {
+            Some(device) => {
+                io_device.clear_source();
+                Ok(Some(device.clone().into()))
+            }
             None => Ok(None),
         }
     }

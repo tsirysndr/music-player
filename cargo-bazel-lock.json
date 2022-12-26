@@ -1,5 +1,5 @@
 {
-  "checksum": "cba69585cf10d283c0f48699ece574f792589921f4f2a1785ee9b23ee94820d7",
+  "checksum": "2996b43c92b533a3fbe28004e48e8315d16088515bf0fa7f798508d3560f36ea",
   "crates": {
     "Inflector 0.11.4": {
       "name": "Inflector",
@@ -6360,13 +6360,13 @@
       },
       "license": "MIT"
     },
-    "cargo_toml 0.13.0": {
+    "cargo_toml 0.13.3": {
       "name": "cargo_toml",
-      "version": "0.13.0",
+      "version": "0.13.3",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cargo_toml/0.13.0/download",
-          "sha256": "aa0e3586af56b3bfa51fca452bd56e8dbbbd5d8d81cbf0b7e4e35b695b537eb8"
+          "url": "https://crates.io/api/v1/crates/cargo_toml/0.13.3/download",
+          "sha256": "497049e9477329f8f6a559972ee42e117487d01d1e8c2cc9f836ea6fa23a9e1a"
         }
       },
       "targets": [
@@ -6402,7 +6402,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.13.0"
+        "version": "0.13.3"
       },
       "license": "Apache-2.0 OR MIT"
     },
@@ -37272,7 +37272,7 @@
               "target": "anyhow"
             },
             {
-              "id": "cargo_toml 0.13.0",
+              "id": "cargo_toml 0.13.3",
               "target": "cargo_toml"
             },
             {

@@ -14,6 +14,7 @@ use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fs::NamedFile;
 use mime_guess::from_path;
+use music_player_addons::CurrentDevice;
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
     scan_devices,
@@ -30,6 +31,7 @@ use rust_embed::RustEmbed;
 use sea_orm::EntityTrait;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
+
 #[derive(RustEmbed)]
 #[folder = "musicplayer/build/"]
 struct Asset;
@@ -130,7 +132,7 @@ pub async fn start_webui(
     let devices = scan_devices().await.unwrap();
     let connected_device: HashMap<String, Device> = HashMap::new();
     let connected_device = Arc::new(std::sync::Mutex::new(connected_device));
-
+    let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -141,6 +143,7 @@ pub async fn start_webui(
     .data(tracklist)
     .data(devices)
     .data(connected_device)
+    .data(current_device)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
 

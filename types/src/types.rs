@@ -1,4 +1,4 @@
-use std::{fmt, time::Duration};
+use std::time::Duration;
 
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use mdns_sd::ServiceInfo;
@@ -47,6 +47,7 @@ pub struct Album {
     pub artist_id: Option<String>,
     pub year: Option<u32>,
     pub cover: Option<String>,
+    pub tracks: Vec<Track>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -374,8 +375,30 @@ impl Connected for Device {
     }
 }
 
-#[derive(Default, Clone)]
-pub struct Track {}
+#[derive(Default, Debug, Clone)]
+pub struct Track {
+    pub id: String,
+    pub title: String,
+    pub duration: Option<f32>,
+    pub disc_number: u32,
+    pub track_number: Option<u32>,
+    pub uri: String,
+    pub artists: Vec<Artist>,
+    pub album: Option<Album>,
+    pub artist: String,
+}
 
 #[derive(Default, Clone)]
-pub struct Playlist {}
+pub struct Playlist {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub tracks: Vec<Track>,
+}
+
+#[derive(Default, Clone)]
+pub struct Folder {
+    pub id: String,
+    pub name: String,
+    pub playlists: Vec<Playlist>,
+}

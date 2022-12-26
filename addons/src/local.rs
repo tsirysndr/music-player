@@ -82,8 +82,7 @@ impl Browseable for Local {
             .library
             .albums(offset, limit)
             .await?;
-        println!("{:?}", response);
-        Ok(vec![])
+        Ok(response.into_iter().map(Into::into).collect())
     }
 
     async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
@@ -94,8 +93,7 @@ impl Browseable for Local {
             .library
             .artists(offset, limit)
             .await?;
-        println!("{:?}", response);
-        Ok(vec![])
+        Ok(response.into_iter().map(Into::into).collect())
     }
 
     async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
@@ -106,23 +104,31 @@ impl Browseable for Local {
             .library
             .songs(offset, limit)
             .await?;
-        println!("{:?}", response);
-        Ok(vec![])
+        Ok(response.into_iter().map(Into::into).collect())
     }
 
     async fn album(&mut self, id: &str) -> Result<Album, Error> {
-        self.client.as_mut().unwrap().library.album(id).await?;
-        todo!()
+        let response = self.client.as_mut().unwrap().library.album(id).await?;
+        match response {
+            Some(album) => Ok(album.into()),
+            None => Err(Error::msg("Album not found")),
+        }
     }
 
     async fn artist(&mut self, id: &str) -> Result<Artist, Error> {
-        self.client.as_mut().unwrap().library.artist(id).await?;
-        todo!()
+        let response = self.client.as_mut().unwrap().library.artist(id).await?;
+        match response {
+            Some(artist) => Ok(artist.into()),
+            None => Err(Error::msg("Artist not found")),
+        }
     }
 
     async fn track(&mut self, id: &str) -> Result<Track, Error> {
-        self.client.as_mut().unwrap().library.song(id).await?;
-        todo!()
+        let response = self.client.as_mut().unwrap().library.song(id).await?;
+        match response {
+            Some(track) => Ok(track.into()),
+            None => Err(Error::msg("Track not found")),
+        }
     }
 }
 

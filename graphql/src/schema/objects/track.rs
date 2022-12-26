@@ -1,5 +1,6 @@
 use async_graphql::*;
 use music_player_entity::{select_result, track::Model};
+use music_player_types::types;
 use music_player_types::types::SimplifiedSong as TrackType;
 use serde::Serialize;
 
@@ -127,6 +128,33 @@ impl From<TrackType> for Track {
             artist_id: song.artist_id,
             album_id: song.album_id,
             album_title: song.album,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<types::Track> for Track {
+    fn from(track: types::Track) -> Self {
+        Self {
+            id: ID(track.id),
+            title: track.title,
+            uri: track.uri,
+            duration: track.duration,
+            track_number: track.track_number,
+            artist: track.artist,
+            album: match track.album.clone() {
+                Some(album) => album.into(),
+                None => Default::default(),
+            },
+            artists: track
+                .artists
+                .into_iter()
+                .map(|artist| artist.into())
+                .collect(),
+            album_title: match track.album.clone() {
+                Some(album) => album.title,
+                None => String::new(),
+            },
             ..Default::default()
         }
     }

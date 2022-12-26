@@ -1,7 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use async_graphql::{futures_util::FutureExt, *};
-use music_player_addons::Browseable;
+use music_player_addons::CurrentDevice;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_scanner::scan_directory;
 use music_player_storage::{
@@ -9,15 +9,11 @@ use music_player_storage::{
     Database,
 };
 use sea_orm::{ActiveModelTrait, ActiveValue};
-use std::sync::Mutex as StdMutex;
 use tokio::sync::Mutex;
 
 use super::{
-    connect_to_current_device,
     objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track},
 };
-
-use music_player_types::types::Device;
 
 #[derive(Default)]
 pub struct LibraryQuery;
@@ -30,16 +26,15 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Track>, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let source_device = connect_to_current_device(connected_device).await?;
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
 
-        if let Some(mut source_device) = source_device {
-            source_device
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let tracks = source
                 .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
+            return Ok(tracks.into_iter().map(Into::into).collect());
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -57,16 +52,15 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Artist>, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let source_device = connect_to_current_device(connected_device).await?;
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
 
-        if let Some(mut source_device) = source_device {
-            source_device
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let artists = source
                 .artists(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
+            return Ok(artists.into_iter().map(Into::into).collect());
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -84,15 +78,15 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Album>, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let source_device = connect_to_current_device(connected_device).await?;
-        if let Some(mut source_device) = source_device {
-            source_device
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let albums = source
                 .albums(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
+            return Ok(albums.into_iter().map(Into::into).collect());
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -105,14 +99,14 @@ impl LibraryQuery {
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let source_device = connect_to_current_device(connected_device).await?;
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
         let id = id.to_string();
-        if let Some(mut source_device) = source_device {
-            source_device.track(&id).await?;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let track = source.track(&id).await?;
+            return Ok(track.into());
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -125,15 +119,16 @@ impl LibraryQuery {
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let source_device = connect_to_current_device(connected_device).await?;
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
         let id = id.to_string();
-        if let Some(mut source_device) = source_device {
-            source_device.artist(&id).await?;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let artist = source.artist(&id).await?;
+            return Ok(artist.into());
         }
+
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let artist = ArtistRepository::new(db.lock().await.get_connection())
@@ -144,15 +139,17 @@ impl LibraryQuery {
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let source_device = connect_to_current_device(connected_device).await?;
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+
         let id = id.to_string();
-        if let Some(mut source_device) = source_device {
-            source_device.album(&id).await?;
+
+        let mut device = current_device.lock().await;
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let album = source.album(&id).await?;
+            return Ok(album.into());
         }
+
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let album = AlbumRepository::new(db.lock().await.get_connection())

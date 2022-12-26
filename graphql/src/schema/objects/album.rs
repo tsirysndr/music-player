@@ -74,6 +74,7 @@ impl From<AlbumType> for Album {
             cover: album.cover,
             artist: album.artist,
             year: album.year,
+            tracks: album.tracks.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }

@@ -1,3 +1,4 @@
+use anyhow::Error;
 use music_player_server::api::{
     metadata::v1alpha1::Track,
     music::v1alpha1::{
@@ -6,14 +7,13 @@ use music_player_server::api::{
     },
 };
 use tonic::transport::Channel;
-use anyhow::Error;
 pub struct TracklistClient {
     client: TracklistServiceClient<Channel>,
 }
 
 impl TracklistClient {
     pub async fn new(host: String, port: u16) -> Result<Self, Error> {
-        let url = format!("http://{}:{}", host, port);
+        let url = format!("tcp://{}:{}", host, port);
         let client = TracklistServiceClient::connect(url).await?;
         Ok(Self { client })
     }

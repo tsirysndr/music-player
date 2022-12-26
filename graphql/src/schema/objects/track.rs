@@ -88,6 +88,19 @@ impl Track {
     }
 }
 
+pub trait RemoteTrackUrl {
+    fn with_remote_track_url(&self, base_url: &str) -> Self;
+}
+
+impl RemoteTrackUrl for Track {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            uri: format!("{}/tracks/{}", base_url, self.id.to_string()),
+            ..self.clone()
+        }
+    }
+}
+
 impl From<Model> for Track {
     fn from(model: Model) -> Self {
         Self {

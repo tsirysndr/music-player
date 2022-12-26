@@ -52,6 +52,22 @@ impl Album {
     }
 }
 
+pub trait RemoteCoverUrl {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self;
+}
+
+impl RemoteCoverUrl for Album {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            cover: self
+                .cover
+                .clone()
+                .map(|cover| format!("{}/covers/{}", base_url, cover)),
+            ..self.clone()
+        }
+    }
+}
+
 impl From<Model> for Album {
     fn from(model: Model) -> Self {
         Self {

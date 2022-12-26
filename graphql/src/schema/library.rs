@@ -12,7 +12,12 @@ use music_player_types::types;
 use sea_orm::{ActiveModelTrait, ActiveValue};
 use tokio::sync::Mutex;
 
-use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
+use super::objects::{
+    album::{Album, RemoteCoverUrl},
+    artist::Artist,
+    search_result::SearchResult,
+    track::{RemoteTrackUrl, Track},
+};
 
 #[derive(Default)]
 pub struct LibraryQuery;
@@ -45,10 +50,7 @@ impl LibraryQuery {
 
             return Ok(tracks
                 .into_iter()
-                .map(|mut track| {
-                    track.uri = format!("{}/tracks/{}", base_url, track.id.to_string());
-                    track
-                })
+                .map(|track| track.with_remote_track_url(base_url.as_str()))
                 .collect());
         }
 
@@ -113,13 +115,7 @@ impl LibraryQuery {
 
             return Ok(result
                 .into_iter()
-                .map(|mut album| {
-                    album.cover = match album.cover {
-                        Some(cover) => Some(format!("{}/covers/{}", base_url, cover)),
-                        None => None,
-                    };
-                    album
-                })
+                .map(|album| album.with_remote_cover_url(base_url.as_str()))
                 .collect());
         }
 
@@ -133,6 +129,9 @@ impl LibraryQuery {
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
@@ -140,7 +139,12 @@ impl LibraryQuery {
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
             let track = source.track(&id).await?;
-            return Ok(track.into());
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            return Ok(Track::from(track).with_remote_track_url(base_url.as_str()));
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -173,6 +177,9 @@ impl LibraryQuery {
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
 
         let id = id.to_string();
@@ -181,7 +188,12 @@ impl LibraryQuery {
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
             let album = source.album(&id).await?;
-            return Ok(album.into());
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            return Ok(Album::from(album).with_remote_cover_url(base_url.as_str()));
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();

@@ -82,12 +82,20 @@ impl DevicesMutation {
         let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
         let mut io_device = io_device.lock().await;
 
+        let base_url = match devices.clone().into_iter().find(|device| {
+            device.id == id.to_string() && (device.service == "http" || device.app == "xbmc")
+        }) {
+            Some(device) => Some(format!("http://{}:{}", device.host, device.port)),
+            None => None,
+        };
+
         match devices.into_iter().find(|device| {
             device.id == id.to_string() && (device.service == "grpc" || device.app == "xbmc")
         }) {
             Some(device) => {
-                let current_device =
-                    types::Device::from(device.clone()).is_connected(Some(&device.clone()));
+                let current_device = types::Device::from(device.clone())
+                    .is_connected(Some(&device.clone()))
+                    .with_base_url(base_url);
                 connected_device
                     .lock()
                     .unwrap()

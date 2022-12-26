@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc, sync::Mutex as StdMutex};
 
 use async_graphql::{futures_util::FutureExt, *};
 use music_player_addons::CurrentDevice;
@@ -8,12 +8,11 @@ use music_player_storage::{
     repo::{album::AlbumRepository, artist::ArtistRepository, track::TrackRepository},
     Database,
 };
+use music_player_types::types;
 use sea_orm::{ActiveModelTrait, ActiveValue};
 use tokio::sync::Mutex;
 
-use super::{
-    objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track},
-};
+use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
 
 #[derive(Default)]
 pub struct LibraryQuery;
@@ -26,15 +25,31 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Track>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
-            let tracks = source
+            let result = source
                 .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
-            return Ok(tracks.into_iter().map(Into::into).collect());
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            let tracks: Vec<Track> = result.into_iter().map(Into::into).collect();
+
+            return Ok(tracks
+                .into_iter()
+                .map(|mut track| {
+                    track.uri = format!("{}/tracks/{}", base_url, track.id.to_string());
+                    track
+                })
+                .collect());
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
@@ -78,6 +93,9 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Album>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -86,7 +104,23 @@ impl LibraryQuery {
             let albums = source
                 .albums(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
-            return Ok(albums.into_iter().map(Into::into).collect());
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            let result: Vec<Album> = albums.into_iter().map(Into::into).collect();
+
+            return Ok(result
+                .into_iter()
+                .map(|mut album| {
+                    album.cover = match album.cover {
+                        Some(cover) => Some(format!("{}/covers/{}", base_url, cover)),
+                        None => None,
+                    };
+                    album
+                })
+                .collect());
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();

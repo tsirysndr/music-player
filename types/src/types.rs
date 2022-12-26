@@ -299,6 +299,14 @@ pub struct Device {
     pub service: String,
     pub app: String,
     pub is_connected: bool,
+    pub base_url: Option<String>,
+}
+
+impl Device {
+    pub fn with_base_url(&mut self, base_url: Option<String>) -> Self {
+        self.base_url = base_url;
+        self.clone()
+    }
 }
 
 impl From<ServiceInfo> for Device {
@@ -320,6 +328,7 @@ impl From<ServiceInfo> for Device {
                 service: srv.get_fullname().to_owned(),
                 app: "xbmc".to_owned(),
                 is_connected: false,
+                base_url: None,
             };
         }
 
@@ -347,6 +356,7 @@ impl From<ServiceInfo> for Device {
                 service: srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
                 app: "music-player".to_owned(),
                 is_connected: false,
+                base_url: None,
             };
         }
 

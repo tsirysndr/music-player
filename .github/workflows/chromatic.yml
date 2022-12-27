@@ -1,6 +1,10 @@
 name: 'Chromatic'
 
-on: push
+on:
+  push:
+    paths:
+      - 'webui/musicplayer/**'
+      - '.github/workflows/chromatic.yml'
 
 # List of jobs
 jobs:

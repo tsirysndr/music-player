@@ -20,7 +20,7 @@ const ConnectButton = styled.button<{
   connected?: boolean;
 }>`
   border: none;
-  background-color: #fef2f8;
+  background-color: #ab28fc0d;
   height: 32px;
   ${(props) => (props.connected ? "width: 272px;" : "40px")}
   display: flex;
@@ -35,7 +35,7 @@ const ConnectButton = styled.button<{
 
 const ConnectText = styled.span`
   font-size: 13.5px;
-  color: #eb2f96;
+  color: #ab28fc;
   flex: 1;
   font-family: RockfordSansRegular;
   text-overflow: ellipsis;
@@ -73,7 +73,7 @@ const Sidebar: FC<SidebarProps> = (props) => {
         onClick={() => setOpenConnectModal(true)}
         connected={connected}
       >
-        <PlugConnected size={20} color="#eb2f96" />
+        <PlugConnected size={20} color="#ab28fc" />
         {connected && <ConnectText>Music Player (Macbook Pro)</ConnectText>}
       </ConnectButton>
       <ConnectModal

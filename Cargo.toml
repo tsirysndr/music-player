@@ -163,6 +163,10 @@ version = "0.1.4"
 path = "types"
 version = "0.1.1"
 
+[dependencies.music-player-audio]
+path = "audio"
+version = "0.1.0"
+
 [dependencies.sea-orm-migration]
 version = "^0.9.0"
 features = [

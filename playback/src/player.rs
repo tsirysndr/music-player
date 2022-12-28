@@ -432,11 +432,7 @@ impl PlayerInternal {
         let mss = MediaSourceStream::new(source, Default::default());
 
         let symphonia_decoder = |mss: MediaSourceStream, hint| {
-            SymphoniaDecoder::new(mss, hint).map(|mut decoder| {
-                // For formats other that Vorbis, we'll try getting normalisation data from
-                // ReplayGain metadata fields, if present.
-                Box::new(decoder) as Decoder
-            })
+            SymphoniaDecoder::new(mss, hint).map(|decoder| Box::new(decoder) as Decoder)
         };
 
         let decoder_type = symphonia_decoder(mss, hint);

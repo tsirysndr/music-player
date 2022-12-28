@@ -68,6 +68,7 @@ pub enum AudioFileError {
 pub enum AudioFile {
     Cached(fs::File),
     Streaming(AudioFileStreaming),
+    Local(fs::File),
 }
 
 #[derive(Debug)]
@@ -261,6 +262,11 @@ impl AudioFile {
                 file_size: stream.shared.file_size,
             },
             AudioFile::Cached(ref file) => StreamLoaderController {
+                channel_tx: None,
+                stream_shared: None,
+                file_size: file.metadata()?.len() as usize,
+            },
+            AudioFile::Local(ref file) => StreamLoaderController {
                 channel_tx: None,
                 stream_shared: None,
                 file_size: file.metadata()?.len() as usize,
@@ -473,6 +479,7 @@ impl Read for AudioFile {
         match *self {
             AudioFile::Cached(ref mut file) => file.read(output),
             AudioFile::Streaming(ref mut file) => file.read(output),
+            AudioFile::Local(ref mut file) => file.read(output),
         }
     }
 }
@@ -482,6 +489,7 @@ impl Seek for AudioFile {
         match *self {
             AudioFile::Cached(ref mut file) => file.seek(pos),
             AudioFile::Streaming(ref mut file) => file.seek(pos),
+            AudioFile::Local(ref mut file) => file.seek(pos),
         }
     }
 }

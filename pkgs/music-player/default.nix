@@ -11,6 +11,8 @@
   protobuf,
   libiconv,
   darwin,
+  zstd,
+  sqlite,
 }:
 rustPlatform.buildRustPackage rec {
   pname = "music-player";
@@ -38,6 +40,8 @@ rustPlatform.buildRustPackage rec {
     [
       curl.dev
       openssl.dev
+      zstd
+      sqlite.dev
     ]
     # Platform specific dependencies can be added as well
     # For MacOS

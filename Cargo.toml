@@ -191,3 +191,4 @@ futures-channel = "0.3.24"
 serde_json = "1.0.85"
 dirs = "4.0.0"
 spinners = "4.1.0"
+zstd = { version = "0.12.1", features = ["pkg-config"] }

@@ -125,7 +125,7 @@ dependencies = [
  "sha1 0.10.5",
  "smallvec",
  "tracing",
- "zstd",
+ "zstd 0.11.2+zstd.1.5.2",
 ]
 
 [[package]]
@@ -3900,6 +3900,7 @@ dependencies = [
  "dirs",
  "futures",
  "futures-channel",
+ "libsqlite3-sys",
  "lofty",
  "md5",
  "music-player-addons",
@@ -3925,6 +3926,7 @@ dependencies = [
  "tokio",
  "tui",
  "tungstenite 0.17.3",
+ "zstd 0.12.1+zstd.1.5.2",
 ]
 
 [[package]]
@@ -8389,7 +8391,16 @@ version = "0.11.2+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20cc960326ece64f010d2d2107537f26dc589a6573a316bd5b1dba685fa5fde4"
 dependencies = [
- "zstd-safe",
+ "zstd-safe 5.0.2+zstd.1.5.2",
+]
+
+[[package]]
+name = "zstd"
+version = "0.12.1+zstd.1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c947d2adc84ff9a59f2e3c03b81aa4128acf28d6ad7d56273f7e8af14e47bea"
+dependencies = [
+ "zstd-safe 6.0.2+zstd.1.5.2",
 ]
 
 [[package]]
@@ -8403,6 +8414,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "zstd-safe"
+version = "6.0.2+zstd.1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6cf39f730b440bab43da8fb5faf5f254574462f73f260f85f7987f32154ff17"
+dependencies = [
+ "libc",
+ "zstd-sys",
+]
+
+[[package]]
 name = "zstd-sys"
 version = "2.0.4+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8410,4 +8431,5 @@ checksum = "4fa202f2ef00074143e219d15b62ffc317d17cc33909feac471c044087cad7b0"
 dependencies = [
  "cc",
  "libc",
+ "pkg-config",
 ]

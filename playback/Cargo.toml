@@ -17,6 +17,10 @@ version = "0.1.4"
 path = "../entity"
 version = "0.1.5"
 
+[dependencies.music-player-audio]
+path = "../audio"
+version = "0.1.0"
+
 [dependencies]
 cpal = "0.14.0"
 futures-util = "0.3.24"

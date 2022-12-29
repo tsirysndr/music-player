@@ -161,12 +161,25 @@ impl From<types::Track> for Track {
             },
             artists: track
                 .artists
+                .clone()
                 .into_iter()
                 .map(|artist| artist.into())
                 .collect(),
             album_title: match track.album.clone() {
                 Some(album) => album.title,
                 None => String::new(),
+            },
+            album_id: match track.album.clone() {
+                Some(album) => album.id,
+                None => String::new(),
+            },
+            artist_id: match track.artists.clone().first() {
+                Some(artist) => artist.id.clone(),
+                None => String::new(),
+            },
+            cover: match track.album {
+                Some(album) => album.cover,
+                None => None,
             },
             ..Default::default()
         }

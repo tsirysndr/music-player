@@ -1,4 +1,4 @@
-use music_player_types::types::Song;
+use music_player_types::types::{Song, Track as TrackType};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -166,6 +166,28 @@ impl From<select_result::PlaylistTrack> for Model {
                 name: playlist_track.artist_name,
                 ..Default::default()
             }],
+            ..Default::default()
+        }
+    }
+}
+
+impl From<TrackType> for Model {
+    fn from(track: TrackType) -> Self {
+        let album = track.album.unwrap();
+        Self {
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            uri: track.uri,
+            album_id: Some(album.id.clone()),
+            artist_id: if track.artists.is_empty() {
+                None
+            } else {
+                Some(track.artists[0].id.clone())
+            },
+            duration: track.duration,
+            album: album.into(),
+            artists: track.artists.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }

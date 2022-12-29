@@ -1,4 +1,4 @@
-use music_player_types::types::Song;
+use music_player_types::types::{Album as AlbumType, Song};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +55,17 @@ impl From<&Song> for ActiveModel {
             ))),
             year: ActiveValue::Set(song.year),
             cover: ActiveValue::Set(song.cover.clone()),
+        }
+    }
+}
+
+impl From<AlbumType> for Model {
+    fn from(album: AlbumType) -> Self {
+        Self {
+            id: album.id.clone(),
+            title: album.title,
+            cover: album.cover,
+            ..Default::default()
         }
     }
 }

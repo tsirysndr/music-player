@@ -11,6 +11,7 @@ type Decoder = Box<dyn AudioDecoder + Send>;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://raw.githubusercontent.com/tsirysndr/music-player/master/fixtures/audio/06%20-%20J.%20Cole%20-%20Fire%20Squad(Explicit).m4a";
+    // let url = "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a";
     let bytes_per_second = 40 * 1024; // 320kbps
     let audio_file = match AudioFile::open(url, bytes_per_second).await {
         Ok(audio_file) => audio_file,
@@ -35,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut format = Hint::new();
-    format.with_extension("m4a");
+    format.mime_type(&AudioFile::get_mime_type(url).await?);
 
     let decoder_type = symphonia_decoder(audio_file, format);
 

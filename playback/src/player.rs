@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use futures_util::{future::FusedFuture, Future};
 use log::{error, trace};
+use music_player_audio::fetch::{AudioFile, Subfile};
 use music_player_entity::track::Model as Track;
 use music_player_tracklist::{PlaybackState, Tracklist};
 use parking_lot::Mutex;
@@ -18,7 +19,7 @@ use std::{
 };
 use symphonia::core::{errors::Error, io::MediaSourceStream, probe::Hint};
 use tokio::{
-    runtime::Runtime,
+    runtime::{Handle, Runtime},
     sync::mpsc::{self, UnboundedReceiver},
 };
 
@@ -414,45 +415,14 @@ impl PlayerInternal {
     }
 
     fn load_track(&self, song: &str) -> Option<PlayerLoadedTrackData> {
-        // Create a hint to help the format registry guess what format reader is appropriate.
-        let mut hint = Hint::new();
-
-        let path = Path::new(song);
-
-        // Provide the file extension as a hint.
-        if let Some(extension) = path.extension() {
-            if let Some(extension_str) = extension.to_str() {
-                hint.with_extension(extension_str);
-            }
-        }
-
-        let source = Box::new(File::open(path).unwrap());
-
-        // Create the media source stream using the boxed media source from above.
-        let mss = MediaSourceStream::new(source, Default::default());
-
-        let symphonia_decoder = |mss: MediaSourceStream, hint| {
-            SymphoniaDecoder::new(mss, hint).map(|decoder| Box::new(decoder) as Decoder)
-        };
-
-        let decoder_type = symphonia_decoder(mss, hint);
-
-        let decoder = match decoder_type {
-            Ok(decoder) => decoder,
-            Err(e) => {
-                panic!("Failed to create decoder: {}", e);
-            }
-        };
-        return Some(PlayerLoadedTrackData {
-            decoder,
-            bytes_per_second: 0,
-            duration_ms: 0,
-            stream_position_ms: 0,
-            is_explicit: false,
-        });
+        let handle = Handle::current();
+        let song = song.to_string();
+        thread::spawn(move || handle.block_on(PlayerTrackLoader::load(&song)))
+            .join()
+            .unwrap()
     }
 
-    fn start_playback(&mut self, track_id: &str, loaded_track: PlayerLoadedTrackData) {
+    fn start_playback(&mut self, _track_id: &str, loaded_track: PlayerLoadedTrackData) {
         self.ensure_sink_running();
         self.send_event(PlayerEvent::Playing {});
 
@@ -620,10 +590,6 @@ impl PlayerInternal {
 
 struct PlayerLoadedTrackData {
     decoder: Decoder,
-    bytes_per_second: usize,
-    duration_ms: u32,
-    stream_position_ms: u32,
-    is_explicit: bool,
 }
 
 type Decoder = Box<dyn AudioDecoder + Send>;
@@ -716,27 +682,63 @@ impl PlayerState {
     }
 }
 
-pub struct PlayerTrackLoader {}
+pub struct PlayerTrackLoader;
 
 impl PlayerTrackLoader {
-    fn stream_data_rate(&self, format: AudioFileFormat) -> usize {
-        let kbps = match format {
-            AudioFileFormat::OGG_VORBIS_96 => 12,
-            AudioFileFormat::OGG_VORBIS_160 => 20,
-            AudioFileFormat::OGG_VORBIS_320 => 40,
-            AudioFileFormat::MP3_256 => 32,
-            AudioFileFormat::MP3_320 => 40,
-            AudioFileFormat::MP3_160 => 20,
-            AudioFileFormat::MP3_96 => 12,
-            AudioFileFormat::MP3_160_ENC => 20,
-            AudioFileFormat::MP4_128_DUAL => todo!(),
-            AudioFileFormat::OTHER3 => todo!(),
-            AudioFileFormat::AAC_160 => todo!(),
-            AudioFileFormat::AAC_320 => todo!(),
-            AudioFileFormat::MP4_128 => todo!(),
-            AudioFileFormat::OTHER5 => todo!(),
+    async fn load(song: &str) -> Option<PlayerLoadedTrackData> {
+        let bytes_per_second = 40 * 1024; // 320kbps
+        let audio_file = match AudioFile::open(&song, bytes_per_second).await {
+            Ok(audio_file) => audio_file,
+            Err(e) => {
+                println!("Error: {}", e);
+                return None;
+            }
         };
-        kbps * 1024
+
+        match audio_file.get_stream_loader_controller() {
+            Ok(stream_loader_controller) => {
+                stream_loader_controller.set_stream_mode();
+                let audio_file =
+                    match Subfile::new(audio_file, 0, stream_loader_controller.len() as u64) {
+                        Ok(audio_file) => audio_file,
+                        Err(e) => {
+                            println!("Error: {}", e);
+                            return None;
+                        }
+                    };
+
+                let symphonia_decoder = |audio_file, format| {
+                    SymphoniaDecoder::new(audio_file, format)
+                        .map(|decoder| Box::new(decoder) as Decoder)
+                };
+
+                let mut format = Hint::new();
+                match AudioFile::get_mime_type(&song).await {
+                    Ok(mime_type) => {
+                        format.mime_type(&mime_type);
+                    }
+                    Err(e) => {
+                        println!("Error: {}", e);
+                        return None;
+                    }
+                }
+
+                let decoder_type = symphonia_decoder(audio_file, format);
+
+                let decoder = match decoder_type {
+                    Ok(decoder) => decoder,
+                    Err(e) => {
+                        panic!("Failed to create decoder: {}", e);
+                    }
+                };
+
+                return Some(PlayerLoadedTrackData { decoder });
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+                return None;
+            }
+        }
     }
 }
 

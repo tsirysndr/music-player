@@ -23,6 +23,7 @@ rust_library(
       "src/player.rs",
     ],
     deps = [
+      "//audio:music_player_audio",
       "//tracklist:music_player_tracklist",
       "//entity:music_player_entity",
       "@crate_index//:rand",

@@ -2,6 +2,7 @@ use std::{
     cmp::min,
     fs,
     io::{self, Read, Seek, SeekFrom},
+    path::Path,
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
@@ -11,13 +12,18 @@ use std::{
 
 use anyhow::Error;
 use futures_util::{future::IntoStream, StreamExt, TryFutureExt};
-use hyper::{client::ResponseFuture, header::CONTENT_RANGE, Body, Response, StatusCode};
+use hyper::{
+    client::ResponseFuture,
+    header::{self, CONTENT_RANGE},
+    Body, Response, StatusCode,
+};
 use symphonia::core::io::MediaSource;
 use thiserror::Error;
 
 use parking_lot::{Condvar, Mutex};
 use tempfile::NamedTempFile;
 use tokio::sync::{mpsc, oneshot, Semaphore};
+use url::Url;
 
 use self::{client::Client, receive::audio_file_fetch};
 
@@ -240,6 +246,9 @@ struct AudioFileDownloadStatus {
 
 impl AudioFile {
     pub async fn open(url: &str, bytes_per_second: usize) -> Result<AudioFile, Error> {
+        if Url::parse(url).is_err() {
+            return Ok(AudioFile::Local(fs::File::open(url)?));
+        }
         let (complete_tx, complete_rx) = oneshot::channel();
 
         let streaming = AudioFileStreaming::open(url.to_owned(), complete_tx, bytes_per_second);
@@ -278,6 +287,33 @@ impl AudioFile {
 
     pub fn is_cached(&self) -> bool {
         matches!(self, AudioFile::Cached { .. })
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self, AudioFile::Local { .. })
+    }
+
+    pub async fn get_mime_type(url: &str) -> Result<String, Error> {
+        if Url::parse(url).is_err() {
+            if !Path::new(url).exists() {
+                return Err(Error::msg("File does not exist"));
+            }
+            match mime_guess::from_path(url).first() {
+                Some(mime) => return Ok(mime.to_string()),
+                None => return Err(Error::msg("No mime type found")),
+            }
+        }
+        let mut streamer = Client::new().stream_from_url(url, 0, MINIMUM_DOWNLOAD_SIZE)?;
+        let response = streamer.next().await.ok_or(AudioFileError::NoData)??;
+
+        let content_type = match response.headers().get(header::CONTENT_TYPE) {
+            Some(content_type) => content_type,
+            None => return Err(Error::msg("No Content-Type header")),
+        };
+
+        let mime = content_type.to_str()?;
+
+        Ok(mime.to_owned())
     }
 }
 

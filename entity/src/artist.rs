@@ -1,4 +1,4 @@
-use music_player_types::types::Song;
+use music_player_types::types::{Artist as ArtistType, Song};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -42,6 +42,16 @@ impl From<&Song> for ActiveModel {
         Self {
             id: ActiveValue::set(id),
             name: ActiveValue::Set(song.album_artist.clone()),
+        }
+    }
+}
+
+impl From<ArtistType> for Model {
+    fn from(artist: ArtistType) -> Self {
+        Self {
+            id: artist.id.clone(),
+            name: artist.name,
+            ..Default::default()
         }
     }
 }

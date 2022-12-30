@@ -6,6 +6,8 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: ["master"]
+  workflow_dispatch:
+    branches: ["*"]
 
 jobs:
   unit-tests:
@@ -46,7 +48,7 @@ jobs:
         run: sudo apt-get install -y libasound2-dev protobuf-compiler
 
       - name: Run cargo-llvm-cov
-        run:  |
+        run: |
           cp -r fixtures/audio /tmp
           sudo cp fixtures/asound.conf /etc
           cd migration && DATABASE_URL=sqlite:///tmp/music-player.sqlite3 cargo run && cd ..

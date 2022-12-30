@@ -5,6 +5,7 @@ on:
     paths:
       - 'webui/musicplayer/**'
       - '.github/workflows/chromatic.yml'
+  workflow_dispatch:
 
 # List of jobs
 jobs:

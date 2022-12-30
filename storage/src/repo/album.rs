@@ -29,6 +29,7 @@ impl AlbumRepository {
                 .find_related(artist_entity::Entity)
                 .all(&self.db)
                 .await?;
+            track.album = album.clone();
         }
         album.tracks = tracks;
         Ok(album)

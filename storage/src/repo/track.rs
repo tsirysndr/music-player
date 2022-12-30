@@ -34,6 +34,7 @@ impl TrackRepository {
             duration: track.duration,
             uri: track.uri,
             artist: track.artist,
+            track: track.track,
             ..Default::default()
         })
     }

@@ -8,7 +8,7 @@ pub mod tononkira;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Track};
+use music_player_types::types::{Album, Artist, Playlist, Track};
 
 pub trait Addon {
     fn name(&self) -> &str;
@@ -32,9 +32,11 @@ pub trait Browseable {
     async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error>;
     async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error>;
     async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error>;
+    async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error>;
     async fn album(&mut self, id: &str) -> Result<Album, Error>;
     async fn artist(&mut self, id: &str) -> Result<Artist, Error>;
     async fn track(&mut self, id: &str) -> Result<Track, Error>;
+    async fn playlist(&mut self, id: &str) -> Result<Playlist, Error>;
 }
 
 #[async_trait]

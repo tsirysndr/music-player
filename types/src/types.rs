@@ -55,6 +55,8 @@ pub struct Artist {
     pub id: String,
     pub name: String,
     pub picture: Option<String>,
+    pub albums: Vec<Album>,
+    pub songs: Vec<Track>,
 }
 
 impl From<Document> for Album {
@@ -411,4 +413,85 @@ pub struct Folder {
     pub id: String,
     pub name: String,
     pub playlists: Vec<Playlist>,
+}
+
+pub trait RemoteTrackUrl {
+    fn with_remote_track_url(&self, base_url: &str) -> Self;
+}
+
+pub trait RemoteCoverUrl {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self;
+}
+
+impl RemoteTrackUrl for Track {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            uri: format!("{}/tracks/{}", base_url, self.id),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Album {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            cover: match self.cover {
+                Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
+                None => None,
+            },
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Album {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Artist {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            albums: self
+                .albums
+                .iter()
+                .map(|album| album.with_remote_cover_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Artist {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            songs: self
+                .songs
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Playlist {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
 }

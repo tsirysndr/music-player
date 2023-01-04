@@ -5,7 +5,8 @@ use music_player_entity::{
 };
 use music_player_types::types::Playlist;
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, JoinType, QueryFilter, QuerySelect, RelationTrait,
+    ColumnTrait, DatabaseConnection, EntityTrait, JoinType, QueryFilter, QueryOrder, QuerySelect,
+    RelationTrait,
 };
 
 pub struct PlaylistRepository {
@@ -90,6 +91,31 @@ impl PlaylistRepository {
     }
 
     pub async fn find_all(&self) -> Result<Vec<Playlist>, Error> {
-        todo!()
+        playlist_entity::Entity::find()
+            .order_by_asc(playlist_entity::Column::Name)
+            .all(&self.db)
+            .await
+            .map(|playlists| playlists.into_iter().map(Into::into).collect())
+            .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    pub async fn main_playlists(&self) -> Result<Vec<Playlist>, Error> {
+        playlist_entity::Entity::find()
+            .order_by_asc(playlist_entity::Column::Name)
+            .filter(playlist_entity::Column::FolderId.is_null())
+            .all(&self.db)
+            .await
+            .map(|playlists| playlists.into_iter().map(Into::into).collect())
+            .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    pub async fn recent_playlists(&self) -> Result<Vec<Playlist>, Error> {
+        playlist_entity::Entity::find()
+            .order_by_desc(playlist_entity::Column::CreatedAt)
+            .limit(10)
+            .all(&self.db)
+            .await
+            .map(|playlists| playlists.into_iter().map(Into::into).collect())
+            .map_err(|e| Error::msg(e.to_string()))
     }
 }

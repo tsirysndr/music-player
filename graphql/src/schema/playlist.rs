@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_graphql::*;
 use cuid::cuid;
 use futures_util::Stream;
+use music_player_addons::CurrentDevice;
 use music_player_entity::{
     album as album_entity, artist as artist_entity, folder as folder_entity,
     playlist as playlist_entity, playlist_tracks as playlist_tracks_entity, select_result,
@@ -31,6 +32,15 @@ impl PlaylistQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
 
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let result = source.playlist(&id).await?;
+            return Ok(result.into());
+        }
+
         let result = PlaylistRepository::new(db.get_connection())
             .find(id.as_str())
             .await?;
@@ -41,9 +51,18 @@ impl PlaylistQuery {
     async fn playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
-        playlist_entity::Entity::find()
-            .order_by_asc(playlist_entity::Column::Name)
-            .all(db.get_connection())
+
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let result = source.playlists(0, 10).await?;
+            return Ok(result.into_iter().map(Into::into).collect());
+        }
+
+        PlaylistRepository::new(db.get_connection())
+            .find_all()
             .await
             .map(|playlists| playlists.into_iter().map(Into::into).collect())
             .map_err(|e| Error::new(e.to_string()))
@@ -52,10 +71,8 @@ impl PlaylistQuery {
     async fn main_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
-        playlist_entity::Entity::find()
-            .order_by_asc(playlist_entity::Column::Name)
-            .filter(playlist_entity::Column::FolderId.is_null())
-            .all(db.get_connection())
+        PlaylistRepository::new(db.get_connection())
+            .main_playlists()
             .await
             .map(|playlists| playlists.into_iter().map(Into::into).collect())
             .map_err(|e| Error::new(e.to_string()))
@@ -64,10 +81,8 @@ impl PlaylistQuery {
     async fn recent_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
-        playlist_entity::Entity::find()
-            .order_by_desc(playlist_entity::Column::CreatedAt)
-            .limit(10)
-            .all(db.get_connection())
+        PlaylistRepository::new(db.get_connection())
+            .recent_playlists()
             .await
             .map(|playlists| playlists.into_iter().map(Into::into).collect())
             .map_err(|e| Error::new(e.to_string()))

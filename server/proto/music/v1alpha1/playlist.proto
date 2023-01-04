@@ -72,7 +72,8 @@ message GetPlaylistDetailsRequest { string id = 1; }
 message GetPlaylistDetailsResponse {
   string id = 1;
   string name = 2;
-  repeated metadata.v1alpha1.Track tracks = 3;
+  string description = 3;
+  repeated metadata.v1alpha1.Track tracks = 4;
 }
 
 message CreateFolderRequest {

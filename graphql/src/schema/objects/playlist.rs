@@ -1,6 +1,6 @@
 use async_graphql::*;
 use music_player_entity::{playlist::Model, select_result};
-use music_player_types::types::Playlist as PlaylistType;
+use music_player_types::types::{Playlist as PlaylistType, RemoteTrackUrl};
 
 use super::track::Track;
 
@@ -63,6 +63,20 @@ impl From<PlaylistType> for Playlist {
             name: playlist.name,
             description: playlist.description,
             tracks: playlist.tracks.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl RemoteTrackUrl for Playlist {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .clone()
+                .into_iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
         }
     }
 }

@@ -1,6 +1,6 @@
 use async_graphql::*;
 use music_player_entity::{select_result, track::Model};
-use music_player_types::types;
+use music_player_types::types::{self, RemoteTrackUrl};
 use music_player_types::types::SimplifiedSong as TrackType;
 use serde::Serialize;
 
@@ -86,10 +86,6 @@ impl Track {
     async fn album_title(&self) -> &str {
         &self.album_title
     }
-}
-
-pub trait RemoteTrackUrl {
-    fn with_remote_track_url(&self, base_url: &str) -> Self;
 }
 
 impl RemoteTrackUrl for Track {

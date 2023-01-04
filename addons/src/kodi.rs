@@ -1,7 +1,7 @@
 use anyhow::Error;
 
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Device, Track};
+use music_player_types::types::{Album, Artist, Device, Playlist, Track};
 
 use super::{Addon, Browseable, Player, StreamingAddon};
 
@@ -78,6 +78,10 @@ impl Browseable for Kodi {
         todo!()
     }
 
+    async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error> {
+        todo!()
+    }
+
     async fn album(&mut self, id: &str) -> Result<Album, Error> {
         todo!()
     }
@@ -87,6 +91,10 @@ impl Browseable for Kodi {
     }
 
     async fn track(&mut self, id: &str) -> Result<Track, Error> {
+        todo!()
+    }
+
+    async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
         todo!()
     }
 }

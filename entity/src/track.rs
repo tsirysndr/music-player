@@ -1,4 +1,4 @@
-use music_player_types::types::{Song, Track as TrackType};
+use music_player_types::types::{Song, Track as TrackType, RemoteTrackUrl};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -189,6 +189,30 @@ impl From<TrackType> for Model {
             album: album.into(),
             artists: track.artists.into_iter().map(Into::into).collect(),
             ..Default::default()
+        }
+    }
+}
+
+impl Into<TrackType> for Model {
+    fn into(self) -> TrackType {
+        TrackType {
+            id: self.id,
+            title: self.title,
+            artist: self.artist,
+            uri: self.uri,
+            duration: self.duration,
+            album: Some(self.album.into()),
+            artists: self.artists.into_iter().map(Into::into).collect(),
+            ..Default::default()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Model {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            uri: format!("{}/tracks/{}", base_url, self.id),
+            ..self.clone()
         }
     }
 }

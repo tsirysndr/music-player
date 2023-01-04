@@ -1,5 +1,5 @@
 use music_player_entity::{playlist, playlist_tracks, track};
-use music_player_storage::Database;
+use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
 };
@@ -203,71 +203,24 @@ impl PlaylistService for Playlist {
         &self,
         _request: tonic::Request<FindAllRequest>,
     ) -> Result<tonic::Response<FindAllResponse>, tonic::Status> {
-        playlist::Entity::find()
-            .all(self.db.lock().await.get_connection())
+        let result = PlaylistRepository::new(self.db.lock().await.get_connection())
+            .find_all()
             .await
-            .map(|playlists| {
-                tonic::Response::new(FindAllResponse {
-                    playlists: playlists
-                        .into_iter()
-                        .map(|playlist| GetPlaylistDetailsResponse {
-                            id: playlist.id,
-                            name: playlist.name,
-                            ..Default::default()
-                        })
-                        .collect(),
-                    ..Default::default()
-                })
-            })
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        let response = FindAllResponse {
-            ..Default::default()
-        };
-        Ok(tonic::Response::new(response))
+            .map_err(|_| tonic::Status::internal("Failed to get playlist"))?;
+        Ok(tonic::Response::new(FindAllResponse {
+            playlists: result.into_iter().map(Into::into).collect(),
+        }))
     }
 
     async fn get_playlist_details(
         &self,
         request: tonic::Request<GetPlaylistDetailsRequest>,
     ) -> Result<tonic::Response<GetPlaylistDetailsResponse>, tonic::Status> {
-        let result = playlist::Entity::find_by_id(request.get_ref().id.clone())
-            .one(self.db.lock().await.get_connection())
-            .await;
-        match result {
-            Ok(playlist) => {
-                if playlist.is_none() {
-                    return Err(tonic::Status::not_found("Playlist not found"));
-                }
-                playlist
-                    .clone()
-                    .unwrap()
-                    .find_related(track::Entity)
-                    .all(self.db.lock().await.get_connection())
-                    .await
-                    .map(|tracks| {
-                        tonic::Response::new(GetPlaylistDetailsResponse {
-                            id: playlist.clone().unwrap().id,
-                            name: playlist.clone().unwrap().name,
-                            tracks: tracks
-                                .into_iter()
-                                .map(|track| Track {
-                                    id: track.id,
-                                    title: track.title,
-                                    uri: track.uri,
-                                    duration: track.duration.unwrap_or_default(),
-                                    disc_number: i32::try_from(track.track.unwrap_or_default())
-                                        .unwrap(),
-                                    ..Default::default()
-                                })
-                                .collect(),
-                            ..Default::default()
-                        })
-                    })
-                    .map_err(|_| tonic::Status::internal("Failed to get playlist items"))
-            }
-            Err(_) => return Err(tonic::Status::internal("Failed to get playlist")),
-        }
+        let result = PlaylistRepository::new(self.db.lock().await.get_connection())
+            .find(&request.get_ref().id)
+            .await
+            .map_err(|_| tonic::Status::internal("Failed to get playlist"))?;
+        Ok(tonic::Response::new(result.into()))
     }
 
     async fn create_folder(

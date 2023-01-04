@@ -3987,6 +3987,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "tokio",
  "tokio-tungstenite",
  "tonic",

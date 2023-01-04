@@ -1,7 +1,7 @@
 use super::{album::Album, track::Track};
 use async_graphql::*;
 use music_player_entity::artist::Model;
-use music_player_types::types::Artist as ArtistType;
+use music_player_types::types::{Artist as ArtistType, RemoteTrackUrl};
 use serde::Serialize;
 
 #[derive(Default, Clone, Serialize)]
@@ -67,12 +67,29 @@ impl From<Model> for Artist {
         }
     }
 }
+
 impl From<ArtistType> for Artist {
     fn from(artist: ArtistType) -> Self {
         Self {
             id: ID(artist.id),
             name: artist.name,
+            picture: artist.picture.unwrap_or_default(),
+            albums: artist.albums.into_iter().map(Into::into).collect(),
+            songs: artist.songs.into_iter().map(Into::into).collect(),
             ..Default::default()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Artist {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            songs: self
+                .songs
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
         }
     }
 }

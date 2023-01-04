@@ -12,7 +12,7 @@ use music_player_storage::repo::playlist::PlaylistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
-use music_player_types::types;
+use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
 use rand::seq::SliceRandom;
 use sea_orm::{
     ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
@@ -22,8 +22,10 @@ use std::sync::Mutex as StdMutex;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
+use crate::load_tracks;
 use crate::simple_broker::SimpleBroker;
 
+use super::objects::album::Album;
 use super::{
     objects::{
         track::{Track, TrackInput},
@@ -234,6 +236,9 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
+        let player_cmd = ctx
+            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let connected_device = ctx
             .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
@@ -241,35 +246,29 @@ impl TracklistMutation {
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
+        let id = id.to_string();
+
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
-            // TODO: call grpc to play album
-        }
+            let album = source.album(&id).await?;
 
-        let id = id.to_string();
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            let album: album_entity::Model = album
+                .with_remote_cover_url(base_url.as_str())
+                .with_remote_track_url(base_url.as_str())
+                .into();
+            let tracks = album.tracks;
+            load_tracks(player_cmd, tracks, position, shuffle);
+            return Ok(true);
+        }
 
         let result = AlbumRepository::new(db.lock().await.get_connection())
             .find(&id)
             .await?;
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        let player_cmd_tx = player_cmd.lock().unwrap();
-        player_cmd_tx.send(PlayerCommand::Stop).unwrap();
-        player_cmd_tx.send(PlayerCommand::Clear).unwrap();
-
-        let mut tracks = result.tracks;
-
-        if shuffle {
-            tracks.shuffle(&mut rand::thread_rng());
-        }
-
-        player_cmd_tx
-            .send(PlayerCommand::LoadTracklist { tracks })
-            .unwrap();
-        player_cmd_tx
-            .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
-            .unwrap();
+        load_tracks(player_cmd, result.tracks, position, shuffle);
         Ok(true)
     }
 
@@ -280,43 +279,36 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
+        let player_cmd = ctx
+            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let connected_device = ctx
             .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
             .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
+        let id = id.to_string();
 
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
-            // TODO: call grpc to play artist tracks
+            let artist = source.artist(&id).await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            let artist: artist_entity::Model =
+                artist.with_remote_track_url(base_url.as_str()).into();
+            load_tracks(player_cmd, artist.tracks, position, shuffle);
+            return Ok(true);
         }
 
-        let id = id.to_string();
-        let mut artist = ArtistRepository::new(db.lock().await.get_connection())
+        let artist = ArtistRepository::new(db.lock().await.get_connection())
             .find(&id)
             .await?;
 
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        let player_cmd_tx = player_cmd.lock().unwrap();
-        player_cmd_tx.send(PlayerCommand::Stop).unwrap();
-        player_cmd_tx.send(PlayerCommand::Clear).unwrap();
-
-        if shuffle {
-            artist.tracks.shuffle(&mut rand::thread_rng());
-        }
-
-        player_cmd_tx
-            .send(PlayerCommand::LoadTracklist {
-                tracks: artist.tracks,
-            })
-            .unwrap();
-        player_cmd_tx
-            .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
-            .unwrap();
-
+        load_tracks(player_cmd, artist.tracks, position, shuffle);
         Ok(true)
     }
 
@@ -327,6 +319,9 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
+        let player_cmd = ctx
+            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
+            .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
         let connected_device = ctx
@@ -339,32 +334,27 @@ impl TracklistMutation {
 
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
-            // TODO: call grpc to play playlist
+            let result = source.playlist(&id).await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            let tracks = result.with_remote_track_url(base_url.as_str()).tracks;
+            let tracks: Vec<track_entity::Model> = tracks.into_iter().map(Into::into).collect();
+
+            load_tracks(player_cmd, tracks, position, shuffle);
+            return Ok(true);
         }
 
         let playlist = PlaylistRepository::new(db.get_connection())
             .find(id.as_str())
             .await?;
 
-        let mut tracks: Vec<track_entity::Model> =
+        let tracks: Vec<track_entity::Model> =
             playlist.tracks.into_iter().map(Into::into).collect();
 
-        if shuffle {
-            tracks.shuffle(&mut rand::thread_rng());
-        }
-
-        let player_cmd = ctx
-            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        let player_cmd_tx = player_cmd.lock().unwrap();
-        player_cmd_tx.send(PlayerCommand::Stop).unwrap();
-        player_cmd_tx.send(PlayerCommand::Clear).unwrap();
-        player_cmd_tx
-            .send(PlayerCommand::LoadTracklist { tracks })
-            .unwrap();
-        player_cmd_tx
-            .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
-            .unwrap();
+        load_tracks(player_cmd, tracks, position, shuffle);
 
         Ok(true)
     }

@@ -5,7 +5,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
-use music_player_types::types::{Album, Artist, Device, Track};
+use music_player_types::types::{Album, Artist, Device, Playlist, Track};
 
 pub struct Client {
     pub library: LibraryClient,
@@ -107,6 +107,11 @@ impl Browseable for Local {
         Ok(response.into_iter().map(Into::into).collect())
     }
 
+    async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error> {
+        let response = self.client.as_mut().unwrap().playlist.list_all().await?;
+        Ok(response)
+    }
+
     async fn album(&mut self, id: &str) -> Result<Album, Error> {
         let response = self.client.as_mut().unwrap().library.album(id).await?;
         match response {
@@ -129,6 +134,11 @@ impl Browseable for Local {
             Some(track) => Ok(track.into()),
             None => Err(Error::msg("Track not found")),
         }
+    }
+
+    async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
+        let response = self.client.as_mut().unwrap().playlist.find(id).await?;
+        Ok(response)
     }
 }
 

@@ -1,6 +1,6 @@
 use async_graphql::*;
 use music_player_entity::album::Model;
-use music_player_types::types::Album as AlbumType;
+use music_player_types::types::{Album as AlbumType, RemoteCoverUrl, RemoteTrackUrl};
 use serde::Serialize;
 
 use super::track::Track;
@@ -52,10 +52,6 @@ impl Album {
     }
 }
 
-pub trait RemoteCoverUrl {
-    fn with_remote_cover_url(&self, base_url: &str) -> Self;
-}
-
 impl RemoteCoverUrl for Album {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
         Self {
@@ -63,6 +59,19 @@ impl RemoteCoverUrl for Album {
                 .cover
                 .clone()
                 .map(|cover| format!("{}/covers/{}", base_url, cover)),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Album {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
             ..self.clone()
         }
     }

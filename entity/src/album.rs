@@ -1,4 +1,4 @@
-use music_player_types::types::{Album as AlbumType, Song};
+use music_player_types::types::{Album as AlbumType, RemoteCoverUrl, Song};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -65,7 +65,36 @@ impl From<AlbumType> for Model {
             id: album.id.clone(),
             title: album.title,
             cover: album.cover,
-            ..Default::default()
+            artist: album.artist,
+            artist_id: album.artist_id,
+            year: album.year,
+            tracks: album.tracks.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl Into<AlbumType> for Model {
+    fn into(self) -> AlbumType {
+        AlbumType {
+            id: self.id,
+            title: self.title,
+            cover: self.cover,
+            artist: self.artist,
+            artist_id: self.artist_id,
+            year: self.year,
+            tracks: self.tracks.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl RemoteCoverUrl for Model {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            cover: self
+                .cover
+                .clone()
+                .map(|cover| format!("{}/covers/{}", base_url, cover)),
+            ..self.clone()
         }
     }
 }

@@ -13,6 +13,7 @@ rust_library(
       "src/range_set.rs",
     ],
     deps = [
+      "//settings:music_player_settings",
       "@crate_index//:anyhow",
       "@crate_index//:bytes",
       "@crate_index//:futures-util",

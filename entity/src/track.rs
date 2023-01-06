@@ -1,4 +1,4 @@
-use music_player_types::types::{Song, Track as TrackType, RemoteTrackUrl};
+use music_player_types::types::{RemoteTrackUrl, Song, Track as TrackType};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -173,20 +173,26 @@ impl From<select_result::PlaylistTrack> for Model {
 
 impl From<TrackType> for Model {
     fn from(track: TrackType) -> Self {
-        let album = track.album.unwrap();
+        let track_album = track.album.unwrap();
         Self {
             id: track.id,
             title: track.title,
             artist: track.artist,
             uri: track.uri,
-            album_id: Some(album.id.clone()),
+            album_id: Some(track_album.id.clone()),
             artist_id: if track.artists.is_empty() {
                 None
             } else {
                 Some(track.artists[0].id.clone())
             },
             duration: track.duration,
-            album: album.into(),
+            album: album::Model {
+                id: track_album.id,
+                title: track_album.title,
+                cover: track_album.cover,
+                year: track_album.year,
+                ..Default::default()
+            },
             artists: track.artists.into_iter().map(Into::into).collect(),
             ..Default::default()
         }

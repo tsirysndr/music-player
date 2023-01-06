@@ -1,4 +1,4 @@
-use music_player_types::types::{Album as AlbumType, RemoteCoverUrl, Song};
+use music_player_types::types::{Album as AlbumType, RemoteCoverUrl, Song, Track as TrackType};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -61,6 +61,15 @@ impl From<&Song> for ActiveModel {
 
 impl From<AlbumType> for Model {
     fn from(album: AlbumType) -> Self {
+        let tracks: Vec<TrackType> = album
+            .clone()
+            .tracks
+            .into_iter()
+            .map(|track| TrackType {
+                album: Some(album.clone()),
+                ..track
+            })
+            .collect();
         Self {
             id: album.id.clone(),
             title: album.title,
@@ -68,7 +77,7 @@ impl From<AlbumType> for Model {
             artist: album.artist,
             artist_id: album.artist_id,
             year: album.year,
-            tracks: album.tracks.into_iter().map(Into::into).collect(),
+            tracks: tracks.into_iter().map(Into::into).collect(),
         }
     }
 }

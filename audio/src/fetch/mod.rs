@@ -27,11 +27,16 @@ use url::Url;
 
 use self::{client::Client, receive::audio_file_fetch};
 
-use crate::range_set::{Range, RangeSet};
+use crate::{
+    fetch::cache::Cache,
+    range_set::{Range, RangeSet},
+};
 
 pub mod client;
 
 pub mod receive;
+
+pub mod cache;
 
 pub type AudioFileResult = Result<(), anyhow::Error>;
 
@@ -230,6 +235,14 @@ impl StreamLoaderController {
         // terminate stream loading and don't load any more data for this file.
         self.send_stream_loader_command(StreamLoaderCommand::Close);
     }
+
+    pub fn mime_type(&self) -> Option<String> {
+        if let Some(ref shared) = self.stream_shared {
+            shared.get_mime_type()
+        } else {
+            None
+        }
+    }
 }
 
 pub struct AudioFileStreaming {
@@ -249,15 +262,28 @@ impl AudioFile {
         if Url::parse(url).is_err() {
             return Ok(AudioFile::Local(fs::File::open(url)?));
         }
+
+        let cache = Cache::new();
+        let file_id = format!("{:x}", md5::compute(url.to_owned()));
+        if cache.is_file_cached(file_id.as_str()) {
+            println!("File is cached: {}", file_id);
+            return Ok(AudioFile::Cached(cache.open_file(file_id.as_str())?));
+        }
+
         let (complete_tx, complete_rx) = oneshot::channel();
 
         let streaming = AudioFileStreaming::open(url.to_owned(), complete_tx, bytes_per_second);
 
-        let file_id = "";
+        let file_id = format!("{:x}", md5::compute(url.to_owned()));
 
         // spawn a task to download the file
         tokio::spawn(complete_rx.map_ok(move |mut file| {
             println!("Download complete: {}", file.path().display());
+            let cache = Cache::new();
+            match cache.save_file(&file_id, &mut file) {
+                Ok(_) => println!("Saved to cache: {}", file_id),
+                Err(e) => println!("Failed to save to cache: {}", e),
+            }
         }));
 
         Ok(AudioFile::Streaming(streaming.await?))
@@ -303,7 +329,7 @@ impl AudioFile {
                 None => return Err(Error::msg("No mime type found")),
             }
         }
-        let mut streamer = Client::new().stream_from_url(url, 0, MINIMUM_DOWNLOAD_SIZE)?;
+        let mut streamer = Client::new().stream_from_url(url, 0, 512)?;
         let response = streamer.next().await.ok_or(AudioFileError::NoData)??;
 
         let content_type = match response.headers().get(header::CONTENT_TYPE) {
@@ -350,6 +376,14 @@ impl AudioFileStreaming {
         let upper_bound: usize = str_value[hyphen_index + 1..slash_index].parse()?;
         let file_size = str_value[slash_index + 1..].parse()?;
 
+        let content_type = match response.headers().get(header::CONTENT_TYPE) {
+            Some(content_type) => content_type,
+            None => return Err(Error::msg("No Content-Type header")),
+        };
+
+        let mime = content_type.to_str()?;
+        let mime = mime.to_owned();
+
         let initial_request = StreamingRequest {
             streamer,
             initial_response: Some(response),
@@ -371,6 +405,7 @@ impl AudioFileStreaming {
             ping_time_ms: AtomicUsize::new(0),
             read_position: AtomicUsize::new(0),
             throughput: AtomicUsize::new(0),
+            mime_type: mime,
         });
 
         let write_file = NamedTempFile::new_in("/tmp/audio")?;
@@ -547,6 +582,7 @@ struct AudioFileShared {
     ping_time_ms: AtomicUsize,
     read_position: AtomicUsize,
     throughput: AtomicUsize,
+    mime_type: String,
 }
 
 impl AudioFileShared {
@@ -587,6 +623,20 @@ impl AudioFileShared {
     fn set_read_position(&self, position: u64) {
         self.read_position
             .store(position as usize, Ordering::Release)
+    }
+
+    fn get_mime_type(&self) -> Option<String> {
+        if Url::parse(&self.url).is_err() {
+            if Path::new(&self.url).exists() {
+                match mime_guess::from_path(&self.url).first() {
+                    Some(mime) => {
+                        return Some(mime.to_string());
+                    }
+                    None => return None,
+                };
+            }
+        }
+        Some(format!("{}", self.mime_type))
     }
 }
 

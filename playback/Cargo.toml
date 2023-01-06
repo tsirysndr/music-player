@@ -38,3 +38,4 @@ tokio = { version = "1.21.0", features = ["full"] }
 zerocopy = "0.6.1"
 owo-colors = "3.5.0"
 async-trait = "0.1.57"
+url = "2.3.1"

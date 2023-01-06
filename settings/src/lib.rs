@@ -109,11 +109,13 @@ pub fn get_application_directory() -> String {
     let playlists = format!("{}/playlists", path);
     let tracks = format!("{}/tracks", path);
     let covers = format!("{}/covers", path);
+    let cache = format!("{}/cache", path);
     fs::create_dir_all(&albums).unwrap();
     fs::create_dir_all(&artists).unwrap();
     fs::create_dir_all(&playlists).unwrap();
     fs::create_dir_all(&tracks).unwrap();
     fs::create_dir_all(&covers).unwrap();
+    fs::create_dir_all(&cache).unwrap();
 
     path
 }

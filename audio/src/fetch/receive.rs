@@ -342,6 +342,7 @@ async fn receive_data(
         };
 
         let data_size = data.len();
+        println!(" data_size: {}", data_size);
         file_data_tx.send(ReceivedData::Data(PartialFileData { offset, data }))?;
 
         actual_length += data_size;

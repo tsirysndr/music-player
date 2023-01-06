@@ -29,7 +29,6 @@ use crate::{
     decoder::{symphonia_decoder::SymphoniaDecoder, AudioDecoder},
     dither::{mk_ditherer, TriangularDitherer},
     formatter,
-    metadata::audio::AudioFileFormat,
 };
 
 const PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
@@ -712,14 +711,16 @@ impl PlayerTrackLoader {
                         .map(|decoder| Box::new(decoder) as Decoder)
                 };
 
+                println!(">> loading ...");
+
                 let mut format = Hint::new();
-                match AudioFile::get_mime_type(&song).await {
-                    Ok(mime_type) => {
+
+                match stream_loader_controller.mime_type() {
+                    Some(mime_type) => {
                         format.mime_type(&mime_type);
                     }
-                    Err(e) => {
-                        println!("Error: {}", e);
-                        return None;
+                    None => {
+                        println!("No mime type");
                     }
                 }
 
@@ -731,6 +732,8 @@ impl PlayerTrackLoader {
                         panic!("Failed to create decoder: {}", e);
                     }
                 };
+
+                println!(">> loaded ...");
 
                 return Some(PlayerLoadedTrackData { decoder });
             }

@@ -45,7 +45,11 @@ impl LibraryQuery {
 
             return Ok(tracks
                 .into_iter()
-                .map(|track| track.with_remote_track_url(base_url.as_str()))
+                .map(|track| {
+                    track
+                        .with_remote_track_url(base_url.as_str())
+                        .with_remote_cover_url(base_url.as_str())
+                })
                 .collect());
         }
 

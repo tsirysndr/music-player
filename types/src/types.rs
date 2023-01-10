@@ -477,6 +477,11 @@ impl RemoteCoverUrl for Artist {
                 .iter()
                 .map(|album| album.with_remote_cover_url(base_url))
                 .collect(),
+            songs: self
+                .songs
+                .iter()
+                .map(|track| track.with_remote_cover_url(base_url))
+                .collect(),
             ..self.clone()
         }
     }

@@ -432,6 +432,18 @@ impl RemoteTrackUrl for Track {
     }
 }
 
+impl RemoteCoverUrl for Track {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            album: match self.album {
+                Some(ref album) => Some(album.with_remote_cover_url(base_url)),
+                None => None,
+            },
+            ..self.clone()
+        }
+    }
+}
+
 impl RemoteCoverUrl for Album {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
         Self {

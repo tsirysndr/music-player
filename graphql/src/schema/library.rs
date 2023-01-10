@@ -159,7 +159,9 @@ impl LibraryQuery {
             let device = device.get("current_device").unwrap();
             let base_url = device.base_url.as_ref().unwrap();
 
-            return Ok(Track::from(track).with_remote_track_url(base_url.as_str()));
+            return Ok(Track::from(track)
+                .with_remote_track_url(base_url.as_str())
+                .with_remote_cover_url(base_url.as_str()));
         }
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();

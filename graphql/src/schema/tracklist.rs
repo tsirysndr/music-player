@@ -210,13 +210,25 @@ impl TracklistMutation {
 
         let id = id.to_string();
 
+        let track: track_entity::Model;
+
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
-            // TODO: call grpc to play next
+            let result = source.track(&id).await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            track = result
+                .with_remote_track_url(base_url.as_str())
+                .with_remote_cover_url(base_url.as_str())
+                .into();
+        } else {
+            track = TrackRepository::new(db.lock().await.get_connection())
+                .find(&id)
+                .await?;
         }
-        let track = TrackRepository::new(db.lock().await.get_connection())
-            .find(&id)
-            .await?;
 
         let player_cmd = ctx
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()

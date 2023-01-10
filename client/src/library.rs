@@ -3,7 +3,7 @@ use music_player_server::api::{
     metadata::v1alpha1::{Album, Artist, Track},
     music::v1alpha1::{
         library_service_client::LibraryServiceClient, GetAlbumDetailsRequest, GetAlbumsRequest,
-        GetArtistDetailsRequest, GetArtistsRequest, GetTracksRequest,
+        GetArtistDetailsRequest, GetArtistsRequest, GetTrackDetailsRequest, GetTracksRequest,
     },
 };
 use tonic::transport::Channel;
@@ -50,7 +50,9 @@ impl LibraryClient {
     }
 
     pub async fn song(&mut self, id: &str) -> Result<Option<Track>, Error> {
-        todo!()
+        let request = tonic::Request::new(GetTrackDetailsRequest { id: id.to_string() });
+        let response = self.client.get_track_details(request).await?;
+        Ok(response.into_inner().track)
     }
 
     pub async fn search(&mut self, query: &str) -> Result<(), Error> {

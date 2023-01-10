@@ -105,6 +105,7 @@ pub mod api {
                     id: model.id,
                     name: model.name,
                     songs: model.tracks.into_iter().map(Into::into).collect(),
+                    albums: model.albums.into_iter().map(Into::into).collect(),
                     ..Default::default()
                 }
             }
@@ -209,6 +210,10 @@ pub mod api {
                     track_number: Some(u32::try_from(self.track_number).unwrap_or_default()),
                     disc_number: u32::try_from(self.disc_number).unwrap_or_default(),
                     artists: self.artists.into_iter().map(Into::into).collect(),
+                    album: match self.album {
+                        Some(album) => Some(album.into()),
+                        None => None,
+                    },
                     ..Default::default()
                 }
             }

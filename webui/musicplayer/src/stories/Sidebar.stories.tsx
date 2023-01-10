@@ -12,4 +12,7 @@ const Template: ComponentStory<typeof Sidebar> = (args: any) => (
 
 export const Default = Template.bind({
   devices: [],
+  currentDevice: undefined,
+  connectToDevice: (_id: string) => {},
+  disconnectFromDevice: () => {},
 });

@@ -57,45 +57,66 @@ export type ConnectModalProps = {
   isOpen: boolean;
   onClose: () => void;
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (id: string) => void;
+  disconnectFromDevice: () => void;
 };
 
-const ConnectModal: FC<ConnectModalProps> = ({ onClose, isOpen, devices }) => {
+const ConnectModal: FC<ConnectModalProps> = ({
+  onClose,
+  isOpen,
+  devices,
+  currentDevice,
+  connectToDevice,
+  disconnectFromDevice,
+}) => {
+  const _connectToDevice = (id: string) => {
+    connectToDevice(id);
+    onClose();
+  };
+  const _disconnectFromDevice = () => {
+    disconnectFromDevice();
+    onClose();
+  };
   return (
     <Modal onClose={onClose} isOpen={isOpen}>
       <ModalHeader>Connect to</ModalHeader>
       <ModalBody>
         <List className="connect-list">
           {devices.map((device) => (
-            <ListItem
-              artwork={() => (
-                <Artwork
-                  icon={device.type}
-                  color={device.name === "xbmc" ? "#28cbfc17" : undefined}
-                />
-              )}
-              overrides={{
-                Content: {
-                  style: {
-                    borderBottom: "none",
+            <div onClick={() => _connectToDevice(device.id)}>
+              <ListItem
+                artwork={() => (
+                  <Artwork
+                    icon={device.type}
+                    color={device.name === "xbmc" ? "#28cbfc17" : undefined}
+                  />
+                )}
+                overrides={{
+                  Content: {
+                    style: {
+                      borderBottom: "none",
+                    },
                   },
-                },
-              }}
-              endEnhancer={() => (
-                <>
-                  {device.isConnected && (
-                    <Button
-                      size={SIZE.compact}
-                      shape={SHAPE.pill}
-                      kind="tertiary"
-                    >
-                      Disconnect
-                    </Button>
-                  )}
-                </>
-              )}
-            >
-              <ListItemLabel children={device.name} />
-            </ListItem>
+                }}
+                endEnhancer={() => (
+                  <>
+                    {device.id === currentDevice?.id && (
+                      <Button
+                        size={SIZE.compact}
+                        shape={SHAPE.pill}
+                        kind="tertiary"
+                        onClick={() => _disconnectFromDevice()}
+                      >
+                        Disconnect
+                      </Button>
+                    )}
+                  </>
+                )}
+              >
+                <ListItemLabel children={device.name} />
+              </ListItem>
+            </div>
           ))}
           {devices.length === 0 && (
             <Placeholder>

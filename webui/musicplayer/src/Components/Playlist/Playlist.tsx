@@ -150,6 +150,9 @@ export type PlaylistProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const Playlist: FC<PlaylistProps> = (props) => {

@@ -204,4 +204,7 @@ Default.args = {
   },
   nowPlaying: {},
   devices: [],
+  currentDevice: undefined,
+  connectToDevice: (_id) => {},
+  disconnectFromDevice: () => {},
 };

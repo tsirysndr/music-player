@@ -427,10 +427,27 @@ export type TracklistChanged = {
   tracklist: Tracklist;
 };
 
+export type ConnectToDeviceMutationVariables = Exact<{
+  id: Scalars['ID'];
+}>;
+
+
+export type ConnectToDeviceMutation = { __typename?: 'Mutation', connectToDevice: { __typename?: 'Device', id: string } };
+
+export type DisconnectFromDeviceMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DisconnectFromDeviceMutation = { __typename?: 'Mutation', disconnectFromDevice?: { __typename?: 'Device', id: string } | null };
+
 export type ListDevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type ListDevicesQuery = { __typename?: 'Query', listDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean }> };
+
+export type ConnectedDeviceQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ConnectedDeviceQuery = { __typename?: 'Query', connectedDevice: { __typename?: 'Device', id: string, name: string, app: string, host: string, port: number, isConnected: boolean } };
 
 export type OnNewDeviceSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
@@ -754,6 +771,71 @@ export const FolderFragmentFragmentDoc = gql`
   }
 }
     `;
+export const ConnectToDeviceDocument = gql`
+    mutation ConnectToDevice($id: ID!) {
+  connectToDevice(id: $id) {
+    id
+  }
+}
+    `;
+export type ConnectToDeviceMutationFn = Apollo.MutationFunction<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>;
+
+/**
+ * __useConnectToDeviceMutation__
+ *
+ * To run a mutation, you first call `useConnectToDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConnectToDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [connectToDeviceMutation, { data, loading, error }] = useConnectToDeviceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useConnectToDeviceMutation(baseOptions?: Apollo.MutationHookOptions<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>(ConnectToDeviceDocument, options);
+      }
+export type ConnectToDeviceMutationHookResult = ReturnType<typeof useConnectToDeviceMutation>;
+export type ConnectToDeviceMutationResult = Apollo.MutationResult<ConnectToDeviceMutation>;
+export type ConnectToDeviceMutationOptions = Apollo.BaseMutationOptions<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>;
+export const DisconnectFromDeviceDocument = gql`
+    mutation DisconnectFromDevice {
+  disconnectFromDevice {
+    id
+  }
+}
+    `;
+export type DisconnectFromDeviceMutationFn = Apollo.MutationFunction<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>;
+
+/**
+ * __useDisconnectFromDeviceMutation__
+ *
+ * To run a mutation, you first call `useDisconnectFromDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDisconnectFromDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [disconnectFromDeviceMutation, { data, loading, error }] = useDisconnectFromDeviceMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDisconnectFromDeviceMutation(baseOptions?: Apollo.MutationHookOptions<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>(DisconnectFromDeviceDocument, options);
+      }
+export type DisconnectFromDeviceMutationHookResult = ReturnType<typeof useDisconnectFromDeviceMutation>;
+export type DisconnectFromDeviceMutationResult = Apollo.MutationResult<DisconnectFromDeviceMutation>;
+export type DisconnectFromDeviceMutationOptions = Apollo.BaseMutationOptions<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>;
 export const ListDevicesDocument = gql`
     query ListDevices {
   listDevices {
@@ -794,6 +876,45 @@ export function useListDevicesLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type ListDevicesQueryHookResult = ReturnType<typeof useListDevicesQuery>;
 export type ListDevicesLazyQueryHookResult = ReturnType<typeof useListDevicesLazyQuery>;
 export type ListDevicesQueryResult = Apollo.QueryResult<ListDevicesQuery, ListDevicesQueryVariables>;
+export const ConnectedDeviceDocument = gql`
+    query ConnectedDevice {
+  connectedDevice {
+    id
+    name
+    app
+    host
+    port
+    isConnected
+  }
+}
+    `;
+
+/**
+ * __useConnectedDeviceQuery__
+ *
+ * To run a query within a React component, call `useConnectedDeviceQuery` and pass it any options that fit your needs.
+ * When your component renders, `useConnectedDeviceQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useConnectedDeviceQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useConnectedDeviceQuery(baseOptions?: Apollo.QueryHookOptions<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>(ConnectedDeviceDocument, options);
+      }
+export function useConnectedDeviceLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>(ConnectedDeviceDocument, options);
+        }
+export type ConnectedDeviceQueryHookResult = ReturnType<typeof useConnectedDeviceQuery>;
+export type ConnectedDeviceLazyQueryHookResult = ReturnType<typeof useConnectedDeviceLazyQuery>;
+export type ConnectedDeviceQueryResult = Apollo.QueryResult<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>;
 export const OnNewDeviceDocument = gql`
     subscription OnNewDevice {
   onNewDevice {

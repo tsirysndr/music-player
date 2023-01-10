@@ -30,7 +30,10 @@ impl DevicesQuery {
             .unwrap();
         let connected_device = connected_device.lock().unwrap().clone();
         match connected_device.get("current_device") {
-            Some(device) => Ok(device.clone().into()),
+            Some(device) => Ok(Device {
+                is_connected: true,
+                ..device.clone().into()
+            }),
             None => Err(Error::new("No device connected")),
         }
     }

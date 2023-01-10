@@ -178,6 +178,9 @@ export type ArtistDetailsProps = {
     position?: number
   ) => void;
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {

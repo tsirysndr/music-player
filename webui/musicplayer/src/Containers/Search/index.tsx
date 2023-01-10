@@ -10,7 +10,8 @@ import { useSearch } from "../../Hooks/useSearch";
 const SearchPage = () => {
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const { devices } = useDevices();
+  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
+    useDevices();
   const {
     play,
     pause,
@@ -96,6 +97,9 @@ const SearchPage = () => {
         }
         recentPlaylists={recentPlaylists}
         devices={devices}
+        currentDevice={currentDevice}
+        connectToDevice={(id) => connectToDevice({ variables: { id } })}
+        disconnectFromDevice={() => disconnectFromDevice()}
       />
     </>
   );

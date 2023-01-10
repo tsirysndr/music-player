@@ -158,6 +158,9 @@ export type AlbumDetailsProps = {
     position?: number
   ) => void;
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {

@@ -97,6 +97,9 @@ export type AlbumsProps = {
     position?: number
   ) => void;
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 export type AlbumProps = {

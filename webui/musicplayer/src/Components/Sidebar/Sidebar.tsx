@@ -39,6 +39,8 @@ const ConnectText = styled.span`
   flex: 1;
   font-family: RockfordSansRegular;
   text-overflow: ellipsis;
+  margin-left: 10px;
+  margin-right: 10px;
 `;
 
 export type SidebarProps = {
@@ -59,11 +61,15 @@ export type SidebarProps = {
     position?: number
   ) => void;
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const Sidebar: FC<SidebarProps> = (props) => {
   const [openConnectModal, setOpenConnectModal] = useState(false);
-  const connected = false;
+  const { currentDevice } = props;
+  const connected = !!currentDevice;
   return (
     <Container>
       <Search {...props} />
@@ -74,12 +80,15 @@ const Sidebar: FC<SidebarProps> = (props) => {
         connected={connected}
       >
         <PlugConnected size={20} color="#ab28fc" />
-        {connected && <ConnectText>Music Player (Macbook Pro)</ConnectText>}
+        {connected && <ConnectText>Device: {currentDevice.name}</ConnectText>}
       </ConnectButton>
       <ConnectModal
         isOpen={openConnectModal}
         onClose={() => setOpenConnectModal(false)}
         devices={props.devices}
+        currentDevice={props.currentDevice}
+        connectToDevice={props.connectToDevice}
+        disconnectFromDevice={props.disconnectFromDevice}
       />
     </Container>
   );

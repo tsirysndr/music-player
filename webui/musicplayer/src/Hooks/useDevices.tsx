@@ -1,12 +1,21 @@
 import _ from "lodash";
 import { useEffect, useState } from "react";
 import { Device } from "../Types/Device";
-import { useListDevicesQuery, useOnNewDeviceSubscription } from "./GraphQL";
+import {
+  useConnectedDeviceQuery,
+  useConnectToDeviceMutation,
+  useDisconnectFromDeviceMutation,
+  useListDevicesQuery,
+  useOnNewDeviceSubscription,
+} from "./GraphQL";
 
 export const useDevices = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const { data } = useOnNewDeviceSubscription();
   const { data: listDevicesData } = useListDevicesQuery();
+  const { data: connectedDeviceData } = useConnectedDeviceQuery();
+  const [connectToDevice] = useConnectToDeviceMutation();
+  const [disconnectFromDevice] = useDisconnectFromDeviceMutation();
 
   useEffect(() => {
     if (
@@ -45,5 +54,14 @@ export const useDevices = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, listDevicesData]);
 
-  return { devices };
+  const currentDevice: Device | undefined = connectedDeviceData
+    ? {
+        id: connectedDeviceData.connectedDevice.id,
+        type: connectedDeviceData.connectedDevice.app,
+        name: connectedDeviceData.connectedDevice.name,
+        isConnected: connectedDeviceData.connectedDevice.isConnected,
+      }
+    : undefined;
+
+  return { devices, currentDevice, connectToDevice, disconnectFromDevice };
 };

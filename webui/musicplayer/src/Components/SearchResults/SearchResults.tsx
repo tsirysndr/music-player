@@ -63,6 +63,9 @@ export type SearchResultsProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const SearchResults: FC<SearchResultsProps> = (props) => {

@@ -26,7 +26,8 @@ const AlbumsPage = () => {
   } = usePlayback();
   const navigate = useNavigate();
   const { onSearch } = useSearch();
-  const { devices } = useDevices();
+  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
+    useDevices();
   const albums = !loading && data ? data.albums : [];
   const {
     folders,
@@ -80,6 +81,9 @@ const AlbumsPage = () => {
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
       devices={devices}
+      currentDevice={currentDevice}
+      connectToDevice={(id) => connectToDevice({ variables: { id } })}
+      disconnectFromDevice={() => disconnectFromDevice()}
     />
   );
 };

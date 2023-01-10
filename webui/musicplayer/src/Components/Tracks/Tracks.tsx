@@ -51,6 +51,9 @@ export type TracksProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const Tracks: FC<TracksProps> = (props) => {

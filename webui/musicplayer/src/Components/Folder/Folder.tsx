@@ -190,6 +190,9 @@ export type FolderProps = {
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
   folder?: any;
   devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const Folder: FC<FolderProps> = (props) => {

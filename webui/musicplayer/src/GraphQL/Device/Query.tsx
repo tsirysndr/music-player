@@ -13,3 +13,16 @@ export const LIST_DEVICES = gql`
     }
   }
 `;
+
+export const CONNECTED_DEVICE = gql`
+  query ConnectedDevice {
+    connectedDevice {
+      id
+      name
+      app
+      host
+      port
+      isConnected
+    }
+  }
+`;

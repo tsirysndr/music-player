@@ -49,5 +49,6 @@ rust_library(
       "@crate_index//:slab",
       "@crate_index//:futures-util",
       "@crate_index//:once_cell",
+      "@crate_index//:url",
     ] + all_crate_deps(),
 )

@@ -7,6 +7,7 @@ rust_library(
     name = "music_player_audio",
     srcs = [
       "src/fetch/mod.rs",
+      "src/fetch/cache.rs",
       "src/fetch/client.rs",
       "src/fetch/receive.rs",
       "src/lib.rs",

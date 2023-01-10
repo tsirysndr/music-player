@@ -7,6 +7,7 @@ import "metadata/v1alpha1/album.proto";
 message ArtistSong {
   string id = 1;
   string title = 2;
+  string artist = 3;
   repeated Artist artists = 4;
   float duration = 5;
   int32 disc_number = 6;

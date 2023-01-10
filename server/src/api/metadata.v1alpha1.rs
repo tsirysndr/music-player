@@ -49,6 +49,8 @@ pub struct ArtistSong {
     pub id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub title: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub artist: ::prost::alloc::string::String,
     #[prost(message, repeated, tag = "4")]
     pub artists: ::prost::alloc::vec::Vec<Artist>,
     #[prost(float, tag = "5")]

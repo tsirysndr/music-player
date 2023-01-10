@@ -196,6 +196,7 @@ pub mod api {
                     track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
+                    artist: model.artist,
                     ..Default::default()
                 }
             }
@@ -214,6 +215,7 @@ pub mod api {
                         Some(album) => Some(album.into()),
                         None => None,
                     },
+                    artist: self.artist,
                     ..Default::default()
                 }
             }

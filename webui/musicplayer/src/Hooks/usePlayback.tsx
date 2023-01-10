@@ -63,7 +63,7 @@ export const usePlayback = () => {
     album: currentTrack?.album?.title,
     duration,
     progress: position,
-    cover: resourceUriResolver.resolve(`/covers/${currentTrack?.album?.id}.jpg`),
+    cover: resourceUriResolver.resolve(`/covers/${currentTrack?.album?.cover}`),
     albumId: currentTrack?.album?.id,
     isPlaying:
       playerStateData?.playerState?.isPlaying ||

@@ -16,7 +16,7 @@ use music_player_types::types::{self, Connected};
 
 use super::{
     connect_to, connect_to_current_device,
-    objects::device::{App, Device},
+    objects::device::{App, ConnectedDevice, Device, DisconnectedDevice},
 };
 
 #[derive(Default)]
@@ -114,6 +114,8 @@ impl DevicesMutation {
                     None => return Err(Error::new("No source found")),
                 }
 
+                SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
+
                 Ok(types::Device::from(device.clone())
                     .is_connected(Some(&device.clone()))
                     .into())
@@ -132,6 +134,7 @@ impl DevicesMutation {
         match connected_device.remove("current_device") {
             Some(device) => {
                 io_device.clear_source();
+                SimpleBroker::<DisconnectedDevice>::publish(device.clone().into());
                 Ok(Some(device.clone().into()))
             }
             None => Ok(None),
@@ -161,5 +164,13 @@ impl DevicesSubscription {
             });
         });
         SimpleBroker::<Device>::subscribe()
+    }
+
+    async fn on_connected(&self, ctx: &Context<'_>) -> impl Stream<Item = ConnectedDevice> {
+        SimpleBroker::<ConnectedDevice>::subscribe()
+    }
+
+    async fn on_disconnected(&self, ctx: &Context<'_>) -> impl Stream<Item = DisconnectedDevice> {
+        SimpleBroker::<DisconnectedDevice>::subscribe()
     }
 }

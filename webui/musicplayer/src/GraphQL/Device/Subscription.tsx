@@ -13,3 +13,21 @@ export const NEW_DEVICE = gql`
     }
   }
 `;
+
+export const ON_DEVICE_CONNECTED = gql`
+  subscription OnDeviceConnected {
+    onConnected {
+      id
+      name
+    }
+  }
+`;
+
+export const ON_DEVICE_DISCONNECTED = gql`
+  subscription OnDeviceDisconnected {
+    onDisconnected {
+      id
+      name
+    }
+  }
+`;

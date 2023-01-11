@@ -45,6 +45,17 @@ export type Artist = {
   website: Scalars['String'];
 };
 
+export type ConnectedDevice = {
+  __typename?: 'ConnectedDevice';
+  app: Scalars['String'];
+  host: Scalars['String'];
+  id: Scalars['String'];
+  isConnected: Scalars['Boolean'];
+  name: Scalars['String'];
+  port: Scalars['Int'];
+  service: Scalars['String'];
+};
+
 export type CurrentlyPlayingSong = {
   __typename?: 'CurrentlyPlayingSong';
   index: Scalars['Int'];
@@ -55,6 +66,17 @@ export type CurrentlyPlayingSong = {
 
 export type Device = {
   __typename?: 'Device';
+  app: Scalars['String'];
+  host: Scalars['String'];
+  id: Scalars['String'];
+  isConnected: Scalars['Boolean'];
+  name: Scalars['String'];
+  port: Scalars['Int'];
+  service: Scalars['String'];
+};
+
+export type DisconnectedDevice = {
+  __typename?: 'DisconnectedDevice';
   app: Scalars['String'];
   host: Scalars['String'];
   id: Scalars['String'];
@@ -365,6 +387,8 @@ export type Subscription = {
   currentlyPlayingSong: Track;
   folder: FolderChanged;
   folders: Array<Folder>;
+  onConnected: ConnectedDevice;
+  onDisconnected: DisconnectedDevice;
   onNewDevice: Device;
   playerState: PlayerState;
   playlist: PlaylistChanged;
@@ -453,6 +477,16 @@ export type OnNewDeviceSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
 export type OnNewDeviceSubscription = { __typename?: 'Subscription', onNewDevice: { __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean } };
+
+export type OnDeviceConnectedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnDeviceConnectedSubscription = { __typename?: 'Subscription', onConnected: { __typename?: 'ConnectedDevice', id: string, name: string } };
+
+export type OnDeviceDisconnectedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnDeviceDisconnectedSubscription = { __typename?: 'Subscription', onDisconnected: { __typename?: 'DisconnectedDevice', id: string, name: string } };
 
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
 
@@ -950,6 +984,66 @@ export function useOnNewDeviceSubscription(baseOptions?: Apollo.SubscriptionHook
       }
 export type OnNewDeviceSubscriptionHookResult = ReturnType<typeof useOnNewDeviceSubscription>;
 export type OnNewDeviceSubscriptionResult = Apollo.SubscriptionResult<OnNewDeviceSubscription>;
+export const OnDeviceConnectedDocument = gql`
+    subscription OnDeviceConnected {
+  onConnected {
+    id
+    name
+  }
+}
+    `;
+
+/**
+ * __useOnDeviceConnectedSubscription__
+ *
+ * To run a query within a React component, call `useOnDeviceConnectedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnDeviceConnectedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnDeviceConnectedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnDeviceConnectedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<OnDeviceConnectedSubscription, OnDeviceConnectedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<OnDeviceConnectedSubscription, OnDeviceConnectedSubscriptionVariables>(OnDeviceConnectedDocument, options);
+      }
+export type OnDeviceConnectedSubscriptionHookResult = ReturnType<typeof useOnDeviceConnectedSubscription>;
+export type OnDeviceConnectedSubscriptionResult = Apollo.SubscriptionResult<OnDeviceConnectedSubscription>;
+export const OnDeviceDisconnectedDocument = gql`
+    subscription OnDeviceDisconnected {
+  onDisconnected {
+    id
+    name
+  }
+}
+    `;
+
+/**
+ * __useOnDeviceDisconnectedSubscription__
+ *
+ * To run a query within a React component, call `useOnDeviceDisconnectedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnDeviceDisconnectedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnDeviceDisconnectedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnDeviceDisconnectedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<OnDeviceDisconnectedSubscription, OnDeviceDisconnectedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<OnDeviceDisconnectedSubscription, OnDeviceDisconnectedSubscriptionVariables>(OnDeviceDisconnectedDocument, options);
+      }
+export type OnDeviceDisconnectedSubscriptionHookResult = ReturnType<typeof useOnDeviceDisconnectedSubscription>;
+export type OnDeviceDisconnectedSubscriptionResult = Apollo.SubscriptionResult<OnDeviceDisconnectedSubscription>;
 export const GetAlbumsDocument = gql`
     query GetAlbums($offset: Int, $limit: Int) {
   albums(offset: $offset, limit: $limit) {

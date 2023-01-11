@@ -71,6 +71,9 @@ const ConnectModal: FC<ConnectModalProps> = ({
   disconnectFromDevice,
 }) => {
   const _connectToDevice = (id: string) => {
+    if (currentDevice?.id === id) {
+      return;
+    }
     connectToDevice(id);
     onClose();
   };

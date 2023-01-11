@@ -20,7 +20,7 @@ const ConnectButton = styled.button<{
   connected?: boolean;
 }>`
   border: none;
-  background-color: #ab28fc0d;
+  background-color: #fbf5ff;
   height: 32px;
   ${(props) => (props.connected ? "width: 272px;" : "40px")}
   display: flex;
@@ -30,7 +30,6 @@ const ConnectButton = styled.button<{
   position: absolute;
   bottom: 0;
   left: 0;
-  overflow: hidden;
 `;
 
 const ConnectText = styled.span`
@@ -41,6 +40,8 @@ const ConnectText = styled.span`
   text-overflow: ellipsis;
   margin-left: 10px;
   margin-right: 10px;
+  overflow: hidden;
+  white-space: nowrap;
 `;
 
 export type SidebarProps = {

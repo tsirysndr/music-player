@@ -35,16 +35,6 @@ impl PlaybackQuery {
             return Ok(response);
         }
 
-        if track.is_none() {
-            let response = CurrentlyPlayingSong {
-                track: None,
-                index: 0,
-                position_ms: 0,
-                is_playing: false,
-            };
-            return Ok(response);
-        }
-
         let track = track.unwrap();
 
         Ok(CurrentlyPlayingSong {

@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 use super::{Addon, StreamingAddon};
 
 pub struct Deezer {
@@ -47,7 +49,7 @@ impl Addon for Deezer {
 }
 
 impl StreamingAddon for Deezer {
-    fn stream(&self, url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn stream(&self, url: &str) -> Result<(), Error> {
         todo!("Implement Deezer::stream");
     }
 }

@@ -17,8 +17,10 @@ use crate::{tests::setup_new_params, tracklist::TracklistClient};
 
 #[tokio::test]
 async fn add() -> Result<(), Box<dyn std::error::Error>> {
+    let host = "0.0.0.0".to_owned();
+    let port = 4086;
     let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url) =
-        setup_new_params(4086).await;
+        setup_new_params(port).await;
 
     let (_, _) = Player::new(
         move || backend(None, audio_format),
@@ -45,7 +47,7 @@ async fn add() -> Result<(), Box<dyn std::error::Error>> {
     });
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let mut client = TracklistClient::new(4086).await?;
+    let mut client = TracklistClient::new(host, port).await?;
 
     client.add("3ac1f1651b6ef6d5f3f55b711e3bfcd1").await?;
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -63,8 +65,10 @@ async fn add() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 async fn list() -> Result<(), Box<dyn std::error::Error>> {
+    let host = "0.0.0.0".to_owned();
+    let port = 4087;
     let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url) =
-        setup_new_params(4087).await;
+        setup_new_params(port).await;
     let (_, _) = Player::new(
         move || backend(None, audio_format),
         |_| {},
@@ -90,7 +94,7 @@ async fn list() -> Result<(), Box<dyn std::error::Error>> {
     });
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let mut client = TracklistClient::new(4087).await?;
+    let mut client = TracklistClient::new(host, port).await?;
     let (previous_tracks, next_tracks) = client.list().await?;
     assert_eq!(previous_tracks.len(), 0);
     assert_eq!(next_tracks.len(), 0);

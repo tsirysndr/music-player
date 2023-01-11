@@ -27,6 +27,11 @@ export type Album = {
   year?: Maybe<Scalars['Int']>;
 };
 
+export enum App {
+  MusicPlayer = 'MUSIC_PLAYER',
+  Xbmc = 'XBMC'
+}
+
 export type Artist = {
   __typename?: 'Artist';
   albums: Array<Album>;
@@ -40,12 +45,45 @@ export type Artist = {
   website: Scalars['String'];
 };
 
+export type ConnectedDevice = {
+  __typename?: 'ConnectedDevice';
+  app: Scalars['String'];
+  host: Scalars['String'];
+  id: Scalars['String'];
+  isConnected: Scalars['Boolean'];
+  name: Scalars['String'];
+  port: Scalars['Int'];
+  service: Scalars['String'];
+};
+
 export type CurrentlyPlayingSong = {
   __typename?: 'CurrentlyPlayingSong';
   index: Scalars['Int'];
   isPlaying: Scalars['Boolean'];
   positionMs: Scalars['Int'];
   track?: Maybe<Track>;
+};
+
+export type Device = {
+  __typename?: 'Device';
+  app: Scalars['String'];
+  host: Scalars['String'];
+  id: Scalars['String'];
+  isConnected: Scalars['Boolean'];
+  name: Scalars['String'];
+  port: Scalars['Int'];
+  service: Scalars['String'];
+};
+
+export type DisconnectedDevice = {
+  __typename?: 'DisconnectedDevice';
+  app: Scalars['String'];
+  host: Scalars['String'];
+  id: Scalars['String'];
+  isConnected: Scalars['Boolean'];
+  name: Scalars['String'];
+  port: Scalars['Int'];
+  service: Scalars['String'];
 };
 
 export type Folder = {
@@ -68,10 +106,12 @@ export type Mutation = {
   addTrackToPlaylist: Playlist;
   addTracks: Scalars['Boolean'];
   clearTracklist: Scalars['Boolean'];
+  connectToDevice: Device;
   createFolder: Folder;
   createPlaylist: Playlist;
   deleteFolder: Folder;
   deletePlaylist: Playlist;
+  disconnectFromDevice?: Maybe<Device>;
   movePlaylistToFolder: Folder;
   movePlaylistsToFolder: Folder;
   next: Scalars['Boolean'];
@@ -109,6 +149,11 @@ export type MutationAddTrackToPlaylistArgs = {
 
 export type MutationAddTracksArgs = {
   tracks: Array<TrackInput>;
+};
+
+
+export type MutationConnectToDeviceArgs = {
+  id: Scalars['ID'];
 };
 
 
@@ -256,6 +301,7 @@ export type Query = {
   albums: Array<Album>;
   artist: Artist;
   artists: Array<Artist>;
+  connectedDevice: Device;
   currentlyPlayingSong: CurrentlyPlayingSong;
   folder: Folder;
   folders: Array<Folder>;
@@ -265,6 +311,7 @@ export type Query = {
   getRandom: Scalars['Boolean'];
   getRepeat: Scalars['Boolean'];
   getVolume: Scalars['Int'];
+  listDevices: Array<Device>;
   mainPlaylists: Array<Playlist>;
   playlist: Playlist;
   playlists: Array<Playlist>;
@@ -281,13 +328,30 @@ export type QueryAlbumArgs = {
 };
 
 
+export type QueryAlbumsArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
+
 export type QueryArtistArgs = {
   id: Scalars['ID'];
 };
 
 
+export type QueryArtistsArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
+
 export type QueryFolderArgs = {
   id: Scalars['ID'];
+};
+
+
+export type QueryListDevicesArgs = {
+  filter?: InputMaybe<App>;
 };
 
 
@@ -305,6 +369,12 @@ export type QueryTrackArgs = {
   id: Scalars['ID'];
 };
 
+
+export type QueryTracksArgs = {
+  limit?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+};
+
 export type SearchResult = {
   __typename?: 'SearchResult';
   albums: Array<Album>;
@@ -317,6 +387,9 @@ export type Subscription = {
   currentlyPlayingSong: Track;
   folder: FolderChanged;
   folders: Array<Folder>;
+  onConnected: ConnectedDevice;
+  onDisconnected: DisconnectedDevice;
+  onNewDevice: Device;
   playerState: PlayerState;
   playlist: PlaylistChanged;
   playlists: Array<Playlist>;
@@ -378,6 +451,43 @@ export type TracklistChanged = {
   tracklist: Tracklist;
 };
 
+export type ConnectToDeviceMutationVariables = Exact<{
+  id: Scalars['ID'];
+}>;
+
+
+export type ConnectToDeviceMutation = { __typename?: 'Mutation', connectToDevice: { __typename?: 'Device', id: string } };
+
+export type DisconnectFromDeviceMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DisconnectFromDeviceMutation = { __typename?: 'Mutation', disconnectFromDevice?: { __typename?: 'Device', id: string } | null };
+
+export type ListDevicesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ListDevicesQuery = { __typename?: 'Query', listDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean }> };
+
+export type ConnectedDeviceQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ConnectedDeviceQuery = { __typename?: 'Query', connectedDevice: { __typename?: 'Device', id: string, name: string, app: string, host: string, port: number, isConnected: boolean } };
+
+export type OnNewDeviceSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnNewDeviceSubscription = { __typename?: 'Subscription', onNewDevice: { __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean } };
+
+export type OnDeviceConnectedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnDeviceConnectedSubscription = { __typename?: 'Subscription', onConnected: { __typename?: 'ConnectedDevice', id: string, name: string } };
+
+export type OnDeviceDisconnectedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnDeviceDisconnectedSubscription = { __typename?: 'Subscription', onDisconnected: { __typename?: 'DisconnectedDevice', id: string, name: string } };
+
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
 
 export type ArtistFragmentFragment = { __typename?: 'Artist', id: string, name: string, picture: string };
@@ -388,17 +498,26 @@ export type PlaylistFragmentFragment = { __typename?: 'Playlist', id: string, na
 
 export type FolderFragmentFragment = { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
-export type GetAlbumsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetAlbumsQueryVariables = Exact<{
+  offset?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetAlbumsQuery = { __typename?: 'Query', albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> }> };
 
-export type GetArtistsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetArtistsQueryVariables = Exact<{
+  offset?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetArtistsQuery = { __typename?: 'Query', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }> };
 
-export type GetTracksQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetTracksQueryVariables = Exact<{
+  offset?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetTracksQuery = { __typename?: 'Query', tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null } }> };
@@ -447,7 +566,7 @@ export type PreviousMutation = { __typename?: 'Mutation', previous: boolean };
 export type CurrentlyPlayingSongQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } | null } };
+export type CurrentlyPlayingSongQuery = { __typename?: 'Query', currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } } | null } };
 
 export type PlayerStateChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
@@ -462,7 +581,7 @@ export type TrackTimePositionChangedSubscription = { __typename?: 'Subscription'
 export type CurrentlyPlayingSongChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string } } };
+export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } } };
 
 export type CreatePlaylistMutationVariables = Exact<{
   name: Scalars['String'];
@@ -686,9 +805,248 @@ export const FolderFragmentFragmentDoc = gql`
   }
 }
     `;
+export const ConnectToDeviceDocument = gql`
+    mutation ConnectToDevice($id: ID!) {
+  connectToDevice(id: $id) {
+    id
+  }
+}
+    `;
+export type ConnectToDeviceMutationFn = Apollo.MutationFunction<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>;
+
+/**
+ * __useConnectToDeviceMutation__
+ *
+ * To run a mutation, you first call `useConnectToDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConnectToDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [connectToDeviceMutation, { data, loading, error }] = useConnectToDeviceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useConnectToDeviceMutation(baseOptions?: Apollo.MutationHookOptions<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>(ConnectToDeviceDocument, options);
+      }
+export type ConnectToDeviceMutationHookResult = ReturnType<typeof useConnectToDeviceMutation>;
+export type ConnectToDeviceMutationResult = Apollo.MutationResult<ConnectToDeviceMutation>;
+export type ConnectToDeviceMutationOptions = Apollo.BaseMutationOptions<ConnectToDeviceMutation, ConnectToDeviceMutationVariables>;
+export const DisconnectFromDeviceDocument = gql`
+    mutation DisconnectFromDevice {
+  disconnectFromDevice {
+    id
+  }
+}
+    `;
+export type DisconnectFromDeviceMutationFn = Apollo.MutationFunction<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>;
+
+/**
+ * __useDisconnectFromDeviceMutation__
+ *
+ * To run a mutation, you first call `useDisconnectFromDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDisconnectFromDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [disconnectFromDeviceMutation, { data, loading, error }] = useDisconnectFromDeviceMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDisconnectFromDeviceMutation(baseOptions?: Apollo.MutationHookOptions<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>(DisconnectFromDeviceDocument, options);
+      }
+export type DisconnectFromDeviceMutationHookResult = ReturnType<typeof useDisconnectFromDeviceMutation>;
+export type DisconnectFromDeviceMutationResult = Apollo.MutationResult<DisconnectFromDeviceMutation>;
+export type DisconnectFromDeviceMutationOptions = Apollo.BaseMutationOptions<DisconnectFromDeviceMutation, DisconnectFromDeviceMutationVariables>;
+export const ListDevicesDocument = gql`
+    query ListDevices {
+  listDevices {
+    id
+    app
+    name
+    service
+    host
+    port
+    isConnected
+  }
+}
+    `;
+
+/**
+ * __useListDevicesQuery__
+ *
+ * To run a query within a React component, call `useListDevicesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useListDevicesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useListDevicesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useListDevicesQuery(baseOptions?: Apollo.QueryHookOptions<ListDevicesQuery, ListDevicesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ListDevicesQuery, ListDevicesQueryVariables>(ListDevicesDocument, options);
+      }
+export function useListDevicesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ListDevicesQuery, ListDevicesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ListDevicesQuery, ListDevicesQueryVariables>(ListDevicesDocument, options);
+        }
+export type ListDevicesQueryHookResult = ReturnType<typeof useListDevicesQuery>;
+export type ListDevicesLazyQueryHookResult = ReturnType<typeof useListDevicesLazyQuery>;
+export type ListDevicesQueryResult = Apollo.QueryResult<ListDevicesQuery, ListDevicesQueryVariables>;
+export const ConnectedDeviceDocument = gql`
+    query ConnectedDevice {
+  connectedDevice {
+    id
+    name
+    app
+    host
+    port
+    isConnected
+  }
+}
+    `;
+
+/**
+ * __useConnectedDeviceQuery__
+ *
+ * To run a query within a React component, call `useConnectedDeviceQuery` and pass it any options that fit your needs.
+ * When your component renders, `useConnectedDeviceQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useConnectedDeviceQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useConnectedDeviceQuery(baseOptions?: Apollo.QueryHookOptions<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>(ConnectedDeviceDocument, options);
+      }
+export function useConnectedDeviceLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>(ConnectedDeviceDocument, options);
+        }
+export type ConnectedDeviceQueryHookResult = ReturnType<typeof useConnectedDeviceQuery>;
+export type ConnectedDeviceLazyQueryHookResult = ReturnType<typeof useConnectedDeviceLazyQuery>;
+export type ConnectedDeviceQueryResult = Apollo.QueryResult<ConnectedDeviceQuery, ConnectedDeviceQueryVariables>;
+export const OnNewDeviceDocument = gql`
+    subscription OnNewDevice {
+  onNewDevice {
+    id
+    app
+    name
+    service
+    host
+    port
+    isConnected
+  }
+}
+    `;
+
+/**
+ * __useOnNewDeviceSubscription__
+ *
+ * To run a query within a React component, call `useOnNewDeviceSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnNewDeviceSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnNewDeviceSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnNewDeviceSubscription(baseOptions?: Apollo.SubscriptionHookOptions<OnNewDeviceSubscription, OnNewDeviceSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<OnNewDeviceSubscription, OnNewDeviceSubscriptionVariables>(OnNewDeviceDocument, options);
+      }
+export type OnNewDeviceSubscriptionHookResult = ReturnType<typeof useOnNewDeviceSubscription>;
+export type OnNewDeviceSubscriptionResult = Apollo.SubscriptionResult<OnNewDeviceSubscription>;
+export const OnDeviceConnectedDocument = gql`
+    subscription OnDeviceConnected {
+  onConnected {
+    id
+    name
+  }
+}
+    `;
+
+/**
+ * __useOnDeviceConnectedSubscription__
+ *
+ * To run a query within a React component, call `useOnDeviceConnectedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnDeviceConnectedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnDeviceConnectedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnDeviceConnectedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<OnDeviceConnectedSubscription, OnDeviceConnectedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<OnDeviceConnectedSubscription, OnDeviceConnectedSubscriptionVariables>(OnDeviceConnectedDocument, options);
+      }
+export type OnDeviceConnectedSubscriptionHookResult = ReturnType<typeof useOnDeviceConnectedSubscription>;
+export type OnDeviceConnectedSubscriptionResult = Apollo.SubscriptionResult<OnDeviceConnectedSubscription>;
+export const OnDeviceDisconnectedDocument = gql`
+    subscription OnDeviceDisconnected {
+  onDisconnected {
+    id
+    name
+  }
+}
+    `;
+
+/**
+ * __useOnDeviceDisconnectedSubscription__
+ *
+ * To run a query within a React component, call `useOnDeviceDisconnectedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnDeviceDisconnectedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnDeviceDisconnectedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnDeviceDisconnectedSubscription(baseOptions?: Apollo.SubscriptionHookOptions<OnDeviceDisconnectedSubscription, OnDeviceDisconnectedSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<OnDeviceDisconnectedSubscription, OnDeviceDisconnectedSubscriptionVariables>(OnDeviceDisconnectedDocument, options);
+      }
+export type OnDeviceDisconnectedSubscriptionHookResult = ReturnType<typeof useOnDeviceDisconnectedSubscription>;
+export type OnDeviceDisconnectedSubscriptionResult = Apollo.SubscriptionResult<OnDeviceDisconnectedSubscription>;
 export const GetAlbumsDocument = gql`
-    query GetAlbums {
-  albums {
+    query GetAlbums($offset: Int, $limit: Int) {
+  albums(offset: $offset, limit: $limit) {
     ...AlbumFragment
     tracks {
       ...TrackFragment
@@ -710,6 +1068,8 @@ ${TrackFragmentFragmentDoc}`;
  * @example
  * const { data, loading, error } = useGetAlbumsQuery({
  *   variables: {
+ *      offset: // value for 'offset'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -725,8 +1085,8 @@ export type GetAlbumsQueryHookResult = ReturnType<typeof useGetAlbumsQuery>;
 export type GetAlbumsLazyQueryHookResult = ReturnType<typeof useGetAlbumsLazyQuery>;
 export type GetAlbumsQueryResult = Apollo.QueryResult<GetAlbumsQuery, GetAlbumsQueryVariables>;
 export const GetArtistsDocument = gql`
-    query GetArtists {
-  artists {
+    query GetArtists($offset: Int, $limit: Int) {
+  artists(offset: $offset, limit: $limit) {
     ...ArtistFragment
   }
 }
@@ -744,6 +1104,8 @@ export const GetArtistsDocument = gql`
  * @example
  * const { data, loading, error } = useGetArtistsQuery({
  *   variables: {
+ *      offset: // value for 'offset'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -759,8 +1121,8 @@ export type GetArtistsQueryHookResult = ReturnType<typeof useGetArtistsQuery>;
 export type GetArtistsLazyQueryHookResult = ReturnType<typeof useGetArtistsLazyQuery>;
 export type GetArtistsQueryResult = Apollo.QueryResult<GetArtistsQuery, GetArtistsQueryVariables>;
 export const GetTracksDocument = gql`
-    query GetTracks {
-  tracks {
+    query GetTracks($offset: Int, $limit: Int) {
+  tracks(offset: $offset, limit: $limit) {
     ...TrackFragment
     artists {
       id
@@ -786,6 +1148,8 @@ ${AlbumFragmentFragmentDoc}`;
  * @example
  * const { data, loading, error } = useGetTracksQuery({
  *   variables: {
+ *      offset: // value for 'offset'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -1088,6 +1452,7 @@ export const CurrentlyPlayingSongDocument = gql`
       album {
         id
         title
+        cover
       }
     }
     index
@@ -1192,6 +1557,7 @@ export const CurrentlyPlayingSongChangedDocument = gql`
     album {
       id
       title
+      cover
     }
   }
 }

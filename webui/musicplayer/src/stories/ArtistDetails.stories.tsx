@@ -71,4 +71,8 @@ Default.args = {
       "Default"
     )();
   },
+  devices: [],
+  currentDevice: undefined,
+  connectToDevice: (_id) => {},
+  disconnectFromDevice: () => {},
 };

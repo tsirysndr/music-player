@@ -1,6 +1,7 @@
 use async_graphql::*;
 use music_player_entity::{select_result, track::Model};
-use music_player_types::types::SimplifiedSong as TrackType;
+use music_player_types::types::{self, RemoteTrackUrl};
+use music_player_types::types::{RemoteCoverUrl, SimplifiedSong as TrackType};
 use serde::Serialize;
 
 use super::{album::Album, artist::Artist};
@@ -87,6 +88,30 @@ impl Track {
     }
 }
 
+impl RemoteTrackUrl for Track {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            uri: format!("{}/tracks/{}", base_url, self.id.to_string()),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Track {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            album: Album {
+                cover: match self.album.cover {
+                    Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
+                    None => None,
+                },
+                ..self.album.clone()
+            },
+            ..self.clone()
+        }
+    }
+}
+
 impl From<Model> for Track {
     fn from(model: Model) -> Self {
         Self {
@@ -127,6 +152,46 @@ impl From<TrackType> for Track {
             artist_id: song.artist_id,
             album_id: song.album_id,
             album_title: song.album,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<types::Track> for Track {
+    fn from(track: types::Track) -> Self {
+        Self {
+            id: ID(track.id),
+            title: track.title,
+            uri: track.uri,
+            duration: track.duration,
+            track_number: track.track_number,
+            artist: track.artist,
+            album: match track.album.clone() {
+                Some(album) => album.into(),
+                None => Default::default(),
+            },
+            artists: track
+                .artists
+                .clone()
+                .into_iter()
+                .map(|artist| artist.into())
+                .collect(),
+            album_title: match track.album.clone() {
+                Some(album) => album.title,
+                None => String::new(),
+            },
+            album_id: match track.album.clone() {
+                Some(album) => album.id,
+                None => String::new(),
+            },
+            artist_id: match track.artists.clone().first() {
+                Some(artist) => artist.id.clone(),
+                None => String::new(),
+            },
+            cover: match track.album {
+                Some(album) => album.cover,
+                None => None,
+            },
             ..Default::default()
         }
     }

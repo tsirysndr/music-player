@@ -65,4 +65,8 @@ Default.args = {
       name: "Oasis",
     },
   ],
+  devices: [],
+  currentDevice: undefined,
+  connectToDevice: (_id) => {},
+  disconnectFromDevice: () => {},
 };

@@ -7,10 +7,15 @@ use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::{ColorMode, MetadataOptions, MetadataRevision, Tag, Value, Visual};
 use symphonia::core::probe::Hint;
 use symphonia::core::units::TimeBase;
+use url::Url;
 
 use log::info;
 
 pub fn print_format(path: &str) {
+    if Url::parse(path).is_ok() {
+        println!("+ {}", path.magenta());
+        return;
+    }
     let mut hint = Hint::new();
 
     let source = Box::new(File::open(Path::new(path)).unwrap());

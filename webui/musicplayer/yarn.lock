@@ -3697,6 +3697,14 @@
     "@babel/runtime" "^7.19.0"
     "@styled-icons/styled-icon" "^10.7.0"
 
+"@styled-icons/fluentui-system-regular@^10.46.0":
+  version "10.46.0"
+  resolved "https://registry.yarnpkg.com/@styled-icons/fluentui-system-regular/-/fluentui-system-regular-10.46.0.tgz#16c4cff965ddf96f37c133b17f59e9ca228266d8"
+  integrity sha512-Ojn2nGx2NY2QnELYG07k7uPXQ6jZ4MKeloby3wNgyncmcMikANPeMs0IJXWeUlW3YcOGMjnVYPq/A8v7QPJ0dQ==
+  dependencies:
+    "@babel/runtime" "^7.19.0"
+    "@styled-icons/styled-icon" "^10.7.0"
+
 "@styled-icons/ionicons-sharp@^10.46.0":
   version "10.46.0"
   resolved "https://registry.yarnpkg.com/@styled-icons/ionicons-sharp/-/ionicons-sharp-10.46.0.tgz#78b99fcac82cbfb87379de1f1e41ee42139caeb6"
@@ -3709,6 +3717,14 @@
   version "10.46.0"
   resolved "https://registry.yarnpkg.com/@styled-icons/remix-fill/-/remix-fill-10.46.0.tgz#4477b1927e99faec55747bd92102b85e979ac203"
   integrity sha512-D2rWGJ9/7BR+3TMvmIoWGASMfyhWT4lTF+we8h9Pya5Ye+69cftvp817DMuaR/6czCugXTrB++HTQX0XJfoBFw==
+  dependencies:
+    "@babel/runtime" "^7.19.0"
+    "@styled-icons/styled-icon" "^10.7.0"
+
+"@styled-icons/simple-icons@^10.46.0":
+  version "10.46.0"
+  resolved "https://registry.yarnpkg.com/@styled-icons/simple-icons/-/simple-icons-10.46.0.tgz#fbb8f73686dbb40e482356a5fdc23e895e2b8468"
+  integrity sha512-zHkbGqAqFOwpqDjbhKTKsAXNxtBOXb7Ot2eKoDaDFckJGr2shAXRchclUS6wSixSPwQIPGAUcdO7Cq744Ollng==
   dependencies:
     "@babel/runtime" "^7.19.0"
     "@styled-icons/styled-icon" "^10.7.0"

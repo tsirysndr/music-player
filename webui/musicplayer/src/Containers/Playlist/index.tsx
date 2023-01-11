@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import Playlist from "../../Components/Playlist";
 import { useGetPlaylistQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
@@ -14,6 +15,8 @@ const PlaylistPage = () => {
     fetchPolicy: "network-only",
   });
   const navigate = useNavigate();
+  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
+    useDevices();
   const { formatTime } = useTimeFormat();
   const {
     play,
@@ -80,6 +83,10 @@ const PlaylistPage = () => {
       }
       playlist={data?.playlist}
       recentPlaylists={recentPlaylists}
+      devices={devices}
+      currentDevice={currentDevice}
+      connectToDevice={(id) => connectToDevice({ variables: { id } })}
+      disconnectFromDevice={() => disconnectFromDevice()}
     />
   );
 };

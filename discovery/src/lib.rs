@@ -4,12 +4,12 @@ mod tests;
 use async_stream::stream;
 use futures_util::Stream;
 use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
-use owo_colors::OwoColorize;
 use std::thread;
 
 use music_player_settings::{read_settings, Settings};
 
 pub const SERVICE_NAME: &'static str = "_music-player._tcp.local.";
+pub const XBMC_SERVICE_NAME: &'static str = "_xbmc-jsonrpc-h._tcp.local.";
 
 pub struct MdnsResponder {
     responder: libmdns::Responder,
@@ -26,11 +26,15 @@ impl MdnsResponder {
     }
 
     pub fn register_service(&mut self, name: &str, port: u16) {
+        let config = read_settings().unwrap();
+        let settings = config.try_deserialize::<Settings>().unwrap();
+        let device_name = format!("device_name={}", settings.device_name);
+
         self.svc.push(self.responder.register(
             "_music-player._tcp".to_owned(),
             name.to_owned(),
             port,
-            &["path=/"],
+            &["path=/", device_name.as_str()],
         ));
     }
 }
@@ -60,12 +64,16 @@ pub fn register(name: &str, port: u16) {
     builder.init();
     */
 
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+    let device_name = format!("device_name={}", settings.device_name);
+
     let responder = libmdns::Responder::new().unwrap();
     let _svc = responder.register(
         "_music-player._tcp".to_owned(),
         name.to_owned(),
         port,
-        &["path=/"],
+        &["path=/", device_name.as_str()],
     );
 
     loop {
@@ -81,13 +89,6 @@ pub fn discover(service_name: &str) -> impl Stream<Item = ServiceInfo> {
         while let Ok(event) = receiver.recv() {
             match event {
                 ServiceEvent::ServiceResolved(info) => {
-                    println!(
-                        "{} - {} - {:?} - port: {}",
-                        info.get_fullname().bright_green(),
-                        info.get_hostname().to_lowercase(),
-                        info.get_addresses(),
-                        info.get_port()
-                    );
                     yield info;
                 }
                 _ => {}

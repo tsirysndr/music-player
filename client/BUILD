@@ -19,6 +19,7 @@ rust_library(
       "//playback:music_player_playback",
       "//storage:music_player_storage",
       "//tracklist:music_player_tracklist",
+      "//types:music_player_types",
       "@crate_index//:tonic",
       "@crate_index//:futures-util",
       "@crate_index//:url",

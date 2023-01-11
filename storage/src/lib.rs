@@ -8,6 +8,8 @@ use sea_orm::DatabaseConnection;
 
 pub mod searcher;
 
+pub mod repo;
+
 #[derive(Clone)]
 pub struct Database {
     pub connection: DatabaseConnection,

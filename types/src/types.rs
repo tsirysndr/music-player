@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
+use mdns_sd::ServiceInfo;
+use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
 use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
@@ -45,6 +47,7 @@ pub struct Album {
     pub artist_id: Option<String>,
     pub year: Option<u32>,
     pub cover: Option<String>,
+    pub tracks: Vec<Track>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -52,6 +55,8 @@ pub struct Artist {
     pub id: String,
     pub name: String,
     pub picture: Option<String>,
+    pub albums: Vec<Album>,
+    pub songs: Vec<Track>,
 }
 
 impl From<Document> for Album {
@@ -284,5 +289,226 @@ impl Song {
         self.channels = properties.channels();
         self.duration = properties.duration();
         self.clone()
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct Device {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub service: String,
+    pub app: String,
+    pub is_connected: bool,
+    pub base_url: Option<String>,
+}
+
+impl Device {
+    pub fn with_base_url(&mut self, base_url: Option<String>) -> Self {
+        self.base_url = base_url;
+        self.clone()
+    }
+}
+
+impl From<ServiceInfo> for Device {
+    fn from(srv: ServiceInfo) -> Self {
+        if srv.get_fullname().contains("xbmc") {
+            return Self {
+                id: srv.get_fullname().to_owned(),
+                name: srv
+                    .get_fullname()
+                    .replace(XBMC_SERVICE_NAME, "")
+                    .replace(".", "")
+                    .to_owned(),
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                port: srv.get_port(),
+                service: srv.get_fullname().to_owned(),
+                app: "xbmc".to_owned(),
+                is_connected: false,
+                base_url: None,
+            };
+        }
+
+        if srv.get_fullname().contains(SERVICE_NAME) {
+            let device_id = srv
+                .get_fullname()
+                .replace(SERVICE_NAME, "")
+                .split("-")
+                .collect::<Vec<&str>>()[1]
+                .replace(".", "")
+                .to_owned();
+            return Self {
+                id: device_id.clone(),
+                name: srv
+                    .get_properties()
+                    .get("device_name")
+                    .unwrap_or(&device_id.clone())
+                    .to_owned(),
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                port: srv.get_port(),
+                service: srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
+                app: "music-player".to_owned(),
+                is_connected: false,
+                base_url: None,
+            };
+        }
+
+        Self {
+            ..Default::default()
+        }
+    }
+}
+
+pub trait Connected {
+    fn is_connected(&self, current: Option<&Device>) -> Self;
+}
+
+impl Connected for Device {
+    fn is_connected(&self, current: Option<&Device>) -> Self {
+        match current {
+            Some(current) => Self {
+                is_connected: self.id == current.id,
+                ..self.clone()
+            },
+            None => Self {
+                is_connected: false,
+                ..self.clone()
+            },
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct Track {
+    pub id: String,
+    pub title: String,
+    pub duration: Option<f32>,
+    pub disc_number: u32,
+    pub track_number: Option<u32>,
+    pub uri: String,
+    pub artists: Vec<Artist>,
+    pub album: Option<Album>,
+    pub artist: String,
+}
+
+#[derive(Default, Clone)]
+pub struct Playlist {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub tracks: Vec<Track>,
+}
+
+#[derive(Default, Clone)]
+pub struct Folder {
+    pub id: String,
+    pub name: String,
+    pub playlists: Vec<Playlist>,
+}
+
+pub trait RemoteTrackUrl {
+    fn with_remote_track_url(&self, base_url: &str) -> Self;
+}
+
+pub trait RemoteCoverUrl {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self;
+}
+
+impl RemoteTrackUrl for Track {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            uri: format!("{}/tracks/{}", base_url, self.id),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Track {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            album: match self.album {
+                Some(ref album) => Some(album.with_remote_cover_url(base_url)),
+                None => None,
+            },
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Album {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            cover: match self.cover {
+                Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
+                None => None,
+            },
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Album {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Artist {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            albums: self
+                .albums
+                .iter()
+                .map(|album| album.with_remote_cover_url(base_url))
+                .collect(),
+            songs: self
+                .songs
+                .iter()
+                .map(|track| track.with_remote_cover_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Artist {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            songs: self
+                .songs
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Playlist {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
     }
 }

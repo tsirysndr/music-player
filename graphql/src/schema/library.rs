@@ -1,13 +1,15 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc, sync::Mutex as StdMutex};
 
 use async_graphql::{futures_util::FutureExt, *};
+use music_player_addons::CurrentDevice;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_scanner::scan_directory;
-use music_player_storage::Database;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
-    QuerySelect,
+use music_player_storage::{
+    repo::{album::AlbumRepository, artist::ArtistRepository, track::TrackRepository},
+    Database,
 };
+use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
+use sea_orm::{ActiveModelTrait, ActiveValue};
 use tokio::sync::Mutex;
 
 use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
@@ -17,152 +19,223 @@ pub struct LibraryQuery;
 
 #[Object]
 impl LibraryQuery {
-    async fn tracks(&self, ctx: &Context<'_>) -> Result<Vec<Track>, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
-            track_entity::Entity::find()
-                .limit(100)
-                .order_by_asc(track_entity::Column::Title)
-                .find_with_related(artist_entity::Entity)
-                .all(db.lock().await.get_connection())
+    async fn tracks(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Track>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let result = source
+                .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
-        let albums: Vec<(track_entity::Model, Option<album_entity::Model>)> =
-            track_entity::Entity::find()
-                .limit(100)
-                .order_by_asc(track_entity::Column::Title)
-                .find_also_related(album_entity::Entity)
-                .all(db.lock().await.get_connection())
-                .await?;
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
 
-        let albums: Vec<Option<album_entity::Model>> = albums
-            .into_iter()
-            .map(|(_track, album)| album.clone())
-            .collect();
-        let mut albums = albums.into_iter();
+            let tracks: Vec<Track> = result.into_iter().map(Into::into).collect();
 
-        Ok(results
-            .into_iter()
-            .map(|(track, artists)| {
-                let album = albums.next().unwrap().unwrap();
-                Track::from(track_entity::Model {
-                    artists,
-                    album,
-                    ..track
+            return Ok(tracks
+                .into_iter()
+                .map(|track| {
+                    track
+                        .with_remote_track_url(base_url.as_str())
+                        .with_remote_cover_url(base_url.as_str())
                 })
-            })
-            .collect())
-    }
+                .collect());
+        }
 
-    async fn artists(&self, ctx: &Context<'_>) -> Result<Vec<Artist>, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let results = artist_entity::Entity::find()
-            .order_by_asc(artist_entity::Column::Name)
-            .all(db.lock().await.get_connection())
+
+        let results = TrackRepository::new(db.lock().await.get_connection())
+            .find_all(100)
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
     }
 
-    async fn albums(&self, ctx: &Context<'_>) -> Result<Vec<Album>, Error> {
+    async fn artists(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Artist>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let artists = source
+                .artists(offset.unwrap_or(0), limit.unwrap_or(100))
+                .await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            return Ok(artists
+                .into_iter()
+                .map(|artist| {
+                    artist
+                        .with_remote_cover_url(base_url.as_str())
+                        .with_remote_track_url(base_url.as_str())
+                })
+                .map(Into::into)
+                .collect());
+        }
+
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let results = album_entity::Entity::find()
-            .order_by_asc(album_entity::Column::Title)
-            .all(db.lock().await.get_connection())
+
+        let results = ArtistRepository::new(db.lock().await.get_connection())
+            .find_all()
             .await?;
+
+        Ok(results.into_iter().map(Into::into).collect())
+    }
+
+    async fn albums(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Album>, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let albums = source
+                .albums(offset.unwrap_or(0), limit.unwrap_or(100))
+                .await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            let result: Vec<Album> = albums.into_iter().map(Into::into).collect();
+
+            return Ok(result
+                .into_iter()
+                .map(|album| {
+                    album
+                        .with_remote_cover_url(base_url.as_str())
+                        .with_remote_track_url(base_url.as_str())
+                })
+                .collect());
+        }
+
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+
+        let results = AlbumRepository::new(db.lock().await.get_connection())
+            .find_all()
+            .await?;
+
         Ok(results.into_iter().map(Into::into).collect())
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
         let id = id.to_string();
-        let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
-            track_entity::Entity::find()
-                .filter(track_entity::Column::Id.eq(id.clone()))
-                .find_with_related(artist_entity::Entity)
-                .all(db.lock().await.get_connection())
-                .await?;
-        if results.len() == 0 {
-            return Err(Error::new("Track not found"));
+
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let track = source.track(&id).await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            return Ok(Track::from(track)
+                .with_remote_track_url(base_url.as_str())
+                .with_remote_cover_url(base_url.as_str()));
         }
-        let track = results[0].0.clone();
-        let album =
-            album_entity::Entity::find_by_id(track.album_id.unwrap_or_default().to_string())
-                .one(db.lock().await.get_connection())
-                .await?;
-        Ok(track_entity::Model {
-            artists: results[0].1.clone(),
-            album: album.unwrap(),
-            id: track.id,
-            title: track.title,
-            duration: track.duration,
-            uri: track.uri,
-            artist: track.artist,
-            ..Default::default()
-        }
-        .into())
+
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+
+        let track = TrackRepository::new(db.lock().await.get_connection())
+            .find(&id)
+            .await?;
+
+        Ok(track.into())
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
         let id = id.to_string();
-        let result = artist_entity::Entity::find_by_id(id.clone())
-            .one(db.lock().await.get_connection())
-            .await?;
 
-        if result.is_none() {
-            return Err(Error::new("Artist not found"));
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let artist = source.artist(&id).await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            return Ok(artist
+                .with_remote_track_url(base_url.as_str())
+                .with_remote_cover_url(base_url.as_str())
+                .into());
         }
 
-        let mut artist = result.unwrap();
-        let results: Vec<(track_entity::Model, Option<album_entity::Model>)> =
-            track_entity::Entity::find()
-                .filter(track_entity::Column::ArtistId.eq(id.clone()))
-                .order_by_asc(track_entity::Column::Title)
-                .find_also_related(album_entity::Entity)
-                .all(db.lock().await.get_connection())
-                .await?;
+        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
-        artist.tracks = results
-            .into_iter()
-            .map(|(track, album)| {
-                let mut track = track;
-                track.artists = vec![artist.clone()];
-                track.album = album.unwrap();
-                track
-            })
-            .collect();
-
-        artist.albums = album_entity::Entity::find()
-            .filter(album_entity::Column::ArtistId.eq(id.clone()))
-            .order_by_asc(album_entity::Column::Title)
-            .all(db.lock().await.get_connection())
+        let artist = ArtistRepository::new(db.lock().await.get_connection())
+            .find(&id)
             .await?;
 
         Ok(artist.into())
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
+        let connected_device = ctx
+            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
+            .unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+
+        let id = id.to_string();
+
+        let mut device = current_device.lock().await;
+        if device.source.is_some() {
+            let source = device.source.as_mut().unwrap();
+            let album = source.album(&id).await?;
+
+            let device = connected_device.lock().unwrap();
+            let device = device.get("current_device").unwrap();
+            let base_url = device.base_url.as_ref().unwrap();
+
+            return Ok(Album::from(album)
+                .with_remote_cover_url(base_url.as_str())
+                .with_remote_track_url(base_url.as_str()));
+        }
+
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let result = album_entity::Entity::find_by_id(id.to_string())
-            .one(db.lock().await.get_connection())
+
+        let album = AlbumRepository::new(db.lock().await.get_connection())
+            .find(&id)
             .await?;
-        if result.is_none() {
-            return Err(Error::new("Album not found"));
-        }
-        let mut album = result.unwrap();
-        let mut tracks = album
-            .find_related(track_entity::Entity)
-            .order_by_asc(track_entity::Column::Track)
-            .all(db.lock().await.get_connection())
-            .await?;
-        for track in &mut tracks {
-            track.artists = track
-                .find_related(artist_entity::Entity)
-                .all(db.lock().await.get_connection())
-                .await?;
-        }
-        album.tracks = tracks;
+
         Ok(album.into())
     }
 

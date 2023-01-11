@@ -1,8 +1,11 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
+import { FC, useState } from "react";
 import Library from "../Library";
 import Playlists from "../Playlists";
 import Search from "../Search";
+import { PlugConnected } from "@styled-icons/fluentui-system-regular";
+import ConnectModal from "./ConnectModal";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   height: calc(100vh - 30px);
@@ -11,6 +14,34 @@ const Container = styled.div`
   padding-right: 20px;
   min-width: 222px;
   overflow-y: auto;
+`;
+
+const ConnectButton = styled.button<{
+  connected?: boolean;
+}>`
+  border: none;
+  background-color: #fbf5ff;
+  height: 32px;
+  ${(props) => (props.connected ? "width: 272px;" : "40px")}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+`;
+
+const ConnectText = styled.span`
+  font-size: 13.5px;
+  color: #ab28fc;
+  flex: 1;
+  font-family: RockfordSansRegular;
+  text-overflow: ellipsis;
+  margin-left: 10px;
+  margin-right: 10px;
+  overflow: hidden;
+  white-space: nowrap;
 `;
 
 export type SidebarProps = {
@@ -30,20 +61,43 @@ export type SidebarProps = {
     shuffle: boolean,
     position?: number
   ) => void;
+  devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const Sidebar: FC<SidebarProps> = (props) => {
+  const [openConnectModal, setOpenConnectModal] = useState(false);
+  const { currentDevice } = props;
+  const connected = !!currentDevice;
   return (
     <Container>
       <Search {...props} />
       <Library {...props} />
       <Playlists {...props} />
+      <ConnectButton
+        onClick={() => setOpenConnectModal(true)}
+        connected={connected}
+      >
+        <PlugConnected size={20} color="#ab28fc" />
+        {connected && <ConnectText>Device: {currentDevice.name}</ConnectText>}
+      </ConnectButton>
+      <ConnectModal
+        isOpen={openConnectModal}
+        onClose={() => setOpenConnectModal(false)}
+        devices={props.devices}
+        currentDevice={props.currentDevice}
+        connectToDevice={props.connectToDevice}
+        disconnectFromDevice={props.disconnectFromDevice}
+      />
     </Container>
   );
 };
 
 Sidebar.defaultProps = {
   active: "tracks",
+  devices: [],
 };
 
 export default Sidebar;

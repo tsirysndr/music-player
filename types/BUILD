@@ -10,6 +10,8 @@ rust_library(
       "src/types.rs",
     ],
    deps = [
+    "//discovery:music_player_discovery",
     "@crate_index//:tantivy",
+    "@crate_index//:mdns-sd",
    ] + all_crate_deps(),
 )

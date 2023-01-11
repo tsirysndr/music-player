@@ -505,7 +505,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
 async fn connect_to_server() -> bool {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
-    match LibraryClient::new(settings.port).await {
+    match LibraryClient::new(settings.host, settings.port).await {
         Ok(_) => true,
         Err(_) => false,
     }

@@ -17,6 +17,10 @@ version = "0.1.4"
 path = "../entity"
 version = "0.1.5"
 
+[dependencies.music-player-audio]
+path = "../audio"
+version = "0.1.0"
+
 [dependencies]
 cpal = "0.14.0"
 futures-util = "0.3.24"
@@ -34,3 +38,4 @@ tokio = { version = "1.21.0", features = ["full"] }
 zerocopy = "0.6.1"
 owo-colors = "3.5.0"
 async-trait = "0.1.57"
+url = "2.3.1"

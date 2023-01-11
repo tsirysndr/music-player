@@ -7,6 +7,7 @@ import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   display: flex;
@@ -95,6 +96,10 @@ export type AlbumsProps = {
     shuffle: boolean,
     position?: number
   ) => void;
+  devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 export type AlbumProps = {

@@ -1,3 +1,4 @@
+use music_player_types::types::Playlist as PlaylistType;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -47,3 +48,14 @@ impl Related<super::track::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Into<PlaylistType> for Model {
+    fn into(self) -> PlaylistType {
+        PlaylistType {
+            id: self.id,
+            name: self.name,
+            description: self.description,
+            tracks: self.tracks.into_iter().map(Into::into).collect(),
+        }
+    }
+}

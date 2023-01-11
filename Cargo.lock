@@ -432,6 +432,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "serde",
  "serde_json",
  "tauri",
@@ -1138,11 +1139,12 @@ dependencies = [
 
 [[package]]
 name = "bstr"
-version = "0.2.17"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
+checksum = "b45ea9b00a7b3f2988e9a65ad3917e62123c38dba709b666506207be96d1790b"
 dependencies = [
  "memchr",
+ "serde",
 ]
 
 [[package]]
@@ -1240,9 +1242,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.13.0"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa0e3586af56b3bfa51fca452bd56e8dbbbd5d8d81cbf0b7e4e35b695b537eb8"
+checksum = "497049e9477329f8f6a559972ee42e117487d01d1e8c2cc9f836ea6fa23a9e1a"
 dependencies = [
  "serde",
  "toml",
@@ -2714,9 +2716,9 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "globset"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a1e17342619edbc21a964c2afbeb6c820c6a2560032872f397bb97ea127bd0a"
+checksum = "029d74589adefde59de1a0c4f4732695c32805624aec7b68d91503d4dba79afc"
 dependencies = [
  "aho-corasick",
  "bstr",
@@ -3080,6 +3082,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-rustls"
+version = "0.23.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1788965e61b367cd03a62950836d5cd41560c3577d90e40e0819373194d1661c"
+dependencies = [
+ "http",
+ "hyper",
+ "log",
+ "rustls",
+ "rustls-native-certs",
+ "tokio",
+ "tokio-rustls",
+]
+
+[[package]]
 name = "hyper-timeout"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3153,11 +3170,10 @@ dependencies = [
 
 [[package]]
 name = "ignore"
-version = "0.4.18"
+version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "713f1b139373f96a2e0ce3ac931cd01ee973c3c5dd7c40c0c2efe96ad2b6751d"
+checksum = "a05705bc64e0b66a806c3740bd6578ea66051b157ec42dc219c785cbf185aef3"
 dependencies = [
- "crossbeam-utils",
  "globset",
  "lazy_static",
  "log",
@@ -3738,9 +3754,9 @@ dependencies = [
 
 [[package]]
 name = "mdns-sd"
-version = "0.5.9"
+version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69b070a70988c737646f0ff395f4317934c4a90ec14910477e3d1d5a5e22f60d"
+checksum = "709cba29c9d7334db28706bc2767db2531934fd2e55781cba82c930fb7f22b47"
 dependencies = [
  "flume 0.10.14",
  "if-addrs",
@@ -3895,6 +3911,7 @@ dependencies = [
 name = "music-player"
 version = "0.2.0-alpha.8"
 dependencies = [
+ "anyhow",
  "clap",
  "crossterm",
  "dirs",
@@ -3903,6 +3920,7 @@ dependencies = [
  "lofty",
  "md5",
  "music-player-addons",
+ "music-player-audio",
  "music-player-client",
  "music-player-discovery",
  "music-player-entity",
@@ -3930,11 +3948,40 @@ dependencies = [
 [[package]]
 name = "music-player-addons"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "music-player-client",
+ "music-player-types",
+ "surf",
+]
+
+[[package]]
+name = "music-player-audio"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes 1.3.0",
+ "futures-util",
+ "hyper",
+ "hyper-rustls",
+ "md5",
+ "mime_guess",
+ "music-player-settings",
+ "parking_lot 0.12.1",
+ "rustls",
+ "symphonia",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "url",
+]
 
 [[package]]
 name = "music-player-client"
 version = "0.1.1"
 dependencies = [
+ "anyhow",
  "envtestkit",
  "futures-util",
  "music-player-playback",
@@ -3942,6 +3989,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "tokio",
  "tokio-tungstenite",
  "tonic",
@@ -3979,6 +4027,7 @@ dependencies = [
 name = "music-player-graphql"
 version = "0.1.4"
 dependencies = [
+ "anyhow",
  "async-graphql",
  "async-graphql-tide",
  "chrono",
@@ -3987,6 +4036,9 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "md5",
+ "mdns-sd",
+ "music-player-addons",
+ "music-player-discovery",
  "music-player-entity",
  "music-player-migration",
  "music-player-playback",
@@ -4024,6 +4076,7 @@ dependencies = [
  "lazy_static",
  "librespot-protocol",
  "log",
+ "music-player-audio",
  "music-player-entity",
  "music-player-tracklist",
  "owo-colors",
@@ -4035,6 +4088,7 @@ dependencies = [
  "symphonia",
  "thiserror",
  "tokio",
+ "url",
  "zerocopy",
 ]
 
@@ -4073,6 +4127,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "owo-colors",
  "prost",
  "sea-orm",
@@ -4102,8 +4157,10 @@ dependencies = [
 name = "music-player-storage"
 version = "0.1.2"
 dependencies = [
+ "anyhow",
  "itertools",
  "md5",
+ "music-player-entity",
  "music-player-settings",
  "music-player-types",
  "sea-orm",
@@ -4127,6 +4184,8 @@ version = "0.1.1"
 dependencies = [
  "lofty",
  "md5",
+ "mdns-sd",
+ "music-player-discovery",
  "tantivy",
 ]
 
@@ -4142,6 +4201,8 @@ dependencies = [
  "dirs",
  "futures-util",
  "mime_guess",
+ "music-player-addons",
+ "music-player-discovery",
  "music-player-entity",
  "music-player-graphql",
  "music-player-playback",
@@ -4149,6 +4210,7 @@ dependencies = [
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-types",
  "owo-colors",
  "rust-embed",
  "sea-orm",
@@ -4248,9 +4310,9 @@ checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
 name = "nom"
-version = "7.1.1"
+version = "7.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8903e5a29a317527874d0402f867152a3d21c908bb0b933e416c65e301d4c36"
+checksum = "e5507769c4919c998e69e49c839d9dc6e693ede4cc4290d6ad8b41d4f09c548c"
 dependencies = [
  "memchr",
  "minimal-lexical",
@@ -4421,9 +4483,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.16.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
+checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
 
 [[package]]
 name = "oneshot"
@@ -4644,9 +4706,9 @@ checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
 name = "pest"
-version = "2.5.1"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc8bed3549e0f9b0a2a78bf7c0018237a2cdf085eecbbc048e52612438e4e9d0"
+checksum = "0f6e86fb9e7026527a0d46bc308b841d73170ef8f443e1807f6ef88526a816d4"
 dependencies = [
  "thiserror",
  "ucd-trie",
@@ -4654,9 +4716,9 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.5.1"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdc078600d06ff90d4ed238f0119d84ab5d43dbaad278b0e33a8820293b32344"
+checksum = "96504449aa860c8dcde14f9fba5c58dc6658688ca1fe363589d6327b8662c603"
 dependencies = [
  "pest",
  "pest_generator",
@@ -4664,9 +4726,9 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.5.1"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28a1af60b1c4148bb269006a750cff8e2ea36aff34d2d96cf7be0b14d1bed23c"
+checksum = "798e0220d1111ae63d66cb66a5dcb3fc2d986d520b98e49e1852bfdb11d7c5e7"
 dependencies = [
  "pest",
  "pest_meta",
@@ -4677,9 +4739,9 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.5.1"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fec8605d59fc2ae0c6c1aefc0c7c7a9769732017c0ce07f7a9cfffa7b4404f20"
+checksum = "984298b75898e30a843e278a9f2452c31e349a073a0ce6fd950a12a74464e065"
 dependencies = [
  "once_cell",
  "pest",
@@ -4949,9 +5011,9 @@ dependencies = [
 
 [[package]]
 name = "prettyplease"
-version = "0.1.22"
+version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c8992a85d8e93a28bdf76137db888d3874e3b230dee5ed8bebac4c9f7617773"
+checksum = "e97e3215779627f01ee256d2fad52f3d95e8e1c11e9fc6fd08f7cd455d5d5c78"
 dependencies = [
  "proc-macro2",
  "syn",
@@ -5519,6 +5581,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-native-certs"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0167bac7a9f490495f3c33013e7722b53cb087ecbe082fb0c6387c96f634ea50"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile",
+ "schannel",
+ "security-framework",
+]
+
+[[package]]
 name = "rustls-pemfile"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5757,6 +5831,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c107b6f4780854c8b126e228ea8869f4d7b71260f962fefb57b996b8959ba6b"
 
 [[package]]
+name = "security-framework"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bc1bb97804af6631813c55739f771071e0f2ed33ee20b68c86ec505d906356c"
+dependencies = [
+ "bitflags",
+ "core-foundation",
+ "core-foundation-sys",
+ "libc",
+ "security-framework-sys",
+]
+
+[[package]]
+name = "security-framework-sys"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0160a13a177a45bfb43ce71c01580998474f556ad854dcbca936dd2841a5c556"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
+]
+
+[[package]]
 name = "selectors"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5820,18 +5917,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.151"
+version = "1.0.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97fed41fc1a24994d044e6db6935e69511a1153b52c15eb42493b26fa87feba0"
+checksum = "bb7d1f0d3021d347a83e556fc4683dea2ea09d87bccdf88ff5c12545d89d5efb"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.151"
+version = "1.0.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "255abe9a125a985c05190d687b320c12f9b1f0b99445e608c21ba0782c719ad8"
+checksum = "af487d118eecd09402d70a5d72551860e788df87b464af30e5ea6a38c75c541e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7250,9 +7347,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.23.0"
+version = "1.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eab6d665857cc6ca78d6e80303a02cea7a7851e85dfbd77cbdc09bd129f1ef46"
+checksum = "7125661431c26622a80ca5051a2f936c9a678318e0351007b0cc313143024e5c"
 dependencies = [
  "autocfg",
  "bytes 1.3.0",

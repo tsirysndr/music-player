@@ -22,6 +22,10 @@ version = "0.1.9"
 path = "../settings"
 version = "0.1.1"
 
+[dependencies.music-player-types]
+path = "../types"
+version = "0.1.1"
+
 [dev-dependencies.music-player-playback]
 path = "../playback"
 version = "0.1.7"
@@ -40,4 +44,5 @@ tokio-tungstenite = "0.17.2"
 tonic = "0.8.1"
 url = "2.3.1"
 tokio = { version = "1.21.2", features = ["full"] }
+anyhow = "1.0.67"
 

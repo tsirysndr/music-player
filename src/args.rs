@@ -1,6 +1,7 @@
 use std::{env, fs, sync::Mutex};
 
 use clap::ArgMatches;
+use futures::StreamExt;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
@@ -52,7 +53,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("albums") {
-        let mut client = LibraryClient::new(settings.port).await?;
+        let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
 
         if matches.is_present("id") {
             let id = matches.value_of("id").unwrap();
@@ -79,7 +80,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
             return Ok(());
         }
 
-        let result = client.albums().await?;
+        let result = client.albums(0, 10000).await?;
 
         let mut builder = Builder::default();
         builder.set_columns(["id", "name"]);
@@ -96,8 +97,8 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("artists") {
-        let mut client = LibraryClient::new(settings.port).await?;
-        let result = client.artists().await?;
+        let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
+        let result = client.artists(0, 10000).await?;
 
         let mut builder = Builder::default();
         builder.set_columns(["id", "name"]);
@@ -114,7 +115,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("playlist") {
-        let mut client = PlaylistClient::new(settings.port).await?;
+        let mut client = PlaylistClient::new(settings.host.clone(), settings.port).await?;
 
         if let Some(matches) = matches.subcommand_matches("add") {
             let id = matches.value_of("id").unwrap();
@@ -154,7 +155,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("queue") {
-        let mut client = TracklistClient::new(settings.port).await?;
+        let mut client = TracklistClient::new(settings.host.clone(), settings.port).await?;
 
         if let Some(_) = matches.subcommand_matches("list") {
             let (mut previous_tracks, next_tracks) = client.list().await?;
@@ -197,8 +198,8 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_matches) = matches.subcommand_matches("tracks") {
-        let mut client = LibraryClient::new(settings.port).await?;
-        let result = client.songs().await?;
+        let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
+        let result = client.songs(0, 10000).await?;
 
         let mut builder = Builder::default();
         builder.set_columns(["id", "title"]);
@@ -212,44 +213,44 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("search") {
-        let client = LibraryClient::new(settings.port).await?;
+        let client = LibraryClient::new(settings.host.clone(), settings.port).await?;
 
         let query = matches.value_of("query").unwrap();
         todo!("search for {}", query);
     }
 
     if let Some(_) = matches.subcommand_matches("pause") {
-        let mut client = PlaybackClient::new(settings.port).await?;
+        let mut client = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         client.pause().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("play") {
-        let mut client = PlaybackClient::new(settings.port).await?;
+        let mut client = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         client.play().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("next") {
-        let mut client = PlaybackClient::new(settings.port).await?;
+        let mut client = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         client.next().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("prev") {
-        let mut client = PlaybackClient::new(settings.port).await?;
+        let mut client = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         client.prev().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("stop") {
-        let mut client = PlaybackClient::new(settings.port).await?;
+        let mut client = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         client.stop().await?;
         return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("current") {
-        let mut client = PlaybackClient::new(settings.port).await?;
+        let mut client = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         let (result, _, _, _) = client.current().await?;
         if result.is_none() {
             println!("No song is currently playing");
@@ -286,7 +287,17 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("devices") {
-        discover(SERVICE_NAME);
+        let services = discover(SERVICE_NAME);
+        tokio::pin!(services);
+        while let Some(info) = services.next().await {
+            println!(
+                "{} - {} - {:?} - port: {}",
+                info.get_fullname().bright_green(),
+                info.get_hostname().to_lowercase(),
+                info.get_addresses(),
+                info.get_port()
+            );
+        }
         return Ok(());
     }
 

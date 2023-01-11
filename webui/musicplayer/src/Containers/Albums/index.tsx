@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Albums from "../../Components/Albums";
 import { useGetAlbumsQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSearch } from "../../Hooks/useSearch";
@@ -25,6 +26,8 @@ const AlbumsPage = () => {
   } = usePlayback();
   const navigate = useNavigate();
   const { onSearch } = useSearch();
+  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
+    useDevices();
   const albums = !loading && data ? data.albums : [];
   const {
     folders,
@@ -44,7 +47,8 @@ const AlbumsPage = () => {
         id: album.id,
         title: album.title,
         artist: album.artist,
-        cover: album.cover && resourceUriResolver.resolve(`/covers/${album.cover}`),
+        cover:
+          album.cover && resourceUriResolver.resolve(`/covers/${album.cover}`),
       }))}
       onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
       onClickLibraryItem={(item) => navigate(`/${item}`)}
@@ -76,6 +80,10 @@ const AlbumsPage = () => {
       onPlayPlaylist={(playlistId, shuffle, position) =>
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
+      devices={devices}
+      currentDevice={currentDevice}
+      connectToDevice={(id) => connectToDevice({ variables: { id } })}
+      disconnectFromDevice={() => disconnectFromDevice()}
     />
   );
 };

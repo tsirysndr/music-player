@@ -28,6 +28,7 @@ export const CURRENTLY_PLAYING_SONG = gql`
       album {
         id
         title
+        cover
       }
     }
   }

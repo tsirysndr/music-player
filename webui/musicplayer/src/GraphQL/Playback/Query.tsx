@@ -13,6 +13,7 @@ export const GET_CURRENTLY_PLAYING = gql`
         album {
           id
           title
+          cover
         }
       }
       index

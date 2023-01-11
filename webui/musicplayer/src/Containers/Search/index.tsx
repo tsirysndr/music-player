@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import SearchResults from "../../Components/SearchResults";
+import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
@@ -9,6 +10,8 @@ import { useSearch } from "../../Hooks/useSearch";
 const SearchPage = () => {
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
+  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
+    useDevices();
   const {
     play,
     pause,
@@ -93,6 +96,10 @@ const SearchPage = () => {
           playPlaylist({ variables: { playlistId, position, shuffle } })
         }
         recentPlaylists={recentPlaylists}
+        devices={devices}
+        currentDevice={currentDevice}
+        connectToDevice={(id) => connectToDevice({ variables: { id } })}
+        disconnectFromDevice={() => disconnectFromDevice()}
       />
     </>
   );

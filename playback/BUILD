@@ -23,6 +23,7 @@ rust_library(
       "src/player.rs",
     ],
     deps = [
+      "//audio:music_player_audio",
       "//tracklist:music_player_tracklist",
       "//entity:music_player_entity",
       "@crate_index//:rand",
@@ -36,6 +37,7 @@ rust_library(
       "@crate_index//:rand_distr",
       "@crate_index//:zerocopy",
       "@crate_index//:librespot-protocol",
+      "@crate_index//:url",
     ] + all_crate_deps(),
     proc_macro_deps = [
         "@crate_index//:async-trait",

@@ -13,6 +13,7 @@ import PlaylistIcon from "../Icons/PlaylistAlt";
 import { Track } from "../../Types";
 import { Folder as FolderIcon } from "@styled-icons/bootstrap";
 import MovePlaylistsModal from "./MovePlaylistsModal";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   display: flex;
@@ -188,6 +189,10 @@ export type FolderProps = {
   ) => void;
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
   folder?: any;
+  devices: Device[];
+  currentDevice?: Device;
+  connectToDevice: (deviceId: string) => void;
+  disconnectFromDevice: () => void;
 };
 
 const Folder: FC<FolderProps> = (props) => {

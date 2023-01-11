@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 let pathSep = "/";
 let coversDir = "";
 
@@ -11,7 +13,15 @@ export const resourceUriResolver = {
   },
   resolve(path: string | undefined): string | undefined {
     if (!path) return path;
-    if (process.env.REACT_APP_NATIVE_WRAPPER !== "tauri") return path;
+    if (process.env.REACT_APP_NATIVE_WRAPPER !== "tauri") {
+      if (_.startsWith(_.replace(path, /^\/covers\//, ""), "http")) {
+        return _.replace(path, /^\/covers\//, "");
+      }
+      return path;
+    }
+    if (_.startsWith(_.replace(path, /^\/covers\//, ""), "http")) {
+      return _.replace(path, /^\/covers\//, "");
+    }
     // Image file in covers/ data directory
     if (/^\/covers\/[^<>:;,?"*|/]+\.(?:jpg|png)$/.test(path)) {
       const { tauri } = window.__TAURI__;
@@ -19,5 +29,5 @@ export const resourceUriResolver = {
       return tauri.convertFileSrc(devicePath);
     }
     return path;
-  }
+  },
 };

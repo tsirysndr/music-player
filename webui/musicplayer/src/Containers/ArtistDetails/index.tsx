@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ArtistDetails from "../../Components/ArtistDetails";
 import { useGetArtistQuery } from "../../Hooks/GraphQL";
+import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
@@ -38,6 +39,8 @@ const ArtistDetailsPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
+  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
+    useDevices();
   const artist = !loading && data ? data.artist : {};
   const tracks =
     !loading && data
@@ -47,7 +50,9 @@ const ArtistDetailsPage = () => {
           artist: track.artist,
           album: track.album.title,
           time: formatTime(track.duration! * 1000),
-          cover: track.album.cover ? resourceUriResolver.resolve(`/covers/${track.album.cover}`) : undefined,
+          cover: track.album.cover
+            ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
+            : undefined,
           artistId: track.artists[0].id,
           albumId: track.album.id,
           index,
@@ -59,7 +64,9 @@ const ArtistDetailsPage = () => {
           id: album.id,
           title: album.title,
           artist: album.artist,
-          cover: album.cover ? resourceUriResolver.resolve(`/covers/${album.cover}`) : undefined,
+          cover: album.cover
+            ? resourceUriResolver.resolve(`/covers/${album.cover}`)
+            : undefined,
         }))
       : [];
   const {
@@ -115,6 +122,10 @@ const ArtistDetailsPage = () => {
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
       recentPlaylists={recentPlaylists}
+      devices={devices}
+      currentDevice={currentDevice}
+      connectToDevice={(id) => connectToDevice({ variables: { id } })}
+      disconnectFromDevice={() => disconnectFromDevice()}
     />
   );
 };

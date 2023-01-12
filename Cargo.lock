@@ -812,6 +812,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
+name = "async-tls"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d85a97c4a0ecce878efd3f945f119c78a646d8975340bca0398f9bb05c30cc52"
+dependencies = [
+ "futures-core",
+ "futures-io",
+ "rustls 0.18.1",
+ "webpki 0.21.4",
+ "webpki-roots 0.20.0",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1283,7 +1296,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766"
 dependencies = [
- "nom",
+ "nom 7.1.2",
 ]
 
 [[package]]
@@ -1475,6 +1488,17 @@ dependencies = [
 
 [[package]]
 name = "config"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19b076e143e1d9538dde65da30f8481c2a6c44040edb8e02b9bf1351edb92ce3"
+dependencies = [
+ "lazy_static",
+ "nom 5.1.2",
+ "serde",
+]
+
+[[package]]
+name = "config"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d379af7f68bfc21714c6c7dea883544201741d2ce8274bb12fa54f89507f52a7"
@@ -1482,7 +1506,7 @@ dependencies = [
  "async-trait",
  "json5",
  "lazy_static",
- "nom",
+ "nom 7.1.2",
  "pathdiff",
  "ron",
  "rust-ini",
@@ -1982,6 +2006,33 @@ dependencies = [
  "darling_core 0.14.2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "dashmap"
+version = "5.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "907076dfda823b0b36d2a1bb5f90c96660a5bbcd7729e10727f07858f22c4edc"
+dependencies = [
+ "cfg-if 1.0.0",
+ "hashbrown 0.12.3",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core 0.9.5",
+]
+
+[[package]]
+name = "deadpool"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d126179d86aee4556e54f5f3c6bf6d9884e7cc52cef82f77ee6f90a7747616d"
+dependencies = [
+ "async-trait",
+ "config 0.10.1",
+ "crossbeam-queue",
+ "num_cpus",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -2997,12 +3048,18 @@ version = "6.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1947510dc91e2bf586ea5ffb412caad7673264e14bb39fb9078da114a94ce1a5"
 dependencies = [
+ "async-h1",
  "async-std",
+ "async-tls",
  "async-trait",
  "cfg-if 1.0.0",
+ "dashmap",
+ "deadpool",
+ "futures",
  "http-types",
  "isahc",
  "log",
+ "rustls 0.18.1",
 ]
 
 [[package]]
@@ -3090,7 +3147,7 @@ dependencies = [
  "http",
  "hyper",
  "log",
- "rustls",
+ "rustls 0.20.7",
  "rustls-native-certs",
  "tokio",
  "tokio-rustls",
@@ -3440,6 +3497,19 @@ dependencies = [
  "byteorder",
  "ogg",
  "tinyvec",
+]
+
+[[package]]
+name = "lexical-core"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6607c62aa161d23d17a9072cc5da0be67cdfc89d3afb1e8d9c842bebc2525ffe"
+dependencies = [
+ "arrayvec 0.5.2",
+ "bitflags",
+ "cfg-if 1.0.0",
+ "ryu",
+ "static_assertions",
 ]
 
 [[package]]
@@ -3969,7 +4039,7 @@ dependencies = [
  "mime_guess",
  "music-player-settings",
  "parking_lot 0.12.1",
- "rustls",
+ "rustls 0.20.7",
  "symphonia",
  "tempfile",
  "thiserror",
@@ -4145,7 +4215,7 @@ dependencies = [
 name = "music-player-settings"
 version = "0.1.2"
 dependencies = [
- "config",
+ "config 0.13.3",
  "dirs",
  "md5",
  "serde",
@@ -4307,6 +4377,17 @@ name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
+
+[[package]]
+name = "nom"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+dependencies = [
+ "lexical-core",
+ "memchr",
+ "version_check",
+]
 
 [[package]]
 name = "nom"
@@ -5570,14 +5651,27 @@ dependencies = [
 
 [[package]]
 name = "rustls"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d1126dcf58e93cee7d098dbda643b5f92ed724f1f6a63007c1116eed6700c81"
+dependencies = [
+ "base64 0.12.3",
+ "log",
+ "ring",
+ "sct 0.6.1",
+ "webpki 0.21.4",
+]
+
+[[package]]
+name = "rustls"
 version = "0.20.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "539a2bfe908f471bfa933876bd1eb6a19cf2176d375f82ef7f99530a40e48c2c"
 dependencies = [
  "log",
  "ring",
- "sct",
- "webpki",
+ "sct 0.7.0",
+ "webpki 0.22.0",
 ]
 
 [[package]]
@@ -5655,6 +5749,16 @@ name = "scratch"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddccb15bcce173023b3fedd9436f882a0739b8dfb45e4f6b6002bee5929f61b2"
+
+[[package]]
+name = "sct"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b362b83898e0e69f38515b82ee15aa80636befe47c3b6d3d89a911e78fc228ce"
+dependencies = [
+ "ring",
+ "untrusted",
+]
 
 [[package]]
 name = "sct"
@@ -6294,7 +6398,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f87e292b4291f154971a43c3774364e2cbcaec599d3f5bf6fa9d122885dbc38a"
 dependencies = [
  "itertools",
- "nom",
+ "nom 7.1.2",
  "unicode_categories",
 ]
 
@@ -6344,7 +6448,7 @@ dependencies = [
  "paste",
  "percent-encoding",
  "rust_decimal",
- "rustls",
+ "rustls 0.20.7",
  "rustls-pemfile",
  "serde",
  "serde_json",
@@ -6358,7 +6462,7 @@ dependencies = [
  "tokio-stream",
  "url",
  "uuid 1.2.2",
- "webpki-roots",
+ "webpki-roots 0.22.6",
 ]
 
 [[package]]
@@ -6559,6 +6663,7 @@ dependencies = [
  "mime_guess",
  "once_cell",
  "pin-project-lite 0.2.9",
+ "rustls 0.18.1",
  "serde",
  "serde_json",
  "web-sys",
@@ -7392,9 +7497,9 @@ version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
 dependencies = [
- "rustls",
+ "rustls 0.20.7",
  "tokio",
- "webpki",
+ "webpki 0.22.0",
 ]
 
 [[package]]
@@ -8036,6 +8141,16 @@ dependencies = [
 
 [[package]]
 name = "webpki"
+version = "0.21.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8e38c0608262c46d4a56202ebabdeb094cef7e560ca7a226c6bf055188aa4ea"
+dependencies = [
+ "ring",
+ "untrusted",
+]
+
+[[package]]
+name = "webpki"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f095d78192e208183081cc07bc5515ef55216397af48b873e5edcd72637fa1bd"
@@ -8046,11 +8161,20 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f20dea7535251981a9670857150d571846545088359b28e4951d350bdaf179f"
+dependencies = [
+ "webpki 0.21.4",
+]
+
+[[package]]
+name = "webpki-roots"
 version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c71e40d7d2c34a5106301fb632274ca37242cd0c9d3e64dbece371a40a2d87"
 dependencies = [
- "webpki",
+ "webpki 0.22.0",
 ]
 
 [[package]]

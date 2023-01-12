@@ -52,7 +52,8 @@ version = "0.1.0"
 [dev-dependencies]
 futures-util = "0.3.25"
 serde_json = "1.0.89"
-surf = "2.3.2"
+
+surf = { version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
 sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
 
 [dependencies]

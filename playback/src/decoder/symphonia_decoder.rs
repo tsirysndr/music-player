@@ -113,7 +113,10 @@ impl SymphoniaDecoder {
             }
             Err(err) => {
                 // The input was not supported by any format reader.
-                panic!("file not supported. reason? {}", err);
+                return Err(DecoderError::SymphoniaDecoder(format!(
+                    "file not supported. reason? {}",
+                    err
+                )));
             }
         }
     }

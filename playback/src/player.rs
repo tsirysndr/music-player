@@ -416,9 +416,13 @@ impl PlayerInternal {
     fn load_track(&self, song: &str) -> Option<PlayerLoadedTrackData> {
         let handle = Handle::current();
         let song = song.to_string();
-        thread::spawn(move || handle.block_on(PlayerTrackLoader::load(&song)))
-            .join()
-            .unwrap()
+        match thread::spawn(move || handle.block_on(PlayerTrackLoader::load(&song))).join() {
+            Ok(track) => track,
+            Err(_) => {
+                println!("Failed to load track");
+                None
+            }
+        }
     }
 
     fn start_playback(&mut self, _track_id: &str, loaded_track: PlayerLoadedTrackData) {

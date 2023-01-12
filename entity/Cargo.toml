@@ -1,6 +1,6 @@
 [package]
 name = "music-player-entity"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -11,7 +11,7 @@ description = "Entities for the music player"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies]
 md5 = "0.7.0"

@@ -1,6 +1,6 @@
 [package]
 name = "music-player-addons"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -10,11 +10,11 @@ description = "The addons for the music player"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies.music-player-client]
 path = "../client"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies]
 surf = "2.3.2"

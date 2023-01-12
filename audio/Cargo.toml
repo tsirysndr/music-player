@@ -11,7 +11,7 @@ description = "The audio fetching logic for music player"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies]
 anyhow = "1.0.68"

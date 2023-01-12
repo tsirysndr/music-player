@@ -1,6 +1,6 @@
 [package]
 name = "music-player-discovery"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -11,7 +11,7 @@ description = "Discovery for the music player"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies]
 env_logger = "0.9.1"

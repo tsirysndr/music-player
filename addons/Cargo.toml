@@ -17,6 +17,6 @@ path = "../client"
 version = "0.1.2"
 
 [dependencies]
-surf = "2.3.2"
+surf = { version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
 async-trait = "0.1.59"
 anyhow = "1.0.67"

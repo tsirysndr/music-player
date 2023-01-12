@@ -13,7 +13,7 @@ description = "The GraphQL server API for the music player"
 
 [dependencies.music-player-playback]
 path = "../playback"
-version = "0.1.8"
+version = "0.1.9"
 
 [dependencies.music-player-scanner]
 path = "../scanner"

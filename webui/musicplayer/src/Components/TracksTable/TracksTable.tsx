@@ -1,3 +1,4 @@
+import { useTheme } from "@emotion/react";
 import styled from "@emotion/styled";
 import { Play } from "@styled-icons/ionicons-sharp";
 import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
@@ -28,6 +29,7 @@ const CellWrapper = styled.div`
   flex-direction: row;
   align-items: center;
   height: 45px;
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const AlbumCover = styled.img<{ current: boolean }>`
@@ -37,17 +39,17 @@ const AlbumCover = styled.img<{ current: boolean }>`
   ${({ current }) => `opacity: ${current ? 0.4 : 1};`}
 `;
 
-const convertToLink = (row: any, item: string) => {
+const convertToLink = (row: any, item: string, color: string) => {
   switch (item) {
     case "Artist":
       return (
-        <Link to={`/artists/${_.get(row, "artistId", "")}`}>
+        <Link to={`/artists/${_.get(row, "artistId", "")}`} style={{ color }}>
           {_.get(row, _.toLower(item), "")}
         </Link>
       );
     case "Album":
       return (
-        <Link to={`/albums/${_.get(row, "albumId", "")}`}>
+        <Link to={`/albums/${_.get(row, "albumId", "")}`} style={{ color }}>
           {_.get(row, _.toLower(item), "")}
         </Link>
       );
@@ -73,6 +75,7 @@ const Cell: FC<CellProps> = ({
   index,
   isAlbumTracks,
 }) => {
+  const theme = useTheme();
   return (
     <CellWrapper>
       {!isAlbumTracks && item === "Title" && !row.cover && (
@@ -102,7 +105,9 @@ const Cell: FC<CellProps> = ({
           )}
 
           {item !== "#" && (
-            <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
+            <div style={{ flex: 1, color: theme.colors.text }}>
+              {convertToLink(row, item, theme.colors.text)}
+            </div>
           )}
         </div>
       )}
@@ -118,7 +123,9 @@ const Cell: FC<CellProps> = ({
               <Speaker color={row.cover ? "#fff" : "#ab28fc"} />
             </div>
           )}
-          <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
+          <div style={{ flex: 1 }}>
+            {convertToLink(row, item, theme.colors.text)}
+          </div>
         </div>
       )}
       {!current && !isAlbumTracks && item === "Title" && (
@@ -137,11 +144,15 @@ const Cell: FC<CellProps> = ({
           >
             <Play size={16} />
           </div>
-          <div className="tracknumber">{convertToLink(row, item)}</div>
+          <div className="tracknumber">
+            {convertToLink(row, item, theme.colors.text)}
+          </div>
         </>
       )}
       {!current && item !== "#" && (
-        <div style={{ flex: 1 }}>{convertToLink(row, item)}</div>
+        <div style={{ flex: 1 }}>
+          {convertToLink(row, item, theme.colors.text)}
+        </div>
       )}
     </CellWrapper>
   );
@@ -176,6 +187,7 @@ const TracksTable: FC<TracksTableProps> = ({
   onAddTrackToPlaylist,
   recentPlaylists,
 }) => {
+  const theme = useTheme();
   return (
     <TableWrapper>
       {title}
@@ -186,6 +198,7 @@ const TracksTable: FC<TracksTableProps> = ({
             style: {
               maxHeight,
               paddingLeft: "10px",
+              backgroundColor: theme.colors.background,
             },
           },
           TableHeadCell: {
@@ -204,15 +217,16 @@ const TracksTable: FC<TracksTableProps> = ({
                     ? "100px"
                     : "auto",
                 outlineWidth: "0px",
-                borderBottomColor: "#fff !important",
-                color: "rgba(0, 0, 0, 0.542)",
+                borderBottomColor: `${theme.colors.background} !important`,
+                color: theme.colors.secondaryText,
+                backgroundColor: theme.colors.background,
               };
             },
           },
           TableBodyCell: {
             style: ({ $col }) => ({
               outlineWidth: "0px 0px 0px 0px",
-              borderBottomColor: "#fff !important",
+              borderBottomColor: `${theme.colors.background} !important`,
               overflow: "hidden",
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
@@ -225,11 +239,15 @@ const TracksTable: FC<TracksTableProps> = ({
           TableHead: {
             style: () => ({
               outlineWidth: "0px",
-              borderBottomColor: "#fff",
+              borderBottomColor: theme.colors.background,
+              backgroundColor: theme.colors.background,
             }),
           },
           TableBody: {
-            style: () => ({ border: "none" }),
+            style: () => ({
+              border: "none",
+              backgroundColor: theme.colors.background,
+            }),
           },
         }}
       >

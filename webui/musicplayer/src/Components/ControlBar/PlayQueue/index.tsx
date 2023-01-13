@@ -5,6 +5,7 @@ import { Track } from "../../../Types";
 import { CloseOutline } from "@styled-icons/evaicons-outline";
 import TrackIcon from "../../Icons/Track";
 import { Play } from "@styled-icons/ionicons-sharp";
+import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   height: calc(100vh - 90px);
@@ -48,7 +49,7 @@ const ListItem = styled.div`
   padding-right: 16px;
   cursor: pointer;
   &:hover {
-    background-color: rgba(228, 229, 230, 0.28);
+    background-color: ${({ theme }) => theme.colors.hover};
   }
 `;
 
@@ -62,7 +63,7 @@ const TrackTitle = styled.div`
 
 const Artist = styled.div`
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.542);
+  color: ${({ theme }) => theme.colors.secondaryText};
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
@@ -127,6 +128,7 @@ const PlayQueue: FC<PlayQueueProps> = ({
   onPlayTrackAt,
   onRemoveTrackAt,
 }) => {
+  const theme = useTheme();
   const [active, setActive] = useState("playqueue");
 
   const onSwitch = () => {
@@ -191,12 +193,15 @@ const PlayQueue: FC<PlayQueueProps> = ({
             )}
             <TrackDetails>
               <TrackTitle>{track.title}</TrackTitle>
-              <Link to={`/artists/${track.artistId}`}>
+              <Link
+                to={`/artists/${track.artistId}`}
+                style={{ textDecoration: "none" }}
+              >
                 <Artist>{track.artist}</Artist>
               </Link>
             </TrackDetails>
             <Remove onClick={() => _onRemoveTrack(index)}>
-              <CloseOutline size={24} />
+              <CloseOutline size={24} color={theme.colors.text} />
             </Remove>
           </ListItem>
         ))}

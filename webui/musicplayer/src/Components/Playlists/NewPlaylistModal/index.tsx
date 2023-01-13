@@ -4,6 +4,7 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from "baseui/modal";
 import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
 import Button from "../../Button";
+import { useTheme } from "@emotion/react";
 
 export type NewPlaylistModalProps = {
   isOpen: boolean;
@@ -16,6 +17,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
   isOpen,
   onCreatePlaylist,
 }) => {
+  const theme = useTheme();
   const { control, handleSubmit, reset } = useForm();
   const _onCreatePlaylist = (data: any) => {
     onCreatePlaylist(data.name, data.description);
@@ -57,7 +59,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
                 },
                 Input: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                     fontSize: "14px",
                     paddingLeft: "0px !important",
                     paddingRight: "0px !important",
@@ -65,7 +67,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
                 },
                 InputContainer: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}
@@ -97,7 +99,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
                 },
                 Input: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                     fontSize: "14px",
                     paddingLeft: "0px !important",
                     paddingRight: "0px !important",
@@ -105,7 +107,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
                 },
                 InputContainer: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}

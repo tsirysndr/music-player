@@ -11,7 +11,7 @@ const Container = styled.div`
   width: 531px;
   display: flex;
   align-items: center;
-  border: 1px solid rgba(177, 178, 181, 0.25);
+  border: 1px solid ${(props) => props.theme.colors.currentTrackBorder};
   border-radius: 5px;
   margin-left: 30px;
   padding-left: 8px;
@@ -51,13 +51,13 @@ const Artist = styled.div`
   text-align: center;
   font-family: RockfordSansLight;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.542);
+  color: ${(props) => props.theme.colors.secondaryText};
   white-space: nowrap;
   text-overflow: ellipsis;
 `;
 
 const AlbumTitle = styled.span`
-  color: rgba(0, 0, 0, 0.542) !important;
+  color: ${(props) => props.theme.colors.secondaryText} !important;
   white-space: nowrap;
   text-overflow: ellipsis;
 `;
@@ -67,6 +67,7 @@ const Title = styled.div`
   font-size: 14px;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Row = styled.div`
@@ -83,6 +84,7 @@ const Time = styled.div`
   text-align: center;
   width: 60px;
   margin-top: -3px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const ProgressbarContainer = styled.div`

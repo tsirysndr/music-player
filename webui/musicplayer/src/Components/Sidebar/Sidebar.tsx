@@ -20,7 +20,7 @@ const ConnectButton = styled.button<{
   connected?: boolean;
 }>`
   border: none;
-  background-color: #fbf5ff;
+  background-color: ${(props) => props.theme.colors.secondaryBackground};
   height: 32px;
   ${(props) => (props.connected ? "width: 272px;" : "40px")}
   display: flex;

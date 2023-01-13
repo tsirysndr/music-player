@@ -18,6 +18,7 @@ import { Device } from "../../Types/Device";
 const Container = styled.div`
   display: flex;
   flex-direction: row;
+  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const Content = styled.div`

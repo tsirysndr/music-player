@@ -14,10 +14,12 @@ import _ from "lodash";
 import { Track } from "../../Types";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";
+import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   display: flex;
   flex-direction: row;
+  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const Content = styled.div`
@@ -35,7 +37,7 @@ const BackButton = styled.button`
   height: 30px;
   width: 30px;
   border-radius: 15px;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.backButton};
   margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
@@ -66,17 +68,20 @@ const Album = styled.div`
   flex-direction: row;
   margin-top: 90px;
   margin-left: 16px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Title = styled.div`
   font-family: RockfordSansBold;
   font-size: 32px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Artist = styled.div`
   font-family: RockfordSansMedium;
   font-size: 14px;
   margin-top: 8px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Metadata = styled.div`
@@ -121,6 +126,7 @@ const Tracks = styled.div`
   margin-top: 25px;
   font-family: RockfordSansLight;
   font-size: 14px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 export type AlbumDetailsProps = {
@@ -178,6 +184,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
     ? album.cover
     : resourceUriResolver.resolve(`/covers/${album.cover}`);
   const { cover } = useCover(coverUrl);
+  const theme = useTheme();
   return (
     <Container>
       <Sidebar active="albums" {...props} />
@@ -187,7 +194,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
           <Scrollable>
             <BackButton onClick={onBack}>
               <div style={{ marginTop: 2 }}>
-                <ArrowBack />
+                <ArrowBack color={theme.colors.text} />
               </div>
             </BackButton>
             <Album>

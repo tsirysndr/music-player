@@ -1,3 +1,4 @@
+import { useTheme } from "@emotion/react";
 import { Input } from "baseui/input";
 import {
   Modal,
@@ -22,6 +23,7 @@ const EditFolderModal: FC<EditFolderModalProps> = ({
   isOpen,
   onEditFolder,
 }) => {
+  const theme = useTheme();
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       name: folder?.name,
@@ -71,7 +73,7 @@ const EditFolderModal: FC<EditFolderModalProps> = ({
                 },
                 Input: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                     fontSize: "14px",
                     paddingLeft: "0px !important",
                     paddingRight: "0px !important",
@@ -79,7 +81,7 @@ const EditFolderModal: FC<EditFolderModalProps> = ({
                 },
                 InputContainer: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}

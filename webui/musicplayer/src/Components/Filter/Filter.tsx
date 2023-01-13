@@ -1,3 +1,4 @@
+import { useTheme } from "@emotion/react";
 import { Input } from "baseui/input";
 import { FC } from "react";
 import Search from "../Icons/Search";
@@ -7,6 +8,7 @@ export type FilterProps = {
 };
 
 const Filter: FC<FilterProps> = ({ placeholder }) => {
+  const theme = useTheme();
   return (
     <>
       <Input
@@ -29,23 +31,24 @@ const Filter: FC<FilterProps> = ({ placeholder }) => {
               borderTopRightRadius: "18px !important",
               borderBottomLeftRadius: "18px !important",
               borderBottomRightRadius: "18px !important",
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.searchBackground,
             },
           },
           Input: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.searchBackground,
               fontSize: "14px",
+              color: theme.colors.text,
             },
           },
           InputContainer: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.searchBackground,
             },
           },
           StartEnhancer: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.searchBackground,
               paddingTop: "0px",
               paddingBottom: "0px",
               paddingLeft: "0px",

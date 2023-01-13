@@ -7,6 +7,7 @@ const Title = styled.div`
   font-family: RockfordSansBold;
   margin-top: 35px;
   margin-bottom: 5px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Item = styled.div<{ active?: boolean }>`
@@ -16,6 +17,7 @@ const Item = styled.div<{ active?: boolean }>`
   display: flex;
   align-items: center;
   font-size: 14px;
+  color: ${(props) => props.theme.colors.text};
   ${(props) => (props.active ? "color: #ab28fc;" : "initial")}
 `;
 

@@ -12,11 +12,13 @@ import ContextMenu from "./ContextMenu";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import EditPlaylistModal from "./EditPlaylistModal";
 import EditFolderModal from "./EditFolderModal";
+import { useTheme } from "@emotion/react";
 
 const Title = styled.div`
   font-size: 16px;
   font-family: RockfordSansBold;
   margin-bottom: 10px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Container = styled.div`
@@ -30,6 +32,7 @@ const Item = styled.div<{ active?: boolean }>`
   display: flex;
   align-items: center;
   font-size: 14px;
+  color: ${(props) => props.theme.colors.text};
   ${(props) => (props.active ? "color: #ab28fc;" : "initial")}
 `;
 
@@ -41,6 +44,7 @@ const Create = styled.div`
   align-items: center;
   font-size: 14px;
   cursor: pointer;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Plus = styled.div`
@@ -79,6 +83,7 @@ const Folder: FC<FolderProps> = ({
     "Delete Folder": () => setDeleteConfirmationModalIsOpen(true),
     "Create Playlist": () => setNewPlaylistModalIsOpen(true),
   };
+  const theme = useTheme();
   return (
     <>
       <Popover
@@ -97,7 +102,7 @@ const Folder: FC<FolderProps> = ({
         overrides={{
           Inner: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.popoverBackground,
             },
           },
         }}
@@ -111,7 +116,11 @@ const Folder: FC<FolderProps> = ({
           }}
         >
           <FolderItem>
-            <FolderIcon size={18} style={{ marginRight: 10 }} />
+            <FolderIcon
+              size={18}
+              style={{ marginRight: 10 }}
+              color={theme.colors.icon}
+            />
             <Item active={folder.id === id}>{folder.name}</Item>
           </FolderItem>
         </Link>
@@ -159,6 +168,7 @@ const Playlist: FC<PlaylistProps> = ({
   onEditPlaylist,
   onPlayPlaylist,
 }) => {
+  const theme = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [editPlaylistModalIsOpen, setEditPlaylistModalIsOpen] =
     useState<boolean>(false);
@@ -190,7 +200,7 @@ const Playlist: FC<PlaylistProps> = ({
         overrides={{
           Inner: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.popoverBackground,
             },
           },
         }}
@@ -261,6 +271,7 @@ const Playlists: FC<PlaylistsProps> = ({
   onEditPlaylist,
   onPlayPlaylist,
 }) => {
+  const theme = useTheme();
   const { id } = useParams();
   const [newFolderModalOpen, setNewFolderModalOpen] = useState(false);
   const [newPlaylistModalOpen, setNewPlaylistModalOpen] = useState(false);
@@ -304,14 +315,14 @@ const Playlists: FC<PlaylistsProps> = ({
         overrides={{
           Inner: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.popoverBackground,
             },
           },
         }}
       >
         <Create>
           <Plus>
-            <AddAlt />
+            <AddAlt color={theme.colors.text} />
           </Plus>
           <span>Create ...</span>
         </Create>

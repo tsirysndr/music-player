@@ -9,6 +9,7 @@ import {
 } from "baseui/modal";
 import { FC, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { useTheme } from "@emotion/react";
 
 export type EditPlaylistModalProps = {
   playlist?: any;
@@ -23,6 +24,7 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
   isOpen,
   onEditPlaylist,
 }) => {
+  const theme = useTheme();
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       name: playlist?.name,
@@ -75,7 +77,7 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
                 },
                 Input: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                     fontSize: "14px",
                     paddingLeft: "0px !important",
                     paddingRight: "0px !important",
@@ -83,7 +85,7 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
                 },
                 InputContainer: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}
@@ -115,7 +117,7 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
                 },
                 Input: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                     fontSize: "14px",
                     paddingLeft: "0px !important",
                     paddingRight: "0px !important",
@@ -123,7 +125,7 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
                 },
                 InputContainer: {
                   style: {
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}

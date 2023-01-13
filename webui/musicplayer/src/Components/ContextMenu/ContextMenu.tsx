@@ -9,6 +9,7 @@ import { NestedMenus, StatefulMenu } from "baseui/menu";
 import TrackIcon from "../Icons/Track";
 import { useCover } from "../../Hooks/useCover";
 import NewPlaylistModal from "../Playlists/NewPlaylistModal";
+import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   display: flex;
@@ -60,7 +61,7 @@ const Track = styled.div`
   align-items: center;
   padding-left: 5px;
   padding-right: 5px;
-  border-bottom: 1px solid #e0e0e0cc;
+  border-bottom: 1px solid ${(props) => props.theme.colors.separator};
 `;
 
 const Artist = styled.div`
@@ -131,6 +132,7 @@ const ContextMenu: FC<ContextMenuProps> = ({
   onAddTrackToPlaylist,
   recentPlaylists,
 }) => {
+  const theme = useTheme();
   const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const { cover } = useCover(track.cover);
   return (
@@ -140,7 +142,11 @@ const ContextMenu: FC<ContextMenuProps> = ({
           placement="left"
           autoFocus={false}
           content={({ close }) => (
-            <div style={{ width: 205 }}>
+            <div
+              style={{
+                width: 205,
+              }}
+            >
               <Track>
                 {cover && <AlbumCover src={cover} />}
                 {!cover && (
@@ -159,6 +165,7 @@ const ContextMenu: FC<ContextMenuProps> = ({
                     List: {
                       style: {
                         boxShadow: "none",
+                        backgroundColor: theme.colors.popoverBackground,
                       },
                     },
                     Option: {
@@ -213,13 +220,13 @@ const ContextMenu: FC<ContextMenuProps> = ({
           overrides={{
             Inner: {
               style: {
-                backgroundColor: "#fff",
+                backgroundColor: theme.colors.popoverBackground,
               },
             },
           }}
         >
           <Icon>
-            <EllipsisHorizontal />
+            <EllipsisHorizontal color={theme.colors.icon} />
           </Icon>
         </StatefulPopover>
       </Hover>
@@ -259,18 +266,18 @@ const ContextMenu: FC<ContextMenuProps> = ({
         }}
       >
         <Icon>
-          <Add size={24} />
+          <Add size={24} color={theme.colors.icon} />
         </Icon>
       </StatefulPopover>
       <Separator />
       {liked && (
         <Icon>
-          <Heart height={24} width={24} />
+          <Heart height={24} width={24} color={theme.colors.icon} />
         </Icon>
       )}
       {!liked && (
         <Icon>
-          <HeartOutline height={24} width={24} />
+          <HeartOutline height={24} width={24} color={theme.colors.icon} />
         </Icon>
       )}
       <NewPlaylistModal

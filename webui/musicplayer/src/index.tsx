@@ -6,7 +6,12 @@ import { Provider as StyletronProvider } from "styletron-react";
 import { Client as Styletron } from "styletron-engine-atomic";
 import { BaseProvider } from "baseui";
 import { PLACEMENT, SnackbarProvider } from "baseui/snackbar";
-import { theme } from "./Theme";
+import {
+  DarkTheme,
+  LightTheme,
+  BaseUIDarktheme,
+  BaseUILighttheme,
+} from "./Theme";
 import {
   ApolloClient,
   createHttpLink,
@@ -20,6 +25,7 @@ import { render } from "react-dom";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { SubscriptionClient } from "subscriptions-transport-ws";
 import { createTauriLink } from "./TauriLink";
+import { ThemeProvider } from "@emotion/react";
 
 let link: ApolloLink;
 
@@ -65,15 +71,17 @@ const root = document.getElementById("root") as HTMLElement;
 
 render(
   <React.StrictMode>
-    <ApolloProvider client={client}>
-      <StyletronProvider value={engine}>
-        <BaseProvider theme={theme}>
-          <SnackbarProvider placement={PLACEMENT.bottom}>
-            <App />
-          </SnackbarProvider>
-        </BaseProvider>
-      </StyletronProvider>
-    </ApolloProvider>
+    <ThemeProvider theme={true ? DarkTheme : LightTheme}>
+      <ApolloProvider client={client}>
+        <StyletronProvider value={engine}>
+          <BaseProvider theme={BaseUIDarktheme}>
+            <SnackbarProvider placement={PLACEMENT.bottom}>
+              <App />
+            </SnackbarProvider>
+          </BaseProvider>
+        </StyletronProvider>
+      </ApolloProvider>
+    </ThemeProvider>
   </React.StrictMode>,
   root
 );

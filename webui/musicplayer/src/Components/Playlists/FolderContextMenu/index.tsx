@@ -2,11 +2,12 @@ import styled from "@emotion/styled";
 import { StatefulMenu } from "baseui/menu";
 import { FC } from "react";
 import { Folder as FolderIcon } from "@styled-icons/bootstrap";
+import { useTheme } from "@emotion/react";
 
 const IconWrapper = styled.div`
   height: 40px;
   width: 40px;
-  background-color: #fbf5fe;
+  background-color: ${(props) => props.theme.colors.secondaryBackground};
   display: flex;
   justify-content: center;
   align-items: center;
@@ -20,7 +21,7 @@ const Header = styled.div`
   align-items: center;
   padding-left: 5px;
   padding-right: 5px;
-  border-bottom: 1px solid #e0e0e0cc;
+  border-bottom: 1px solid ${(props) => props.theme.colors.separator};
 `;
 
 const FolderDetails = styled.div`
@@ -44,6 +45,7 @@ const FolderContextMenu: FC<FolderContextProps> = ({
   folder,
   handlers,
 }) => {
+  const theme = useTheme();
   return (
     <div style={{ width: 205 }}>
       <Header>
@@ -59,12 +61,13 @@ const FolderContextMenu: FC<FolderContextProps> = ({
           List: {
             style: {
               boxShadow: "none",
+              backgroundColor: theme.colors.popoverBackground,
             },
           },
           ListItem: {
             style: () => ({
               ":hover": {
-                backgroundColor: "#f7f7f8",
+                backgroundColor: theme.colors.hover,
               },
             }),
           },

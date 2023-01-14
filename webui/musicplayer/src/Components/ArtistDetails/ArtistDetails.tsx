@@ -13,10 +13,12 @@ import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
+import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   display: flex;
   flex-direction: row;
+  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const Content = styled.div`
@@ -34,7 +36,7 @@ const BackButton = styled.button`
   height: 30px;
   width: 30px;
   border-radius: 15px;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.backButton};
   margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
@@ -52,6 +54,7 @@ const Artist = styled.div`
   margin-top: 94px;
   margin-left: 26px;
   margin-bottom: 40px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Buttons = styled.div`
@@ -81,6 +84,7 @@ const Title = styled.div`
   margin-left: 15px;
   margin-bottom: 10px;
   flex: 1;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Row = styled.div`
@@ -94,7 +98,7 @@ const Row = styled.div`
 const SeeMore = styled.div`
   width: 64px;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.51);
+  color: ${(props) => props.theme.colors.secondaryText};
   cursor: pointer;
 `;
 
@@ -136,6 +140,7 @@ const AlbumTitle = styled.div`
   overflow: hidden;
   white-space: nowrap;
   cursor: pointer;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 export type ArtistDetailsProps = {
@@ -195,6 +200,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
     recentPlaylists,
     onAddTrackToPlaylist,
   } = props;
+  const theme = useTheme();
   return (
     <Container>
       <Sidebar active="artists" {...props} />
@@ -204,7 +210,7 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
           <Scrollable>
             <BackButton onClick={onBack}>
               <div style={{ marginTop: 2 }}>
-                <ArrowBack />
+                <ArrowBack color={theme.colors.text} />
               </div>
             </BackButton>
             <Artist>{artist.name}</Artist>

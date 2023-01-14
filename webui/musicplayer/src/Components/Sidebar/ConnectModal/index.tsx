@@ -4,7 +4,7 @@ import { FC } from "react";
 import { MusicPlayer } from "@styled-icons/bootstrap";
 import { Kodi } from "@styled-icons/simple-icons";
 import styled from "@emotion/styled";
-import { css } from "@emotion/react";
+import { css, useTheme } from "@emotion/react";
 import { Device } from "../../../Types/Device";
 import { Button, SHAPE, SIZE } from "baseui/button";
 
@@ -70,6 +70,7 @@ const ConnectModal: FC<ConnectModalProps> = ({
   connectToDevice,
   disconnectFromDevice,
 }) => {
+  const theme = useTheme();
   const _connectToDevice = (id: string) => {
     if (currentDevice?.id === id) {
       return;
@@ -96,6 +97,13 @@ const ConnectModal: FC<ConnectModalProps> = ({
                   />
                 )}
                 overrides={{
+                  Root: {
+                    style: {
+                      ":hover": {
+                        backgroundColor: theme.colors.hover,
+                      },
+                    },
+                  },
                   Content: {
                     style: {
                       borderBottom: "none",

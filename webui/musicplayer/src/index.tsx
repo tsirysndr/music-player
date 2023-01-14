@@ -4,9 +4,7 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { Provider as StyletronProvider } from "styletron-react";
 import { Client as Styletron } from "styletron-engine-atomic";
-import { BaseProvider } from "baseui";
 import { PLACEMENT, SnackbarProvider } from "baseui/snackbar";
-import { theme } from "./Theme";
 import {
   ApolloClient,
   createHttpLink,
@@ -20,6 +18,7 @@ import { render } from "react-dom";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { SubscriptionClient } from "subscriptions-transport-ws";
 import { createTauriLink } from "./TauriLink";
+import Providers from "./Providers";
 
 let link: ApolloLink;
 
@@ -67,11 +66,11 @@ render(
   <React.StrictMode>
     <ApolloProvider client={client}>
       <StyletronProvider value={engine}>
-        <BaseProvider theme={theme}>
+        <Providers>
           <SnackbarProvider placement={PLACEMENT.bottom}>
             <App />
           </SnackbarProvider>
-        </BaseProvider>
+        </Providers>
       </StyletronProvider>
     </ApolloProvider>
   </React.StrictMode>,

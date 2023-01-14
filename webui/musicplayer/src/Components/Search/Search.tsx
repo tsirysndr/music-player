@@ -1,3 +1,4 @@
+import { useTheme } from "@emotion/react";
 import { Input } from "baseui/input";
 import { FC } from "react";
 
@@ -8,6 +9,7 @@ export type SearchProps = {
 };
 
 const Search: FC<SearchProps> = ({ onSearch, width, height }) => {
+  const theme = useTheme();
   const handleKeyPress = (
     event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -37,13 +39,14 @@ const Search: FC<SearchProps> = ({ onSearch, width, height }) => {
           },
           Input: {
             style: {
-              backgroundColor: "rgba(177, 178, 181, 0.1)",
+              backgroundColor: theme.colors.searchBackground,
               fontSize: "14px",
+              color: theme.colors.text,
             },
           },
           InputContainer: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.searchBackground,
               width: "100%",
             },
           },

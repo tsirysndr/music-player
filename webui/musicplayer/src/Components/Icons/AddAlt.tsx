@@ -1,6 +1,10 @@
 import * as React from "react";
 
-const SvgComponent: React.FC = (props) => (
+export type AddAltProps = {
+  color?: string;
+};
+
+const SvgComponent: React.FC<AddAltProps> = (props) => (
   <svg
     width={17}
     xmlns="http://www.w3.org/2000/svg"
@@ -14,7 +18,7 @@ const SvgComponent: React.FC = (props) => (
     <g
       className="ionicon"
       style={{
-        fill: "#000",
+        fill: props.color,
       }}
     >
       <path
@@ -35,12 +39,16 @@ const SvgComponent: React.FC = (props) => (
         style={{
           fill: "none",
           strokeWidth: 2,
-          stroke: "#000",
+          stroke: props.color,
         }}
         className="stroke-shape"
       />
     </g>
   </svg>
 );
+
+SvgComponent.defaultProps = {
+  color: "#000",
+};
 
 export default SvgComponent;

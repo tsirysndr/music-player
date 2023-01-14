@@ -119,7 +119,6 @@ tr:hover td div button {
  }
 
  .connect-list li:hover {
-  background-color: #f3f3f386;
   border-radius: 5px;
   cursor: pointer;
  }

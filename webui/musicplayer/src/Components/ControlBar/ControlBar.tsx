@@ -8,9 +8,11 @@ import Repeat from "../Icons/Repeat";
 import Shuffle from "../Icons/Shuffle";
 import CurrentTrack from "./CurrentTrack";
 import { ListOutline } from "@styled-icons/evaicons-outline";
+import { Speaker } from "@styled-icons/bootstrap";
 import { StatefulPopover } from "baseui/popover";
 import PlayQueue from "./PlayQueue";
 import { Track } from "../../Types";
+import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   display: flex;
@@ -40,6 +42,10 @@ const Button = styled.button`
 `;
 
 const PlayQueueButton = styled(Button)``;
+
+const SpeakerButton = styled(Button)`
+  margin-right: 10px;
+`;
 
 const ButtonGroup = styled.div`
   display: flex;
@@ -72,8 +78,11 @@ export type ControlBarProps = {
 };
 
 const ControlBar: FC<ControlBarProps> = (props) => {
+  const theme = useTheme();
   const [played, setPlayed] = useState(false);
-  const [playQueueButtonColor, setPlayQueueButtonColor] = useState("#000");
+  const [playQueueButtonColor, setPlayQueueButtonColor] = useState(
+    theme.colors.icon
+  );
   const {
     nowPlaying,
     onNext,
@@ -90,6 +99,10 @@ const ControlBar: FC<ControlBarProps> = (props) => {
     }
   }, [nowPlaying?.isPlaying]);
 
+  useEffect(() => {
+    setPlayQueueButtonColor(theme.colors.icon);
+  }, [theme]);
+
   const handlePlay = () => {
     setPlayed(true);
     onPlay();
@@ -104,33 +117,37 @@ const ControlBar: FC<ControlBarProps> = (props) => {
     <Container>
       <Controls>
         <Button onClick={onShuffle}>
-          <Shuffle />
+          <Shuffle color={theme.colors.text} />
         </Button>
         <Button onClick={onPrevious}>
-          <Previous />
+          <Previous color={theme.colors.text} />
         </Button>
         {!played && (
           <Button onClick={handlePlay}>
-            <Play />
+            <Play color={theme.colors.text} />
           </Button>
         )}
         {played && (
           <Button onClick={handlePause}>
-            <Pause />
+            <Pause color={theme.colors.text} />
           </Button>
         )}
         <Button onClick={onNext}>
-          <Next />
+          <Next color={theme.colors.text} />
         </Button>
         <Button onClick={onRepeat}>
-          <Repeat />
+          <Repeat color={theme.colors.text} />
         </Button>
       </Controls>
       <CurrentTrack nowPlaying={nowPlaying} />
+
       <ButtonGroup>
+        <SpeakerButton>
+          <Speaker size={18} color={theme.colors.icon} />
+        </SpeakerButton>
         <StatefulPopover
           onOpen={() => setPlayQueueButtonColor("#ab28fc")}
-          onClose={() => setPlayQueueButtonColor("#000")}
+          onClose={() => setPlayQueueButtonColor(theme.colors.icon)}
           placement="bottom"
           content={() => <PlayQueue {...props} />}
           overrides={{
@@ -141,7 +158,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
             },
             Inner: {
               style: {
-                backgroundColor: "#fff",
+                backgroundColor: theme.colors.popoverBackground,
               },
             },
           }}

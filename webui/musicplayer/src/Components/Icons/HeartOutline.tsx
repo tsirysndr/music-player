@@ -22,7 +22,7 @@ const HeartOutline: React.FC<HeartOutlineProps> = (props) => (
     <g
       className="ionicon"
       style={{
-        fill: "#000",
+        fill: props.color,
       }}
     >
       <path
@@ -43,7 +43,7 @@ const HeartOutline: React.FC<HeartOutlineProps> = (props) => (
         style={{
           fill: "none",
           strokeWidth: 2,
-          stroke: "#000",
+          stroke: props.color,
           strokeOpacity: 1,
         }}
         className="stroke-shape"

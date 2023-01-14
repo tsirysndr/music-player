@@ -12,6 +12,7 @@ import { Device } from "../../Types/Device";
 const Container = styled.div`
   display: flex;
   flex-direction: row;
+  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const Content = styled.div`
@@ -59,6 +60,7 @@ const Title = styled.div`
   overflow: hidden;
   white-space: nowrap;
   cursor: pointer;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Scrollable = styled.div`

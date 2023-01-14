@@ -99,6 +99,10 @@ const ControlBar: FC<ControlBarProps> = (props) => {
     }
   }, [nowPlaying?.isPlaying]);
 
+  useEffect(() => {
+    setPlayQueueButtonColor(theme.colors.icon);
+  }, [theme]);
+
   const handlePlay = () => {
     setPlayed(true);
     onPlay();

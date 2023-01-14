@@ -1,11 +1,26 @@
 import styled from "@emotion/styled";
-import { FC, useState } from "react";
+import { FC, useContext, useState } from "react";
 import Library from "../Library";
 import Playlists from "../Playlists";
 import Search from "../Search";
 import { PlugConnected } from "@styled-icons/fluentui-system-regular";
 import ConnectModal from "./ConnectModal";
 import { Device } from "../../Types/Device";
+import { Sun, MoonStars } from "@styled-icons/bootstrap";
+import { useTheme } from "@emotion/react";
+import { ThemeContext } from "../../Providers/ThemeProvider";
+
+const Button = styled.button`
+  background-color: transparent;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &:hover {
+    opacity: 0.6;
+  }
+`;
 
 const Container = styled.div`
   height: calc(100vh - 30px);
@@ -44,6 +59,30 @@ const ConnectText = styled.span`
   white-space: nowrap;
 `;
 
+const DarkModeButtonWrapper = styled.div`
+  position: absolute;
+  bottom: 50px;
+`;
+
+const DarkModeButton = () => {
+  const theme = useTheme();
+  const { theme: currentTheme, setTheme } = useContext(ThemeContext);
+  return (
+    <DarkModeButtonWrapper>
+      <Button
+        onClick={() => setTheme(currentTheme === "dark" ? "light" : "dark")}
+      >
+        {currentTheme === "light" && (
+          <Sun size={18} color={theme.colors.text} />
+        )}
+        {currentTheme === "dark" && (
+          <MoonStars size={18} color={theme.colors.text} />
+        )}
+      </Button>
+    </DarkModeButtonWrapper>
+  );
+};
+
 export type SidebarProps = {
   active?: string;
   onClickLibraryItem: (item: string) => void;
@@ -76,6 +115,9 @@ const Sidebar: FC<SidebarProps> = (props) => {
       <Search {...props} />
       <Library {...props} />
       <Playlists {...props} />
+
+      <DarkModeButton />
+
       <ConnectButton
         onClick={() => setOpenConnectModal(true)}
         connected={connected}

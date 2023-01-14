@@ -4,14 +4,7 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { Provider as StyletronProvider } from "styletron-react";
 import { Client as Styletron } from "styletron-engine-atomic";
-import { BaseProvider } from "baseui";
 import { PLACEMENT, SnackbarProvider } from "baseui/snackbar";
-import {
-  DarkTheme,
-  LightTheme,
-  BaseUIDarktheme,
-  BaseUILighttheme,
-} from "./Theme";
 import {
   ApolloClient,
   createHttpLink,
@@ -25,7 +18,7 @@ import { render } from "react-dom";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { SubscriptionClient } from "subscriptions-transport-ws";
 import { createTauriLink } from "./TauriLink";
-import { ThemeProvider } from "@emotion/react";
+import Providers from "./Providers";
 
 let link: ApolloLink;
 
@@ -71,17 +64,15 @@ const root = document.getElementById("root") as HTMLElement;
 
 render(
   <React.StrictMode>
-    <ThemeProvider theme={true ? DarkTheme : LightTheme}>
-      <ApolloProvider client={client}>
-        <StyletronProvider value={engine}>
-          <BaseProvider theme={BaseUIDarktheme}>
-            <SnackbarProvider placement={PLACEMENT.bottom}>
-              <App />
-            </SnackbarProvider>
-          </BaseProvider>
-        </StyletronProvider>
-      </ApolloProvider>
-    </ThemeProvider>
+    <ApolloProvider client={client}>
+      <StyletronProvider value={engine}>
+        <Providers>
+          <SnackbarProvider placement={PLACEMENT.bottom}>
+            <App />
+          </SnackbarProvider>
+        </Providers>
+      </StyletronProvider>
+    </ApolloProvider>
   </React.StrictMode>,
   root
 );

@@ -1,8 +1,8 @@
 import { Client as Styletron } from "styletron-engine-atomic";
 import { Provider as StyletronProvider } from "styletron-react";
-import { LightTheme, BaseProvider } from "baseui";
-import { theme } from "../src/Theme";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { PLACEMENT, SnackbarProvider } from "baseui/snackbar";
+import Providers from "../src/Providers";
 import "../src/index.css";
 
 const engine = new Styletron();
@@ -34,9 +34,11 @@ export const decorators = [
   reactRouterDecorator,
   (Story) => (
     <StyletronProvider value={engine}>
-      <BaseProvider theme={theme}>
-        <Story />
-      </BaseProvider>
+      <Providers>
+        <SnackbarProvider placement={PLACEMENT.bottom}>
+          <Story />
+        </SnackbarProvider>
+      </Providers>
     </StyletronProvider>
   ),
 ];

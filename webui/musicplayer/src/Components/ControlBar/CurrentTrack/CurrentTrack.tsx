@@ -25,7 +25,7 @@ const AlbumCover = styled.img`
 const NoCover = styled.div`
   height: 62px;
   width: 62px;
-  background-color: #f3f3f3b9;
+  background-color: ${(props) => props.theme.colors.cover};
   display: flex;
   align-items: center;
   justify-content: center;

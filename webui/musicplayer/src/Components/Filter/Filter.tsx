@@ -31,24 +31,24 @@ const Filter: FC<FilterProps> = ({ placeholder }) => {
               borderTopRightRadius: "18px !important",
               borderBottomLeftRadius: "18px !important",
               borderBottomRightRadius: "18px !important",
-              backgroundColor: theme.colors.searchBackground,
+              backgroundColor: theme.colors.searchBackgroundAlt,
             },
           },
           Input: {
             style: {
-              backgroundColor: theme.colors.searchBackground,
+              backgroundColor: theme.colors.searchBackgroundAlt,
               fontSize: "14px",
               color: theme.colors.text,
             },
           },
           InputContainer: {
             style: {
-              backgroundColor: theme.colors.searchBackground,
+              backgroundColor: theme.colors.searchBackgroundAlt,
             },
           },
           StartEnhancer: {
             style: {
-              backgroundColor: theme.colors.searchBackground,
+              backgroundColor: theme.colors.searchBackgroundAlt,
               paddingTop: "0px",
               paddingBottom: "0px",
               paddingLeft: "0px",

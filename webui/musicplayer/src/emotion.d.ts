@@ -7,6 +7,7 @@ declare module "@emotion/react" {
       background: string;
       icon: string;
       searchBackground: string;
+      searchBackgroundAlt: string;
       secondaryBackground: string;
       secondaryText: string;
       backButton: string;
@@ -14,6 +15,7 @@ declare module "@emotion/react" {
       popoverBackground: string;
       separator: string;
       hover: string;
+      cover: string;
     };
   }
 }

@@ -1,13 +1,13 @@
 import styled from "@emotion/styled";
 import { FC, ReactNode } from "react";
 import Filter from "../Filter";
-import { Table } from "baseui/table-semantic";
 
 const Title = styled.div`
   font-family: RockfordSansBold;
   font-size: 16px;
   margin-top: 30px;
   margin-bottom: 36px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Header = styled.div`

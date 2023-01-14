@@ -36,7 +36,7 @@ const BackButton = styled.button`
   height: 30px;
   width: 30px;
   border-radius: 15px;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.backButton};
   margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
@@ -92,6 +92,7 @@ const PlaylistName = styled.div`
   white-space: nowrap;
   cursor: pointer;
   margin-top: 15px;
+  color: ${(props) => props.theme.colors.text};
 `;
 
 const Row = styled.div`

@@ -89,7 +89,7 @@ const AlbumCoverAlt = styled.div<{ current?: boolean }>`
   width: 48px;
   border-radius: 4px;
   cursor: pointer;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.cover};
   display: flex;
   justify-content: center;
   align-items: center;

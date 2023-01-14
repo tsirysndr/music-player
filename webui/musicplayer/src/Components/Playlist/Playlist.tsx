@@ -15,6 +15,7 @@ import { Track } from "../../Types";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";
+import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   display: flex;
@@ -37,7 +38,7 @@ const BackButton = styled.button`
   height: 30px;
   width: 30px;
   border-radius: 15px;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.backButton};
   margin-left: 26px;
   margin-bottom: 46px;
   position: absolute;
@@ -90,6 +91,7 @@ const NoCover = styled.div`
 const Title = styled.div`
   font-family: RockfordSansBold;
   font-size: 32px;
+  color: ${(props) => props.theme.colors.text};
 `;
 const Placeholder = styled.div`
   font-family: RockfordSansRegular;
@@ -181,6 +183,7 @@ const Playlist: FC<PlaylistProps> = (props) => {
       artistId: track.artistId,
       albumId: track.albumId,
     })) || [];
+  const theme = useTheme();
   return (
     <Container>
       <Sidebar active="artists" {...props} />
@@ -190,7 +193,7 @@ const Playlist: FC<PlaylistProps> = (props) => {
           <Scrollable>
             <BackButton onClick={onBack}>
               <div style={{ marginTop: 2 }}>
-                <ArrowBack />
+                <ArrowBack color={theme.colors.text} />
               </div>
             </BackButton>
             <Header>

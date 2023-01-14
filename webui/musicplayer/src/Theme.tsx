@@ -1,6 +1,6 @@
 import { createLightTheme, createDarkTheme } from "baseui/themes";
 
-export const BaseUIDarktheme = createDarkTheme(
+export const BaseUIDarkTheme = createDarkTheme(
   {
     primaryFontFamily: "RockfordSansRegular",
   },
@@ -19,7 +19,7 @@ export const BaseUIDarktheme = createDarkTheme(
   }
 );
 
-export const BaseUILighttheme = createLightTheme(
+export const BaseUILightTheme = createLightTheme(
   {
     primaryFontFamily: "RockfordSansRegular",
   },
@@ -42,14 +42,16 @@ export const LightTheme = {
     text: "#000",
     background: "#fff",
     icon: "#000",
-    searchBackground: "#fff",
+    searchBackground: "#f7f7f7",
+    searchBackgroundAlt: "#fff",
     secondaryBackground: "#fbf5ff",
     secondaryText: "rgba(0, 0, 0, 0.542)",
     backButton: "#f7f7f8",
     currentTrackBorder: "rgba(177, 178, 181, 0.25)",
     popoverBackground: "#fff",
     separator: "#e0e0e0cc",
-    hover: "",
+    hover: "#b1b2b51a",
+    cover: "#f3f3f3b9",
   },
 };
 
@@ -59,6 +61,7 @@ export const DarkTheme = {
     background: "#000",
     icon: "#828282",
     searchBackground: "#0f1010",
+    searchBackgroundAlt: "#0f1010",
     secondaryBackground: "#281832",
     secondaryText: "#828282",
     backButton: "#242429",
@@ -66,5 +69,6 @@ export const DarkTheme = {
     popoverBackground: "#141414",
     separator: "rgba(177, 178, 181, 0.15)",
     hover: "#0f1010",
+    cover: "#2f2f2fb9",
   },
 };

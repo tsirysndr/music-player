@@ -290,6 +290,7 @@ const Playlists: FC<PlaylistsProps> = ({
                 List: {
                   style: {
                     boxShadow: "none",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}

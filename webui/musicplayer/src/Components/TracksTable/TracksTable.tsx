@@ -16,7 +16,7 @@ const TableWrapper = styled.div`
 const AlbumCoverAlt = styled.div<{ current: boolean }>`
   height: 43px;
   width: 43px;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.cover};
   display: flex;
   justify-content: center;
   align-items: center;

@@ -48,7 +48,7 @@ const AlbumCover = styled.img`
 const AlbumCoverAlt = styled.div`
   height: 43px;
   width: 43px;
-  background-color: #f7f7f8;
+  background-color: ${(props) => props.theme.colors.cover};
   display: flex;
   justify-content: center;
   align-items: center;
@@ -90,6 +90,7 @@ const ChildMenu: FC<{
   recentPlaylists: any[];
   onSelect: (item: { id: string; label: string }) => void;
 }> = ({ onSelect, recentPlaylists }) => {
+  const theme = useTheme();
   return (
     <StatefulMenu
       items={{
@@ -107,6 +108,7 @@ const ChildMenu: FC<{
         List: {
           style: {
             boxShadow: "none",
+            backgroundColor: theme.colors.popoverBackground,
           },
         },
       }}
@@ -241,6 +243,7 @@ const ContextMenu: FC<ContextMenuProps> = ({
                 List: {
                   style: {
                     boxShadow: "none",
+                    backgroundColor: theme.colors.popoverBackground,
                   },
                 },
               }}
@@ -260,7 +263,7 @@ const ContextMenu: FC<ContextMenuProps> = ({
         overrides={{
           Inner: {
             style: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.colors.popoverBackground,
             },
           },
         }}

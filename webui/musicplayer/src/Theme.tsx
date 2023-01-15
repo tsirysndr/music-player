@@ -68,7 +68,7 @@ export const DarkTheme = {
     currentTrackBorder: "rgba(177, 178, 181, 0.15)",
     popoverBackground: "#141414",
     separator: "rgba(177, 178, 181, 0.15)",
-    hover: "#0f1010",
+    hover: "#242424",
     cover: "#2f2f2fb9",
   },
 };

@@ -64,10 +64,25 @@ impl DevicesQuery {
 
         let devices = devices
             .iter()
+            .filter(|device| device.is_source_device)
             .map(|srv| types::Device::from(srv.clone()).is_connected(current_device))
             .map(Into::into)
             .collect();
         Ok(devices)
+    }
+
+    async fn list_cast_devices(&self, ctx: &Context<'_>) -> Result<Vec<Device>, Error> {
+        let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
+        let devices = devices.lock().unwrap().clone();
+        Ok(devices
+            .into_iter()
+            .filter(|device| device.is_cast_device)
+            .map(Into::into)
+            .collect())
+    }
+
+    async fn current_cast_device(&self, ctx: &Context<'_>) -> Result<Option<Device>, Error> {
+        todo!()
     }
 }
 

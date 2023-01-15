@@ -36,8 +36,13 @@ const FolderPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
-  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
-    useDevices();
+  const {
+    devices,
+    castDevices,
+    currentDevice,
+    connectToDevice,
+    disconnectFromDevice,
+  } = useDevices();
   const {
     folders,
     playlists,
@@ -88,6 +93,7 @@ const FolderPage = () => {
       }
       folder={data?.folder}
       devices={devices}
+      castDevices={castDevices}
       currentDevice={currentDevice}
       connectToDevice={(id) => connectToDevice({ variables: { id } })}
       disconnectFromDevice={() => disconnectFromDevice()}

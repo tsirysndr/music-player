@@ -302,6 +302,7 @@ export type Query = {
   artist: Artist;
   artists: Array<Artist>;
   connectedDevice: Device;
+  currentCastDevice?: Maybe<Device>;
   currentlyPlayingSong: CurrentlyPlayingSong;
   folder: Folder;
   folders: Array<Folder>;
@@ -311,6 +312,7 @@ export type Query = {
   getRandom: Scalars['Boolean'];
   getRepeat: Scalars['Boolean'];
   getVolume: Scalars['Int'];
+  listCastDevices: Array<Device>;
   listDevices: Array<Device>;
   mainPlaylists: Array<Playlist>;
   playlist: Playlist;
@@ -467,6 +469,11 @@ export type ListDevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type ListDevicesQuery = { __typename?: 'Query', listDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean }> };
+
+export type ListCastDevicesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ListCastDevicesQuery = { __typename?: 'Query', listCastDevices: Array<{ __typename?: 'Device', id: string, app: string, name: string, service: string, host: string, port: number, isConnected: boolean }> };
 
 export type ConnectedDeviceQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -910,6 +917,46 @@ export function useListDevicesLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type ListDevicesQueryHookResult = ReturnType<typeof useListDevicesQuery>;
 export type ListDevicesLazyQueryHookResult = ReturnType<typeof useListDevicesLazyQuery>;
 export type ListDevicesQueryResult = Apollo.QueryResult<ListDevicesQuery, ListDevicesQueryVariables>;
+export const ListCastDevicesDocument = gql`
+    query ListCastDevices {
+  listCastDevices {
+    id
+    app
+    name
+    service
+    host
+    port
+    isConnected
+  }
+}
+    `;
+
+/**
+ * __useListCastDevicesQuery__
+ *
+ * To run a query within a React component, call `useListCastDevicesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useListCastDevicesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useListCastDevicesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useListCastDevicesQuery(baseOptions?: Apollo.QueryHookOptions<ListCastDevicesQuery, ListCastDevicesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ListCastDevicesQuery, ListCastDevicesQueryVariables>(ListCastDevicesDocument, options);
+      }
+export function useListCastDevicesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ListCastDevicesQuery, ListCastDevicesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ListCastDevicesQuery, ListCastDevicesQueryVariables>(ListCastDevicesDocument, options);
+        }
+export type ListCastDevicesQueryHookResult = ReturnType<typeof useListCastDevicesQuery>;
+export type ListCastDevicesLazyQueryHookResult = ReturnType<typeof useListCastDevicesLazyQuery>;
+export type ListCastDevicesQueryResult = Apollo.QueryResult<ListCastDevicesQuery, ListCastDevicesQueryVariables>;
 export const ConnectedDeviceDocument = gql`
     query ConnectedDevice {
   connectedDevice {

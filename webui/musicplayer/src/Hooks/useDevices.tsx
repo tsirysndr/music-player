@@ -7,6 +7,7 @@ import {
   useConnectedDeviceQuery,
   useConnectToDeviceMutation,
   useDisconnectFromDeviceMutation,
+  useListCastDevicesQuery,
   useListDevicesQuery,
   useOnDeviceConnectedSubscription,
   useOnDeviceDisconnectedSubscription,
@@ -18,8 +19,10 @@ export const useDevices = () => {
   const [currentDevice, setCurrentDevice] =
     useState<Device | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [castDevices, setCastDevices] = useState<Device[]>([]);
   const { data } = useOnNewDeviceSubscription();
   const { data: listDevicesData } = useListDevicesQuery();
+  const { data: listCastDevicesData } = useListCastDevicesQuery();
   const { data: connectedDeviceData, refetch } = useConnectedDeviceQuery();
   const [connectToDevice] = useConnectToDeviceMutation();
   const [disconnectFromDevice] = useDisconnectFromDeviceMutation();
@@ -62,8 +65,21 @@ export const useDevices = () => {
         )
       );
     }
+    if (listCastDevicesData?.listCastDevices) {
+      setCastDevices(
+        _.uniqBy(
+          listCastDevicesData.listCastDevices.map((x) => ({
+            id: x.id,
+            type: x.app,
+            name: x.name,
+            isConnected: x.isConnected,
+          })),
+          "id"
+        )
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, listDevicesData]);
+  }, [data, listDevicesData, listCastDevicesData]);
 
   useEffect(() => {
     if (deviceConnectedData) {
@@ -109,5 +125,11 @@ export const useDevices = () => {
       });
   }, [connectedDeviceData]);
 
-  return { devices, currentDevice, connectToDevice, disconnectFromDevice };
+  return {
+    devices,
+    castDevices,
+    currentDevice,
+    connectToDevice,
+    disconnectFromDevice,
+  };
 };

@@ -6,7 +6,7 @@ use futures_util::StreamExt;
 use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
 use music_player_entity::track as track_entity;
 use music_player_playback::player::PlayerCommand;
-use music_player_types::types::Device;
+use music_player_types::types::{Device, AIRPLAY_SERVICE_NAME, CHROMECAST_SERVICE_NAME};
 use rand::seq::SliceRandom;
 use schema::{Mutation, Query, Subscription};
 use std::{
@@ -20,11 +20,7 @@ pub mod simple_broker;
 
 pub type MusicPlayerSchema = Schema<Query, Mutation, Subscription>;
 
-pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dyn std::error::Error>>
-{
-    let devices: Arc<std::sync::Mutex<Vec<Device>>> = Arc::new(std::sync::Mutex::new(Vec::new()));
-    let mp_devices = Arc::clone(&devices);
-    let xbmc_devices = Arc::clone(&devices);
+fn scan_mp_devices(mp_devices: Arc<Mutex<Vec<Device>>>) {
     thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
             let services = discover(SERVICE_NAME);
@@ -44,9 +40,9 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
             }
         });
     });
+}
 
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
+fn scan_xbmc_devices(xbmc_devices: Arc<Mutex<Vec<Device>>>) {
     thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
             let services = discover(XBMC_SERVICE_NAME);
@@ -60,6 +56,55 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
             }
         });
     });
+}
+
+fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
+    thread::spawn(move || {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let services = discover(CHROMECAST_SERVICE_NAME);
+            tokio::pin!(services);
+            while let Some(info) = services.next().await {
+                devices.lock().unwrap().push(Device::from(info.clone()));
+                SimpleBroker::<Device>::publish(Device::from(info.clone()));
+            }
+        });
+    });
+}
+
+fn scan_airplay_devices(devices: Arc<Mutex<Vec<Device>>>) {
+    thread::spawn(move || {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let services = discover(AIRPLAY_SERVICE_NAME);
+            tokio::pin!(services);
+            while let Some(info) = services.next().await {
+                devices.lock().unwrap().push(Device::from(info.clone()));
+                SimpleBroker::<Device>::publish(Device::from(info.clone()));
+            }
+        });
+    });
+}
+
+pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dyn std::error::Error>>
+{
+    let devices: Arc<std::sync::Mutex<Vec<Device>>> = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let mp_devices = Arc::clone(&devices);
+    let xbmc_devices = Arc::clone(&devices);
+    let chromecast_devices = Arc::clone(&devices);
+    let airplay_devices = Arc::clone(&devices);
+
+    scan_mp_devices(mp_devices);
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    scan_xbmc_devices(xbmc_devices);
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    scan_chromecast_devices(chromecast_devices);
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    scan_airplay_devices(airplay_devices);
 
     Ok(devices)
 }

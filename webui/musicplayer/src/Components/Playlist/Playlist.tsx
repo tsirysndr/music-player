@@ -153,6 +153,7 @@ export type PlaylistProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
@@ -271,6 +272,3 @@ Playlist.defaultProps = {
 };
 
 export default Playlist;
-function formatTime(arg0: number) {
-  throw new Error("Function not implemented.");
-}

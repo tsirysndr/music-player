@@ -10,8 +10,13 @@ import { useSearch } from "../../Hooks/useSearch";
 
 const AlbumDetailsPage = () => {
   const params = useParams();
-  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
-    useDevices();
+  const {
+    devices,
+    castDevices,
+    currentDevice,
+    connectToDevice,
+    disconnectFromDevice,
+  } = useDevices();
   const { data, loading, refetch } = useGetAlbumQuery({
     variables: {
       id: params.id!,
@@ -106,6 +111,7 @@ const AlbumDetailsPage = () => {
       }
       recentPlaylists={recentPlaylists}
       devices={devices}
+      castDevices={castDevices}
       currentDevice={currentDevice}
       connectToDevice={(id) => connectToDevice({ variables: { id } })}
       disconnectFromDevice={() => disconnectFromDevice()}

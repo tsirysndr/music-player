@@ -183,6 +183,7 @@ export type ArtistDetailsProps = {
     position?: number
   ) => void;
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;

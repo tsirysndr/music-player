@@ -28,8 +28,13 @@ const TracksPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
-  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
-    useDevices();
+  const {
+    devices,
+    castDevices,
+    currentDevice,
+    connectToDevice,
+    disconnectFromDevice,
+  } = useDevices();
   const tracks = !loading && data ? data.tracks : [];
   const {
     folders,
@@ -97,6 +102,7 @@ const TracksPage = () => {
         }
         recentPlaylists={recentPlaylists}
         devices={devices}
+        castDevices={castDevices}
         currentDevice={currentDevice}
         connectToDevice={(id) => connectToDevice({ variables: { id } })}
         disconnectFromDevice={() => disconnectFromDevice()}

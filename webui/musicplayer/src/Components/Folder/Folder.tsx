@@ -192,6 +192,7 @@ export type FolderProps = {
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
   folder?: any;
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;

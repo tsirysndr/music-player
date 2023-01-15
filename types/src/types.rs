@@ -8,6 +8,9 @@ use tantivy::{
     Document,
 };
 
+pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
+pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
+
 #[derive(Debug, Clone, Default)]
 pub struct Song {
     pub title: String,
@@ -302,6 +305,8 @@ pub struct Device {
     pub app: String,
     pub is_connected: bool,
     pub base_url: Option<String>,
+    pub is_cast_device: bool,
+    pub is_source_device: bool,
 }
 
 impl Device {
@@ -331,6 +336,8 @@ impl From<ServiceInfo> for Device {
                 app: "xbmc".to_owned(),
                 is_connected: false,
                 base_url: None,
+                is_cast_device: true,
+                is_source_device: true,
             };
         }
 
@@ -359,6 +366,50 @@ impl From<ServiceInfo> for Device {
                 app: "music-player".to_owned(),
                 is_connected: false,
                 base_url: None,
+                is_cast_device: true,
+                is_source_device: true,
+            };
+        }
+
+        if srv.get_fullname().contains(CHROMECAST_SERVICE_NAME) {
+            return Self {
+                id: srv.get_properties().get("id").unwrap().to_owned(),
+                name: srv.get_properties().get("fn").unwrap().to_owned(),
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                port: srv.get_port(),
+                service: srv.get_fullname().to_owned(),
+                app: "chromecast".to_owned(),
+                is_connected: false,
+                base_url: None,
+                is_cast_device: true,
+                is_source_device: false,
+            };
+        }
+
+        if srv.get_fullname().contains(AIRPLAY_SERVICE_NAME) {
+            let name = srv.get_fullname().split("@").collect::<Vec<&str>>()[1]
+                .replace(AIRPLAY_SERVICE_NAME, "")
+                .to_owned();
+            let name = name.split_at(name.len() - 1).0.to_owned();
+            return Self {
+                id: srv.get_fullname().to_owned(),
+                name,
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                port: srv.get_port(),
+                service: srv.get_fullname().to_owned(),
+                app: "airplay".to_owned(),
+                is_connected: false,
+                base_url: None,
+                is_cast_device: true,
+                is_source_device: false,
             };
         }
 

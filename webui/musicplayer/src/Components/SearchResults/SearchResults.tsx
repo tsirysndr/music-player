@@ -64,6 +64,7 @@ export type SearchResultsProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;

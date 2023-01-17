@@ -1,12 +1,14 @@
 #[cfg(test)]
 mod tests;
 use crate::simple_broker::SimpleBroker;
-use async_graphql::Schema;
+use anyhow::Error;
+use async_graphql::{Context, Schema};
 use futures_util::StreamExt;
+use music_player_addons::{CurrentDevice, Player};
 use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
 use music_player_entity::track as track_entity;
 use music_player_playback::player::PlayerCommand;
-use music_player_types::types::{Device, AIRPLAY_SERVICE_NAME, CHROMECAST_SERVICE_NAME};
+use music_player_types::types::{Device, Track, AIRPLAY_SERVICE_NAME, CHROMECAST_SERVICE_NAME};
 use rand::seq::SliceRandom;
 use schema::{Mutation, Query, Subscription};
 use std::{
@@ -14,6 +16,7 @@ use std::{
     thread,
 };
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::Mutex as TokioMutex;
 
 pub mod schema;
 pub mod simple_broker;
@@ -109,14 +112,20 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
     Ok(devices)
 }
 
-pub fn load_tracks(
+pub async fn load_tracks(
     player_cmd: &Arc<Mutex<UnboundedSender<PlayerCommand>>>,
+    player: Option<&mut Box<dyn Player + Send>>,
     mut tracks: Vec<track_entity::Model>,
     position: Option<u32>,
     shuffle: bool,
-) {
+) -> Result<(), Error> {
     if shuffle {
         tracks.shuffle(&mut rand::thread_rng());
+    }
+    if let Some(player) = player {
+        player
+            .load_tracks(tracks.clone().into_iter().map(Into::into).collect())
+            .await?;
     }
     let player_cmd_tx = player_cmd.lock().unwrap();
     player_cmd_tx.send(PlayerCommand::Stop).unwrap();
@@ -127,4 +136,5 @@ pub fn load_tracks(
     player_cmd_tx
         .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
         .unwrap();
+    Ok(())
 }

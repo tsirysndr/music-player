@@ -18,8 +18,8 @@ use sea_orm::{
     ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
     RelationTrait,
 };
+use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
-use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use crate::load_tracks;
@@ -76,9 +76,6 @@ impl TracklistMutation {
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -202,9 +199,6 @@ impl TracklistMutation {
 
     async fn play_next(&self, ctx: &Context<'_>, id: ID) -> Result<bool, Error> {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -216,9 +210,13 @@ impl TracklistMutation {
             let source = device.source.as_mut().unwrap();
             let result = source.track(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             track = result
                 .with_remote_track_url(base_url.as_str())
@@ -252,9 +250,6 @@ impl TracklistMutation {
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -264,23 +259,38 @@ impl TracklistMutation {
             let source = device.source.as_mut().unwrap();
             let album = source.album(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             let album: album_entity::Model = album
-                .with_remote_cover_url(base_url.as_str())
-                .with_remote_track_url(base_url.as_str())
+                .with_remote_cover_url(&base_url)
+                .with_remote_track_url(&base_url)
                 .into();
             let tracks = album.tracks;
-            load_tracks(player_cmd, tracks, position, shuffle);
+
+            let receiver = device.receiver.as_mut();
+
+            load_tracks(player_cmd, receiver, tracks, position, shuffle).await?;
             return Ok(true);
         }
 
         let result = AlbumRepository::new(db.lock().await.get_connection())
             .find(&id)
             .await?;
-        load_tracks(player_cmd, result.tracks, position, shuffle);
+
+        load_tracks(
+            player_cmd,
+            device.receiver.as_mut(),
+            result.tracks,
+            position,
+            shuffle,
+        )
+        .await?;
         Ok(true)
     }
 
@@ -295,9 +305,6 @@ impl TracklistMutation {
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
@@ -306,13 +313,18 @@ impl TracklistMutation {
             let source = device.source.as_mut().unwrap();
             let artist = source.artist(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             let artist: artist_entity::Model =
                 artist.with_remote_track_url(base_url.as_str()).into();
-            load_tracks(player_cmd, artist.tracks, position, shuffle);
+            let receiver = device.receiver.as_mut();
+            load_tracks(player_cmd, receiver, artist.tracks, position, shuffle).await?;
             return Ok(true);
         }
 
@@ -320,7 +332,14 @@ impl TracklistMutation {
             .find(&id)
             .await?;
 
-        load_tracks(player_cmd, artist.tracks, position, shuffle);
+        load_tracks(
+            player_cmd,
+            device.receiver.as_mut(),
+            artist.tracks,
+            position,
+            shuffle,
+        )
+        .await?;
         Ok(true)
     }
 
@@ -336,9 +355,6 @@ impl TracklistMutation {
             .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -348,14 +364,20 @@ impl TracklistMutation {
             let source = device.source.as_mut().unwrap();
             let result = source.playlist(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             let tracks = result.with_remote_track_url(base_url.as_str()).tracks;
             let tracks: Vec<track_entity::Model> = tracks.into_iter().map(Into::into).collect();
 
-            load_tracks(player_cmd, tracks, position, shuffle);
+            let receiver = device.receiver.as_mut();
+
+            load_tracks(player_cmd, receiver, tracks, position, shuffle).await?;
             return Ok(true);
         }
 
@@ -366,7 +388,14 @@ impl TracklistMutation {
         let tracks: Vec<track_entity::Model> =
             playlist.tracks.into_iter().map(Into::into).collect();
 
-        load_tracks(player_cmd, tracks, position, shuffle);
+        load_tracks(
+            player_cmd,
+            device.receiver.as_mut(),
+            tracks,
+            position,
+            shuffle,
+        )
+        .await?;
 
         Ok(true)
     }

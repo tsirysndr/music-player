@@ -30,6 +30,14 @@ impl Kodi {
             client: None,
         }
     }
+
+    pub fn connect_to_player(
+        &mut self,
+        device: Device,
+    ) -> Result<Option<Box<dyn Player + Send>>, Error> {
+        let player: Self = device.clone().into();
+        Ok(Some(Box::new(player)))
+    }
 }
 
 impl Addon for Kodi {
@@ -122,6 +130,10 @@ impl Player for Kodi {
     }
 
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
         todo!()
     }
 }

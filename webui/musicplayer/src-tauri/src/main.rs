@@ -13,7 +13,7 @@ use futures::{
 use music_player_graphql::{
     scan_devices,
     schema::{
-        objects::{ player_state::PlayerState, track::Track},
+        objects::{player_state::PlayerState, track::Track},
         playback::PositionMilliseconds,
         Mutation, Query, Subscription,
     },
@@ -28,10 +28,10 @@ use music_player_playback::{
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
+use music_player_types::types::Device;
 use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
-use music_player_types::types::Device;
 
 mod graphql_server;
 
@@ -96,9 +96,8 @@ async fn main() {
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
-    let connected_device: HashMap<String, Device> = HashMap::new();
-    let connected_device = Arc::new(std::sync::Mutex::new(connected_device));
     let devices = scan_devices().await.unwrap();
+    let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
@@ -140,7 +139,7 @@ async fn main() {
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
-    .data(connected_device)
+    .data(current_device)
     .finish();
 
     let config = read_settings().unwrap();

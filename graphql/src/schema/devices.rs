@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     sync::{Arc, Mutex},
     thread,
 };
@@ -15,8 +14,9 @@ use crate::simple_broker::SimpleBroker;
 use music_player_types::types::{self, Connected};
 
 use super::{
-    connect_to, connect_to_current_device,
+    connect_to, connect_to_cast_device,
     objects::device::{App, ConnectedDevice, Device, DisconnectedDevice},
+    PlayerType,
 };
 
 #[derive(Default)]
@@ -25,11 +25,9 @@ pub struct DevicesQuery;
 #[Object]
 impl DevicesQuery {
     async fn connected_device(&self, ctx: &Context<'_>) -> Result<Device, Error> {
-        let connected_device = ctx
-            .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
-            .unwrap();
-        let connected_device = connected_device.lock().unwrap().clone();
-        match connected_device.get("current_device") {
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let device = current_device.lock().await;
+        match &device.source_device {
             Some(device) => Ok(Device {
                 is_connected: true,
                 ..device.clone().into()
@@ -42,13 +40,10 @@ impl DevicesQuery {
         ctx: &Context<'_>,
         filter: Option<App>,
     ) -> Result<Vec<Device>, Error> {
-        let connected_device = ctx
-            .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
-            .unwrap();
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let device = current_device.lock().await;
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let connected_device = connected_device.lock().unwrap().clone();
-        let current_device = connected_device.get("current_device");
 
         let devices = match filter {
             Some(App::MusicPlayer) => devices
@@ -65,7 +60,7 @@ impl DevicesQuery {
         let devices = devices
             .iter()
             .filter(|device| device.is_source_device)
-            .map(|srv| types::Device::from(srv.clone()).is_connected(current_device))
+            .map(|srv| types::Device::from(srv.clone()).is_connected(device.source_device.as_ref()))
             .map(Into::into)
             .collect();
         Ok(devices)
@@ -81,8 +76,16 @@ impl DevicesQuery {
             .collect())
     }
 
-    async fn current_cast_device(&self, ctx: &Context<'_>) -> Result<Option<Device>, Error> {
-        todo!()
+    async fn connected_cast_device(&self, ctx: &Context<'_>) -> Result<Device, Error> {
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let device = current_device.lock().await;
+        match &device.receiver_device {
+            Some(device) => Ok(Device {
+                is_connected: true,
+                ..device.clone().into()
+            }),
+            None => Err(Error::new("No device connected")),
+        }
     }
 }
 
@@ -94,9 +97,6 @@ impl DevicesMutation {
     async fn connect_to_device(&self, ctx: &Context<'_>, id: ID) -> Result<Device, Error> {
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let connected_device = ctx
-            .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
         let mut io_device = io_device.lock().await;
 
@@ -114,10 +114,7 @@ impl DevicesMutation {
                 let current_device = types::Device::from(device.clone())
                     .is_connected(Some(&device.clone()))
                     .with_base_url(base_url);
-                connected_device
-                    .lock()
-                    .unwrap()
-                    .insert("current_device".to_string(), current_device.clone());
+                io_device.set_source_device(current_device.clone());
 
                 let source = connect_to(
                     types::Device::from(device.clone()).is_connected(Some(&device.clone())),
@@ -140,15 +137,71 @@ impl DevicesMutation {
     }
 
     async fn disconnect_from_device(&self, ctx: &Context<'_>) -> Result<Option<Device>, Error> {
-        let connected_device = ctx
-            .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
         let mut io_device = io_device.lock().await;
-        let mut connected_device = connected_device.lock().unwrap();
-        match connected_device.remove("current_device") {
+        match io_device.clear_source() {
             Some(device) => {
-                io_device.clear_source();
+                SimpleBroker::<DisconnectedDevice>::publish(device.clone().into());
+                Ok(Some(device.clone().into()))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn connect_to_cast_device(&self, ctx: &Context<'_>, id: ID) -> Result<Device, Error> {
+        let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
+        let devices = devices.lock().unwrap().clone();
+        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let mut io_device = io_device.lock().await;
+
+        match devices.into_iter().find(|device| {
+            device.id == id.to_string()
+                && (device.service == "grpc"
+                    || device.app == "xbmc"
+                    || device.app == "chromecast"
+                    || device.app == "airplay")
+        }) {
+            Some(device) => {
+                let current_device =
+                    types::Device::from(device.clone()).is_connected(Some(&device.clone()));
+                io_device.set_receiver_device(current_device.clone());
+
+                let player_type = match device.app.as_str() {
+                    "chromecast" => PlayerType::Chromecast,
+                    "airplay" => PlayerType::Airplay,
+                    "xbmc" => PlayerType::Kodi,
+                    _ => PlayerType::MusicPlayer,
+                };
+
+                let receiver = connect_to_cast_device(
+                    types::Device::from(device.clone()).is_connected(Some(&device.clone())),
+                    player_type,
+                )
+                .await?;
+
+                match receiver {
+                    Some(receiver) => io_device.set_receiver(receiver),
+                    None => return Err(Error::new("No source found")),
+                }
+
+                SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
+
+                Ok(types::Device::from(device.clone())
+                    .is_connected(Some(&device.clone()))
+                    .into())
+            }
+            None => Err(Error::new("Device not found")),
+        }
+    }
+
+    async fn disconnect_from_cast_device(
+        &self,
+        ctx: &Context<'_>,
+    ) -> Result<Option<Device>, Error> {
+        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let mut io_device = io_device.lock().await;
+        match io_device.clear_receiver() {
+            Some(device) => {
                 SimpleBroker::<DisconnectedDevice>::publish(device.clone().into());
                 Ok(Some(device.clone().into()))
             }
@@ -163,19 +216,25 @@ pub struct DevicesSubscription;
 #[Subscription]
 impl DevicesSubscription {
     async fn on_new_device(&self, ctx: &Context<'_>) -> impl Stream<Item = Device> {
-        let connected_device = ctx
-            .data::<Arc<Mutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let connected_device = connected_device.lock().unwrap().clone();
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = current_device.lock().await;
+
+        let current_device = match &current_device.source_device {
+            Some(device) => Some(types::Device {
+                id: device.id.clone(),
+                ..Default::default()
+            }),
+            None => None,
+        };
 
         thread::spawn(move || {
-            let current_device = connected_device.get("current_device");
-
             thread::sleep(std::time::Duration::from_secs(1));
             devices.into_iter().for_each(|device| {
-                SimpleBroker::<Device>::publish(device.is_connected(current_device).into());
+                SimpleBroker::<Device>::publish(
+                    device.is_connected(current_device.as_ref()).into(),
+                );
             });
         });
         SimpleBroker::<Device>::subscribe()

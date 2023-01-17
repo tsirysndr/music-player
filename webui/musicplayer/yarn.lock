@@ -3712,12 +3712,12 @@
     "@babel/runtime" "^7.20.7"
     "@styled-icons/styled-icon" "^10.7.0"
 
-"@styled-icons/fluentui-system-regular@^10.46.0":
-  version "10.46.0"
-  resolved "https://registry.yarnpkg.com/@styled-icons/fluentui-system-regular/-/fluentui-system-regular-10.46.0.tgz#16c4cff965ddf96f37c133b17f59e9ca228266d8"
-  integrity sha512-Ojn2nGx2NY2QnELYG07k7uPXQ6jZ4MKeloby3wNgyncmcMikANPeMs0IJXWeUlW3YcOGMjnVYPq/A8v7QPJ0dQ==
+"@styled-icons/fluentui-system-regular@^10.47.0":
+  version "10.47.0"
+  resolved "https://registry.yarnpkg.com/@styled-icons/fluentui-system-regular/-/fluentui-system-regular-10.47.0.tgz#f82d96d22748b994212e751e89924526131f4ea8"
+  integrity sha512-x1TmxKS6mpX+QJw8ismT3rNa6TPvKYftmQRy57LbdNE9L5FkyWldrumPboZGKWi/oNiBn6SBelPeqv8LPFXNHQ==
   dependencies:
-    "@babel/runtime" "^7.19.0"
+    "@babel/runtime" "^7.20.7"
     "@styled-icons/styled-icon" "^10.7.0"
 
 "@styled-icons/ionicons-outline@^10.46.0":

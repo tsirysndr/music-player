@@ -130,8 +130,6 @@ pub async fn start_webui(
     let db = Arc::new(Mutex::new(Database::new().await));
 
     let devices = scan_devices().await.unwrap();
-    let connected_device: HashMap<String, Device> = HashMap::new();
-    let connected_device = Arc::new(std::sync::Mutex::new(connected_device));
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let schema = Schema::build(
         Query::default(),
@@ -142,7 +140,6 @@ pub async fn start_webui(
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
-    .data(connected_device)
     .data(current_device)
     .finish();
     println!("Starting webui at {}", addr.bright_green());

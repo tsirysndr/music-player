@@ -52,6 +52,7 @@ export const LightTheme = {
     separator: "#e0e0e0cc",
     hover: "#b1b2b51a",
     cover: "#f3f3f3b9",
+    tooltip: "#ab28fc1a",
   },
 };
 
@@ -70,5 +71,6 @@ export const DarkTheme = {
     separator: "rgba(177, 178, 181, 0.15)",
     hover: "#242424",
     cover: "#2f2f2fb9",
+    tooltip: "#ab28fc38",
   },
 };

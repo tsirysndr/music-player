@@ -172,6 +172,10 @@ impl Player for Local {
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
         todo!()
     }
+
+    async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
+        todo!()
+    }
 }
 
 impl From<Device> for Local {
@@ -196,5 +200,14 @@ impl Local {
         self.client = Some(client);
 
         Ok(())
+    }
+
+    pub async fn connect_to_player(
+        &mut self,
+        device: Device,
+    ) -> Result<Option<Box<dyn Player + Send>>, Error> {
+        let mut player: Self = device.clone().into();
+        player.connect().await?;
+        Ok(Some(Box::new(player)))
     }
 }

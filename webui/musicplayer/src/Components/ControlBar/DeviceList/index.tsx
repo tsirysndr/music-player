@@ -8,14 +8,14 @@ import { Laptop } from "@styled-icons/ionicons-outline";
 import { Kodi, Airplayaudio, Chromecast } from "@styled-icons/simple-icons";
 
 const Container = styled.div`
-  max-height: calc(100vh - 90px);
+  max-height: calc(100vh - 153px); /* - 90px */
   padding-top: 15px;
   padding-bottom: 15px;
   overflow-y: auto;
 `;
 
 const List = styled.div`
-  max-height: calc(100vh - 210px);
+  max-height: calc(100vh - 273px); /* - 210px */
   padding-left: 15px;
   padding-right: 15px;
   overflow-y: auto;

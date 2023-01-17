@@ -1,3 +1,5 @@
+pub mod airplay;
+pub mod chromecast;
 pub mod datpiff;
 pub mod deezer;
 pub mod genius;
@@ -8,7 +10,7 @@ pub mod tononkira;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playlist, Track};
 
 pub trait Addon {
     fn name(&self) -> &str;
@@ -47,11 +49,14 @@ pub trait Player {
     async fn next(&mut self) -> Result<(), Error>;
     async fn previous(&mut self) -> Result<(), Error>;
     async fn seek(&mut self, position: u32) -> Result<(), Error>;
+    async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error>;
 }
 
 pub struct CurrentDevice {
     pub source: Option<Box<dyn Browseable + Send>>,
     pub receiver: Option<Box<dyn Player + Send>>,
+    pub source_device: Option<Device>,
+    pub receiver_device: Option<Device>,
 }
 
 impl CurrentDevice {
@@ -59,6 +64,8 @@ impl CurrentDevice {
         Self {
             source: None,
             receiver: None,
+            source_device: None,
+            receiver_device: None,
         }
     }
 
@@ -66,15 +73,38 @@ impl CurrentDevice {
         self.source = Some(source);
     }
 
-    pub fn clear_source(&mut self) {
+    pub fn set_source_device(&mut self, device: Device) {
+        self.source_device = Some(device);
+    }
+
+    pub fn clear_source(&mut self) -> Option<Device> {
         self.source = None;
+        match self.source_device.take() {
+            Some(device) => Some(device),
+            None => None,
+        }
     }
 
     pub fn set_receiver(&mut self, receiver: Box<dyn Player + Send>) {
         self.receiver = Some(receiver);
     }
 
-    pub fn clear_receiver(&mut self) {
+    pub fn set_receiver_device(&mut self, device: Device) {
+        self.receiver_device = Some(device);
+    }
+
+    pub fn clear_receiver(&mut self) -> Option<Device> {
         self.receiver = None;
+        match self.receiver_device.take() {
+            Some(device) => Some(device),
+            None => None,
+        }
+    }
+
+    pub fn get_source_device(&self) -> Option<Device> {
+        match &self.source_device {
+            Some(device) => Some(device.clone()),
+            None => None,
+        }
     }
 }

@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
-use music_player_addons::{local::Local, Browseable};
+use music_player_addons::{
+    airplay::Airplay, chromecast::Chromecast, kodi::Kodi, local::Local, Browseable, Player,
+};
 use music_player_types::types::Device;
 
 use self::{
@@ -63,21 +65,27 @@ pub enum MutationType {
     Updated,
 }
 
-pub async fn connect_to_current_device(
-    devices: HashMap<String, Device>,
-) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
-    match devices.get("current_device") {
-        Some(current_device) => {
-            let mut local: Local = current_device.clone().into();
-            local.connect().await?;
-            Ok(Some(Box::new(local)))
-        }
-        None => Ok(None),
-    }
-}
-
 pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
     let mut local: Local = device.clone().into();
     local.connect().await?;
     Ok(Some(Box::new(local)))
+}
+
+pub enum PlayerType {
+    MusicPlayer,
+    Chromecast,
+    Airplay,
+    Kodi,
+}
+
+pub async fn connect_to_cast_device(
+    device: Device,
+    player_type: PlayerType,
+) -> Result<Option<Box<dyn Player + Send>>, Error> {
+    match player_type {
+        PlayerType::MusicPlayer => Local::new().connect_to_player(device).await,
+        PlayerType::Chromecast => Chromecast::new().connect(device),
+        PlayerType::Airplay => Airplay::new().connect(device),
+        PlayerType::Kodi => Kodi::new().connect_to_player(device),
+    }
 }

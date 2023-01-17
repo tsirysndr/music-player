@@ -8,6 +8,7 @@ import Sidebar from "../Sidebar";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -129,25 +130,28 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 const Albums: FC<AlbumsProps> = (props) => {
   const { albums, onClickAlbum } = props;
   return (
-    <Container>
-      <Sidebar active="albums" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <Scrollable>
-          <MainContent title="Albums" placeholder="Filter Albums">
-            <Wrapper>
-              <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
-                {albums.map((item) => (
-                  <Cell key={item.id}>
-                    <Album onClick={onClickAlbum} album={item} />
-                  </Cell>
-                ))}
-              </Grid>
-            </Wrapper>
-          </MainContent>
-        </Scrollable>
-      </Content>
-    </Container>
+    <>
+      {false && <ListeningOn />}
+      <Container>
+        <Sidebar active="albums" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <Scrollable>
+            <MainContent title="Albums" placeholder="Filter Albums">
+              <Wrapper>
+                <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
+                  {albums.map((item) => (
+                    <Cell key={item.id}>
+                      <Album onClick={onClickAlbum} album={item} />
+                    </Cell>
+                  ))}
+                </Grid>
+              </Wrapper>
+            </MainContent>
+          </Scrollable>
+        </Content>
+      </Container>
+    </>
   );
 };
 

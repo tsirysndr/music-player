@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, sync::Mutex as StdMutex};
+use std::{sync::Arc, sync::Mutex as StdMutex};
 
 use async_graphql::{futures_util::FutureExt, *};
 use music_player_addons::CurrentDevice;
@@ -25,9 +25,6 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Track>, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -37,9 +34,13 @@ impl LibraryQuery {
                 .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             let tracks: Vec<Track> = result.into_iter().map(Into::into).collect();
 
@@ -68,9 +69,6 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Artist>, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -80,9 +78,13 @@ impl LibraryQuery {
                 .artists(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             return Ok(artists
                 .into_iter()
@@ -110,9 +112,6 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Album>, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -122,9 +121,13 @@ impl LibraryQuery {
                 .albums(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             let result: Vec<Album> = albums.into_iter().map(Into::into).collect();
 
@@ -148,9 +151,6 @@ impl LibraryQuery {
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
@@ -159,9 +159,13 @@ impl LibraryQuery {
             let source = device.source.as_mut().unwrap();
             let track = source.track(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             return Ok(Track::from(track)
                 .with_remote_track_url(base_url.as_str())
@@ -178,9 +182,6 @@ impl LibraryQuery {
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
@@ -189,9 +190,13 @@ impl LibraryQuery {
             let source = device.source.as_mut().unwrap();
             let artist = source.artist(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             return Ok(artist
                 .with_remote_track_url(base_url.as_str())
@@ -209,9 +214,6 @@ impl LibraryQuery {
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
-        let connected_device = ctx
-            .data::<Arc<StdMutex<HashMap<String, types::Device>>>>()
-            .unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
 
         let id = id.to_string();
@@ -221,9 +223,13 @@ impl LibraryQuery {
             let source = device.source.as_mut().unwrap();
             let album = source.album(&id).await?;
 
-            let device = connected_device.lock().unwrap();
-            let device = device.get("current_device").unwrap();
-            let base_url = device.base_url.as_ref().unwrap();
+            let base_url = device
+                .source_device
+                .as_ref()
+                .unwrap()
+                .base_url
+                .as_ref()
+                .unwrap();
 
             return Ok(Album::from(album)
                 .with_remote_cover_url(base_url.as_str())

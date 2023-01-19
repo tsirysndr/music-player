@@ -75,7 +75,7 @@ const PlaylistPage = () => {
       onEditPlaylist={(id, name, description) =>
         renamePlaylist({ variables: { id, name } })
       }
-      onAddTrackToPlaylist={(trackId, playlistId) =>
+      onAddTrackToPlaylist={(playlistId, trackId) =>
         addTrackToPlaylist({ variables: { trackId, playlistId } })
       }
       onPlayPlaylist={(playlistId, shuffle, position) =>

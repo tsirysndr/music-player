@@ -37,7 +37,7 @@ const DeleteConfirmationModal: FC<DeleteConfirmationModalProps> = (props) => {
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>{message}</ModalBody>
       <ModalFooter>
-        <Button kind={KIND.tertiary} onClick={onDelete}>
+        <Button kind={KIND.primary} onClick={onDelete}>
           Delete
         </Button>
         <Separator />

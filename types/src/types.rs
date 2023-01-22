@@ -3,6 +3,7 @@ use std::time::Duration;
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use mdns_sd::ServiceInfo;
 use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
+use music_player_settings::{read_settings, Settings};
 use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
@@ -300,6 +301,7 @@ pub struct Device {
     pub id: String,
     pub name: String,
     pub host: String,
+    pub ip: String,
     pub port: u16,
     pub service: String,
     pub app: String,
@@ -307,6 +309,7 @@ pub struct Device {
     pub base_url: Option<String>,
     pub is_cast_device: bool,
     pub is_source_device: bool,
+    pub is_current_device: bool,
 }
 
 impl Device {
@@ -331,6 +334,7 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
                 port: srv.get_port(),
                 service: srv.get_fullname().to_owned(),
                 app: "xbmc".to_owned(),
@@ -338,6 +342,7 @@ impl From<ServiceInfo> for Device {
                 base_url: None,
                 is_cast_device: true,
                 is_source_device: true,
+                is_current_device: false,
             };
         }
 
@@ -349,6 +354,13 @@ impl From<ServiceInfo> for Device {
                 .collect::<Vec<&str>>()[1]
                 .replace(".", "")
                 .to_owned();
+
+            let config = read_settings().unwrap();
+            let settings = config.try_deserialize::<Settings>().unwrap();
+
+            let is_current_device = device_id == settings.device_id
+                && srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned() == "http";
+
             return Self {
                 id: device_id.clone(),
                 name: srv
@@ -361,6 +373,7 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
                 port: srv.get_port(),
                 service: srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
                 app: "music-player".to_owned(),
@@ -368,6 +381,7 @@ impl From<ServiceInfo> for Device {
                 base_url: None,
                 is_cast_device: true,
                 is_source_device: true,
+                is_current_device,
             };
         }
 
@@ -380,6 +394,7 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
                 port: srv.get_port(),
                 service: srv.get_fullname().to_owned(),
                 app: "chromecast".to_owned(),
@@ -387,6 +402,7 @@ impl From<ServiceInfo> for Device {
                 base_url: None,
                 is_cast_device: true,
                 is_source_device: false,
+                is_current_device: false,
             };
         }
 
@@ -403,6 +419,7 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
                 port: srv.get_port(),
                 service: srv.get_fullname().to_owned(),
                 app: "airplay".to_owned(),
@@ -410,6 +427,7 @@ impl From<ServiceInfo> for Device {
                 base_url: None,
                 is_cast_device: true,
                 is_source_device: false,
+                is_current_device: false,
             };
         }
 
@@ -558,6 +576,19 @@ impl RemoteTrackUrl for Playlist {
                 .tracks
                 .iter()
                 .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Playlist {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_cover_url(base_url))
                 .collect(),
             ..self.clone()
         }

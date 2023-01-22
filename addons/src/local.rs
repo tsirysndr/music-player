@@ -22,6 +22,7 @@ pub struct Local {
     enabled: bool,
     client: Option<Client>,
     host: String,
+    ip: String,
     port: u16,
 }
 
@@ -35,6 +36,7 @@ impl Local {
             enabled: true,
             client: None,
             host: "localhost".to_string(),
+            ip: "".to_string(),
             port: 5051,
         }
     }
@@ -140,6 +142,10 @@ impl Browseable for Local {
         let response = self.client.as_mut().unwrap().playlist.find(id).await?;
         Ok(response)
     }
+
+    fn device_ip(&self) -> String {
+        self.ip.clone()
+    }
 }
 
 #[async_trait]
@@ -176,6 +182,18 @@ impl Player for Local {
     async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
         todo!()
     }
+
+    async fn play_next(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn device_type(&self) -> String {
+        "music-player".to_string()
+    }
 }
 
 impl From<Device> for Local {
@@ -183,6 +201,7 @@ impl From<Device> for Local {
         Self {
             host: device.host,
             port: device.port,
+            ip: device.ip,
             ..Local::new()
         }
     }

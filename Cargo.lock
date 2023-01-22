@@ -4104,6 +4104,7 @@ dependencies = [
  "music-player-types",
  "rust_cast",
  "surf",
+ "url",
 ]
 
 [[package]]
@@ -4204,6 +4205,7 @@ dependencies = [
  "slab",
  "tide",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -4336,6 +4338,7 @@ dependencies = [
  "md5",
  "mdns-sd",
  "music-player-discovery",
+ "music-player-settings",
  "tantivy",
 ]
 
@@ -4350,6 +4353,7 @@ dependencies = [
  "async-graphql-actix-web",
  "dirs",
  "futures-util",
+ "mime",
  "mime_guess",
  "music-player-addons",
  "music-player-discovery",
@@ -5758,8 +5762,7 @@ dependencies = [
 [[package]]
 name = "rust_cast"
 version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c9b210a559ed66ebb5096ebb754ad14e197bf8954c029bae6bfc82f0f51e460"
+source = "git+https://github.com/tsirysndr/rust-cast.git?rev=c2220d2#c2220d2c2ba407c919cae174e94d71bd1ff1692a"
 dependencies = [
  "byteorder",
  "log",

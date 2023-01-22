@@ -7,6 +7,7 @@ use super::{Addon, Browseable, Player, StreamingAddon};
 
 pub struct Client {
     pub host: String,
+    pub ip: String,
     pub port: u16,
 }
 
@@ -105,6 +106,10 @@ impl Browseable for Kodi {
     async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
         todo!()
     }
+
+    fn device_ip(&self) -> String {
+        todo!()
+    }
 }
 
 #[async_trait]
@@ -135,6 +140,18 @@ impl Player for Kodi {
 
     async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
         todo!()
+    }
+
+    async fn play_next(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn device_type(&self) -> String {
+        "xbmc".to_string()
     }
 }
 

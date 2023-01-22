@@ -83,6 +83,18 @@ impl Player for Airplay {
     async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
         todo!()
     }
+
+    async fn play_next(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn device_type(&self) -> String {
+        "airplay".to_string()
+    }
 }
 
 impl From<Device> for Airplay {

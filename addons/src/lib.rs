@@ -39,6 +39,7 @@ pub trait Browseable {
     async fn artist(&mut self, id: &str) -> Result<Artist, Error>;
     async fn track(&mut self, id: &str) -> Result<Track, Error>;
     async fn playlist(&mut self, id: &str) -> Result<Playlist, Error>;
+    fn device_ip(&self) -> String;
 }
 
 #[async_trait]
@@ -50,6 +51,9 @@ pub trait Player {
     async fn previous(&mut self) -> Result<(), Error>;
     async fn seek(&mut self, position: u32) -> Result<(), Error>;
     async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error>;
+    async fn play_next(&mut self, track: Track) -> Result<(), Error>;
+    async fn load(&mut self, track: Track) -> Result<(), Error>;
+    fn device_type(&self) -> String;
 }
 
 pub struct CurrentDevice {

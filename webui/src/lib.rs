@@ -6,7 +6,7 @@ use actix_files as fs;
 use actix_web::{
     error::ErrorNotFound,
     guard,
-    http::header::HOST,
+    http::header::{ContentDisposition, DispositionType, HOST},
     web::{self, Data},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
@@ -55,7 +55,9 @@ async fn index_spa() -> impl Responder {
 }
 
 async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<NamedFile, Error> {
+    println!("Request: {}", req.uri());
     let id = req.match_info().get("id").unwrap();
+    let id = id.split('.').next().unwrap();
     let mut path = PathBuf::new();
 
     let track = track_entity::Entity::find_by_id(id.to_owned())
@@ -65,7 +67,12 @@ async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<
 
     if let Some(track) = track {
         path.push(track.uri);
-        Ok(NamedFile::open(path)?)
+        println!("Serving file: {}", path.display());
+        let file = NamedFile::open(path)?;
+        Ok(file.set_content_disposition(ContentDisposition {
+            disposition: DispositionType::Attachment,
+            parameters: vec![],
+        }))
     } else {
         Err(ErrorNotFound("Track not found".to_string()))
     }
@@ -174,6 +181,7 @@ pub async fn start_webui(
             .route("/playlists/{_:.*}", web::get().to(index_spa))
             .route("/search", web::get().to(index_spa))
             .route("/tracks/{id}", web::get().to(index_file))
+            .route("/tracks/{id}", web::head().to(index_file))
             .service(dist)
     })
     .bind(addr)?

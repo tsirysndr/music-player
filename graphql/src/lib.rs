@@ -137,6 +137,14 @@ pub async fn load_tracks(
                         let url = Url::parse(track.uri.as_str()).unwrap();
                         let host = url.host_str().unwrap();
                         track.uri = track.uri.to_lowercase().replace(host, source_ip.as_str());
+                        let cover = match track.clone().album.cover {
+                            Some(cover) => Url::parse(cover.as_str()).ok().map(|url| {
+                                let host = url.host_str().unwrap();
+                                cover.to_lowercase().replace(host, source_ip.as_str())
+                            }),
+                            None => None,
+                        };
+                        track.album.cover = cover;
                         track
                     })
                     .collect();

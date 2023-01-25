@@ -13,6 +13,9 @@ use std::str::FromStr;
 
 const DEFAULT_DESTINATION_ID: &str = "receiver-0";
 
+// const DEFAULT_APP_ID: &str = "CF09BEBE";
+const DEFAULT_APP_ID: &str = "34164A08";
+
 pub struct Chromecast {
     name: String,
     version: String,
@@ -71,7 +74,7 @@ impl Chromecast {
             return Ok((cast_device, app.transport_id, 0, app.session_id));
         }
 
-        let app_to_manage = CastDeviceApp::from_str("default").unwrap();
+        let app_to_manage = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
         let status = cast_device.receiver.get_status().unwrap();
 
         let app = status
@@ -180,7 +183,7 @@ impl Player for Chromecast {
 
     async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
         let (cast_device, transport_id, _, _) =
-            self.connect_without_host_verification(Some("default".to_owned()))?;
+            self.connect_without_host_verification(Some(DEFAULT_APP_ID.to_owned()))?;
 
         let medias = tracks
             .iter()
@@ -223,7 +226,7 @@ impl Player for Chromecast {
 
     async fn load(&mut self, track: Track) -> Result<(), Error> {
         let (cast_device, transport_id, _, session_id) =
-            self.connect_without_host_verification(Some("default".to_owned()))?;
+            self.connect_without_host_verification(Some(DEFAULT_APP_ID.to_owned()))?;
 
         println!("Loading track: {}", track.uri);
 

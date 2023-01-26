@@ -1,4 +1,6 @@
-use music_player_types::types::{Album as AlbumType, RemoteCoverUrl, Song, Track as TrackType, RemoteTrackUrl};
+use music_player_types::types::{
+    Album as AlbumType, RemoteCoverUrl, RemoteTrackUrl, Song, Track as TrackType,
+};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 

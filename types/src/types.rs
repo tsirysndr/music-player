@@ -361,6 +361,19 @@ impl From<ServiceInfo> for Device {
             let is_current_device = device_id == settings.device_id
                 && srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned() == "http";
 
+            let mut addresses = srv.get_addresses().iter();
+            let mut ip = addresses.next().unwrap().to_string();
+
+            if is_current_device {
+                loop {
+                    ip = addresses.next().unwrap().to_string();
+                    let url = format!("http://{}:{}/", ip, srv.get_port());
+                    if minreq::get(url).send().is_ok() {
+                        break;
+                    }
+                }
+            }
+
             return Self {
                 id: device_id.clone(),
                 name: srv
@@ -373,7 +386,7 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
-                ip: srv.get_addresses().iter().next().unwrap().to_string(),
+                ip,
                 port: srv.get_port(),
                 service: srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
                 app: "music-player".to_owned(),
@@ -520,6 +533,11 @@ impl RemoteCoverUrl for Album {
                 Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
                 None => None,
             },
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_cover_url(base_url))
+                .collect(),
             ..self.clone()
         }
     }

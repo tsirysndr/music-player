@@ -216,3 +216,32 @@ pub fn update_track_url<T: RemoteTrackUrl>(devices: Vec<Device>, result: T) -> R
         false => Err(Error::msg("Cannot find current device")),
     }
 }
+
+pub fn update_cover_url<T: RemoteCoverUrl>(
+    devices: Vec<Device>,
+    result: T,
+    will_play_on_chromecast: bool,
+) -> Result<T, Error> {
+    let base_url = match devices
+        .clone()
+        .into_iter()
+        .find(|device| device.is_current_device)
+    {
+        Some(device) => {
+            let host = match will_play_on_chromecast {
+                true => device.ip,
+                false => device.host,
+            };
+            Some(format!("http://{}:{}", host, device.port))
+        }
+        None => None,
+    };
+
+    match base_url.is_some() {
+        true => {
+            let base_url = base_url.unwrap();
+            Ok(result.with_remote_cover_url(&base_url))
+        }
+        false => Err(Error::msg("Cannot find current device")),
+    }
+}

@@ -25,6 +25,7 @@ use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 use crate::load_tracks;
 use crate::simple_broker::SimpleBroker;
+use crate::update_cover_url;
 use crate::update_track_url;
 use crate::update_tracks_url;
 
@@ -340,7 +341,17 @@ impl TracklistMutation {
         if device.receiver.is_some() {
             let receiver = device.receiver.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
-            result = update_tracks_url(devices, result, will_play_on_chromecast)?;
+            result = update_tracks_url(devices.clone(), result, will_play_on_chromecast)?;
+            result.tracks = result
+                .tracks
+                .into_iter()
+                .map(|track| {
+                    let t: types::Track = track.into();
+                    update_cover_url(devices.clone(), t.clone(), will_play_on_chromecast)
+                        .unwrap_or_else(|_| t.clone())
+                        .into()
+                })
+                .collect();
         }
 
         load_tracks(

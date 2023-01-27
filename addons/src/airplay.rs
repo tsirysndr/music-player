@@ -95,6 +95,10 @@ impl Player for Airplay {
     fn device_type(&self) -> String {
         "airplay".to_string()
     }
+
+    fn disconnect(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 impl From<Device> for Airplay {

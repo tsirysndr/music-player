@@ -194,6 +194,11 @@ impl Player for Local {
     fn device_type(&self) -> String {
         "music-player".to_string()
     }
+
+    fn disconnect(&mut self) -> Result<(), Error> {
+        self.client = None;
+        Ok(())
+    }
 }
 
 impl From<Device> for Local {
@@ -229,4 +234,5 @@ impl Local {
         player.connect().await?;
         Ok(Some(Box::new(player)))
     }
+
 }

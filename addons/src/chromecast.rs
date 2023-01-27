@@ -41,6 +41,9 @@ impl Chromecast {
 
     pub fn connect(&mut self, device: Device) -> Result<Option<Box<dyn Player + Send>>, Error> {
         let player: Self = device.clone().into();
+        self.host = Some(device.ip);
+        self.port = Some(device.port);
+        self.connect_without_host_verification(Some(DEFAULT_APP_ID.to_owned()))?;
         Ok(Some(Box::new(player)))
     }
 
@@ -247,6 +250,28 @@ impl Player for Chromecast {
 
     fn device_type(&self) -> String {
         "chromecast".to_string()
+    }
+
+    fn disconnect(&mut self) -> Result<(), Error> {
+        if self.host.is_none() || self.port.is_none() {
+            return Err(Error::msg("No device connected"));
+        }
+        let (cast_device, _, _, _) = self.connect_without_host_verification(None)?;
+        let status = cast_device.receiver.get_status().unwrap();
+
+        let current_app = &CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
+
+        let app = status
+            .applications
+            .iter()
+            .find(|app| &CastDeviceApp::from_str(app.app_id.as_str()).unwrap() == current_app);
+        if let Some(app) = app {
+            cast_device
+                .receiver
+                .stop_app(app.session_id.as_str())
+                .unwrap();
+        }
+        Ok(())
     }
 }
 

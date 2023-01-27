@@ -54,6 +54,7 @@ pub trait Player {
     async fn play_next(&mut self, track: Track) -> Result<(), Error>;
     async fn load(&mut self, track: Track) -> Result<(), Error>;
     fn device_type(&self) -> String;
+    fn disconnect(&mut self) -> Result<(), Error>;
 }
 
 pub struct CurrentDevice {

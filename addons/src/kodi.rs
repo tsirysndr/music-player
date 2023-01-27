@@ -153,6 +153,11 @@ impl Player for Kodi {
     fn device_type(&self) -> String {
         "xbmc".to_string()
     }
+
+    fn disconnect(&mut self) -> Result<(), Error> {
+        self.client = None;
+        Ok(())
+    }
 }
 
 impl From<Device> for Kodi {

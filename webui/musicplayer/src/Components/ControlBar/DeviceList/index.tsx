@@ -65,6 +65,22 @@ const IconWrapper = styled.div`
   margin-right: 16px;
 `;
 
+const Disconnect = styled.button`
+  background-color: #000;
+  border: none;
+  color: #fff;
+  height: 21px;
+  border-radius: 12px;
+  font-family: "RockfordSansRegular";
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  padding-bottom: 4px;
+  cursor: pointer;
+`;
+
 export type ArtworkProps = {
   icon?: string;
   color?: string;
@@ -94,10 +110,20 @@ const DeviceName = styled.div`
 `;
 
 export type DeviceListProps = {
+  currentCastDevice?: Device;
   castDevices: Device[];
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
+  close: () => void;
 };
 
-const DeviceList: FC<DeviceListProps> = ({ castDevices }) => {
+const DeviceList: FC<DeviceListProps> = ({
+  castDevices,
+  close,
+  connectToCastDevice,
+  disconnectFromCastDevice,
+  currentCastDevice,
+}) => {
   const theme = useTheme();
   const colors: {
     [key: string]: string;
@@ -106,46 +132,66 @@ const DeviceList: FC<DeviceListProps> = ({ castDevices }) => {
     xbmc: "rgba(40, 203, 252, 0.082)",
     airplay: "rgba(255, 0, 195, 0.063)",
   };
+
+  const _onConnectToCastDevice = (deviceId: string) => {
+    connectToCastDevice(deviceId);
+    close();
+  };
+
+  const _onDisconnectFromCastDevice = () => {
+    disconnectFromCastDevice();
+    close();
+  };
+
   return (
     <Container>
       <CurrentDeviceWrapper>
         <IconWrapper>
           <Laptop size={30} color={"#ab28fc"} />
         </IconWrapper>
-        <div>
+        <div style={{ flex: 1 }}>
           <CurrentDevice>Current device</CurrentDevice>
-          <CurrentDeviceName>Music Player</CurrentDeviceName>
+          <CurrentDeviceName>
+            {currentCastDevice ? currentCastDevice.name : "Music Player"}
+          </CurrentDeviceName>
         </div>
+        {currentCastDevice && (
+          <Disconnect onClick={_onDisconnectFromCastDevice}>
+            disconnect
+          </Disconnect>
+        )}
       </CurrentDeviceWrapper>
       <Title>Select another output device</Title>
       <List>
         {castDevices.map((device) => (
-          <ListItem
-            key={device.id}
-            artwork={() => (
-              <Artwork icon={device.type} color={colors[device.type]} />
-            )}
-            overrides={{
-              Root: {
-                style: {
-                  cursor: "pointer",
-                  ":hover": {
-                    backgroundColor: theme.colors.hover,
+          <div onClick={() => _onConnectToCastDevice(device.id)}>
+            <ListItem
+              key={device.id}
+              artwork={() => (
+                <Artwork icon={device.type} color={colors[device.type]} />
+              )}
+              overrides={{
+                Root: {
+                  style: {
+                    cursor: "pointer",
+                    ":hover": {
+                      backgroundColor: theme.colors.hover,
+                    },
+                    borderRadius: "5px",
                   },
-                  borderRadius: "5px",
                 },
-              },
-              Content: {
-                style: {
-                  borderBottom: "none",
+                Content: {
+                  style: {
+                    borderBottom: "none",
+                  },
                 },
-              },
-            }}
-          >
-            <ListItemLabel>
-              <DeviceName>{device.name}</DeviceName>
-            </ListItemLabel>
-          </ListItem>
+              }}
+            >
+              <ListItemLabel>
+                <DeviceName>{device.name}</DeviceName>
+              </ListItemLabel>
+            </ListItem>
+          </div>
         ))}
       </List>
     </Container>

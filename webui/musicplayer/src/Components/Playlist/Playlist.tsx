@@ -16,6 +16,7 @@ import { useTimeFormat } from "../../Hooks/useFormat";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";
 import { useTheme } from "@emotion/react";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -155,8 +156,11 @@ export type PlaylistProps = {
   devices: Device[];
   castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const Playlist: FC<PlaylistProps> = (props) => {
@@ -169,6 +173,7 @@ const Playlist: FC<PlaylistProps> = (props) => {
     nowPlaying,
     playlist,
     recentPlaylists,
+    currentCastDevice,
   } = props;
   const { formatTime } = useTimeFormat();
   const tracks =
@@ -186,82 +191,85 @@ const Playlist: FC<PlaylistProps> = (props) => {
     })) || [];
   const theme = useTheme();
   return (
-    <Container>
-      <Sidebar active="artists" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <MainContent displayHeader={false}>
-          <Scrollable>
-            <BackButton onClick={onBack}>
-              <div style={{ marginTop: 2 }}>
-                <ArrowBack color={theme.colors.text} />
-              </div>
-            </BackButton>
-            <Header>
-              <NoCover>
-                <PlaylistIcon
-                  size={48}
-                  color="#ab28fc"
-                  style={{ marginRight: -38, marginTop: 38 }}
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="artists" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <MainContent displayHeader={false}>
+            <Scrollable>
+              <BackButton onClick={onBack}>
+                <div style={{ marginTop: 2 }}>
+                  <ArrowBack color={theme.colors.text} />
+                </div>
+              </BackButton>
+              <Header>
+                <NoCover>
+                  <PlaylistIcon
+                    size={48}
+                    color="#ab28fc"
+                    style={{ marginRight: -38, marginTop: 38 }}
+                  />
+                </NoCover>
+                <PlaylistDetails>
+                  <PlaylistDetailsWrapper>
+                    <Title>{playlist.name}</Title>
+                  </PlaylistDetailsWrapper>
+                  <Buttons>
+                    <Button
+                      onClick={() => onPlayPlaylist(playlist.id, false)}
+                      kind="primary"
+                      disabled={!tracks.length}
+                    >
+                      <Label>
+                        <Icon>
+                          <Play small color="#fff" />
+                        </Icon>
+                        <div style={{ marginLeft: 7 }}>Play</div>
+                      </Label>
+                    </Button>
+                    <Separator />
+                    <Button
+                      onClick={() => onPlayPlaylist(playlist.id, true)}
+                      kind="secondary"
+                      disabled={!tracks.length}
+                    >
+                      <Label>
+                        <Shuffle color="#ab28fc" />
+                        <div style={{ marginLeft: 7 }}>Shuffle</div>
+                      </Label>
+                    </Button>
+                  </Buttons>
+                </PlaylistDetails>
+              </Header>
+              {tracks.length === 0 && (
+                <Placeholder>
+                  Start building your playlist with tracks by tapping on ‘Add to
+                  playlist’ in the option menu.
+                </Placeholder>
+              )}
+              {tracks.length > 0 && (
+                <TracksTable
+                  tracks={tracks}
+                  currentTrackId={nowPlaying.id}
+                  isPlaying={nowPlaying.isPlaying}
+                  header={["Title", "Artist", "Album", "Time"]}
+                  maxHeight={"initial"}
+                  onPlayTrack={(id, position) =>
+                    onPlayPlaylist(id, false, position)
+                  }
+                  onPlayNext={onPlayNext}
+                  onCreatePlaylist={onCreatePlaylist}
+                  recentPlaylists={recentPlaylists}
+                  onAddTrackToPlaylist={onAddTrackToPlaylist}
                 />
-              </NoCover>
-              <PlaylistDetails>
-                <PlaylistDetailsWrapper>
-                  <Title>{playlist.name}</Title>
-                </PlaylistDetailsWrapper>
-                <Buttons>
-                  <Button
-                    onClick={() => onPlayPlaylist(playlist.id, false)}
-                    kind="primary"
-                    disabled={!tracks.length}
-                  >
-                    <Label>
-                      <Icon>
-                        <Play small color="#fff" />
-                      </Icon>
-                      <div style={{ marginLeft: 7 }}>Play</div>
-                    </Label>
-                  </Button>
-                  <Separator />
-                  <Button
-                    onClick={() => onPlayPlaylist(playlist.id, true)}
-                    kind="secondary"
-                    disabled={!tracks.length}
-                  >
-                    <Label>
-                      <Shuffle color="#ab28fc" />
-                      <div style={{ marginLeft: 7 }}>Shuffle</div>
-                    </Label>
-                  </Button>
-                </Buttons>
-              </PlaylistDetails>
-            </Header>
-            {tracks.length === 0 && (
-              <Placeholder>
-                Start building your playlist with tracks by tapping on ‘Add to
-                playlist’ in the option menu.
-              </Placeholder>
-            )}
-            {tracks.length > 0 && (
-              <TracksTable
-                tracks={tracks}
-                currentTrackId={nowPlaying.id}
-                isPlaying={nowPlaying.isPlaying}
-                header={["Title", "Artist", "Album", "Time"]}
-                maxHeight={"initial"}
-                onPlayTrack={(id, position) =>
-                  onPlayPlaylist(id, false, position)
-                }
-                onPlayNext={onPlayNext}
-                onCreatePlaylist={onCreatePlaylist}
-                recentPlaylists={recentPlaylists}
-                onAddTrackToPlaylist={onAddTrackToPlaylist}
-              />
-            )}
-          </Scrollable>
-        </MainContent>
-      </Content>
-    </Container>
+              )}
+            </Scrollable>
+          </MainContent>
+        </Content>
+      </Container>
+    </>
   );
 };
 

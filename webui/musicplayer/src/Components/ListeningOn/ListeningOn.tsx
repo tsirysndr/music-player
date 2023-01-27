@@ -9,7 +9,7 @@ const Container = styled.div`
   position: relative;
   background: ${(props) => props.theme.colors.tooltip};
   color: #ab28fc;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
   padding-right: 20px;
   padding-top: 2px;
@@ -31,9 +31,10 @@ const IconWrapper = styled.div`
 
 export type ListeningOnProps = {
   icon?: "music-player" | "xbmc" | "airplay" | "chromecast";
+  deviceName?: string;
 };
 
-const ListeningOn: FC<ListeningOnProps> = ({ icon }) => {
+const ListeningOn: FC<ListeningOnProps> = ({ icon, deviceName }) => {
   return (
     <Wrapper>
       <Container>
@@ -47,7 +48,7 @@ const ListeningOn: FC<ListeningOnProps> = ({ icon }) => {
           {icon === "chromecast" && <Chromecast size={15} color={"#ab28fc"} />}
         </IconWrapper>
         <div style={{ marginTop: -3, marginRight: 25 }}>
-          Listening on Salon TV
+          Listening on {deviceName}
         </div>
       </Container>
     </Wrapper>

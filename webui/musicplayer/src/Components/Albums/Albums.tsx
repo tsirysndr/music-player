@@ -102,8 +102,11 @@ export type AlbumsProps = {
   devices: Device[];
   castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 export type AlbumProps = {
@@ -128,10 +131,10 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 };
 
 const Albums: FC<AlbumsProps> = (props) => {
-  const { albums, onClickAlbum } = props;
+  const { albums, onClickAlbum, currentCastDevice } = props;
   return (
     <>
-      {false && <ListeningOn />}
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
         <Sidebar active="albums" {...props} />
         <Content>

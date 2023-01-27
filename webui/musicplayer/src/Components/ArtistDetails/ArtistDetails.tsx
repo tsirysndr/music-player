@@ -14,6 +14,7 @@ import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
 import { useTheme } from "@emotion/react";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -185,8 +186,11 @@ export type ArtistDetailsProps = {
   devices: Device[];
   castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
@@ -200,89 +204,93 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
     onCreatePlaylist,
     recentPlaylists,
     onAddTrackToPlaylist,
+    currentCastDevice,
   } = props;
   const theme = useTheme();
   return (
-    <Container>
-      <Sidebar active="artists" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <MainContent displayHeader={false}>
-          <Scrollable>
-            <BackButton onClick={onBack}>
-              <div style={{ marginTop: 2 }}>
-                <ArrowBack color={theme.colors.text} />
-              </div>
-            </BackButton>
-            <Artist>{artist.name}</Artist>
-            <Buttons>
-              <Button
-                onClick={() => onPlayArtistTracks(artist.id, false)}
-                kind="primary"
-              >
-                <Label>
-                  <Icon>
-                    <Play small color="#fff" />
-                  </Icon>
-                  <div style={{ marginLeft: 7 }}>Play</div>
-                </Label>
-              </Button>
-              <Separator />
-              <Button
-                onClick={() => onPlayArtistTracks(artist.id, true)}
-                kind="secondary"
-              >
-                <Label>
-                  <Shuffle color="#ab28fc" />
-                  <div style={{ marginLeft: 7 }}>Shuffle</div>
-                </Label>
-              </Button>
-            </Buttons>
-            <Tracks>
-              <TracksTable
-                tracks={tracks}
-                title={
-                  <Row>
-                    <Title>Tracks</Title>
-                    <SeeMore>See all</SeeMore>
-                  </Row>
-                }
-                maxHeight={"initial"}
-                onPlayTrack={(id, position) =>
-                  onPlayArtistTracks(id, false, position)
-                }
-                onPlayNext={onPlayNext}
-                onCreatePlaylist={onCreatePlaylist}
-                recentPlaylists={recentPlaylists}
-                onAddTrackToPlaylist={onAddTrackToPlaylist}
-              />
-            </Tracks>
-            <Row>
-              <Title>Albums</Title>
-              <SeeMore>See all</SeeMore>
-            </Row>
-            <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
-              {albums.map((item) => (
-                <Cell key={item.id}>
-                  <Link to={`/albums/${item.id}`}>
-                    {item.cover && <AlbumCover src={item.cover} />}
-                    {!item.cover && (
-                      <NoAlbumCover>
-                        <AlbumIcon size={120} />
-                      </NoAlbumCover>
-                    )}
-                  </Link>
-                  <Link to={`/albums/${item.id}`}>
-                    <AlbumTitle>{item.title}</AlbumTitle>
-                  </Link>
-                  <AlbumArtist>{item.artist}</AlbumArtist>
-                </Cell>
-              ))}
-            </Grid>
-          </Scrollable>
-        </MainContent>
-      </Content>
-    </Container>
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="artists" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <MainContent displayHeader={false}>
+            <Scrollable>
+              <BackButton onClick={onBack}>
+                <div style={{ marginTop: 2 }}>
+                  <ArrowBack color={theme.colors.text} />
+                </div>
+              </BackButton>
+              <Artist>{artist.name}</Artist>
+              <Buttons>
+                <Button
+                  onClick={() => onPlayArtistTracks(artist.id, false)}
+                  kind="primary"
+                >
+                  <Label>
+                    <Icon>
+                      <Play small color="#fff" />
+                    </Icon>
+                    <div style={{ marginLeft: 7 }}>Play</div>
+                  </Label>
+                </Button>
+                <Separator />
+                <Button
+                  onClick={() => onPlayArtistTracks(artist.id, true)}
+                  kind="secondary"
+                >
+                  <Label>
+                    <Shuffle color="#ab28fc" />
+                    <div style={{ marginLeft: 7 }}>Shuffle</div>
+                  </Label>
+                </Button>
+              </Buttons>
+              <Tracks>
+                <TracksTable
+                  tracks={tracks}
+                  title={
+                    <Row>
+                      <Title>Tracks</Title>
+                      <SeeMore>See all</SeeMore>
+                    </Row>
+                  }
+                  maxHeight={"initial"}
+                  onPlayTrack={(id, position) =>
+                    onPlayArtistTracks(id, false, position)
+                  }
+                  onPlayNext={onPlayNext}
+                  onCreatePlaylist={onCreatePlaylist}
+                  recentPlaylists={recentPlaylists}
+                  onAddTrackToPlaylist={onAddTrackToPlaylist}
+                />
+              </Tracks>
+              <Row>
+                <Title>Albums</Title>
+                <SeeMore>See all</SeeMore>
+              </Row>
+              <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
+                {albums.map((item) => (
+                  <Cell key={item.id}>
+                    <Link to={`/albums/${item.id}`}>
+                      {item.cover && <AlbumCover src={item.cover} />}
+                      {!item.cover && (
+                        <NoAlbumCover>
+                          <AlbumIcon size={120} />
+                        </NoAlbumCover>
+                      )}
+                    </Link>
+                    <Link to={`/albums/${item.id}`}>
+                      <AlbumTitle>{item.title}</AlbumTitle>
+                    </Link>
+                    <AlbumArtist>{item.artist}</AlbumArtist>
+                  </Cell>
+                ))}
+              </Grid>
+            </Scrollable>
+          </MainContent>
+        </Content>
+      </Container>
+    </>
   );
 };
 

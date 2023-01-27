@@ -40,8 +40,11 @@ const FolderPage = () => {
     devices,
     castDevices,
     currentDevice,
+    currentCastDevice,
     connectToDevice,
     disconnectFromDevice,
+    connectToCastDevice,
+    disconnectFromCastDevice,
   } = useDevices();
   const {
     folders,
@@ -95,8 +98,11 @@ const FolderPage = () => {
       devices={devices}
       castDevices={castDevices}
       currentDevice={currentDevice}
+      currentCastDevice={currentCastDevice}
       connectToDevice={(id) => connectToDevice({ variables: { id } })}
       disconnectFromDevice={() => disconnectFromDevice()}
+      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
+      disconnectFromCastDevice={() => disconnectFromCastDevice()}
     />
   );
 };

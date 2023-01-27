@@ -40,3 +40,16 @@ export const CONNECTED_DEVICE = gql`
     }
   }
 `;
+
+export const CONNECTED_CAST_DEVICE = gql`
+  query ConnectedCastDevice {
+    connectedCastDevice {
+      id
+      name
+      app
+      host
+      port
+      isConnected
+    }
+  }
+`;

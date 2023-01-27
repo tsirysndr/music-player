@@ -15,6 +15,7 @@ import { Track } from "../../Types";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";
 import { useTheme } from "@emotion/react";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -166,8 +167,11 @@ export type AlbumDetailsProps = {
   devices: Device[];
   castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
@@ -180,6 +184,7 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
     onCreatePlaylist,
     onAddTrackToPlaylist,
     recentPlaylists,
+    currentCastDevice,
   } = props;
   const coverUrl = _.startsWith(album.cover, "https://")
     ? album.cover
@@ -187,71 +192,74 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
   const { cover } = useCover(coverUrl);
   const theme = useTheme();
   return (
-    <Container>
-      <Sidebar active="albums" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <MainContent displayHeader={false}>
-          <Scrollable>
-            <BackButton onClick={onBack}>
-              <div style={{ marginTop: 2 }}>
-                <ArrowBack color={theme.colors.text} />
-              </div>
-            </BackButton>
-            <Album>
-              {cover && <AlbumCover src={cover} />}
-              {!cover && (
-                <NoAlbumCover>
-                  <AlbumIcon />
-                </NoAlbumCover>
-              )}
-              <Metadata>
-                <MetadataContainer>
-                  <Title>{album.title}</Title>
-                  <Artist>{album.artist}</Artist>
-                  <Tracks>{album.tracks.length} TRACKS</Tracks>
-                </MetadataContainer>
-                <Buttons>
-                  <Button
-                    onClick={() => onPlayAlbum(album.id, false)}
-                    kind="primary"
-                  >
-                    <Label>
-                      <Icon>
-                        <Play small color="#fff" />
-                      </Icon>
-                      <div style={{ marginLeft: 7 }}>Play</div>
-                    </Label>
-                  </Button>
-                  <Separator />
-                  <Button
-                    onClick={() => onPlayAlbum(album.id, true)}
-                    kind="secondary"
-                  >
-                    <Label>
-                      <Shuffle color="#ab28fc" />
-                      <div style={{ marginLeft: 7 }}>Shuffle</div>
-                    </Label>
-                  </Button>
-                </Buttons>
-              </Metadata>
-            </Album>
-            <TracksTable
-              tracks={album.tracks.map((track: any) => ({ ...track, cover }))}
-              currentTrackId={nowPlaying.id}
-              isPlaying={nowPlaying.isPlaying}
-              header={["#", "Title", "Artist", "Time"]}
-              maxHeight={"initial"}
-              onPlayTrack={(id, position) => onPlayAlbum(id, false, position)}
-              onPlayNext={onPlayNext}
-              onCreatePlaylist={onCreatePlaylist}
-              recentPlaylists={recentPlaylists}
-              onAddTrackToPlaylist={onAddTrackToPlaylist}
-            />
-          </Scrollable>
-        </MainContent>
-      </Content>
-    </Container>
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="albums" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <MainContent displayHeader={false}>
+            <Scrollable>
+              <BackButton onClick={onBack}>
+                <div style={{ marginTop: 2 }}>
+                  <ArrowBack color={theme.colors.text} />
+                </div>
+              </BackButton>
+              <Album>
+                {cover && <AlbumCover src={cover} />}
+                {!cover && (
+                  <NoAlbumCover>
+                    <AlbumIcon />
+                  </NoAlbumCover>
+                )}
+                <Metadata>
+                  <MetadataContainer>
+                    <Title>{album.title}</Title>
+                    <Artist>{album.artist}</Artist>
+                    <Tracks>{album.tracks.length} TRACKS</Tracks>
+                  </MetadataContainer>
+                  <Buttons>
+                    <Button
+                      onClick={() => onPlayAlbum(album.id, false)}
+                      kind="primary"
+                    >
+                      <Label>
+                        <Icon>
+                          <Play small color="#fff" />
+                        </Icon>
+                        <div style={{ marginLeft: 7 }}>Play</div>
+                      </Label>
+                    </Button>
+                    <Separator />
+                    <Button
+                      onClick={() => onPlayAlbum(album.id, true)}
+                      kind="secondary"
+                    >
+                      <Label>
+                        <Shuffle color="#ab28fc" />
+                        <div style={{ marginLeft: 7 }}>Shuffle</div>
+                      </Label>
+                    </Button>
+                  </Buttons>
+                </Metadata>
+              </Album>
+              <TracksTable
+                tracks={album.tracks.map((track: any) => ({ ...track, cover }))}
+                currentTrackId={nowPlaying.id}
+                isPlaying={nowPlaying.isPlaying}
+                header={["#", "Title", "Artist", "Time"]}
+                maxHeight={"initial"}
+                onPlayTrack={(id, position) => onPlayAlbum(id, false, position)}
+                onPlayNext={onPlayNext}
+                onCreatePlaylist={onCreatePlaylist}
+                recentPlaylists={recentPlaylists}
+                onAddTrackToPlaylist={onAddTrackToPlaylist}
+              />
+            </Scrollable>
+          </MainContent>
+        </Content>
+      </Container>
+    </>
   );
 };
 

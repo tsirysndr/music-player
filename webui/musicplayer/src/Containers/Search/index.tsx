@@ -14,8 +14,11 @@ const SearchPage = () => {
     devices,
     castDevices,
     currentDevice,
+    currentCastDevice,
     connectToDevice,
     disconnectFromDevice,
+    connectToCastDevice,
+    disconnectFromCastDevice,
   } = useDevices();
   const {
     play,
@@ -104,8 +107,11 @@ const SearchPage = () => {
         devices={devices}
         castDevices={castDevices}
         currentDevice={currentDevice}
+        currentCastDevice={currentCastDevice}
         connectToDevice={(id) => connectToDevice({ variables: { id } })}
         disconnectFromDevice={() => disconnectFromDevice()}
+        connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
+        disconnectFromCastDevice={() => disconnectFromCastDevice()}
       />
     </>
   );

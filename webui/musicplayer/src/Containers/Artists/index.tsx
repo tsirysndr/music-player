@@ -27,8 +27,11 @@ const ArtistsPage = () => {
     devices,
     castDevices,
     currentDevice,
+    currentCastDevice,
     connectToDevice,
     disconnectFromDevice,
+    connectToCastDevice,
+    disconnectFromCastDevice,
   } = useDevices();
   const artists = !loading && data ? data.artists : [];
   const {
@@ -84,8 +87,11 @@ const ArtistsPage = () => {
       devices={devices}
       castDevices={castDevices}
       currentDevice={currentDevice}
+      currentCastDevice={currentCastDevice}
       connectToDevice={(id) => connectToDevice({ variables: { id } })}
       disconnectFromDevice={() => disconnectFromDevice()}
+      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
+      disconnectFromCastDevice={() => disconnectFromCastDevice()}
     />
   );
 };

@@ -256,7 +256,21 @@ impl Player for Chromecast {
         if self.host.is_none() || self.port.is_none() {
             return Err(Error::msg("No device connected"));
         }
-        let (cast_device, _, _, _) = self.connect_without_host_verification(None)?;
+
+        let cast_device = match CastDevice::connect_without_host_verification(
+            self.host.as_ref().unwrap(),
+            self.port.unwrap(),
+        ) {
+            Ok(cast_device) => cast_device,
+            Err(err) => panic!("Could not establish connection with Cast Device: {:?}", err),
+        };
+
+        cast_device
+            .connection
+            .connect(DEFAULT_DESTINATION_ID.to_string())
+            .unwrap();
+        cast_device.heartbeat.ping().unwrap();
+
         let status = cast_device.receiver.get_status().unwrap();
 
         let current_app = &CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();

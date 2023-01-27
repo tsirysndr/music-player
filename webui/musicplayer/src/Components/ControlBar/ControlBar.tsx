@@ -68,6 +68,7 @@ export type ControlBarProps = {
     albumId: string;
   };
   castDevices: Device[];
+  currentCastDevice?: Device;
   onPlay: () => void;
   onPause: () => void;
   onNext: () => void;
@@ -78,6 +79,8 @@ export type ControlBarProps = {
   previousTracks?: Track[];
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const ControlBar: FC<ControlBarProps> = (props) => {
@@ -147,7 +150,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
       <ButtonGroup>
         <StatefulPopover
           placement="bottom"
-          content={() => <DeviceList {...props} />}
+          content={({ close }) => <DeviceList {...props} close={close} />}
           overrides={{
             Body: {
               style: {

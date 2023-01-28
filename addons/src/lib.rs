@@ -50,7 +50,7 @@ pub trait Player {
     async fn next(&mut self) -> Result<(), Error>;
     async fn previous(&mut self) -> Result<(), Error>;
     async fn seek(&mut self, position: u32) -> Result<(), Error>;
-    async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error>;
+    async fn load_tracks(&mut self, tracks: Vec<Track>, start_index: Option<i32>) -> Result<(), Error>;
     async fn play_next(&mut self, track: Track) -> Result<(), Error>;
     async fn load(&mut self, track: Track) -> Result<(), Error>;
     async fn get_current_playback(&mut self) -> Result<Playback, Error>;

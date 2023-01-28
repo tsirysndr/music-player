@@ -151,7 +151,10 @@ pub async fn load_tracks(
             }
         }
         player
-            .load_tracks(tracks.clone().into_iter().map(Into::into).collect())
+            .load_tracks(
+                tracks.clone().into_iter().map(Into::into).collect(),
+                Some(0),
+            )
             .await?;
         return Ok(());
     }

@@ -22,6 +22,7 @@ use sea_orm::{
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
+use url::Url;
 
 use crate::load_tracks;
 use crate::simple_broker::SimpleBroker;
@@ -245,6 +246,7 @@ impl TracklistMutation {
 
         if device.source.is_some() {
             let source = device.source.as_mut().unwrap();
+            let source_ip = source.device_ip();
             let result = source.track(&id).await?;
 
             let base_url = device
@@ -259,6 +261,24 @@ impl TracklistMutation {
                 .with_remote_track_url(base_url.as_str())
                 .with_remote_cover_url(base_url.as_str())
                 .into();
+
+            let receiver = device.receiver.as_mut().unwrap();
+            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            if will_play_on_chromecast {
+                let url = Url::parse(track.uri.as_str()).unwrap();
+                let host = url.host_str().unwrap();
+                track.uri = track.uri.to_lowercase().replace(host, source_ip.as_str());
+                let cover = match track.clone().album.cover {
+                    Some(cover) => Url::parse(cover.as_str()).ok().map(|url| {
+                        let host = url.host_str().unwrap();
+                        cover.to_lowercase().replace(host, source_ip.as_str())
+                    }),
+                    None => None,
+                };
+                track.album.cover = cover;
+            }
+            receiver.play_next(track.into()).await?;
+            return Ok(true);
         } else {
             track = TrackRepository::new(db.lock().await.get_connection())
                 .find(&id)
@@ -267,7 +287,12 @@ impl TracklistMutation {
 
         if device.receiver.is_some() {
             let receiver = device.receiver.as_mut().unwrap();
-            track = update_track_url(devices, track)?;
+            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            track = update_track_url(devices.clone(), track)?;
+            let t: types::Track = track.into();
+            track = update_cover_url(devices.clone(), t.clone(), will_play_on_chromecast)
+                .unwrap_or_else(|_| t.clone())
+                .into();
             receiver.play_next(track.into()).await?;
             return Ok(true);
         }
@@ -418,7 +443,17 @@ impl TracklistMutation {
         if device.receiver.is_some() {
             let receiver = device.receiver.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
-            artist = update_tracks_url(devices, artist, will_play_on_chromecast)?;
+            artist = update_tracks_url(devices.clone(), artist, will_play_on_chromecast)?;
+            artist.tracks = artist
+                .tracks
+                .into_iter()
+                .map(|track| {
+                    let t: types::Track = track.into();
+                    update_cover_url(devices.clone(), t.clone(), will_play_on_chromecast)
+                        .unwrap_or_else(|_| t.clone())
+                        .into()
+                })
+                .collect();
         }
 
         load_tracks(
@@ -489,7 +524,17 @@ impl TracklistMutation {
         if device.receiver.is_some() {
             let receiver = device.receiver.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
-            playlist = update_tracks_url(devices, playlist, will_play_on_chromecast)?;
+            playlist = update_tracks_url(devices.clone(), playlist, will_play_on_chromecast)?;
+            playlist.tracks = playlist
+                .tracks
+                .into_iter()
+                .map(|track| {
+                    let t: types::Track = track.into();
+                    update_cover_url(devices.clone(), t.clone(), will_play_on_chromecast)
+                        .unwrap_or_else(|_| t.clone())
+                        .into()
+                })
+                .collect();
         }
 
         let tracks: Vec<track_entity::Model> =

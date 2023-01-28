@@ -80,7 +80,7 @@ impl Player for Airplay {
         todo!()
     }
 
-    async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error> {
+    async fn load_tracks(&mut self, tracks: Vec<Track>, start_index: Option<i32>) -> Result<(), Error> {
         todo!()
     }
 

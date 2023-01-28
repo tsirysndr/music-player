@@ -16,8 +16,10 @@ pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
 pub struct Playback {
     pub current_track: Option<Track>,
     pub index: u32,
+    pub current_item_id: Option<i32>,
     pub position_ms: u32,
     pub is_playing: bool,
+    pub items: Vec<(Track, i32)>,
 }
 
 #[derive(Debug, Clone, Default)]

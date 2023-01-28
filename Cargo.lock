@@ -4109,6 +4109,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "jsonrpsee",
+ "md5",
  "music-player-client",
  "music-player-types",
  "rust_cast",
@@ -5772,7 +5773,7 @@ dependencies = [
 [[package]]
 name = "rust_cast"
 version = "0.18.1"
-source = "git+https://github.com/tsirysndr/rust-cast.git?rev=c2220d2#c2220d2c2ba407c919cae174e94d71bd1ff1692a"
+source = "git+https://github.com/tsirysndr/rust-cast.git?rev=ee415c8#ee415c8a6eecf8b0e7f5b0b956633d9d765b76e9"
 dependencies = [
  "byteorder",
  "log",

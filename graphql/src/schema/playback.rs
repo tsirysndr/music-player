@@ -1,6 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use crate::simple_broker::SimpleBroker;
 use async_graphql::*;
@@ -26,6 +24,15 @@ impl PlaybackQuery {
         &self,
         ctx: &Context<'_>,
     ) -> Result<CurrentlyPlayingSong, Error> {
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.receiver.is_some() {
+            let receiver = device.receiver.as_mut().unwrap();
+            let playback = receiver.get_current_playback().await?;
+            return Ok(playback.into());
+        }
+
         let tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
         let (track, index) = tracklist.lock().unwrap().current_track();
         let playback_state = tracklist.lock().unwrap().playback_state();

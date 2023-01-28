@@ -10,7 +10,7 @@ pub mod tononkira;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Device, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
 
 pub trait Addon {
     fn name(&self) -> &str;
@@ -53,6 +53,7 @@ pub trait Player {
     async fn load_tracks(&mut self, tracks: Vec<Track>) -> Result<(), Error>;
     async fn play_next(&mut self, track: Track) -> Result<(), Error>;
     async fn load(&mut self, track: Track) -> Result<(), Error>;
+    async fn get_current_playback(&mut self) -> Result<Playback, Error>;
     fn device_type(&self) -> String;
     fn disconnect(&mut self) -> Result<(), Error>;
 }

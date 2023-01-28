@@ -1,7 +1,7 @@
 use crate::{Addon, Player};
 use anyhow::Error;
 use async_trait::async_trait;
-use music_player_types::types::{Device, Track};
+use music_player_types::types::{Device, Playback, Track};
 
 pub struct Airplay {
     name: String,
@@ -89,6 +89,10 @@ impl Player for Airplay {
     }
 
     async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn get_current_playback(&mut self) -> Result<Playback, Error> {
         todo!()
     }
 

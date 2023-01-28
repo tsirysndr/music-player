@@ -5,7 +5,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
-use music_player_types::types::{Album, Artist, Device, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
 
 pub struct Client {
     pub library: LibraryClient,
@@ -191,6 +191,10 @@ impl Player for Local {
         todo!()
     }
 
+    async fn get_current_playback(&mut self) -> Result<Playback, Error> {
+        todo!()
+    }
+
     fn device_type(&self) -> String {
         "music-player".to_string()
     }
@@ -234,5 +238,4 @@ impl Local {
         player.connect().await?;
         Ok(Some(Box::new(player)))
     }
-
 }

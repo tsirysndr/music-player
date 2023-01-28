@@ -1,7 +1,7 @@
 use anyhow::Error;
 
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Device, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
 
 use super::{Addon, Browseable, Player, StreamingAddon};
 
@@ -147,6 +147,10 @@ impl Player for Kodi {
     }
 
     async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn get_current_playback(&mut self) -> Result<Playback, Error> {
         todo!()
     }
 

@@ -13,6 +13,14 @@ pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
 pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
 
 #[derive(Debug, Clone, Default)]
+pub struct Playback {
+    pub current_track: Option<Track>,
+    pub index: u32,
+    pub position_ms: u32,
+    pub is_playing: bool,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct Song {
     pub title: String,
     pub artist: String,

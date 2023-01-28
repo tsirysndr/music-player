@@ -84,7 +84,7 @@ pub async fn connect_to_cast_device(
 ) -> Result<Option<Box<dyn Player + Send>>, Error> {
     match player_type {
         PlayerType::MusicPlayer => Local::new().connect_to_player(device).await,
-        PlayerType::Chromecast => Chromecast::new().connect(device),
+        PlayerType::Chromecast => Chromecast::connect(device),
         PlayerType::Airplay => Airplay::new().connect(device),
         PlayerType::Kodi => Kodi::new().connect_to_player(device),
     }

@@ -45,8 +45,16 @@ pub struct TracklistQuery;
 #[Object]
 impl TracklistQuery {
     async fn tracklist_tracks(&self, ctx: &Context<'_>) -> Result<Tracklist, Error> {
+        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
         let state = ctx.data::<Arc<StdMutex<TracklistState>>>().unwrap();
         let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
+        let mut device = current_device.lock().await;
+
+        if device.receiver.is_some() {
+            let receiver = device.receiver.as_mut().unwrap();
+            let playback = receiver.get_current_playback().await?;
+            return Ok(playback.into());
+        }
 
         let response = Tracklist {
             next_tracks: next_tracks.into_iter().map(Into::into).collect(),

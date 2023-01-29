@@ -53,16 +53,6 @@ const CustomReceiver = () => {
 
   useEffect(() => {
     if (playerManager) {
-      /*
-      playerManager.setMessageInterceptor(
-        cast.framework.messages.MessageType.LOAD,
-        (request) => {
-          console.log(">> LOAD", request);
-          request$.next(request);
-          return request;
-        }
-      );
-      */
       playerManager.addEventListener(
         cast.framework.events.EventType.MEDIA_STATUS,
         (request) => {

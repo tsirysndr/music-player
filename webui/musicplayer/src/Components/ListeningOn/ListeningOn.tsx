@@ -1,5 +1,4 @@
 import styled from "@emotion/styled";
-import { Speaker2 } from "@styled-icons/fluentui-system-regular";
 import { MusicPlayer } from "@styled-icons/bootstrap";
 import { Kodi, Airplayaudio, Chromecast } from "@styled-icons/simple-icons";
 import { FC } from "react";
@@ -39,9 +38,6 @@ const ListeningOn: FC<ListeningOnProps> = ({ icon, deviceName }) => {
     <Wrapper>
       <Container>
         <IconWrapper>
-          {
-            //<Speaker2 size={15} color="#ab28fc" />
-          }
           {icon === "music-player" && <MusicPlayer size={15} color="#ab28fc" />}
           {icon === "xbmc" && <Kodi size={15} color="#ab28fc" />}
           {icon === "airplay" && <Airplayaudio size={15} color={"#ab28fc"} />}

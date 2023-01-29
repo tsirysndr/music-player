@@ -76,8 +76,7 @@ export type SearchResultsProps = {
 
 const SearchResults: FC<SearchResultsProps> = (props) => {
   const [activeKey, setActiveKey] = useState<React.Key>(0);
-  const { tracks, nowPlaying, onPlayTrack, onPlayNext, currentCastDevice } =
-    props;
+  const { currentCastDevice } = props;
   return (
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}

@@ -6,9 +6,11 @@ export const useTimeFormat = () => {
 
     if (seconds === "60") {
       minutes += 1;
-      return `${minutes < 10 ? `0${minutes}` : minutes}:00`;
+      minutes = minutes < 10 ? `0${minutes}` : minutes;
+      return `${minutes}:00`;
     } else {
-      return `${minutes < 10 ? `0${minutes}` : minutes}:${secondsDisplay}`;
+      minutes = minutes < 10 ? `0${minutes}` : minutes;
+      return `${minutes}:${secondsDisplay}`;
     }
   };
   return { formatTime };

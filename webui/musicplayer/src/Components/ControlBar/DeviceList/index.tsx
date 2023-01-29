@@ -164,7 +164,10 @@ const DeviceList: FC<DeviceListProps> = ({
       <Title>Select another output device</Title>
       <List>
         {castDevices.map((device) => (
-          <div onClick={() => _onConnectToCastDevice(device.id)}>
+          <div
+            key={device.id}
+            onClick={() => _onConnectToCastDevice(device.id)}
+          >
             <ListItem
               key={device.id}
               artwork={() => (

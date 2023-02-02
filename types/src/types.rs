@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use local_ip_addr::get_local_ip_address;
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use mdns_sd::ServiceInfo;
 use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
@@ -375,13 +376,7 @@ impl From<ServiceInfo> for Device {
             let mut ip = addresses.next().unwrap().to_string();
 
             if is_current_device {
-                loop {
-                    ip = addresses.next().unwrap().to_string();
-                    let url = format!("http://{}:{}/", ip, srv.get_port());
-                    if minreq::get(url).send().is_ok() {
-                        break;
-                    }
-                }
+                ip = get_local_ip_address().unwrap();
             }
 
             return Self {

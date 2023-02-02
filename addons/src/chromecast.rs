@@ -77,6 +77,35 @@ impl<'a> Chromecast<'a> {
         Ok(Some(Box::new(player)))
     }
 
+    fn reconnect(&mut self) -> Result<(), Error> {
+        let cast_device = match CastDevice::connect_without_host_verification(
+            self.host.clone().unwrap(),
+            self.port.unwrap(),
+        ) {
+            Ok(cast_device) => cast_device,
+            Err(err) => panic!("Could not establish connection with Cast Device: {:?}", err),
+        };
+
+        cast_device
+            .connection
+            .connect(DEFAULT_DESTINATION_ID.to_string())?;
+        cast_device.heartbeat.ping()?;
+
+        let app_to_run = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
+        let app = cast_device.receiver.launch_app(&app_to_run)?;
+
+        cast_device
+            .connection
+            .connect(app.transport_id.as_str())
+            .unwrap();
+
+        self.client = Some(cast_device);
+        self.transport_id = Some(app.transport_id);
+        self.session_id = Some(app.session_id);
+
+        Ok(())
+    }
+
     fn current_app_session(&mut self) -> Result<(&CastDevice, String, i32, String), Error> {
         let app_to_manage = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
         if let Some(cast_device) = &self.client {
@@ -100,9 +129,14 @@ impl<'a> Chromecast<'a> {
                         .get_status(app.transport_id.as_str(), None)
                         .unwrap();
                     let status = status.entries.first().unwrap();
-                    let media_session_id = status.to_owned().media_session_id;
-                    let transport_id = app.to_owned().transport_id;
-                    Ok((cast_device, transport_id, media_session_id, "".to_string()))
+                    let media_session_id = status.media_session_id;
+                    let transport_id = app.transport_id.as_str();
+                    Ok((
+                        cast_device,
+                        transport_id.to_string(),
+                        media_session_id,
+                        "".to_string(),
+                    ))
                 }
                 None => Err(Error::msg(format!("{:?} is not running", app_to_manage))),
             }
@@ -310,6 +344,14 @@ impl<'a> Player for Chromecast<'a> {
 
         if let Some(cast_device) = &self.client {
             let app_to_manage = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
+            println!("{:?}", cast_device.receiver.get_status());
+
+            if cast_device.receiver.get_status().is_err() {
+                self.reconnect()?;
+            }
+
+            let cast_device = self.client.as_ref().unwrap();
+
             let status = cast_device.receiver.get_status().unwrap();
             let app = status
                 .applications

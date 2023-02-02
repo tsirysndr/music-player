@@ -3713,6 +3713,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "local-ip-addr"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb5eb03bdac69ee369631cbb0131787688639f8192a017d5aeb98c51223dd514"
+dependencies = [
+ "anyhow",
+ "socket2",
+]
+
+[[package]]
 name = "local-waker"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4109,6 +4119,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "jsonrpsee",
+ "local-ip-addr",
  "md5",
  "music-player-client",
  "music-player-types",
@@ -4344,6 +4355,7 @@ dependencies = [
 name = "music-player-types"
 version = "0.1.2"
 dependencies = [
+ "local-ip-addr",
  "lofty",
  "md5",
  "mdns-sd",

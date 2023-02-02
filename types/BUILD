@@ -13,5 +13,6 @@ rust_library(
     "//discovery:music_player_discovery",
     "@crate_index//:tantivy",
     "@crate_index//:mdns-sd",
+    "@crate_index//:local-ip-addr"
    ] + all_crate_deps(),
 )

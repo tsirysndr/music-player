@@ -1,4 +1,5 @@
 use async_graphql::Object;
+use music_player_types::types;
 
 use super::track::Track;
 
@@ -26,5 +27,16 @@ impl CurrentlyPlayingSong {
 
     async fn is_playing(&self) -> bool {
         self.is_playing
+    }
+}
+
+impl From<types::Playback> for CurrentlyPlayingSong {
+    fn from(playback: types::Playback) -> Self {
+        CurrentlyPlayingSong {
+            track: playback.current_track.map(|track| track.into()),
+            index: playback.index,
+            position_ms: playback.position_ms,
+            is_playing: playback.is_playing,
+        }
     }
 }

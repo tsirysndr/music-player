@@ -5,6 +5,7 @@ import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
 import ControlBar from "../ControlBar";
 import Artist from "../Icons/Artist";
+import ListeningOn from "../ListeningOn";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 
@@ -91,44 +92,51 @@ export type ArtistsProps = {
     position?: number
   ) => void;
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const Artists: FC<ArtistsProps> = (props) => {
-  const { onClickArtist, artists } = props;
+  const { onClickArtist, artists, currentCastDevice } = props;
   return (
-    <Container>
-      <Sidebar active="artists" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <Scrollable>
-          <MainContent title="Artists" placeholder="Filter Artists">
-            <Wrapper>
-              <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
-                {artists.map((item) => (
-                  <Cell key={item.id}>
-                    {item.cover && (
-                      <ArtistCover
-                        src={item.cover}
-                        onClick={() => onClickArtist(item)}
-                      />
-                    )}
-                    {!item.cover && (
-                      <NoArtistCover onClick={() => onClickArtist(item)}>
-                        <Artist width={75} height={75} color="#a4a3a3" />
-                      </NoArtistCover>
-                    )}
-                    <ArtistName>{item.name}</ArtistName>
-                  </Cell>
-                ))}
-              </Grid>
-            </Wrapper>
-          </MainContent>
-        </Scrollable>
-      </Content>
-    </Container>
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="artists" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <Scrollable>
+            <MainContent title="Artists" placeholder="Filter Artists">
+              <Wrapper>
+                <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
+                  {artists.map((item) => (
+                    <Cell key={item.id}>
+                      {item.cover && (
+                        <ArtistCover
+                          src={item.cover}
+                          onClick={() => onClickArtist(item)}
+                        />
+                      )}
+                      {!item.cover && (
+                        <NoArtistCover onClick={() => onClickArtist(item)}>
+                          <Artist width={75} height={75} color="#a4a3a3" />
+                        </NoArtistCover>
+                      )}
+                      <ArtistName>{item.name}</ArtistName>
+                    </Cell>
+                  ))}
+                </Grid>
+              </Wrapper>
+            </MainContent>
+          </Scrollable>
+        </Content>
+      </Container>
+    </>
   );
 };
 

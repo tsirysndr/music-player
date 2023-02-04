@@ -14,6 +14,7 @@ import { Track } from "../../Types";
 import { Folder as FolderIcon } from "@styled-icons/bootstrap";
 import MovePlaylistsModal from "./MovePlaylistsModal";
 import { Device } from "../../Types/Device";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -192,9 +193,13 @@ export type FolderProps = {
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
   folder?: any;
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const Folder: FC<FolderProps> = (props) => {
@@ -205,53 +210,60 @@ const Folder: FC<FolderProps> = (props) => {
     mainPlaylists,
     folder,
     onMovePlaylists,
+    currentCastDevice,
   } = props;
   const [isMovePlaylistsModalOpen, setIsMovePlaylistsModalOpen] =
     useState(false);
   return (
-    <Container>
-      <Sidebar active="artists" {...props} playlists={mainPlaylists} />
-      <Content>
-        <ControlBar {...props} />
-        <MainContent displayHeader={false}>
-          <Scrollable>
-            {folder?.playlists?.length > 0 && (
-              <Scrollable>
-                <MainContent title="Playlists" placeholder="Filter Playlists">
-                  <Wrapper>
-                    <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
-                      {folder?.playlists.map((item: any) => (
-                        <Cell key={item.id}>
-                          <Playlist playlist={item} />
-                        </Cell>
-                      ))}
-                    </Grid>
-                  </Wrapper>
-                </MainContent>
-              </Scrollable>
-            )}
-            {folder?.playlists?.length === 0 && (
-              <PlaceholderWrapper>
-                <FolderIcon size={100} color="rgb(70, 70, 70)" />
-                <Placeholder>
-                  Start moving playlists to your folder.
-                </Placeholder>
-                <Button onClick={() => setIsMovePlaylistsModalOpen(true)}>
-                  Move Playlists
-                </Button>
-              </PlaceholderWrapper>
-            )}
-          </Scrollable>
-        </MainContent>
-      </Content>
-      <MovePlaylistsModal
-        isOpen={isMovePlaylistsModalOpen}
-        onClose={() => setIsMovePlaylistsModalOpen(false)}
-        onMovePlaylists={onMovePlaylists}
-        playlists={playlists}
-        folderId={folder?.id}
-      />
-    </Container>
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="artists" {...props} playlists={mainPlaylists} />
+        <Content>
+          <ControlBar {...props} />
+          <MainContent displayHeader={false}>
+            <Scrollable>
+              {folder?.playlists?.length > 0 && (
+                <Scrollable>
+                  <MainContent title="Playlists" placeholder="Filter Playlists">
+                    <Wrapper>
+                      <Grid
+                        gridColumns={[2, 3, 4, 6]}
+                        gridMargins={[8, 16, 18]}
+                      >
+                        {folder?.playlists.map((item: any) => (
+                          <Cell key={item.id}>
+                            <Playlist playlist={item} />
+                          </Cell>
+                        ))}
+                      </Grid>
+                    </Wrapper>
+                  </MainContent>
+                </Scrollable>
+              )}
+              {folder?.playlists?.length === 0 && (
+                <PlaceholderWrapper>
+                  <FolderIcon size={100} color="rgb(70, 70, 70)" />
+                  <Placeholder>
+                    Start moving playlists to your folder.
+                  </Placeholder>
+                  <Button onClick={() => setIsMovePlaylistsModalOpen(true)}>
+                    Move Playlists
+                  </Button>
+                </PlaceholderWrapper>
+              )}
+            </Scrollable>
+          </MainContent>
+        </Content>
+        <MovePlaylistsModal
+          isOpen={isMovePlaylistsModalOpen}
+          onClose={() => setIsMovePlaylistsModalOpen(false)}
+          onMovePlaylists={onMovePlaylists}
+          playlists={playlists}
+          folderId={folder?.id}
+        />
+      </Container>
+    </>
   );
 };
 

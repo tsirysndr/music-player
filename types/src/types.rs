@@ -1,12 +1,27 @@
 use std::time::Duration;
 
+use local_ip_addr::get_local_ip_address;
 use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use mdns_sd::ServiceInfo;
 use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
+use music_player_settings::{read_settings, Settings};
 use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
 };
+
+pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
+pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
+
+#[derive(Debug, Clone, Default)]
+pub struct Playback {
+    pub current_track: Option<Track>,
+    pub index: u32,
+    pub current_item_id: Option<i32>,
+    pub position_ms: u32,
+    pub is_playing: bool,
+    pub items: Vec<(Track, i32)>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Song {
@@ -297,11 +312,15 @@ pub struct Device {
     pub id: String,
     pub name: String,
     pub host: String,
+    pub ip: String,
     pub port: u16,
     pub service: String,
     pub app: String,
     pub is_connected: bool,
     pub base_url: Option<String>,
+    pub is_cast_device: bool,
+    pub is_source_device: bool,
+    pub is_current_device: bool,
 }
 
 impl Device {
@@ -326,11 +345,15 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
                 port: srv.get_port(),
                 service: srv.get_fullname().to_owned(),
                 app: "xbmc".to_owned(),
                 is_connected: false,
                 base_url: None,
+                is_cast_device: true,
+                is_source_device: true,
+                is_current_device: false,
             };
         }
 
@@ -342,6 +365,20 @@ impl From<ServiceInfo> for Device {
                 .collect::<Vec<&str>>()[1]
                 .replace(".", "")
                 .to_owned();
+
+            let config = read_settings().unwrap();
+            let settings = config.try_deserialize::<Settings>().unwrap();
+
+            let is_current_device = device_id == settings.device_id
+                && srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned() == "http";
+
+            let mut addresses = srv.get_addresses().iter();
+            let mut ip = addresses.next().unwrap().to_string();
+
+            if is_current_device {
+                ip = get_local_ip_address().unwrap();
+            }
+
             return Self {
                 id: device_id.clone(),
                 name: srv
@@ -354,11 +391,61 @@ impl From<ServiceInfo> for Device {
                     .split_at(srv.get_hostname().len() - 1)
                     .0
                     .to_owned(),
+                ip,
                 port: srv.get_port(),
                 service: srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned(),
                 app: "music-player".to_owned(),
                 is_connected: false,
                 base_url: None,
+                is_cast_device: true,
+                is_source_device: true,
+                is_current_device,
+            };
+        }
+
+        if srv.get_fullname().contains(CHROMECAST_SERVICE_NAME) {
+            return Self {
+                id: srv.get_properties().get("id").unwrap().to_owned(),
+                name: srv.get_properties().get("fn").unwrap().to_owned(),
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
+                port: srv.get_port(),
+                service: srv.get_fullname().to_owned(),
+                app: "chromecast".to_owned(),
+                is_connected: false,
+                base_url: None,
+                is_cast_device: true,
+                is_source_device: false,
+                is_current_device: false,
+            };
+        }
+
+        if srv.get_fullname().contains(AIRPLAY_SERVICE_NAME) {
+            let name = srv.get_fullname().split("@").collect::<Vec<&str>>()[1]
+                .replace(AIRPLAY_SERVICE_NAME, "")
+                .to_owned();
+            let name = name.split_at(name.len() - 1).0.to_owned();
+            return Self {
+                id: srv.get_fullname().to_owned(),
+                name,
+                host: srv
+                    .get_hostname()
+                    .split_at(srv.get_hostname().len() - 1)
+                    .0
+                    .to_owned(),
+                ip: srv.get_addresses().iter().next().unwrap().to_string(),
+                port: srv.get_port(),
+                service: srv.get_fullname().to_owned(),
+                app: "airplay".to_owned(),
+                is_connected: false,
+                base_url: None,
+                is_cast_device: true,
+                is_source_device: false,
+                is_current_device: false,
             };
         }
 
@@ -451,6 +538,11 @@ impl RemoteCoverUrl for Album {
                 Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
                 None => None,
             },
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_cover_url(base_url))
+                .collect(),
             ..self.clone()
         }
     }
@@ -507,6 +599,19 @@ impl RemoteTrackUrl for Playlist {
                 .tracks
                 .iter()
                 .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteCoverUrl for Playlist {
+    fn with_remote_cover_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .iter()
+                .map(|track| track.with_remote_cover_url(base_url))
                 .collect(),
             ..self.clone()
         }

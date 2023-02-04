@@ -13,6 +13,8 @@ import { StatefulPopover } from "baseui/popover";
 import PlayQueue from "./PlayQueue";
 import { Track } from "../../Types";
 import { useTheme } from "@emotion/react";
+import DeviceList from "./DeviceList";
+import { Device } from "../../Types/Device";
 
 const Container = styled.div`
   display: flex;
@@ -65,6 +67,8 @@ export type ControlBarProps = {
     isPlaying?: boolean;
     albumId: string;
   };
+  castDevices: Device[];
+  currentCastDevice?: Device;
   onPlay: () => void;
   onPause: () => void;
   onNext: () => void;
@@ -75,6 +79,8 @@ export type ControlBarProps = {
   previousTracks?: Track[];
   onPlayTrackAt: (position: number) => void;
   onRemoveTrackAt: (position: number) => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const ControlBar: FC<ControlBarProps> = (props) => {
@@ -142,9 +148,26 @@ const ControlBar: FC<ControlBarProps> = (props) => {
       <CurrentTrack nowPlaying={nowPlaying} />
 
       <ButtonGroup>
-        <SpeakerButton>
-          <Speaker size={18} color={theme.colors.icon} />
-        </SpeakerButton>
+        <StatefulPopover
+          placement="bottom"
+          content={({ close }) => <DeviceList {...props} close={close} />}
+          overrides={{
+            Body: {
+              style: {
+                left: "-70px",
+              },
+            },
+            Inner: {
+              style: {
+                backgroundColor: theme.colors.popoverBackground,
+              },
+            },
+          }}
+        >
+          <SpeakerButton>
+            <Speaker size={18} color={theme.colors.icon} />
+          </SpeakerButton>
+        </StatefulPopover>
         <StatefulPopover
           onOpen={() => setPlayQueueButtonColor("#ab28fc")}
           onClose={() => setPlayQueueButtonColor(theme.colors.icon)}

@@ -1,0 +1,43 @@
+
+@font-face {
+  font-family: 'RockfordSansLight';
+  src: local('RockfordSansLight'), url(./Assets/fonts/RockfordSans-Light.otf) format('opentype');
+}
+
+@font-face {
+  font-family: 'RockfordSansRegular';
+  src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-Regular.otf) format('opentype');
+}
+
+@font-face {
+  font-family: 'RockfordSansMedium';
+  src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-Medium.otf) format('opentype');
+}
+
+@font-face {
+  font-family: 'RockfordSansBold';
+    font-weight: 900;
+    src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-Bold.otf) format('opentype');
+}
+
+@font-face {
+  font-family: 'RockfordSansExtraBold';
+    font-weight: 900;
+    src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-ExtraBold.otf) format('opentype');
+}
+
+
+body {
+  margin: 0;
+  font-family: RockfordSansRegular, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #fff;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

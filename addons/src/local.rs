@@ -5,7 +5,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
-use music_player_types::types::{Album, Artist, Device, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
 
 pub struct Client {
     pub library: LibraryClient,
@@ -22,6 +22,7 @@ pub struct Local {
     enabled: bool,
     client: Option<Client>,
     host: String,
+    ip: String,
     port: u16,
 }
 
@@ -35,6 +36,7 @@ impl Local {
             enabled: true,
             client: None,
             host: "localhost".to_string(),
+            ip: "".to_string(),
             port: 5051,
         }
     }
@@ -140,6 +142,10 @@ impl Browseable for Local {
         let response = self.client.as_mut().unwrap().playlist.find(id).await?;
         Ok(response)
     }
+
+    fn device_ip(&self) -> String {
+        self.ip.clone()
+    }
 }
 
 #[async_trait]
@@ -172,6 +178,35 @@ impl Player for Local {
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
         todo!()
     }
+
+    async fn load_tracks(
+        &mut self,
+        tracks: Vec<Track>,
+        start_index: Option<i32>,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn play_next(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn get_current_playback(&mut self) -> Result<Playback, Error> {
+        todo!()
+    }
+
+    fn device_type(&self) -> String {
+        "music-player".to_string()
+    }
+
+    fn disconnect(&mut self) -> Result<(), Error> {
+        self.client = None;
+        Ok(())
+    }
 }
 
 impl From<Device> for Local {
@@ -179,6 +214,7 @@ impl From<Device> for Local {
         Self {
             host: device.host,
             port: device.port,
+            ip: device.ip,
             ..Local::new()
         }
     }
@@ -196,5 +232,14 @@ impl Local {
         self.client = Some(client);
 
         Ok(())
+    }
+
+    pub async fn connect_to_player(
+        &mut self,
+        device: Device,
+    ) -> Result<Option<Box<dyn Player + Send>>, Error> {
+        let mut player: Self = device.clone().into();
+        player.connect().await?;
+        Ok(Some(Box::new(player)))
     }
 }

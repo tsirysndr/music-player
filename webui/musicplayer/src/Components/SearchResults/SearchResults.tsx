@@ -9,6 +9,7 @@ import Albums from "./Albums";
 import Artists from "./Artists";
 import Playlists from "./Playlists";
 import { Device } from "../../Types/Device";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -64,60 +65,67 @@ export type SearchResultsProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const SearchResults: FC<SearchResultsProps> = (props) => {
   const [activeKey, setActiveKey] = useState<React.Key>(0);
-  const { tracks, nowPlaying, onPlayTrack, onPlayNext } = props;
+  const { currentCastDevice } = props;
   return (
-    <Container>
-      <Sidebar active={""} {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <div>
-          <Tabs
-            activeKey={activeKey}
-            onChange={({ activeKey }) => setActiveKey(activeKey)}
-            overrides={{
-              TabList: {
-                style: {
-                  marginLeft: "26px",
-                  marginRight: "26px",
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active={""} {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <div>
+            <Tabs
+              activeKey={activeKey}
+              onChange={({ activeKey }) => setActiveKey(activeKey)}
+              overrides={{
+                TabList: {
+                  style: {
+                    marginLeft: "26px",
+                    marginRight: "26px",
+                  },
                 },
-              },
-              TabBorder: {
-                style: {
-                  marginLeft: "26px",
-                  marginRight: "26px",
+                TabBorder: {
+                  style: {
+                    marginLeft: "26px",
+                    marginRight: "26px",
+                  },
                 },
-              },
-            }}
-          >
-            <Tab title="Tracks">
-              <Results>
-                <Tracks {...props} />
-              </Results>
-            </Tab>
-            <Tab title="Albums">
-              <Results>
-                <Albums {...props} />
-              </Results>
-            </Tab>
-            <Tab title="Artists">
-              <Results>
-                <Artists {...props} />
-              </Results>
-            </Tab>
-            <Tab title="Playlists">
-              <Playlists />
-            </Tab>
-          </Tabs>
-        </div>
-      </Content>
-    </Container>
+              }}
+            >
+              <Tab title="Tracks">
+                <Results>
+                  <Tracks {...props} />
+                </Results>
+              </Tab>
+              <Tab title="Albums">
+                <Results>
+                  <Albums {...props} />
+                </Results>
+              </Tab>
+              <Tab title="Artists">
+                <Results>
+                  <Artists {...props} />
+                </Results>
+              </Tab>
+              <Tab title="Playlists">
+                <Playlists />
+              </Tab>
+            </Tabs>
+          </div>
+        </Content>
+      </Container>
+    </>
   );
 };
 

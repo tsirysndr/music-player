@@ -1,4 +1,6 @@
-use music_player_types::types::{Album as AlbumType, RemoteCoverUrl, Song, Track as TrackType};
+use music_player_types::types::{
+    Album as AlbumType, RemoteCoverUrl, RemoteTrackUrl, Song, Track as TrackType,
+};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -103,6 +105,20 @@ impl RemoteCoverUrl for Model {
                 .cover
                 .clone()
                 .map(|cover| format!("{}/covers/{}", base_url, cover)),
+            ..self.clone()
+        }
+    }
+}
+
+impl RemoteTrackUrl for Model {
+    fn with_remote_track_url(&self, base_url: &str) -> Self {
+        Self {
+            tracks: self
+                .tracks
+                .clone()
+                .into_iter()
+                .map(|track| track.with_remote_track_url(base_url))
+                .collect(),
             ..self.clone()
         }
     }

@@ -42,8 +42,6 @@ pub async fn setup_schema() -> (
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
-    let connected_device: HashMap<String, Device> = HashMap::new();
-    let connected_device = Arc::new(std::sync::Mutex::new(connected_device));
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
@@ -64,7 +62,6 @@ pub async fn setup_schema() -> (
         .data(Arc::clone(&cmd_tx))
         .data(Arc::clone(&tracklist))
         .data(Arc::clone(&devices))
-        .data(Arc::clone(&connected_device))
         .data(Arc::clone(&current_device))
         .finish(),
         Arc::clone(&cmd_tx),

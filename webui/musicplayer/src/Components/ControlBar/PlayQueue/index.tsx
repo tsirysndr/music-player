@@ -8,7 +8,7 @@ import { Play } from "@styled-icons/ionicons-sharp";
 import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
-  height: calc(100vh - 90px);
+  height: calc(100vh - 113px);
   width: 356px;
 `;
 

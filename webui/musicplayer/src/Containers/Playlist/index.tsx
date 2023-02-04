@@ -15,8 +15,16 @@ const PlaylistPage = () => {
     fetchPolicy: "network-only",
   });
   const navigate = useNavigate();
-  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
-    useDevices();
+  const {
+    devices,
+    castDevices,
+    currentDevice,
+    currentCastDevice,
+    connectToDevice,
+    disconnectFromDevice,
+    connectToCastDevice,
+    disconnectFromCastDevice,
+  } = useDevices();
   const { formatTime } = useTimeFormat();
   const {
     play,
@@ -84,9 +92,13 @@ const PlaylistPage = () => {
       playlist={data?.playlist}
       recentPlaylists={recentPlaylists}
       devices={devices}
+      castDevices={castDevices}
       currentDevice={currentDevice}
+      currentCastDevice={currentCastDevice}
       connectToDevice={(id) => connectToDevice({ variables: { id } })}
       disconnectFromDevice={() => disconnectFromDevice()}
+      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
+      disconnectFromCastDevice={() => disconnectFromCastDevice()}
     />
   );
 };

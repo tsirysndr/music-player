@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Device } from "../Types/Device";
 import {
+  useConnectedCastDeviceQuery,
   useConnectedDeviceQuery,
+  useConnectToCastDeviceMutation,
   useConnectToDeviceMutation,
+  useDisconnectFromCastDeviceMutation,
   useDisconnectFromDeviceMutation,
+  useListCastDevicesQuery,
   useListDevicesQuery,
   useOnDeviceConnectedSubscription,
   useOnDeviceDisconnectedSubscription,
@@ -17,12 +21,19 @@ export const useDevices = () => {
   const navigate = useNavigate();
   const [currentDevice, setCurrentDevice] =
     useState<Device | undefined>(undefined);
+  const [currentCastDevice, setCurrentCastDevice] =
+    useState<Device | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [castDevices, setCastDevices] = useState<Device[]>([]);
   const { data } = useOnNewDeviceSubscription();
   const { data: listDevicesData } = useListDevicesQuery();
+  const { data: listCastDevicesData } = useListCastDevicesQuery();
   const { data: connectedDeviceData, refetch } = useConnectedDeviceQuery();
+  const { data: connectedCastDeviceData } = useConnectedCastDeviceQuery();
   const [connectToDevice] = useConnectToDeviceMutation();
   const [disconnectFromDevice] = useDisconnectFromDeviceMutation();
+  const [connectToCastDevice] = useConnectToCastDeviceMutation();
+  const [disconnectFromCastDevice] = useDisconnectFromCastDeviceMutation();
   const { data: deviceConnectedData } = useOnDeviceConnectedSubscription();
   const { data: deviceDisconnectedData } =
     useOnDeviceDisconnectedSubscription();
@@ -62,14 +73,36 @@ export const useDevices = () => {
         )
       );
     }
+    if (listCastDevicesData?.listCastDevices) {
+      setCastDevices(
+        _.uniqBy(
+          listCastDevicesData.listCastDevices.map((x) => ({
+            id: x.id,
+            type: x.app,
+            name: x.name,
+            isConnected: x.isConnected,
+          })),
+          "id"
+        )
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, listDevicesData]);
+  }, [data, listDevicesData, listCastDevicesData]);
 
   useEffect(() => {
     if (deviceConnectedData) {
       enqueue({
         message: `Connected to ${deviceConnectedData.onConnected.name}`,
       });
+      if (deviceConnectedData.onConnected.app === "chromecast") {
+        setCurrentCastDevice({
+          id: deviceConnectedData.onConnected.id,
+          type: deviceConnectedData.onConnected.app,
+          name: deviceConnectedData.onConnected.name,
+          isConnected: true,
+        });
+        return;
+      }
       refetch()
         .then((result) => {
           if (result.data?.connectedDevice) {
@@ -109,5 +142,24 @@ export const useDevices = () => {
       });
   }, [connectedDeviceData]);
 
-  return { devices, currentDevice, connectToDevice, disconnectFromDevice };
+  useEffect(() => {
+    connectedCastDeviceData &&
+      setCurrentCastDevice({
+        id: connectedCastDeviceData.connectedCastDevice.id,
+        type: connectedCastDeviceData.connectedCastDevice.app,
+        name: connectedCastDeviceData.connectedCastDevice.name,
+        isConnected: connectedCastDeviceData.connectedCastDevice.isConnected,
+      });
+  }, [connectedCastDeviceData]);
+
+  return {
+    devices,
+    castDevices,
+    currentDevice,
+    currentCastDevice,
+    connectToDevice,
+    disconnectFromDevice,
+    connectToCastDevice,
+    disconnectFromCastDevice,
+  };
 };

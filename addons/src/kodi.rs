@@ -1,12 +1,13 @@
 use anyhow::Error;
 
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Device, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
 
 use super::{Addon, Browseable, Player, StreamingAddon};
 
 pub struct Client {
     pub host: String,
+    pub ip: String,
     pub port: u16,
 }
 
@@ -29,6 +30,14 @@ impl Kodi {
             enabled: true,
             client: None,
         }
+    }
+
+    pub fn connect_to_player(
+        &mut self,
+        device: Device,
+    ) -> Result<Option<Box<dyn Player + Send>>, Error> {
+        let player: Self = device.clone().into();
+        Ok(Some(Box::new(player)))
     }
 }
 
@@ -97,6 +106,10 @@ impl Browseable for Kodi {
     async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
         todo!()
     }
+
+    fn device_ip(&self) -> String {
+        todo!()
+    }
 }
 
 #[async_trait]
@@ -123,6 +136,35 @@ impl Player for Kodi {
 
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
         todo!()
+    }
+
+    async fn load_tracks(
+        &mut self,
+        tracks: Vec<Track>,
+        start_index: Option<i32>,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn play_next(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn load(&mut self, track: Track) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn get_current_playback(&mut self) -> Result<Playback, Error> {
+        todo!()
+    }
+
+    fn device_type(&self) -> String {
+        "xbmc".to_string()
+    }
+
+    fn disconnect(&mut self) -> Result<(), Error> {
+        self.client = None;
+        Ok(())
     }
 }
 

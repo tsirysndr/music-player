@@ -3,6 +3,7 @@ import { FC } from "react";
 import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
 import ControlBar from "../ControlBar";
+import ListeningOn from "../ListeningOn";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
@@ -52,9 +53,13 @@ export type TracksProps = {
   ) => void;
   recentPlaylists: any[];
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 const Tracks: FC<TracksProps> = (props) => {
@@ -66,26 +71,30 @@ const Tracks: FC<TracksProps> = (props) => {
     onCreatePlaylist,
     onAddTrackToPlaylist,
     recentPlaylists,
+    currentCastDevice,
   } = props;
   return (
-    <Container>
-      <Sidebar active="tracks" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <MainContent title="Tracks">
-          <TracksTable
-            tracks={tracks}
-            currentTrackId={nowPlaying.id}
-            isPlaying={nowPlaying.isPlaying}
-            onPlayTrack={onPlayTrack}
-            onPlayNext={onPlayNext}
-            onCreatePlaylist={onCreatePlaylist}
-            recentPlaylists={recentPlaylists}
-            onAddTrackToPlaylist={onAddTrackToPlaylist}
-          />
-        </MainContent>
-      </Content>
-    </Container>
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="tracks" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <MainContent title="Tracks">
+            <TracksTable
+              tracks={tracks}
+              currentTrackId={nowPlaying.id}
+              isPlaying={nowPlaying.isPlaying}
+              onPlayTrack={onPlayTrack}
+              onPlayNext={onPlayNext}
+              onCreatePlaylist={onCreatePlaylist}
+              recentPlaylists={recentPlaylists}
+              onAddTrackToPlaylist={onAddTrackToPlaylist}
+            />
+          </MainContent>
+        </Content>
+      </Container>
+    </>
   );
 };
 

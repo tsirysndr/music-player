@@ -39,8 +39,16 @@ const ArtistDetailsPage = () => {
     playPlaylist,
   } = usePlayback();
   const { onSearch } = useSearch();
-  const { devices, currentDevice, connectToDevice, disconnectFromDevice } =
-    useDevices();
+  const {
+    devices,
+    castDevices,
+    currentDevice,
+    currentCastDevice,
+    connectToDevice,
+    disconnectFromDevice,
+    connectToCastDevice,
+    disconnectFromCastDevice,
+  } = useDevices();
   const artist = !loading && data ? data.artist : {};
   const tracks =
     !loading && data
@@ -123,9 +131,13 @@ const ArtistDetailsPage = () => {
       }
       recentPlaylists={recentPlaylists}
       devices={devices}
+      castDevices={castDevices}
       currentDevice={currentDevice}
+      currentCastDevice={currentCastDevice}
       connectToDevice={(id) => connectToDevice({ variables: { id } })}
       disconnectFromDevice={() => disconnectFromDevice()}
+      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
+      disconnectFromCastDevice={() => disconnectFromCastDevice()}
     />
   );
 };

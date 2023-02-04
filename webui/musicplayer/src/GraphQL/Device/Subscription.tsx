@@ -19,6 +19,8 @@ export const ON_DEVICE_CONNECTED = gql`
     onConnected {
       id
       name
+      service
+      app
     }
   }
 `;
@@ -28,6 +30,8 @@ export const ON_DEVICE_DISCONNECTED = gql`
     onDisconnected {
       id
       name
+      service
+      app
     }
   }
 `;

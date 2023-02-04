@@ -8,6 +8,7 @@ import Sidebar from "../Sidebar";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
+import ListeningOn from "../ListeningOn";
 
 const Container = styled.div`
   display: flex;
@@ -99,9 +100,13 @@ export type AlbumsProps = {
     position?: number
   ) => void;
   devices: Device[];
+  castDevices: Device[];
   currentDevice?: Device;
+  currentCastDevice?: Device;
   connectToDevice: (deviceId: string) => void;
   disconnectFromDevice: () => void;
+  connectToCastDevice: (deviceId: string) => void;
+  disconnectFromCastDevice: () => void;
 };
 
 export type AlbumProps = {
@@ -126,27 +131,30 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 };
 
 const Albums: FC<AlbumsProps> = (props) => {
-  const { albums, onClickAlbum } = props;
+  const { albums, onClickAlbum, currentCastDevice } = props;
   return (
-    <Container>
-      <Sidebar active="albums" {...props} />
-      <Content>
-        <ControlBar {...props} />
-        <Scrollable>
-          <MainContent title="Albums" placeholder="Filter Albums">
-            <Wrapper>
-              <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
-                {albums.map((item) => (
-                  <Cell key={item.id}>
-                    <Album onClick={onClickAlbum} album={item} />
-                  </Cell>
-                ))}
-              </Grid>
-            </Wrapper>
-          </MainContent>
-        </Scrollable>
-      </Content>
-    </Container>
+    <>
+      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
+      <Container>
+        <Sidebar active="albums" {...props} />
+        <Content>
+          <ControlBar {...props} />
+          <Scrollable>
+            <MainContent title="Albums" placeholder="Filter Albums">
+              <Wrapper>
+                <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
+                  {albums.map((item) => (
+                    <Cell key={item.id}>
+                      <Album onClick={onClickAlbum} album={item} />
+                    </Cell>
+                  ))}
+                </Grid>
+              </Wrapper>
+            </MainContent>
+          </Scrollable>
+        </Content>
+      </Container>
+    </>
   );
 };
 

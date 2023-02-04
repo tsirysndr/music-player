@@ -71,3 +71,4 @@ tokio = { version = "1.21.2", features = ["full"] }
 actix-cors = "0.6.3"
 sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
 futures-util = "0.3.25"
+mime = "0.3.16"

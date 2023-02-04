@@ -201,13 +201,23 @@ pub fn update_tracks_url<T: RemoteCoverUrl + RemoteTrackUrl>(
     }
 }
 
-pub fn update_track_url<T: RemoteTrackUrl>(devices: Vec<Device>, result: T) -> Result<T, Error> {
+pub fn update_track_url<T: RemoteTrackUrl>(
+    devices: Vec<Device>,
+    result: T,
+    will_play_on_chromecast: bool,
+) -> Result<T, Error> {
     let base_url = match devices
         .clone()
         .into_iter()
         .find(|device| device.is_current_device)
     {
-        Some(device) => Some(format!("http://{}:{}", device.host, device.port)),
+        Some(device) => {
+            let host = match will_play_on_chromecast {
+                true => device.ip,
+                false => device.host,
+            };
+            Some(format!("http://{}:{}", host, device.port))
+        }
         None => None,
     };
 

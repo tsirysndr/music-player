@@ -47,7 +47,6 @@ impl<'a> Chromecast<'a> {
 
     pub fn connect(device: Device) -> Result<Option<Box<dyn Player + Send + 'a>>, Error> {
         let mut player: Self = device.clone().into();
-        // player.connect_without_host_verification(Some(DEFAULT_APP_ID.to_owned()))?;
 
         let cast_device = match CastDevice::connect_without_host_verification(
             player.host.clone().unwrap(),

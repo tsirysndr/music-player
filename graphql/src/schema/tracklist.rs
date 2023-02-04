@@ -296,7 +296,7 @@ impl TracklistMutation {
         if device.receiver.is_some() {
             let receiver = device.receiver.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
-            track = update_track_url(devices.clone(), track)?;
+            track = update_track_url(devices.clone(), track, will_play_on_chromecast)?;
             let t: types::Track = track.into();
             track = update_cover_url(devices.clone(), t.clone(), will_play_on_chromecast)
                 .unwrap_or_else(|_| t.clone())

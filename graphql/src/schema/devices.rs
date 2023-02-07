@@ -156,10 +156,7 @@ impl DevicesMutation {
 
         match devices.into_iter().find(|device| {
             device.id == id.to_string()
-                && (device.service == "grpc"
-                    || device.app == "xbmc"
-                    || device.app == "chromecast"
-                    || device.app == "airplay")
+                && (device.service == "grpc" || device.app == "dlna" || device.app == "chromecast")
         }) {
             Some(device) => {
                 let current_device =
@@ -169,7 +166,7 @@ impl DevicesMutation {
                 let player_type = match device.app.as_str() {
                     "chromecast" => PlayerType::Chromecast,
                     "airplay" => PlayerType::Airplay,
-                    "xbmc" => PlayerType::Kodi,
+                    "dlna" => PlayerType::Kodi,
                     _ => PlayerType::MusicPlayer,
                 };
 

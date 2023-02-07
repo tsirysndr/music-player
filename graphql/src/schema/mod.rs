@@ -76,6 +76,7 @@ pub enum PlayerType {
     Chromecast,
     Airplay,
     Kodi,
+    Dlna,
 }
 
 pub async fn connect_to_cast_device(
@@ -87,5 +88,6 @@ pub async fn connect_to_cast_device(
         PlayerType::Chromecast => Chromecast::connect(device),
         PlayerType::Airplay => Airplay::new().connect(device),
         PlayerType::Kodi => Kodi::new().connect_to_player(device),
+        PlayerType::Dlna => Err(Error::msg("Not implemented")),
     }
 }

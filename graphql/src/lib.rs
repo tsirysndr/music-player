@@ -2,17 +2,15 @@
 mod tests;
 use crate::simple_broker::SimpleBroker;
 use anyhow::Error;
-use async_graphql::{Context, Schema};
+use async_graphql::Schema;
 use futures_util::StreamExt;
-use music_player_addons::Browseable;
-use music_player_addons::{CurrentDevice, Player};
+use music_player_addons::Player;
 use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
-use music_player_entity::album as album_entity;
 use music_player_entity::track as track_entity;
 use music_player_playback::player::PlayerCommand;
 use music_player_types::types::RemoteCoverUrl;
 use music_player_types::types::RemoteTrackUrl;
-use music_player_types::types::{Device, Track, AIRPLAY_SERVICE_NAME, CHROMECAST_SERVICE_NAME};
+use music_player_types::types::{Device, AIRPLAY_SERVICE_NAME, CHROMECAST_SERVICE_NAME};
 use rand::seq::SliceRandom;
 use schema::{Mutation, Query, Subscription};
 use std::{
@@ -20,13 +18,16 @@ use std::{
     thread,
 };
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::Mutex as TokioMutex;
+use upnp_client::discovery::discover_pnp_locations;
 use url::Url;
 
 pub mod schema;
 pub mod simple_broker;
 
 pub type MusicPlayerSchema = Schema<Query, Mutation, Subscription>;
+
+const MEDIA_RENDERER: &str = "urn:schemas-upnp-org:device:MediaRenderer";
+const MEDIA_SERVER: &str = "urn:schemas-upnp-org:device:MediaServer";
 
 fn scan_mp_devices(mp_devices: Arc<Mutex<Vec<Device>>>) {
     thread::spawn(move || {
@@ -79,14 +80,22 @@ fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
     });
 }
 
-fn scan_airplay_devices(devices: Arc<Mutex<Vec<Device>>>) {
+fn scan_upnp_dlna_devices(devices: Arc<Mutex<Vec<Device>>>) {
     thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let services = discover(AIRPLAY_SERVICE_NAME);
-            tokio::pin!(services);
-            while let Some(info) = services.next().await {
-                devices.lock().unwrap().push(Device::from(info.clone()));
-                SimpleBroker::<Device>::publish(Device::from(info.clone()));
+            let upnp_devices = discover_pnp_locations();
+            tokio::pin!(upnp_devices);
+
+            while let Some(device) = upnp_devices.next().await {
+                if device.device_type.contains(MEDIA_RENDERER)
+                    || device.device_type.contains(MEDIA_SERVER)
+                {
+                    let mut devices = devices.lock().unwrap();
+                    if devices.iter().find(|d| d.id == device.udn).is_none() {
+                        devices.push(Device::from(device.clone()));
+                        SimpleBroker::<Device>::publish(Device::from(device.clone()));
+                    }
+                }
             }
         });
     });
@@ -98,7 +107,7 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
     let mp_devices = Arc::clone(&devices);
     let xbmc_devices = Arc::clone(&devices);
     let chromecast_devices = Arc::clone(&devices);
-    let airplay_devices = Arc::clone(&devices);
+    let dlna_devices = Arc::clone(&devices);
 
     scan_mp_devices(mp_devices);
 
@@ -112,7 +121,7 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
 
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-    scan_airplay_devices(airplay_devices);
+    scan_upnp_dlna_devices(dlna_devices);
 
     Ok(devices)
 }

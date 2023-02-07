@@ -24,3 +24,5 @@ tantivy = "0.18.1"
 mdns-sd = "0.5.9"
 minreq = { version = "2.6.0" }
 local-ip-addr = "0.1.1"
+upnp-client = "0.1.2"
+url = "2.3.1"

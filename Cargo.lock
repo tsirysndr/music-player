@@ -1471,6 +1471,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
+name = "colored_json"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "633215cdbb84194508d4c07c08d06e92ee9d489d54e68d17913d8d1bacfcfdeb"
+dependencies = [
+ "atty",
+ "serde",
+ "serde_json",
+ "yansi",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2159,6 +2171,15 @@ name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
+
+[[package]]
+name = "elementtree"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3efd4742acf458718a6456e0adf0b4d734d6b783e452bbf1ac36bf31f4085cb3"
+dependencies = [
+ "string_cache",
+]
 
 [[package]]
 name = "embed_plist"
@@ -4125,6 +4146,7 @@ dependencies = [
  "music-player-types",
  "rust_cast",
  "surf",
+ "upnp-client",
  "url",
 ]
 
@@ -4226,6 +4248,7 @@ dependencies = [
  "slab",
  "tide",
  "tokio",
+ "upnp-client",
  "url",
 ]
 
@@ -4363,6 +4386,8 @@ dependencies = [
  "music-player-discovery",
  "music-player-settings",
  "tantivy",
+ "upnp-client",
+ "url",
 ]
 
 [[package]]
@@ -7650,9 +7675,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.24.0"
+version = "1.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7125661431c26622a80ca5051a2f936c9a678318e0351007b0cc313143024e5c"
+checksum = "c8e00990ebabbe4c14c08aca901caed183ecd5c09562a12c824bb53d3c3fd3af"
 dependencies = [
  "autocfg",
  "bytes",
@@ -8083,6 +8108,28 @@ name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
+
+[[package]]
+name = "upnp-client"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a557794e76b800d25a621f128b2dbb7177fdf516075aa0ce642f330d9638b5b"
+dependencies = [
+ "anyhow",
+ "async-stream 0.3.3",
+ "colored_json",
+ "elementtree",
+ "futures-util",
+ "http",
+ "serde",
+ "serde_json",
+ "socket2",
+ "surf",
+ "tokio",
+ "url",
+ "xml-builder",
+ "xml-rs",
+]
 
 [[package]]
 name = "url"
@@ -8760,6 +8807,12 @@ checksum = "6d1526bbe5aaeb5eb06885f4d987bcdfa5e23187055de9b83fe00156a821fabc"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "xml-builder"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccb75a3f8ef413a4fb3eb7203031bc6707c220f110e18983134866fd44ce02b3"
 
 [[package]]
 name = "xml-rs"

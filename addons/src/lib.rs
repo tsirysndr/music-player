@@ -7,6 +7,7 @@ pub mod kodi;
 pub mod local;
 pub mod myvazo;
 pub mod tononkira;
+pub mod dlna;
 
 use anyhow::Error;
 use async_trait::async_trait;

@@ -25,3 +25,4 @@ jsonrpsee = { version = "0.16.2", features = ["jsonrpsee-ws-client", "jsonrpsee-
 url = "2.3.1"
 md5 = "0.7.0"
 local-ip-addr = "0.1.1"
+upnp-client = "0.1.2"

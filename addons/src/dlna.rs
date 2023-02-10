@@ -56,26 +56,44 @@ impl Addon for Dlna {
 #[async_trait]
 impl Player for Dlna {
     async fn play(&mut self) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            client.play().await?;
+        }
         todo!()
     }
 
     async fn pause(&mut self) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            client.pause().await?;
+        }
         todo!()
     }
 
     async fn stop(&mut self) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            client.stop().await?;
+        }
         todo!()
     }
 
     async fn next(&mut self) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            // client.next().await?;
+        }
         todo!()
     }
 
     async fn previous(&mut self) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            // client.previous().await?;
+        }
         todo!()
     }
 
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            client.seek(position as u64).await?;
+        }
         todo!()
     }
 

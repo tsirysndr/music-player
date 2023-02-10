@@ -6,6 +6,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "music_player_audio",
     srcs = [
+      "src/decoder/mod.rs",
+      "src/decoder/symphonia_decoder.rs",
       "src/fetch/mod.rs",
       "src/fetch/cache.rs",
       "src/fetch/client.rs",

@@ -50,5 +50,7 @@ rust_library(
       "@crate_index//:futures-util",
       "@crate_index//:once_cell",
       "@crate_index//:url",
+      "@crate_index//:upnp-client",
+      "@crate_index//:local-ip-addr"
     ] + all_crate_deps(),
 )

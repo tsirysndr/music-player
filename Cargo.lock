@@ -8413,9 +8413,9 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "upnp-client"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf6dac76130c77cc0ec22b783400dfc417447bd804b256a5cba6b3385dc12659"
+checksum = "f0fb040a8994c1908b78abf4c81d8649083326ac360e0bb07dc417863bbe0a41"
 dependencies = [
  "anyhow",
  "async-stream 0.3.3",

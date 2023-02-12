@@ -277,15 +277,48 @@ impl Player for Dlna {
     }
 
     async fn get_current_playback(&mut self) -> Result<Playback, Error> {
-        // TODO: Implement
-        Ok(Playback {
-            current_track: None,
-            index: 0,
-            position_ms: 0,
-            is_playing: false,
-            current_item_id: None,
-            items: vec![],
-        })
+        if let Some(client) = &self.client {
+            let position = client.get_position().await?;
+            let duration = client.get_duration().await?;
+            let transport_info = client.get_transport_info().await?;
+            if duration != 0 && position >= (duration - 10) {
+                self.preload_next_track().await?;
+            }
+            if duration != 0 && position >= (duration - 1) {
+                self.next().await?;
+            }
+            let (previous_tracks, next_tracks) = self.tracklist.lock().unwrap().tracks();
+            let tracks: Vec<Track> = previous_tracks
+                .iter()
+                .map(|t| t.clone().into())
+                .chain(next_tracks.iter().map(|t| t.clone().into()))
+                .collect();
+            let items: Vec<(Track, i32)> = tracks
+                .iter()
+                .enumerate()
+                .map(|(i, t)| (t.clone(), (i + 1) as i32))
+                .collect();
+            let (current_track, index) = self.tracklist.lock().unwrap().current_track();
+            return match current_track {
+                Some(track) => Ok(Playback {
+                    current_track: Some(track.clone().into()),
+                    index: index as u32,
+                    position_ms: position * 1000 as u32,
+                    is_playing: transport_info.current_transport_state == "PLAYING",
+                    current_item_id: Some(index as i32),
+                    items,
+                }),
+                None => Ok(Playback {
+                    current_track: None,
+                    index: 0,
+                    position_ms: 0,
+                    is_playing: false,
+                    current_item_id: None,
+                    items: vec![],
+                }),
+            };
+        }
+        Err(Error::msg("device not connected"))
     }
 
     fn device_type(&self) -> String {

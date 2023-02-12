@@ -6,6 +6,7 @@ import { Device } from "../../../Types/Device";
 import { MusicPlayer } from "@styled-icons/bootstrap";
 import { Laptop } from "@styled-icons/ionicons-outline";
 import { Kodi, Airplayaudio, Chromecast } from "@styled-icons/simple-icons";
+import { Speaker } from "@styled-icons/remix-fill";
 
 const Container = styled.div`
   max-height: calc(100vh - 153px); /* - 90px */
@@ -96,6 +97,7 @@ const Artwork: FC<ArtworkProps> = ({ icon, color }) => {
       {icon === "chromecast" && (
         <Chromecast size={18} color={theme.colors.text} />
       )}
+      {icon === "dlna" && <Speaker size={18} color={"#ff00c3"} />}
     </Icon>
   );
 };
@@ -131,6 +133,7 @@ const DeviceList: FC<DeviceListProps> = ({
     "music-player": "rgba(40, 252, 227, 0.088)",
     xbmc: "rgba(40, 203, 252, 0.082)",
     airplay: "rgba(255, 0, 195, 0.063)",
+    dlna: "rgba(255, 0, 195, 0.063)",
   };
 
   const _onConnectToCastDevice = (deviceId: string) => {

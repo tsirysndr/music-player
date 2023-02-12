@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.6215da36.css",
-    "main.js": "/static/js/main.42a36401.js",
+    "main.js": "/static/js/main.2461da8f.js",
     "static/js/787.26bf0a29.chunk.js": "/static/js/787.26bf0a29.chunk.js",
     "static/media/RockfordSans-ExtraBold.otf": "/static/media/RockfordSans-ExtraBold.1513e8fd97078bfb7708.otf",
     "static/media/RockfordSans-Bold.otf": "/static/media/RockfordSans-Bold.c9f599ae01b13e565598.otf",
@@ -10,11 +10,11 @@
     "static/media/RockfordSans-Light.otf": "/static/media/RockfordSans-Light.b4a12e8abb38f7d105c4.otf",
     "index.html": "/index.html",
     "main.6215da36.css.map": "/static/css/main.6215da36.css.map",
-    "main.42a36401.js.map": "/static/js/main.42a36401.js.map",
+    "main.2461da8f.js.map": "/static/js/main.2461da8f.js.map",
     "787.26bf0a29.chunk.js.map": "/static/js/787.26bf0a29.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.6215da36.css",
-    "static/js/main.42a36401.js"
+    "static/js/main.2461da8f.js"
   ]
 }

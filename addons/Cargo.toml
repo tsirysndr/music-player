@@ -29,7 +29,7 @@ jsonrpsee = { version = "0.16.2", features = ["jsonrpsee-ws-client", "jsonrpsee-
 url = "2.3.1"
 md5 = "0.7.0"
 local-ip-addr = "0.1.1"
-upnp-client = "0.1.5"
+upnp-client = "0.1.6"
 futures = "0.3.26"
 tokio = { version = "1.25.0", features = ["time"] }
 hyper = { version = "0.14.23", features = ["runtime", "client", "stream", "tcp", "http1", "http2"] }

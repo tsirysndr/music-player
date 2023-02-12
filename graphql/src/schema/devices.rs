@@ -166,7 +166,7 @@ impl DevicesMutation {
                 let player_type = match device.app.as_str() {
                     "chromecast" => PlayerType::Chromecast,
                     "airplay" => PlayerType::Airplay,
-                    "dlna" => PlayerType::Kodi,
+                    "dlna" => PlayerType::Dlna,
                     _ => PlayerType::MusicPlayer,
                 };
 

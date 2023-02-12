@@ -23,6 +23,7 @@ rust_library(
       deps = [
         "//client:music_player_client",
         "//types:music_player_types",
+        "//tracklist:music_player_tracklist",
         "@crate_index//:upnp-client",
         "@crate_index//:local-ip-addr",
         "@crate_index//:rust_cast",

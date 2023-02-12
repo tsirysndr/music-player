@@ -9,6 +9,7 @@ use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
 };
+use upnp_client::types::Metadata;
 use url::Url;
 
 pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
@@ -534,6 +535,18 @@ pub struct Folder {
     pub id: String,
     pub name: String,
     pub playlists: Vec<Playlist>,
+}
+
+impl Into<Metadata> for Track {
+    fn into(self) -> Metadata {
+        Metadata {
+            title: self.title,
+            artist: Some(self.artist),
+            album: self.album.clone().map(|a| a.title),
+            album_art_uri: self.album.map(|a| a.cover.unwrap()),
+            ..Default::default()
+        }
+    }
 }
 
 pub trait RemoteTrackUrl {

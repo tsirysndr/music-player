@@ -16,6 +16,10 @@ version = "0.1.2"
 path = "../client"
 version = "0.1.2"
 
+[dependencies.music-player-tracklist]
+path = "../tracklist"
+version = "0.1.6"
+
 [dependencies]
 surf = { version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
 async-trait = "0.1.59"
@@ -25,4 +29,6 @@ jsonrpsee = { version = "0.16.2", features = ["jsonrpsee-ws-client", "jsonrpsee-
 url = "2.3.1"
 md5 = "0.7.0"
 local-ip-addr = "0.1.1"
-upnp-client = "0.1.3"
+upnp-client = "0.1.5"
+futures = "0.3.26"
+tokio = { version = "1.25.0", features = ["time"] }

@@ -60,7 +60,7 @@ impl From<types::Device> for Device {
             port: device.port,
             service: device.service,
             app: device.app,
-            is_connected: false,
+            is_connected: device.is_connected,
         }
     }
 }

@@ -4279,6 +4279,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures",
+ "hyper",
  "jsonrpsee",
  "local-ip-addr",
  "md5",

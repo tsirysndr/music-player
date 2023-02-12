@@ -3,6 +3,7 @@ use std::{
     time::Duration,
 };
 
+use crate::{Addon, Browseable, Player};
 use anyhow::Error;
 use async_trait::async_trait;
 use music_player_tracklist::Tracklist;
@@ -13,8 +14,6 @@ use upnp_client::{
     media_server::MediaServerClient,
     types::{LoadOptions, Metadata, ObjectClass},
 };
-
-use crate::{Addon, Browseable, Player};
 
 pub struct Dlna {
     name: String,
@@ -67,11 +66,13 @@ impl Dlna {
         if let Some(client) = &self.client {
             let (_, next_tracks) = self.tracklist.lock().unwrap().tracks();
             if let Some(next_track) = next_tracks.first() {
+                let content_type = get_content_type(&next_track.uri).await;
                 let options = LoadOptions {
                     dlna_features: Some(
                         "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
                             .to_string(),
                     ),
+                    content_type,
                     metadata: Some(next_track.clone().into()),
                     object_class: Some(ObjectClass::Audio),
                     ..Default::default()
@@ -193,7 +194,7 @@ impl Player for Dlna {
             if self.tracklist.lock().unwrap().previous_track().is_some() {
                 let (current_track, _) = self.tracklist.lock().unwrap().current_track();
                 let current_track = current_track.unwrap();
-                let options = build_load_options(current_track.clone());
+                let options = build_load_options(current_track.clone(), &current_track.uri).await;
                 client.load(&current_track.uri, options).await?;
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 self.preload_next_track().await?;
@@ -228,7 +229,7 @@ impl Player for Dlna {
                 .play_track_at(start_index as usize);
             let current_track = current_track.unwrap();
 
-            let options = build_load_options(current_track.clone());
+            let options = build_load_options(current_track.clone(), &current_track.uri).await;
 
             client.load(&current_track.uri, options).await?;
             // sleep to wait for the track to be loaded
@@ -241,11 +242,13 @@ impl Player for Dlna {
 
     async fn play_next(&mut self, track: Track) -> Result<(), Error> {
         if let Some(client) = &self.client {
+            let content_type = get_content_type(&track.uri).await;
             let options = LoadOptions {
                 dlna_features: Some(
                     "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
                         .to_string(),
                 ),
+                content_type,
                 metadata: Some(track.clone().into()),
                 object_class: Some(ObjectClass::Audio),
                 ..Default::default()
@@ -262,7 +265,7 @@ impl Player for Dlna {
 
     async fn load(&mut self, track: Track) -> Result<(), Error> {
         self.tracklist = Arc::new(Mutex::new(Tracklist::new(vec![track.clone().into()])));
-        let options = build_load_options(track);
+        let options = build_load_options(track.clone(), &track.uri).await;
         if let Some(client) = &self.client {
             self.tracklist.lock().unwrap().play_track_at(0);
             let (current_track, _) = self.tracklist.lock().unwrap().current_track();
@@ -304,16 +307,34 @@ impl From<Device> for Dlna {
     }
 }
 
-fn build_load_options<T>(track: T) -> LoadOptions
+async fn get_content_type(url: &str) -> Option<String> {
+    let req = hyper::Request::builder()
+        .method("GET")
+        .header("Range", "bytes=0-1000")
+        .uri(url)
+        .body(hyper::Body::empty())
+        .unwrap();
+    let client = hyper::Client::new();
+    let response = client.request(req).await.unwrap();
+
+    response
+        .headers()
+        .get("Content-Type")
+        .map(|content_type| content_type.to_str().unwrap().to_owned())
+}
+
+async fn build_load_options<T>(track: T, url: &str) -> LoadOptions
 where
     T: Into<Metadata>,
 {
+    let content_type = get_content_type(url).await;
     LoadOptions {
         dlna_features: Some(
             "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
                 .to_string(),
         ),
         metadata: Some(track.into()),
+        content_type,
         object_class: Some(ObjectClass::Audio),
         autoplay: true,
         ..Default::default()

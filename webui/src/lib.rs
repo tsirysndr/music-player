@@ -55,7 +55,6 @@ async fn index_spa() -> impl Responder {
 }
 
 async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<NamedFile, Error> {
-    println!("Request: {}", req.uri());
     let id = req.match_info().get("id").unwrap();
     let id = id.split('.').next().unwrap();
     let mut path = PathBuf::new();

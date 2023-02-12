@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 use music_player_addons::{
-    airplay::Airplay, chromecast::Chromecast, kodi::Kodi, local::Local, Browseable, Player,
+    airplay::Airplay, chromecast::Chromecast, dlna::Dlna, kodi::Kodi, local::Local, Browseable,
+    Player,
 };
 use music_player_types::types::Device;
 
@@ -88,6 +89,6 @@ pub async fn connect_to_cast_device(
         PlayerType::Chromecast => Chromecast::connect(device),
         PlayerType::Airplay => Airplay::new().connect(device),
         PlayerType::Kodi => Kodi::new().connect_to_player(device),
-        PlayerType::Dlna => Err(Error::msg("Not implemented")),
+        PlayerType::Dlna => Dlna::connect_to_media_renderer(device),
     }
 }

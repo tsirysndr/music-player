@@ -580,11 +580,15 @@ impl RemoteCoverUrl for Track {
 
 impl RemoteCoverUrl for Album {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
-        Self {
-            cover: match self.cover {
-                Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
-                None => None,
+        let cover_url = match self.cover {
+            Some(ref cover) => match cover.starts_with("http") {
+                true => Some(cover.to_owned()),
+                false => Some(format!("{}/covers/{}", base_url, cover)),
             },
+            None => None,
+        };
+        Self {
+            cover: cover_url,
             tracks: self
                 .tracks
                 .iter()

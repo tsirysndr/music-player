@@ -3,9 +3,8 @@ use std::sync::Arc;
 use async_graphql::*;
 use cuid::cuid;
 use futures_util::Stream;
-use music_player_addons::CurrentDevice;
-use music_player_entity::{
-    album as album_entity, artist as artist_entity, folder as folder_entity,
+use music_player_addons::CurrentSourceDevice;
+use music_player_entity::{folder as folder_entity,
     playlist as playlist_entity, playlist_tracks as playlist_tracks_entity, select_result,
     track as track_entity,
 };
@@ -32,11 +31,11 @@ impl PlaylistQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
 
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let result = source.playlist(&id).await?;
             return Ok(result.into());
         }
@@ -52,11 +51,11 @@ impl PlaylistQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let db = db.lock().await;
 
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let result = source.playlists(0, 10).await?;
             return Ok(result.into_iter().map(Into::into).collect());
         }

@@ -198,6 +198,7 @@ impl DevicesMutation {
         let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
         let mut io_device = io_device.lock().await;
         if let Some(receiver) = io_device.receiver.as_mut() {
+            receiver.stop().await?;
             receiver.disconnect()?;
         }
         match io_device.clear_receiver() {

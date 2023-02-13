@@ -59,6 +59,8 @@ async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<
     let id = id.split('.').next().unwrap();
     let mut path = PathBuf::new();
 
+    println!("id: {}", id);
+
     let track = track_entity::Entity::find_by_id(id.to_owned())
         .one(db.lock().await.get_connection())
         .await
@@ -133,8 +135,6 @@ pub async fn start_webui(
 
     let addr = format!("0.0.0.0:{}", settings.http_port);
 
-    let db = Arc::new(Mutex::new(Database::new().await));
-
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let schema = Schema::build(
@@ -142,13 +142,15 @@ pub async fn start_webui(
         Mutation::default(),
         Subscription::default(),
     )
-    .data(Arc::clone(&db))
+    .data(Arc::new(Mutex::new(Database::new().await)))
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
     .data(current_device)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
+
+    let db = Arc::new(Mutex::new(Database::new().await));
 
     HttpServer::new(move || {
         let cors = Cors::permissive();

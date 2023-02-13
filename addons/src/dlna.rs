@@ -282,11 +282,11 @@ impl Player for Dlna {
             let position = client.get_position().await?;
             let duration = client.get_duration().await?;
             let transport_info = client.get_transport_info().await?;
-            if duration != 0 && position >= (duration - 10) {
+            if duration != 0 && position >= (duration - 10) && position < (duration - 5) {
                 self.preload_next_track().await?;
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
-            if duration != 0 && position >= (duration - 1) {
+            if duration != 0 && position >= (duration - 2) {
                 self.next().await?;
             }
             let (previous_tracks, next_tracks) = self.tracklist.lock().unwrap().tracks();

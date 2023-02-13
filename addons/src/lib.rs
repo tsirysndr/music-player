@@ -2,6 +2,7 @@ pub mod airplay;
 pub mod chromecast;
 pub mod datpiff;
 pub mod deezer;
+pub mod dlna;
 pub mod genius;
 pub mod kodi;
 pub mod local;
@@ -50,12 +51,90 @@ pub trait Player {
     async fn next(&mut self) -> Result<(), Error>;
     async fn previous(&mut self) -> Result<(), Error>;
     async fn seek(&mut self, position: u32) -> Result<(), Error>;
-    async fn load_tracks(&mut self, tracks: Vec<Track>, start_index: Option<i32>) -> Result<(), Error>;
+    async fn load_tracks(
+        &mut self,
+        tracks: Vec<Track>,
+        start_index: Option<i32>,
+    ) -> Result<(), Error>;
     async fn play_next(&mut self, track: Track) -> Result<(), Error>;
     async fn load(&mut self, track: Track) -> Result<(), Error>;
     async fn get_current_playback(&mut self) -> Result<Playback, Error>;
     fn device_type(&self) -> String;
     fn disconnect(&mut self) -> Result<(), Error>;
+}
+
+pub struct CurrentSourceDevice {
+    pub client: Option<Box<dyn Browseable + Send>>,
+    pub source_device: Option<Device>,
+}
+
+impl CurrentSourceDevice {
+    pub fn new() -> Self {
+        Self {
+            client: None,
+            source_device: None,
+        }
+    }
+
+    pub fn set_client(&mut self, client: Box<dyn Browseable + Send>) {
+        self.client = Some(client);
+    }
+
+    pub fn set_source_device(&mut self, device: Device) {
+        self.source_device = Some(device);
+    }
+
+    pub fn clear_client(&mut self) -> Option<Device> {
+        self.client = None;
+        match self.source_device.take() {
+            Some(device) => Some(device),
+            None => None,
+        }
+    }
+
+    pub fn get_source_device(&self) -> Option<Device> {
+        match &self.source_device {
+            Some(device) => Some(device.clone()),
+            None => None,
+        }
+    }
+}
+
+pub struct CurrentReceiverDevice {
+    pub client: Option<Box<dyn Player + Send>>,
+    pub receiver_device: Option<Device>,
+}
+
+impl CurrentReceiverDevice {
+    pub fn new() -> Self {
+        Self {
+            client: None,
+            receiver_device: None,
+        }
+    }
+
+    pub fn set_client(&mut self, client: Box<dyn Player + Send>) {
+        self.client = Some(client);
+    }
+
+    pub fn set_receiver_device(&mut self, device: Device) {
+        self.receiver_device = Some(device);
+    }
+
+    pub fn clear_client(&mut self) -> Option<Device> {
+        self.client = None;
+        match self.receiver_device.take() {
+            Some(device) => Some(device),
+            None => None,
+        }
+    }
+
+    pub fn get_receiver_device(&self) -> Option<Device> {
+        match &self.receiver_device {
+            Some(device) => Some(device.clone()),
+            None => None,
+        }
+    }
 }
 
 pub struct CurrentDevice {

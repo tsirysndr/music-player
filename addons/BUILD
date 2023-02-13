@@ -6,8 +6,11 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "music_player_addons",
     srcs = [
+      "src/airplay.rs",
+      "src/chromecast.rs",
       "src/datpiff.rs",
       "src/deezer.rs",
+      "src/dlna.rs",
       "src/genius.rs",
       "src/kodi.rs",
       "src/lastfm.rs",
@@ -20,6 +23,10 @@ rust_library(
       deps = [
         "//client:music_player_client",
         "//types:music_player_types",
+        "//tracklist:music_player_tracklist",
+        "@crate_index//:upnp-client",
+        "@crate_index//:local-ip-addr",
+        "@crate_index//:rust_cast",
       ] + all_crate_deps(),
       proc_macro_deps = [
         "@crate_index//:async-trait",

@@ -145,17 +145,6 @@ load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "rend
 crates_repository(
     name = "crate_index",
     annotations = {
-        "curl-sys": [crate.annotation(
-            gen_build_script = False,
-            data = [
-                "@curl.dev//:curl",
-                "@libnghttp2.dev//:libnghttp2",
-            ],
-            deps = [
-                "@curl.dev//:curl",
-                "@libnghttp2.dev//:libnghttp2",
-            ],
-        )],
         "rust-embed": [crate.annotation(
             crate_features = ["debug-embed", "actix"]
         )]

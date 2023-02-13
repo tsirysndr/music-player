@@ -6,7 +6,7 @@ use std::{
 use async_graphql::*;
 
 use futures_util::Stream;
-use music_player_addons::CurrentDevice;
+use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::simple_broker::SimpleBroker;
@@ -25,7 +25,7 @@ pub struct DevicesQuery;
 #[Object]
 impl DevicesQuery {
     async fn connected_device(&self, ctx: &Context<'_>) -> Result<Device, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
         let device = current_device.lock().await;
         match &device.source_device {
             Some(device) => Ok(Device {
@@ -40,7 +40,7 @@ impl DevicesQuery {
         ctx: &Context<'_>,
         filter: Option<App>,
     ) -> Result<Vec<Device>, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
         let device = current_device.lock().await;
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
@@ -77,7 +77,9 @@ impl DevicesQuery {
     }
 
     async fn connected_cast_device(&self, ctx: &Context<'_>) -> Result<Device, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let device = current_device.lock().await;
         match &device.receiver_device {
             Some(device) => Ok(Device {
@@ -97,7 +99,7 @@ impl DevicesMutation {
     async fn connect_to_device(&self, ctx: &Context<'_>, id: ID) -> Result<Device, Error> {
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let io_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
         let mut io_device = io_device.lock().await;
 
         let base_url = match devices.clone().into_iter().find(|device| {
@@ -122,7 +124,7 @@ impl DevicesMutation {
                 .await?;
 
                 match source {
-                    Some(source) => io_device.set_source(source),
+                    Some(source) => io_device.set_client(source),
                     None => return Err(Error::new("No source found")),
                 }
 
@@ -137,9 +139,9 @@ impl DevicesMutation {
     }
 
     async fn disconnect_from_device(&self, ctx: &Context<'_>) -> Result<Option<Device>, Error> {
-        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let io_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
         let mut io_device = io_device.lock().await;
-        match io_device.clear_source() {
+        match io_device.clear_client() {
             Some(device) => {
                 SimpleBroker::<DisconnectedDevice>::publish(device.clone().into());
                 Ok(Some(device.clone().into()))
@@ -151,15 +153,14 @@ impl DevicesMutation {
     async fn connect_to_cast_device(&self, ctx: &Context<'_>, id: ID) -> Result<Device, Error> {
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let io_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut io_device = io_device.lock().await;
 
         match devices.into_iter().find(|device| {
             device.id == id.to_string()
-                && (device.service == "grpc"
-                    || device.app == "xbmc"
-                    || device.app == "chromecast"
-                    || device.app == "airplay")
+                && (device.service == "grpc" || device.app == "dlna" || device.app == "chromecast")
         }) {
             Some(device) => {
                 let current_device =
@@ -169,7 +170,7 @@ impl DevicesMutation {
                 let player_type = match device.app.as_str() {
                     "chromecast" => PlayerType::Chromecast,
                     "airplay" => PlayerType::Airplay,
-                    "xbmc" => PlayerType::Kodi,
+                    "dlna" => PlayerType::Dlna,
                     _ => PlayerType::MusicPlayer,
                 };
 
@@ -180,7 +181,7 @@ impl DevicesMutation {
                 .await?;
 
                 match receiver {
-                    Some(receiver) => io_device.set_receiver(receiver),
+                    Some(receiver) => io_device.set_client(receiver),
                     None => return Err(Error::new("No source found")),
                 }
 
@@ -198,12 +199,15 @@ impl DevicesMutation {
         &self,
         ctx: &Context<'_>,
     ) -> Result<Option<Device>, Error> {
-        let io_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let io_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut io_device = io_device.lock().await;
-        if let Some(receiver) = io_device.receiver.as_mut() {
+        if let Some(receiver) = io_device.client.as_mut() {
+            receiver.stop().await?;
             receiver.disconnect()?;
         }
-        match io_device.clear_receiver() {
+        match io_device.clear_client() {
             Some(device) => {
                 SimpleBroker::<DisconnectedDevice>::publish(device.clone().into());
                 Ok(Some(device.clone().into()))

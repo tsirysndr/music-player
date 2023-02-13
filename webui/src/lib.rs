@@ -14,7 +14,7 @@ use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fs::NamedFile;
 use mime_guess::from_path;
-use music_player_addons::CurrentDevice;
+use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
     scan_devices,
@@ -55,10 +55,11 @@ async fn index_spa() -> impl Responder {
 }
 
 async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<NamedFile, Error> {
-    println!("Request: {}", req.uri());
     let id = req.match_info().get("id").unwrap();
     let id = id.split('.').next().unwrap();
     let mut path = PathBuf::new();
+
+    println!("id: {}", id);
 
     let track = track_entity::Entity::find_by_id(id.to_owned())
         .one(db.lock().await.get_connection())
@@ -134,22 +135,26 @@ pub async fn start_webui(
 
     let addr = format!("0.0.0.0:{}", settings.http_port);
 
-    let db = Arc::new(Mutex::new(Database::new().await));
-
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
+    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
+    let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
         Subscription::default(),
     )
-    .data(Arc::clone(&db))
+    .data(Arc::new(Mutex::new(Database::new().await)))
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
     .data(current_device)
+    .data(source_device)
+    .data(receiver_device)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
+
+    let db = Arc::new(Mutex::new(Database::new().await));
 
     HttpServer::new(move || {
         let cors = Cors::permissive();

@@ -9,6 +9,8 @@ use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
 };
+use upnp_client::types::Metadata;
+use url::Url;
 
 pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
 pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
@@ -455,6 +457,39 @@ impl From<ServiceInfo> for Device {
     }
 }
 
+impl From<upnp_client::types::Device> for Device {
+    fn from(device: upnp_client::types::Device) -> Self {
+        let (host, port) = Url::parse(&device.location)
+            .map(|url| {
+                let host = url.host_str().unwrap();
+                let port = url.port().unwrap();
+                (host.to_string(), port)
+            })
+            .unwrap();
+        let is_cast_device = device
+            .device_type
+            .contains("urn:schemas-upnp-org:device:MediaRenderer");
+        let is_source_device = device
+            .device_type
+            .contains("urn:schemas-upnp-org:device:MediaServer");
+
+        Self {
+            id: device.udn,
+            name: device.friendly_name,
+            host: host.clone(),
+            ip: host.clone(),
+            port,
+            service: device.device_type,
+            app: "dlna".to_owned(),
+            is_connected: false,
+            base_url: Some(device.location),
+            is_cast_device,
+            is_source_device,
+            is_current_device: false,
+        }
+    }
+}
+
 pub trait Connected {
     fn is_connected(&self, current: Option<&Device>) -> Self;
 }
@@ -502,6 +537,18 @@ pub struct Folder {
     pub playlists: Vec<Playlist>,
 }
 
+impl Into<Metadata> for Track {
+    fn into(self) -> Metadata {
+        Metadata {
+            title: self.title,
+            artist: Some(self.artist),
+            album: self.album.clone().map(|a| a.title),
+            album_art_uri: self.album.map(|a| a.cover.unwrap()),
+            ..Default::default()
+        }
+    }
+}
+
 pub trait RemoteTrackUrl {
     fn with_remote_track_url(&self, base_url: &str) -> Self;
 }
@@ -533,11 +580,15 @@ impl RemoteCoverUrl for Track {
 
 impl RemoteCoverUrl for Album {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
-        Self {
-            cover: match self.cover {
-                Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
-                None => None,
+        let cover_url = match self.cover {
+            Some(ref cover) => match cover.starts_with("http") {
+                true => Some(cover.to_owned()),
+                false => Some(format!("{}/covers/{}", base_url, cover)),
             },
+            None => None,
+        };
+        Self {
+            cover: cover_url,
             tracks: self
                 .tracks
                 .iter()

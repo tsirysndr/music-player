@@ -1,6 +1,7 @@
 use music_player_types::types::{RemoteTrackUrl, Song, Track as TrackType};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
+use upnp_client::types::Metadata;
 
 use crate::{album, artist, select_result};
 
@@ -209,6 +210,18 @@ impl Into<TrackType> for Model {
             duration: self.duration,
             album: Some(self.album.into()),
             artists: self.artists.into_iter().map(Into::into).collect(),
+            ..Default::default()
+        }
+    }
+}
+
+impl Into<Metadata> for Model {
+    fn into(self) -> Metadata {
+        Metadata {
+            title: self.title,
+            artist: Some(self.artist),
+            album: Some(self.album.title),
+            album_art_uri: self.album.cover,
             ..Default::default()
         }
     }

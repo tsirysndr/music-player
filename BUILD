@@ -31,6 +31,7 @@ rust_binary(
     ],
     deps = [
       "//addons:music_player_addons",
+      "//audio:music_player_audio",
       "//client:music_player_client",
       "//discovery:music_player_discovery",
       "//entity:music_player_entity",

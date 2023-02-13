@@ -7,9 +7,9 @@ use rust_cast::{
         media::{Image, Media, Metadata, MusicTrackMediaMetadata, StreamType},
         receiver::CastDeviceApp,
     },
-    CastDevice,
+    CastDevice, ChannelMessage,
 };
-use std::str::FromStr;
+use std::{str::FromStr, thread, time::Duration};
 
 const DEFAULT_DESTINATION_ID: &str = "receiver-0";
 

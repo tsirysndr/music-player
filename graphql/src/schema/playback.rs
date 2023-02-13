@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::simple_broker::SimpleBroker;
 use async_graphql::*;
 use futures_util::Stream;
-use music_player_addons::CurrentDevice;
+use music_player_addons::CurrentReceiverDevice;
 use music_player_playback::player::PlayerCommand;
 use music_player_tracklist::{PlaybackState, Tracklist};
 use tokio::sync::mpsc::UnboundedSender;
@@ -24,11 +24,13 @@ impl PlaybackQuery {
         &self,
         ctx: &Context<'_>,
     ) -> Result<CurrentlyPlayingSong, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             let playback = receiver.get_current_playback().await?;
             return Ok(playback.into());
         }
@@ -69,11 +71,13 @@ pub struct PlaybackMutation;
 #[Object]
 impl PlaybackMutation {
     async fn next(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             receiver.next().await?;
             return Ok(true);
         }
@@ -90,11 +94,13 @@ impl PlaybackMutation {
     }
 
     async fn play(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             receiver.play().await?;
             return Ok(true);
         }
@@ -111,11 +117,13 @@ impl PlaybackMutation {
     }
 
     async fn pause(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             receiver.pause().await?;
             return Ok(true);
         }
@@ -132,11 +140,13 @@ impl PlaybackMutation {
     }
 
     async fn previous(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             receiver.previous().await?;
             return Ok(true);
         }
@@ -153,11 +163,13 @@ impl PlaybackMutation {
     }
 
     async fn seek(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             receiver.seek(position).await?;
             return Ok(true);
         }
@@ -174,11 +186,13 @@ impl PlaybackMutation {
     }
 
     async fn stop(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx
+            .data::<Arc<TokioMutex<CurrentReceiverDevice>>>()
+            .unwrap();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             receiver.stop().await?;
             return Ok(true);
         }

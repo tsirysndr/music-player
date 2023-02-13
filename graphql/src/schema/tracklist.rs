@@ -1,11 +1,7 @@
 use async_graphql::*;
-use chrono::format;
 use futures_util::Stream;
-use music_player_addons::CurrentDevice;
-use music_player_entity::{
-    album as album_entity, artist as artist_entity, playlist as playlist_entity,
-    playlist_tracks as playlist_tracks_entity, select_result, track as track_entity,
-};
+use music_player_addons::{CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::repo::album::AlbumRepository;
 use music_player_storage::repo::artist::ArtistRepository;
@@ -45,13 +41,13 @@ pub struct TracklistQuery;
 #[Object]
 impl TracklistQuery {
     async fn tracklist_tracks(&self, ctx: &Context<'_>) -> Result<Tracklist, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
         let state = ctx.data::<Arc<StdMutex<TracklistState>>>().unwrap();
         let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
         let mut device = current_device.lock().await;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             let playback = receiver.get_current_playback().await?;
             return Ok(playback.into());
         }
@@ -89,15 +85,15 @@ impl TracklistMutation {
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
         let id = track.id.to_string();
 
         let track: track_entity::Model;
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let result = source.track(&id).await?;
 
             let base_url = device
@@ -113,7 +109,10 @@ impl TracklistMutation {
                 .with_remote_cover_url(base_url.as_str())
                 .into();
 
-            let receiver = device.receiver.as_mut();
+            let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+            let mut device = current_device.lock().await;
+
+            let receiver = device.client.as_mut();
 
             if let Some(receiver) = receiver {
                 receiver.load(track.clone().into()).await?;
@@ -245,15 +244,15 @@ impl TracklistMutation {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
         let id = id.to_string();
 
         let mut track: track_entity::Model;
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let source_ip = source.device_ip();
             let result = source.track(&id).await?;
 
@@ -270,7 +269,10 @@ impl TracklistMutation {
                 .with_remote_cover_url(base_url.as_str())
                 .into();
 
-            let receiver = device.receiver.as_mut().unwrap();
+            let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+            let mut device = current_device.lock().await;
+
+            let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
             if will_play_on_chromecast {
                 let url = Url::parse(track.uri.as_str()).unwrap();
@@ -293,8 +295,11 @@ impl TracklistMutation {
                 .await?;
         }
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
             track = update_track_url(devices.clone(), track, will_play_on_chromecast)?;
             let t: types::Track = track.into();
@@ -329,13 +334,13 @@ impl TracklistMutation {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
         let id = id.to_string();
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let album = source.album(&id).await?;
             let source_ip = source.device_ip();
 
@@ -353,7 +358,9 @@ impl TracklistMutation {
                 .into();
             let tracks = album.tracks;
 
-            let receiver = device.receiver.as_mut();
+            let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+            let mut device = current_device.lock().await;
+            let receiver = device.client.as_mut();
 
             load_tracks(
                 player_cmd,
@@ -371,8 +378,11 @@ impl TracklistMutation {
             .find(&id)
             .await?;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
             result = update_tracks_url(devices.clone(), result, will_play_on_chromecast)?;
             result.tracks = result
@@ -389,7 +399,7 @@ impl TracklistMutation {
 
         load_tracks(
             player_cmd,
-            device.receiver.as_mut(),
+            device.client.as_mut(),
             None,
             result.tracks,
             position,
@@ -412,12 +422,12 @@ impl TracklistMutation {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let artist = source.artist(&id).await?;
             let source_ip = source.device_ip();
 
@@ -431,7 +441,11 @@ impl TracklistMutation {
 
             let artist: artist_entity::Model =
                 artist.with_remote_track_url(base_url.as_str()).into();
-            let receiver = device.receiver.as_mut();
+
+            let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+            let mut device = current_device.lock().await;
+            let receiver = device.client.as_mut();
+
             load_tracks(
                 player_cmd,
                 receiver,
@@ -448,8 +462,11 @@ impl TracklistMutation {
             .find(&id)
             .await?;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
             artist = update_tracks_url(devices.clone(), artist, will_play_on_chromecast)?;
             artist.tracks = artist
@@ -466,7 +483,7 @@ impl TracklistMutation {
 
         load_tracks(
             player_cmd,
-            device.receiver.as_mut(),
+            device.client.as_mut(),
             None,
             artist.tracks,
             position,
@@ -490,13 +507,13 @@ impl TracklistMutation {
         let db = db.lock().await;
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
         let id = id.to_string();
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let result = source.playlist(&id).await?;
             let source_ip = source.device_ip();
 
@@ -511,7 +528,9 @@ impl TracklistMutation {
             let tracks = result.with_remote_track_url(base_url.as_str()).tracks;
             let tracks: Vec<track_entity::Model> = tracks.into_iter().map(Into::into).collect();
 
-            let receiver = device.receiver.as_mut();
+            let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+            let mut device = current_device.lock().await;
+            let receiver = device.client.as_mut();
 
             load_tracks(
                 player_cmd,
@@ -529,8 +548,11 @@ impl TracklistMutation {
             .find(id.as_str())
             .await?;
 
-        if device.receiver.is_some() {
-            let receiver = device.receiver.as_mut().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == "chromecast";
             playlist = update_tracks_url(devices.clone(), playlist, will_play_on_chromecast)?;
             playlist.tracks = playlist
@@ -550,7 +572,7 @@ impl TracklistMutation {
 
         load_tracks(
             player_cmd,
-            device.receiver.as_mut(),
+            device.client.as_mut(),
             None,
             tracks,
             position,

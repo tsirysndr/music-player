@@ -1,7 +1,7 @@
-use std::{sync::Arc, sync::Mutex as StdMutex};
+use std::sync::Arc;
 
 use async_graphql::{futures_util::FutureExt, *};
-use music_player_addons::CurrentDevice;
+use music_player_addons::CurrentSourceDevice;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_scanner::scan_directory;
 use music_player_storage::{
@@ -25,11 +25,13 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Track>, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        println!("lock device ...");
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
+        println!("lock device done");
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let result = source
                 .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
@@ -54,11 +56,13 @@ impl LibraryQuery {
                 .collect());
         }
 
+        println!("lock db ...");
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-
+        println!("lock db done");
         let results = TrackRepository::new(db.lock().await.get_connection())
             .find_all(100)
             .await?;
+        println!("album results:");
 
         Ok(results.into_iter().map(Into::into).collect())
     }
@@ -69,11 +73,11 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Artist>, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let artists = source
                 .artists(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
@@ -112,11 +116,11 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Album>, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let albums = source
                 .albums(offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
@@ -151,12 +155,12 @@ impl LibraryQuery {
     }
 
     async fn track(&self, ctx: &Context<'_>, id: ID) -> Result<Track, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let track = source.track(&id).await?;
 
             let base_url = device
@@ -182,12 +186,12 @@ impl LibraryQuery {
     }
 
     async fn artist(&self, ctx: &Context<'_>, id: ID) -> Result<Artist, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
         let id = id.to_string();
 
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let artist = source.artist(&id).await?;
 
             let base_url = device
@@ -214,13 +218,13 @@ impl LibraryQuery {
     }
 
     async fn album(&self, ctx: &Context<'_>, id: ID) -> Result<Album, Error> {
-        let current_device = ctx.data::<Arc<Mutex<CurrentDevice>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
 
         let id = id.to_string();
 
         let mut device = current_device.lock().await;
-        if device.source.is_some() {
-            let source = device.source.as_mut().unwrap();
+        if device.client.is_some() {
+            let source = device.client.as_mut().unwrap();
             let album = source.album(&id).await?;
 
             let base_url = device

@@ -14,7 +14,7 @@ use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fs::NamedFile;
 use mime_guess::from_path;
-use music_player_addons::CurrentDevice;
+use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
     scan_devices,
@@ -137,6 +137,8 @@ pub async fn start_webui(
 
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
+    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
+    let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -147,6 +149,8 @@ pub async fn start_webui(
     .data(tracklist)
     .data(devices)
     .data(current_device)
+    .data(source_device)
+    .data(receiver_device)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
 

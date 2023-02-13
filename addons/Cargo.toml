@@ -24,7 +24,7 @@ version = "0.1.6"
 surf = { version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
 async-trait = "0.1.59"
 anyhow = "1.0.67"
-rust_cast = { git = "https://github.com/tsirysndr/rust-cast.git", rev = "3a36506", features = ["thread_safe"] }
+rust_cast = { git = "https://github.com/tsirysndr/rust-cast.git", rev = "320f250", features = ["thread_safe"] }
 jsonrpsee = { version = "0.16.2", features = ["jsonrpsee-ws-client", "jsonrpsee-http-client", "jsonrpsee-client-transport", "async-client", "client"] }
 url = "2.3.1"
 md5 = "0.7.0"

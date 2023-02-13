@@ -218,8 +218,9 @@ impl Player for Dlna {
         start_index: Option<i32>,
     ) -> Result<(), Error> {
         self.tracklist = Arc::new(Mutex::new(Tracklist::new(
-            tracks.into_iter().map(Into::into).collect(),
+            tracks.clone().into_iter().map(Into::into).collect(),
         )));
+
         if let Some(client) = &self.client {
             let start_index = start_index.unwrap_or(0);
             let (current_track, _) = self
@@ -233,7 +234,7 @@ impl Player for Dlna {
 
             client.load(&current_track.uri, options).await?;
             // sleep to wait for the track to be loaded
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(3)).await;
             self.preload_next_track().await?;
             return Ok(());
         }
@@ -283,6 +284,7 @@ impl Player for Dlna {
             let transport_info = client.get_transport_info().await?;
             if duration != 0 && position >= (duration - 10) {
                 self.preload_next_track().await?;
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
             if duration != 0 && position >= (duration - 1) {
                 self.next().await?;

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use async_graphql::Schema;
-use music_player_addons::CurrentDevice;
+use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink, Sink},
     config::AudioFormat,
@@ -43,6 +43,8 @@ pub async fn setup_schema() -> (
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
+    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
+    let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
@@ -63,6 +65,8 @@ pub async fn setup_schema() -> (
         .data(Arc::clone(&tracklist))
         .data(Arc::clone(&devices))
         .data(Arc::clone(&current_device))
+        .data(Arc::clone(&source_device))
+        .data(Arc::clone(&receiver_device))
         .finish(),
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

@@ -1,5 +1,5 @@
 use anyhow::Error;
-use futures_util::{future::IntoStream, FutureExt, TryStreamExt};
+use futures_util::{future::IntoStream, FutureExt};
 use hyper::{
     client::{self, HttpConnector, ResponseFuture},
     header::RANGE,

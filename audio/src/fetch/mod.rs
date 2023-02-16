@@ -408,7 +408,7 @@ impl AudioFileStreaming {
             mime_type: mime,
         });
 
-        let write_file = NamedTempFile::new_in("/tmp/audio")?;
+        let write_file = NamedTempFile::new()?;
         write_file.as_file().set_len(file_size as u64)?;
 
         let read_file = write_file.reopen()?;

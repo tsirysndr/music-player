@@ -2,8 +2,9 @@ use anyhow::Error;
 use music_player_server::api::{
     metadata::v1alpha1::Track,
     music::v1alpha1::{
-        tracklist_service_client::TracklistServiceClient, AddTrackRequest, ClearTracklistRequest,
-        GetTracklistTracksRequest, PlayTrackAtRequest, RemoveTrackRequest,
+        tracklist_service_client::TracklistServiceClient, AddTrackRequest, AddTracksRequest,
+        ClearTracklistRequest, GetTracklistTracksRequest, LoadTracksRequest, PlayTrackAtRequest,
+        RemoveTrackRequest,
     },
 };
 use tonic::transport::Channel;
@@ -26,15 +27,21 @@ impl TracklistClient {
             }),
             ..Default::default()
         });
-        let response = self.client.add_track(request).await?;
+        self.client.add_track(request).await?;
         Ok(())
     }
 
     pub async fn add_tracks(&mut self, ids: &[&str]) -> Result<(), Error> {
-        let request = tonic::Request::new(AddTrackRequest {
-            ..Default::default()
+        let request = tonic::Request::new(AddTracksRequest {
+            tracks: ids
+                .iter()
+                .map(|id| Track {
+                    id: id.to_string(),
+                    ..Default::default()
+                })
+                .collect(),
         });
-        let response = self.client.add_track(request).await?;
+        self.client.add_tracks(request).await?;
         Ok(())
     }
 
@@ -42,7 +49,7 @@ impl TracklistClient {
         let request = tonic::Request::new(ClearTracklistRequest {
             ..Default::default()
         });
-        let response = self.client.clear_tracklist(request).await?;
+        self.client.clear_tracklist(request).await?;
         Ok(())
     }
 
@@ -59,7 +66,7 @@ impl TracklistClient {
         let request = tonic::Request::new(RemoveTrackRequest {
             ..Default::default()
         });
-        let response = self.client.remove_track(request).await?;
+        self.client.remove_track(request).await?;
         Ok(())
     }
 
@@ -67,7 +74,33 @@ impl TracklistClient {
         let request = tonic::Request::new(PlayTrackAtRequest {
             index: index as u32,
         });
-        let response = self.client.play_track_at(request).await?;
+        self.client.play_track_at(request).await?;
+        Ok(())
+    }
+
+    pub async fn play_next(&mut self, id: &str) -> Result<(), Error> {
+        let request = tonic::Request::new(AddTrackRequest {
+            track: Some(Track {
+                id: id.to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        self.client.add_track(request).await?;
+        Ok(())
+    }
+
+    pub async fn load_tracks(&mut self, ids: Vec<String>) -> Result<(), Error> {
+        let request = tonic::Request::new(LoadTracksRequest {
+            tracks: ids
+                .into_iter()
+                .map(|id| Track {
+                    id,
+                    ..Default::default()
+                })
+                .collect(),
+        });
+        self.client.load_tracks(request).await?;
         Ok(())
     }
 }

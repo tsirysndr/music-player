@@ -4081,6 +4081,15 @@ pub struct AddTracksRequest {
 pub struct AddTracksResponse {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LoadTracksRequest {
+    #[prost(message, repeated, tag = "1")]
+    pub tracks: ::prost::alloc::vec::Vec<super::super::metadata::v1alpha1::Track>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LoadTracksResponse {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClearTracklistRequest {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -4280,6 +4289,25 @@ pub mod tracklist_service_client {
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/music.v1alpha1.TracklistService/AddTracks",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn load_tracks(
+            &mut self,
+            request: impl tonic::IntoRequest<super::LoadTracksRequest>,
+        ) -> Result<tonic::Response<super::LoadTracksResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.TracklistService/LoadTracks",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -4547,6 +4575,10 @@ pub mod tracklist_service_server {
             &self,
             request: tonic::Request<super::AddTracksRequest>,
         ) -> Result<tonic::Response<super::AddTracksResponse>, tonic::Status>;
+        async fn load_tracks(
+            &self,
+            request: tonic::Request<super::LoadTracksRequest>,
+        ) -> Result<tonic::Response<super::LoadTracksResponse>, tonic::Status>;
         async fn clear_tracklist(
             &self,
             request: tonic::Request<super::ClearTracklistRequest>,
@@ -4724,6 +4756,44 @@ pub mod tracklist_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = AddTracksSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.TracklistService/LoadTracks" => {
+                    #[allow(non_camel_case_types)]
+                    struct LoadTracksSvc<T: TracklistService>(pub Arc<T>);
+                    impl<
+                        T: TracklistService,
+                    > tonic::server::UnaryService<super::LoadTracksRequest>
+                    for LoadTracksSvc<T> {
+                        type Response = super::LoadTracksResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::LoadTracksRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { (*inner).load_tracks(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = LoadTracksSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

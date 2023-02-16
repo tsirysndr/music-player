@@ -12,6 +12,10 @@ message AddTracksRequest { repeated metadata.v1alpha1.Track tracks = 1; }
 
 message AddTracksResponse {}
 
+message LoadTracksRequest { repeated metadata.v1alpha1.Track tracks = 1; }
+
+message LoadTracksResponse {}
+
 message ClearTracklistRequest {}
 
 message ClearTracklistResponse {}
@@ -70,6 +74,7 @@ message PlayTrackAtResponse {}
 service TracklistService {
   rpc AddTrack(AddTrackRequest) returns (AddTrackResponse) {}
   rpc AddTracks(AddTracksRequest) returns (AddTracksResponse) {}
+  rpc LoadTracks(LoadTracksRequest) returns (LoadTracksResponse) {}
   rpc ClearTracklist(ClearTracklistRequest) returns (ClearTracklistResponse) {}
   rpc FilterTracklist(FilterTracklistRequest)
       returns (FilterTracklistResponse) {}

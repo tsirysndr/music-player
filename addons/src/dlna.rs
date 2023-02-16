@@ -114,15 +114,36 @@ impl Addon for Dlna {
 #[async_trait]
 impl Browseable for Dlna {
     async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
-        todo!()
+        if let Some(client) = &self.media_server_client {
+            client
+                .browse("musicdb://albums", "BrowseDirectChildren")
+                .await?;
+            let mut result = vec![];
+            return Ok(result);
+        }
+        Err(Error::msg("No device connected"))
     }
 
     async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
-        todo!()
+        if let Some(client) = &self.media_server_client {
+            client
+                .browse("musicdb://artists", "BrowseDirectChildren")
+                .await?;
+            let mut result = vec![];
+            return Ok(result);
+        }
+        Err(Error::msg("No device connected"))
     }
 
     async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
-        todo!()
+        if let Some(client) = &self.media_server_client {
+            client
+                .browse("musicdb://songs", "BrowseDirectChildren")
+                .await?;
+            let mut result = vec![];
+            return Ok(result);
+        }
+        Err(Error::msg("No device connected"))
     }
 
     async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error> {

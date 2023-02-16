@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use music_player_entity::{album, artist, track};
 use music_player_playback::player::PlayerCommand;
-use music_player_storage::Database;
+use music_player_storage::{repo::track::TrackRepository, Database};
 use music_player_tracklist::Tracklist as TracklistState;
 use sea_orm::EntityTrait;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
@@ -15,9 +15,10 @@ use crate::api::{
         FilterTracklistRequest, FilterTracklistResponse, GetNextTrackRequest, GetNextTrackResponse,
         GetPreviousTrackRequest, GetPreviousTrackResponse, GetRandomRequest, GetRandomResponse,
         GetRepeatRequest, GetRepeatResponse, GetSingleRequest, GetSingleResponse,
-        GetTracklistTracksRequest, GetTracklistTracksResponse, PlayNextRequest, PlayNextResponse,
-        PlayTrackAtRequest, PlayTrackAtResponse, RemoveTrackRequest, RemoveTrackResponse,
-        SetRepeatRequest, SetRepeatResponse, ShuffleRequest, ShuffleResponse,
+        GetTracklistTracksRequest, GetTracklistTracksResponse, LoadTracksRequest,
+        LoadTracksResponse, PlayNextRequest, PlayNextResponse, PlayTrackAtRequest,
+        PlayTrackAtResponse, RemoveTrackRequest, RemoveTrackResponse, SetRepeatRequest,
+        SetRepeatResponse, ShuffleRequest, ShuffleResponse,
     },
 };
 
@@ -189,8 +190,26 @@ impl TracklistService for Tracklist {
 
     async fn play_next(
         &self,
-        _request: tonic::Request<PlayNextRequest>,
+        request: tonic::Request<PlayNextRequest>,
     ) -> Result<tonic::Response<PlayNextResponse>, tonic::Status> {
+        let track = request.into_inner().track;
+        if track.is_none() {
+            return Err(tonic::Status::invalid_argument("Track is required"));
+        }
+
+        let track = track.unwrap();
+        let id = track.id;
+
+        let track = TrackRepository::new(&self.db.lock().await.get_connection())
+            .find(&id)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::PlayNext(track))
+            .unwrap();
         let response = PlayNextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -206,6 +225,36 @@ impl TracklistService for Tracklist {
             .send(PlayerCommand::PlayTrackAt(request.index as usize))
             .unwrap();
         let response = PlayTrackAtResponse {};
+        Ok(tonic::Response::new(response))
+    }
+
+    async fn load_tracks(
+        &self,
+        request: tonic::Request<LoadTracksRequest>,
+    ) -> Result<tonic::Response<LoadTracksResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let ids = request
+            .tracks
+            .into_iter()
+            .map(|t| t.id)
+            .collect::<Vec<String>>();
+
+        let mut tracks: Vec<track::Model> = vec![];
+
+        for id in ids {
+            let track = TrackRepository::new(&self.db.lock().await.get_connection())
+                .find(&id)
+                .await
+                .map_err(|e| tonic::Status::internal(e.to_string()))?;
+            tracks.push(track);
+        }
+
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::LoadTracklist { tracks })
+            .unwrap();
+        let response = LoadTracksResponse {};
         Ok(tonic::Response::new(response))
     }
 }

@@ -152,27 +152,27 @@ impl Browseable for Local {
 impl Player for Local {
     async fn play(&mut self) -> Result<(), Error> {
         self.client.as_mut().unwrap().playback.play().await?;
-        todo!()
+        Ok(())
     }
 
     async fn pause(&mut self) -> Result<(), Error> {
         self.client.as_mut().unwrap().playback.pause().await?;
-        todo!()
+        Ok(())
     }
 
     async fn stop(&mut self) -> Result<(), Error> {
         self.client.as_mut().unwrap().playback.stop().await?;
-        todo!()
+        Ok(())
     }
 
     async fn next(&mut self) -> Result<(), Error> {
         self.client.as_mut().unwrap().playback.next().await?;
-        todo!()
+        Ok(())
     }
 
     async fn previous(&mut self) -> Result<(), Error> {
         self.client.as_mut().unwrap().playback.prev().await?;
-        todo!()
+        Ok(())
     }
 
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
@@ -184,19 +184,57 @@ impl Player for Local {
         tracks: Vec<Track>,
         start_index: Option<i32>,
     ) -> Result<(), Error> {
-        todo!()
+        let ids: Vec<String> = tracks.into_iter().map(|t| t.id).collect();
+        self.client
+            .as_mut()
+            .unwrap()
+            .tracklist
+            .load_tracks(ids)
+            .await?;
+        Ok(())
     }
 
     async fn play_next(&mut self, track: Track) -> Result<(), Error> {
-        todo!()
+        self.client
+            .as_mut()
+            .unwrap()
+            .tracklist
+            .play_next(&track.id)
+            .await?;
+        Ok(())
     }
 
     async fn load(&mut self, track: Track) -> Result<(), Error> {
-        todo!()
+        self.client
+            .as_mut()
+            .unwrap()
+            .tracklist
+            .add(&track.id)
+            .await?;
+        Ok(())
     }
 
     async fn get_current_playback(&mut self) -> Result<Playback, Error> {
-        todo!()
+        let (current_track, index, position_ms, is_playing) =
+            self.client.as_mut().unwrap().playback.current().await?;
+        return match current_track {
+            Some(track) => Ok(Playback {
+                current_track: Some(track.into()),
+                index,
+                position_ms,
+                is_playing,
+                current_item_id: None,
+                items: vec![],
+            }),
+            None => Ok(Playback {
+                current_track: None,
+                index: 0,
+                position_ms: 0,
+                is_playing: false,
+                current_item_id: None,
+                items: vec![],
+            }),
+        };
     }
 
     fn device_type(&self) -> String {

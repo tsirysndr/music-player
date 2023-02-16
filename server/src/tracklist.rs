@@ -198,12 +198,12 @@ impl TracklistService for Tracklist {
         }
 
         let track = track.unwrap();
-        let id = track.id;
 
-        let track = TrackRepository::new(&self.db.lock().await.get_connection())
-            .find(&id)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if track.uri.is_empty() {
+            return Err(tonic::Status::invalid_argument("Track URI is required"));
+        }
+
+        let track = track.into();
 
         self.cmd_tx
             .lock()

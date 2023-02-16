@@ -1,7 +1,7 @@
 use anyhow::Error;
 
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track, XBMC_DEVICE};
 
 use super::{Addon, Browseable, Player, StreamingAddon};
 
@@ -158,8 +158,12 @@ impl Player for Kodi {
         todo!()
     }
 
+    async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
+        todo!()
+    }
+
     fn device_type(&self) -> String {
-        "xbmc".to_string()
+        String::from(XBMC_DEVICE)
     }
 
     fn disconnect(&mut self) -> Result<(), Error> {

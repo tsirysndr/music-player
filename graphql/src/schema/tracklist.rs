@@ -9,6 +9,7 @@ use music_player_storage::repo::playlist::PlaylistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
+use music_player_types::types::MUSIC_PLAYER_DEVICE;
 use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
 use rand::seq::SliceRandom;
 use sea_orm::{
@@ -48,6 +49,13 @@ impl TracklistQuery {
 
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
+            if receiver.device_type() == String::from(MUSIC_PLAYER_DEVICE) {
+                let (previous_tracks, next_tracks) = receiver.get_current_tracklist().await?;
+                return Ok(Tracklist {
+                    next_tracks: next_tracks.into_iter().map(Into::into).collect(),
+                    previous_tracks: previous_tracks.into_iter().map(Into::into).collect(),
+                });
+            }
             let playback = receiver.get_current_playback().await?;
             return Ok(playback.into());
         }

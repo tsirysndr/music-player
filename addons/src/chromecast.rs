@@ -1,7 +1,7 @@
 use crate::{Addon, Player};
 use anyhow::Error;
 use async_trait::async_trait;
-use music_player_types::types::{Album, Artist, Device, Playback, Track};
+use music_player_types::types::{Album, Artist, Device, Playback, Track, CHROMECAST_DEVICE};
 use rust_cast::{
     channels::{
         media::{Image, Media, Metadata, MusicTrackMediaMetadata, StreamType},
@@ -512,8 +512,12 @@ impl<'a> Player for Chromecast<'a> {
         Err(Error::msg("Cast device is not connected"))
     }
 
+    async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
+        todo!()
+    }
+    
     fn device_type(&self) -> String {
-        "chromecast".to_string()
+        String::from(CHROMECAST_DEVICE)
     }
 
     fn disconnect(&mut self) -> Result<(), Error> {

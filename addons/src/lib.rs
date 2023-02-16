@@ -59,6 +59,7 @@ pub trait Player {
     async fn play_next(&mut self, track: Track) -> Result<(), Error>;
     async fn load(&mut self, track: Track) -> Result<(), Error>;
     async fn get_current_playback(&mut self) -> Result<Playback, Error>;
+    async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error>;
     fn device_type(&self) -> String;
     fn disconnect(&mut self) -> Result<(), Error>;
 }

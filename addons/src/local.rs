@@ -5,7 +5,9 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
-use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
+use music_player_types::types::{
+    Album, Artist, Device, Playback, Playlist, Track, MUSIC_PLAYER_DEVICE,
+};
 
 pub struct Client {
     pub library: LibraryClient,
@@ -236,8 +238,16 @@ impl Player for Local {
         };
     }
 
+    async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
+        let (previous, next) = self.client.as_mut().unwrap().tracklist.list().await?;
+        Ok((
+            previous.into_iter().map(Into::into).collect(),
+            next.into_iter().map(Into::into).collect(),
+        ))
+    }
+
     fn device_type(&self) -> String {
-        "music-player".to_string()
+        String::from(MUSIC_PLAYER_DEVICE)
     }
 
     fn disconnect(&mut self) -> Result<(), Error> {

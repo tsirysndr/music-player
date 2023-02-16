@@ -15,6 +15,12 @@ use url::Url;
 pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
 pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
 
+pub const AIRPLAY_DEVICE: &str = "AirPlay";
+pub const CHROMECAST_DEVICE: &str = "Chromecast";
+pub const XBMC_DEVICE: &str = "XBMC";
+pub const MUSIC_PLAYER_DEVICE: &str = "MusicPlayer";
+pub const UPNP_DLNA_DEVICE: &str = "UPnP/DLNA";
+
 #[derive(Debug, Clone, Default)]
 pub struct Playback {
     pub current_track: Option<Track>,

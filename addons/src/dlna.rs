@@ -7,7 +7,9 @@ use crate::{Addon, Browseable, Player};
 use anyhow::Error;
 use async_trait::async_trait;
 use music_player_tracklist::Tracklist;
-use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
+use music_player_types::types::{
+    Album, Artist, Device, Playback, Playlist, Track, UPNP_DLNA_DEVICE,
+};
 use upnp_client::{
     device_client::DeviceClient,
     media_renderer::MediaRendererClient,
@@ -344,8 +346,12 @@ impl Player for Dlna {
         Err(Error::msg("device not connected"))
     }
 
+    async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
+        todo!()
+    }
+
     fn device_type(&self) -> String {
-        "dlna".to_string()
+        String::from(UPNP_DLNA_DEVICE)
     }
 
     fn disconnect(&mut self) -> Result<(), Error> {

@@ -4084,6 +4084,8 @@ pub struct AddTracksResponse {}
 pub struct LoadTracksRequest {
     #[prost(message, repeated, tag = "1")]
     pub tracks: ::prost::alloc::vec::Vec<super::super::metadata::v1alpha1::Track>,
+    #[prost(int32, tag = "2")]
+    pub start_index: i32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

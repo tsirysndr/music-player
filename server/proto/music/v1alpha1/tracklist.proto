@@ -12,7 +12,10 @@ message AddTracksRequest { repeated metadata.v1alpha1.Track tracks = 1; }
 
 message AddTracksResponse {}
 
-message LoadTracksRequest { repeated metadata.v1alpha1.Track tracks = 1; }
+message LoadTracksRequest { 
+  repeated metadata.v1alpha1.Track tracks = 1; 
+  int32 start_index = 2; 
+}
 
 message LoadTracksResponse {}
 

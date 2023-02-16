@@ -189,7 +189,7 @@ impl Player for Local {
             .as_mut()
             .unwrap()
             .tracklist
-            .load_tracks(ids)
+            .load_tracks(ids, start_index.unwrap_or(0))
             .await?;
         Ok(())
     }

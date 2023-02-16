@@ -90,7 +90,7 @@ impl TracklistClient {
         Ok(())
     }
 
-    pub async fn load_tracks(&mut self, ids: Vec<String>) -> Result<(), Error> {
+    pub async fn load_tracks(&mut self, ids: Vec<String>, start_index: i32) -> Result<(), Error> {
         let request = tonic::Request::new(LoadTracksRequest {
             tracks: ids
                 .into_iter()
@@ -99,6 +99,7 @@ impl TracklistClient {
                     ..Default::default()
                 })
                 .collect(),
+            start_index,
         });
         self.client.load_tracks(request).await?;
         Ok(())

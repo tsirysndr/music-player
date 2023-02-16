@@ -238,6 +238,7 @@ impl TracklistService for Tracklist {
             .into_iter()
             .map(|t| t.id)
             .collect::<Vec<String>>();
+        let start_index = request.start_index as usize;
 
         let mut tracks: Vec<track::Model> = vec![];
 
@@ -252,7 +253,22 @@ impl TracklistService for Tracklist {
         self.cmd_tx
             .lock()
             .unwrap()
+            .send(PlayerCommand::Stop)
+            .unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::Clear)
+            .unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
             .send(PlayerCommand::LoadTracklist { tracks })
+            .unwrap();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::PlayTrackAt(start_index))
             .unwrap();
         let response = LoadTracksResponse {};
         Ok(tonic::Response::new(response))

@@ -11,11 +11,11 @@ description = "The playback logic for music player"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.1.6"
+version = "0.1.7"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.1.6"
+version = "0.1.7"
 
 [dependencies.music-player-audio]
 path = "../audio"

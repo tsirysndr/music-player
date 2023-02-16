@@ -3,10 +3,11 @@ use music_player_server::api::{
     metadata::v1alpha1::Track,
     music::v1alpha1::{
         tracklist_service_client::TracklistServiceClient, AddTrackRequest, AddTracksRequest,
-        ClearTracklistRequest, GetTracklistTracksRequest, LoadTracksRequest, PlayTrackAtRequest,
-        RemoveTrackRequest,
+        ClearTracklistRequest, GetTracklistTracksRequest, LoadTracksRequest, PlayNextRequest,
+        PlayTrackAtRequest, RemoveTrackRequest,
     },
 };
+use music_player_types::types;
 use tonic::transport::Channel;
 pub struct TracklistClient {
     client: TracklistServiceClient<Channel>,
@@ -78,27 +79,21 @@ impl TracklistClient {
         Ok(())
     }
 
-    pub async fn play_next(&mut self, id: &str) -> Result<(), Error> {
-        let request = tonic::Request::new(AddTrackRequest {
-            track: Some(Track {
-                id: id.to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
+    pub async fn play_next(&mut self, track: types::Track) -> Result<(), Error> {
+        let request = tonic::Request::new(PlayNextRequest {
+            track: Some(track.into()),
         });
-        self.client.add_track(request).await?;
+        self.client.play_next(request).await?;
         Ok(())
     }
 
-    pub async fn load_tracks(&mut self, ids: Vec<String>, start_index: i32) -> Result<(), Error> {
+    pub async fn load_tracks(
+        &mut self,
+        tracks: Vec<types::Track>,
+        start_index: i32,
+    ) -> Result<(), Error> {
         let request = tonic::Request::new(LoadTracksRequest {
-            tracks: ids
-                .into_iter()
-                .map(|id| Track {
-                    id,
-                    ..Default::default()
-                })
-                .collect(),
+            tracks: tracks.into_iter().map(Into::into).collect(),
             start_index,
         });
         self.client.load_tracks(request).await?;

@@ -184,12 +184,11 @@ impl Player for Local {
         tracks: Vec<Track>,
         start_index: Option<i32>,
     ) -> Result<(), Error> {
-        let ids: Vec<String> = tracks.into_iter().map(|t| t.id).collect();
         self.client
             .as_mut()
             .unwrap()
             .tracklist
-            .load_tracks(ids, start_index.unwrap_or(0))
+            .load_tracks(tracks, start_index.unwrap_or(0))
             .await?;
         Ok(())
     }
@@ -199,7 +198,7 @@ impl Player for Local {
             .as_mut()
             .unwrap()
             .tracklist
-            .play_next(&track.id)
+            .play_next(track)
             .await?;
         Ok(())
     }

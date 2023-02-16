@@ -240,6 +240,22 @@ pub mod api {
             }
         }
 
+        impl Into<track::Model> for Track {
+            fn into(self) -> track::Model {
+                track::Model {
+                    id: self.id,
+                    title: self.title,
+                    uri: self.uri,
+                    duration: Some(self.duration),
+                    track: Some(u32::try_from(self.track_number).unwrap_or_default()),
+                    artists: self.artists.into_iter().map(Into::into).collect(),
+                    artist: self.artist,
+                    album: self.album.unwrap().into(),
+                    ..Default::default()
+                }
+            }
+        }
+
         impl From<types::Track> for Track {
             fn from(track: types::Track) -> Self {
                 Self {
@@ -268,6 +284,17 @@ pub mod api {
                     picture: Some(self.picture),
                     albums: self.albums.into_iter().map(Into::into).collect(),
                     songs: self.songs.into_iter().map(Into::into).collect(),
+                }
+            }
+        }
+
+        impl Into<artist::Model> for Artist {
+            fn into(self) -> artist::Model {
+                artist::Model {
+                    id: self.id,
+                    name: self.name,
+                    albums: self.albums.into_iter().map(Into::into).collect(),
+                    ..Default::default()
                 }
             }
         }
@@ -317,6 +344,20 @@ pub mod api {
                     year: Some(u32::try_from(self.year).unwrap_or_default()),
                     artist_id: Some(format!("{:x}", md5::compute(self.artist.as_str()))),
                     tracks: self.tracks.into_iter().map(Into::into).collect(),
+                }
+            }
+        }
+
+        impl Into<album::Model> for Album {
+            fn into(self) -> album::Model {
+                album::Model {
+                    id: self.id,
+                    title: self.title,
+                    cover: Some(self.cover),
+                    artist: self.artist.clone(),
+                    year: Some(u32::try_from(self.year).unwrap_or_default()),
+                    artist_id: Some(format!("{:x}", md5::compute(self.artist.as_str()))),
+                    ..Default::default()
                 }
             }
         }

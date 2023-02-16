@@ -233,22 +233,12 @@ impl TracklistService for Tracklist {
         request: tonic::Request<LoadTracksRequest>,
     ) -> Result<tonic::Response<LoadTracksResponse>, tonic::Status> {
         let request = request.into_inner();
-        let ids = request
+        let tracks = request
             .tracks
             .into_iter()
-            .map(|t| t.id)
-            .collect::<Vec<String>>();
+            .map(Into::into)
+            .collect::<Vec<track::Model>>();
         let start_index = request.start_index as usize;
-
-        let mut tracks: Vec<track::Model> = vec![];
-
-        for id in ids {
-            let track = TrackRepository::new(&self.db.lock().await.get_connection())
-                .find(&id)
-                .await
-                .map_err(|e| tonic::Status::internal(e.to_string()))?;
-            tracks.push(track);
-        }
 
         self.cmd_tx
             .lock()

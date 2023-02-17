@@ -13,7 +13,7 @@ description = "The server API for the music player"
 
 [dependencies.music-player-playback]
 path = "../playback"
-version = "0.1.9"
+version = "0.1.10"
 
 [dependencies.music-player-scanner]
 path = "../scanner"

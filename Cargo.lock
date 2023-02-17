@@ -4316,7 +4316,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-client"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "envtestkit",
@@ -4945,6 +4945,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
+name = "openssl-src"
+version = "111.25.0+1.1.1t"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3173cd3626c43e3854b1b727422a276e568d9ec5fe8cec197822cf52cfb743d6"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4953,6 +4962,7 @@ dependencies = [
  "autocfg",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -6051,7 +6061,7 @@ dependencies = [
 [[package]]
 name = "rust_cast"
 version = "0.18.1"
-source = "git+https://github.com/tsirysndr/rust-cast.git?rev=320f250#320f2501b17548ef44de67d66c895df4574d036d"
+source = "git+https://github.com/tsirysndr/rust-cast.git?rev=d63aa7f#d63aa7f75a71490716b7758a414087520036afd6"
 dependencies = [
  "byteorder",
  "log",

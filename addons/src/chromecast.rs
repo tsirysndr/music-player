@@ -515,7 +515,15 @@ impl<'a> Player for Chromecast<'a> {
     async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
         todo!()
     }
-    
+
+    async fn play_track_at(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn remove_track_at(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
     fn device_type(&self) -> String {
         String::from(CHROMECAST_DEVICE)
     }

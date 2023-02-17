@@ -187,6 +187,14 @@ impl TracklistMutation {
     }
 
     async fn clear_tracklist(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
+            return Ok(true);
+        }
+
         let player_cmd = ctx
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -208,6 +216,15 @@ impl TracklistMutation {
 
     async fn remove_track(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
         let state = ctx.data::<Arc<StdMutex<TracklistState>>>().unwrap();
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
+            receiver.remove_track_at(position).await?;
+            return Ok(true);
+        }
+
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -230,6 +247,15 @@ impl TracklistMutation {
     }
 
     async fn play_track_at(&self, ctx: &Context<'_>, position: u32) -> Result<bool, Error> {
+        let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
+        let mut device = current_device.lock().await;
+
+        if device.client.is_some() {
+            let receiver = device.client.as_mut().unwrap();
+            receiver.play_track_at(position).await?;
+            return Ok(true);
+        }
+
         let player_cmd = ctx
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();

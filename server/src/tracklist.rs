@@ -17,7 +17,7 @@ use crate::api::{
         GetRepeatRequest, GetRepeatResponse, GetSingleRequest, GetSingleResponse,
         GetTracklistTracksRequest, GetTracklistTracksResponse, LoadTracksRequest,
         LoadTracksResponse, PlayNextRequest, PlayNextResponse, PlayTrackAtRequest,
-        PlayTrackAtResponse, RemoveTrackRequest, RemoveTrackResponse, SetRepeatRequest,
+        PlayTrackAtResponse, RemoveTrackAtRequest, RemoveTrackAtResponse, SetRepeatRequest,
         SetRepeatResponse, ShuffleRequest, ShuffleResponse,
     },
 };
@@ -151,11 +151,17 @@ impl TracklistService for Tracklist {
         Ok(tonic::Response::new(response))
     }
 
-    async fn remove_track(
+    async fn remove_track_at(
         &self,
-        _request: tonic::Request<RemoveTrackRequest>,
-    ) -> Result<tonic::Response<RemoveTrackResponse>, tonic::Status> {
-        let response = RemoveTrackResponse {};
+        request: tonic::Request<RemoveTrackAtRequest>,
+    ) -> Result<tonic::Response<RemoveTrackAtResponse>, tonic::Status> {
+        let request = request.into_inner();
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::RemoveTrack(request.position as usize))
+            .unwrap();
+        let response = RemoveTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }
 

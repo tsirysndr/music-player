@@ -348,11 +348,18 @@ impl<'a> Player for Chromecast<'a> {
 
         if let Some(cast_device) = &self.client {
             let app_to_manage = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
-            // println!("{:?}", cast_device.receiver.get_status());
 
             if cast_device.receiver.get_status().is_err() {
                 println!("[chromecast] Reconnecting to device");
                 self.reconnect()?;
+                return Ok(Playback {
+                    current_track: None,
+                    index: 0,
+                    position_ms: 0,
+                    is_playing: false,
+                    current_item_id: None,
+                    items: vec![],
+                });
             }
 
             let cast_device = self.client.as_ref().unwrap();

@@ -4,7 +4,7 @@ use music_player_server::api::{
     music::v1alpha1::{
         tracklist_service_client::TracklistServiceClient, AddTrackRequest, AddTracksRequest,
         ClearTracklistRequest, GetTracklistTracksRequest, LoadTracksRequest, PlayNextRequest,
-        PlayTrackAtRequest, RemoveTrackRequest,
+        PlayTrackAtRequest, RemoveTrackAtRequest,
     },
 };
 use music_player_types::types;
@@ -63,11 +63,12 @@ impl TracklistClient {
         Ok((response.previous_tracks, response.next_tracks))
     }
 
-    pub async fn remove(&mut self, id: &str) -> Result<(), Error> {
-        let request = tonic::Request::new(RemoveTrackRequest {
+    pub async fn remove(&mut self, position: u32) -> Result<(), Error> {
+        let request = tonic::Request::new(RemoveTrackAtRequest {
+            position,
             ..Default::default()
         });
-        self.client.remove_track(request).await?;
+        self.client.remove_track_at(request).await?;
         Ok(())
     }
 

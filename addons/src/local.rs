@@ -246,6 +246,26 @@ impl Player for Local {
         ))
     }
 
+    async fn play_track_at(&mut self, position: u32) -> Result<(), Error> {
+        self.client
+            .as_mut()
+            .unwrap()
+            .tracklist
+            .play_track_at(position as usize)
+            .await?;
+        Ok(())
+    }
+
+    async fn remove_track_at(&mut self, position: u32) -> Result<(), Error> {
+        self.client
+            .as_mut()
+            .unwrap()
+            .tracklist
+            .remove(position)
+            .await?;
+        Ok(())
+    }
+
     fn device_type(&self) -> String {
         String::from(MUSIC_PLAYER_DEVICE)
     }

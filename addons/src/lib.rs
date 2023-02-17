@@ -60,6 +60,8 @@ pub trait Player {
     async fn load(&mut self, track: Track) -> Result<(), Error>;
     async fn get_current_playback(&mut self) -> Result<Playback, Error>;
     async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error>;
+    async fn play_track_at(&mut self, position: u32) -> Result<(), Error>;
+    async fn remove_track_at(&mut self, position: u32) -> Result<(), Error>;
     fn device_type(&self) -> String;
     fn disconnect(&mut self) -> Result<(), Error>;
 }

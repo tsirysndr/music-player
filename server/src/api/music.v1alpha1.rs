@@ -4125,10 +4125,13 @@ pub struct GetPreviousTrackResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RemoveTrackRequest {}
+pub struct RemoveTrackAtRequest {
+    #[prost(uint32, tag = "1")]
+    pub position: u32,
+}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RemoveTrackResponse {}
+pub struct RemoveTrackAtResponse {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SetRepeatRequest {}
@@ -4446,10 +4449,10 @@ pub mod tracklist_service_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
-        pub async fn remove_track(
+        pub async fn remove_track_at(
             &mut self,
-            request: impl tonic::IntoRequest<super::RemoveTrackRequest>,
-        ) -> Result<tonic::Response<super::RemoveTrackResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::RemoveTrackAtRequest>,
+        ) -> Result<tonic::Response<super::RemoveTrackAtResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -4461,7 +4464,7 @@ pub mod tracklist_service_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/music.v1alpha1.TracklistService/RemoveTrack",
+                "/music.v1alpha1.TracklistService/RemoveTrackAt",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -4609,10 +4612,10 @@ pub mod tracklist_service_server {
             &self,
             request: tonic::Request<super::GetPreviousTrackRequest>,
         ) -> Result<tonic::Response<super::GetPreviousTrackResponse>, tonic::Status>;
-        async fn remove_track(
+        async fn remove_track_at(
             &self,
-            request: tonic::Request<super::RemoveTrackRequest>,
-        ) -> Result<tonic::Response<super::RemoveTrackResponse>, tonic::Status>;
+            request: tonic::Request<super::RemoveTrackAtRequest>,
+        ) -> Result<tonic::Response<super::RemoveTrackAtResponse>, tonic::Status>;
         async fn shuffle(
             &self,
             request: tonic::Request<super::ShuffleRequest>,
@@ -5081,25 +5084,25 @@ pub mod tracklist_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/music.v1alpha1.TracklistService/RemoveTrack" => {
+                "/music.v1alpha1.TracklistService/RemoveTrackAt" => {
                     #[allow(non_camel_case_types)]
-                    struct RemoveTrackSvc<T: TracklistService>(pub Arc<T>);
+                    struct RemoveTrackAtSvc<T: TracklistService>(pub Arc<T>);
                     impl<
                         T: TracklistService,
-                    > tonic::server::UnaryService<super::RemoveTrackRequest>
-                    for RemoveTrackSvc<T> {
-                        type Response = super::RemoveTrackResponse;
+                    > tonic::server::UnaryService<super::RemoveTrackAtRequest>
+                    for RemoveTrackAtSvc<T> {
+                        type Response = super::RemoveTrackAtResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::RemoveTrackRequest>,
+                            request: tonic::Request<super::RemoveTrackAtRequest>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).remove_track(request).await
+                                (*inner).remove_track_at(request).await
                             };
                             Box::pin(fut)
                         }
@@ -5109,7 +5112,7 @@ pub mod tracklist_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = RemoveTrackSvc(inner);
+                        let method = RemoveTrackAtSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

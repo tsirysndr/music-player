@@ -162,6 +162,14 @@ impl Player for Kodi {
         todo!()
     }
 
+    async fn play_track_at(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn remove_track_at(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
     fn device_type(&self) -> String {
         String::from(XBMC_DEVICE)
     }

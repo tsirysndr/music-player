@@ -100,6 +100,14 @@ impl Player for Airplay {
         todo!()
     }
 
+    async fn play_track_at(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn remove_track_at(&mut self, position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
     fn device_type(&self) -> String {
         String::from(AIRPLAY_DEVICE)
     }

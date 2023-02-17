@@ -37,9 +37,11 @@ message GetNextTrackResponse { metadata.v1alpha1.Track track = 1; }
 
 message GetPreviousTrackResponse { metadata.v1alpha1.Track track = 1; }
 
-message RemoveTrackRequest {}
+message RemoveTrackAtRequest {
+  uint32 position = 1;
+}
 
-message RemoveTrackResponse {}
+message RemoveTrackAtResponse {}
 
 message SetRepeatRequest {}
 
@@ -87,7 +89,7 @@ service TracklistService {
   rpc GetNextTrack(GetNextTrackRequest) returns (GetNextTrackResponse) {}
   rpc GetPreviousTrack(GetPreviousTrackRequest)
       returns (GetPreviousTrackResponse) {}
-  rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
+  rpc RemoveTrackAt(RemoveTrackAtRequest) returns (RemoveTrackAtResponse) {}
   rpc Shuffle(ShuffleRequest) returns (ShuffleResponse) {}
   rpc SetRepeat(SetRepeatRequest) returns (SetRepeatResponse) {}
   rpc GetTracklistTracks(GetTracklistTracksRequest)

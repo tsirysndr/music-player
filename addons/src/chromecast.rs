@@ -1,3 +1,5 @@
+extern crate chromecast as rust_cast;
+
 use crate::{Addon, Player};
 use anyhow::Error;
 use async_trait::async_trait;

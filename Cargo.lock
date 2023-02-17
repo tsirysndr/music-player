@@ -1422,6 +1422,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "chromecast"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5453602895cb7a51331fef2f2cffd8234b8a82ff0d1e30f6125925305b878b6b"
+dependencies = [
+ "byteorder",
+ "log",
+ "openssl",
+ "protobuf 3.2.0",
+ "protobuf-codegen 3.2.0",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4278,6 +4294,7 @@ version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chromecast",
  "futures",
  "hyper",
  "jsonrpsee",
@@ -4286,7 +4303,6 @@ dependencies = [
  "music-player-client",
  "music-player-tracklist",
  "music-player-types",
- "rust_cast",
  "surf",
  "tokio",
  "upnp-client",
@@ -6056,21 +6072,6 @@ checksum = "e46a2036019fdb888131db7a4c847a1063a7493f971ed94ea82c67eada63ca54"
 dependencies = [
  "serde",
  "serde_derive",
-]
-
-[[package]]
-name = "rust_cast"
-version = "0.18.1"
-source = "git+https://github.com/tsirysndr/rust-cast.git?rev=d63aa7f#d63aa7f75a71490716b7758a414087520036afd6"
-dependencies = [
- "byteorder",
- "log",
- "openssl",
- "protobuf 3.2.0",
- "protobuf-codegen 3.2.0",
- "serde",
- "serde_derive",
- "serde_json",
 ]
 
 [[package]]

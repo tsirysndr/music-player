@@ -19,7 +19,7 @@ version = "0.1.7"
 
 [dependencies.music-player-audio]
 path = "../audio"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 cpal = "0.14.0"

@@ -9,8 +9,8 @@ use music_player_storage::repo::playlist::PlaylistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
-use music_player_types::types::MUSIC_PLAYER_DEVICE;
 use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
+use music_player_types::types::{CHROMECAST_DEVICE, MUSIC_PLAYER_DEVICE};
 use rand::seq::SliceRandom;
 use sea_orm::{
     ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
@@ -307,7 +307,7 @@ impl TracklistMutation {
             let mut device = current_device.lock().await;
 
             let receiver = device.client.as_mut().unwrap();
-            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            let will_play_on_chromecast = receiver.device_type() == String::from(CHROMECAST_DEVICE);
             if will_play_on_chromecast {
                 let url = Url::parse(track.uri.as_str()).unwrap();
                 let host = url.host_str().unwrap();
@@ -334,7 +334,7 @@ impl TracklistMutation {
 
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
-            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            let will_play_on_chromecast = receiver.device_type() == String::from(CHROMECAST_DEVICE);
             track = update_track_url(devices.clone(), track, will_play_on_chromecast)?;
             let t: types::Track = track.into();
             track = update_cover_url(devices.clone(), t.clone(), will_play_on_chromecast)
@@ -417,7 +417,7 @@ impl TracklistMutation {
 
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
-            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            let will_play_on_chromecast = receiver.device_type() == String::from(CHROMECAST_DEVICE);
             result = update_tracks_url(devices.clone(), result, will_play_on_chromecast)?;
             result.tracks = result
                 .tracks
@@ -501,7 +501,7 @@ impl TracklistMutation {
 
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
-            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            let will_play_on_chromecast = receiver.device_type() == String::from(CHROMECAST_DEVICE);
             artist = update_tracks_url(devices.clone(), artist, will_play_on_chromecast)?;
             artist.tracks = artist
                 .tracks
@@ -587,7 +587,7 @@ impl TracklistMutation {
 
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
-            let will_play_on_chromecast = receiver.device_type() == "chromecast";
+            let will_play_on_chromecast = receiver.device_type() == String::from(CHROMECAST_DEVICE);
             playlist = update_tracks_url(devices.clone(), playlist, will_play_on_chromecast)?;
             playlist.tracks = playlist
                 .tracks

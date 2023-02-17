@@ -231,7 +231,7 @@ impl<'a> Player for Chromecast<'a> {
                 .map(|track| Media {
                     content_id: track.uri.clone(),
                     content_type: "".to_string(),
-                    stream_type: StreamType::Buffered,
+                    stream_type: StreamType::None,
                     metadata: Some(Metadata::MusicTrack(MusicTrackMediaMetadata {
                         title: Some(track.title.clone()),
                         artist: Some(track.artists.first().unwrap().name.clone()),
@@ -255,10 +255,13 @@ impl<'a> Player for Chromecast<'a> {
 
             cast_device.media.queue_load(
                 self.transport_id.as_ref().unwrap(),
-                medias,
+                medias.clone(),
                 Some(start_index.unwrap_or(0)),
                 None,
             )?;
+
+            println!("[chromecast] Tracks loaded");
+            println!("[chromecast] Playing track {:#?}", medias[0]);
 
             return Ok(());
         }
@@ -345,9 +348,10 @@ impl<'a> Player for Chromecast<'a> {
 
         if let Some(cast_device) = &self.client {
             let app_to_manage = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
-            println!("{:?}", cast_device.receiver.get_status());
+            // println!("{:?}", cast_device.receiver.get_status());
 
             if cast_device.receiver.get_status().is_err() {
+                println!("[chromecast] Reconnecting to device");
                 self.reconnect()?;
             }
 

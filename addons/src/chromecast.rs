@@ -369,23 +369,69 @@ impl<'a> Player for Chromecast<'a> {
                     .connect(app.transport_id.as_str())
                     .unwrap();
 
-                let status = cast_device
+                if let Ok(status) = cast_device
                     .media
                     .get_status(app.transport_id.as_str(), None)
-                    .unwrap();
-                match status.entries.first() {
-                    Some(status) => {
-                        let media = status.media.as_ref().unwrap();
-                        let metadata = media.metadata.as_ref().unwrap();
-                        let items = status.items.as_ref().unwrap();
-                        let items = items
-                            .iter()
-                            .map(|item| {
-                                let media = item.media.as_ref().unwrap();
-                                let metadata = media.metadata.as_ref().unwrap();
-                                let cover = metadata.images.first().map(|x| x.url.clone());
-                                (
-                                    Track {
+                {
+                    match status.entries.first() {
+                        Some(status) => {
+                            let media = status.media.as_ref().unwrap();
+                            let metadata = media.metadata.as_ref().unwrap();
+                            let items = status.items.as_ref().unwrap();
+                            let items = items
+                                .iter()
+                                .map(|item| {
+                                    let media = item.media.as_ref().unwrap();
+                                    let metadata = media.metadata.as_ref().unwrap();
+                                    let cover = metadata.images.first().map(|x| x.url.clone());
+                                    (
+                                        Track {
+                                            id: media
+                                                .content_id
+                                                .clone()
+                                                .split("/")
+                                                .last()
+                                                .unwrap()
+                                                .to_string(),
+                                            uri: media.content_id.clone(),
+                                            title: metadata.title.clone().unwrap(),
+                                            artists: vec![Artist {
+                                                id: format!(
+                                                    "{:x}",
+                                                    md5::compute(metadata.artist.clone().unwrap())
+                                                ),
+                                                name: metadata.artist.clone().unwrap(),
+                                                ..Default::default()
+                                            }],
+                                            album: Some(Album {
+                                                id: cover
+                                                    .clone()
+                                                    .map(|x| {
+                                                        x.split("/")
+                                                            .last()
+                                                            .map(|x| x.split(".").next().unwrap())
+                                                            .unwrap()
+                                                            .to_string()
+                                                    })
+                                                    .unwrap_or_default(),
+                                                title: metadata.album_name.clone().unwrap(),
+                                                cover,
+                                                ..Default::default()
+                                            }),
+                                            track_number: metadata.track_number,
+                                            disc_number: metadata.disc_number.unwrap_or(0),
+                                            duration: media.duration,
+                                            ..Default::default()
+                                        },
+                                        item.item_id,
+                                    )
+                                })
+                                .collect::<Vec<(Track, i32)>>();
+
+                            match metadata {
+                                Metadata::MusicTrack(metadata) => {
+                                    let cover = metadata.images.first().map(|x| x.url.clone());
+                                    let track = Track {
                                         id: media
                                             .content_id
                                             .clone()
@@ -422,97 +468,66 @@ impl<'a> Player for Chromecast<'a> {
                                         disc_number: metadata.disc_number.unwrap_or(0),
                                         duration: media.duration,
                                         ..Default::default()
-                                    },
-                                    item.item_id,
-                                )
-                            })
-                            .collect::<Vec<(Track, i32)>>();
-
-                        match metadata {
-                            Metadata::MusicTrack(metadata) => {
-                                let cover = metadata.images.first().map(|x| x.url.clone());
-                                let track = Track {
-                                    id: media
-                                        .content_id
-                                        .clone()
-                                        .split("/")
-                                        .last()
-                                        .unwrap()
-                                        .to_string(),
-                                    uri: media.content_id.clone(),
-                                    title: metadata.title.clone().unwrap(),
-                                    artists: vec![Artist {
-                                        id: format!(
-                                            "{:x}",
-                                            md5::compute(metadata.artist.clone().unwrap())
-                                        ),
-                                        name: metadata.artist.clone().unwrap(),
-                                        ..Default::default()
-                                    }],
-                                    album: Some(Album {
-                                        id: cover
-                                            .clone()
-                                            .map(|x| {
-                                                x.split("/")
-                                                    .last()
-                                                    .map(|x| x.split(".").next().unwrap())
-                                                    .unwrap()
-                                                    .to_string()
-                                            })
-                                            .unwrap_or_default(),
-                                        title: metadata.album_name.clone().unwrap(),
-                                        cover,
-                                        ..Default::default()
-                                    }),
-                                    track_number: metadata.track_number,
-                                    disc_number: metadata.disc_number.unwrap_or(0),
-                                    duration: media.duration,
-                                    ..Default::default()
-                                };
-                                return Ok(Playback {
-                                    current_track: Some(track),
-                                    index: 0,
-                                    position_ms: status
-                                        .current_time
-                                        .map(|x| (x * 1000.0) as u32)
-                                        .unwrap_or(0),
-                                    is_playing: true,
-                                    items,
-                                    current_item_id: status.current_item_id,
-                                });
+                                    };
+                                    return Ok(Playback {
+                                        current_track: Some(track),
+                                        index: 0,
+                                        position_ms: status
+                                            .current_time
+                                            .map(|x| (x * 1000.0) as u32)
+                                            .unwrap_or(0),
+                                        is_playing: true,
+                                        items,
+                                        current_item_id: status.current_item_id,
+                                    });
+                                }
+                                _ => {}
                             }
-                            _ => {}
-                        }
 
-                        return Ok(Playback {
-                            current_track: Some(Track {
-                                uri: status
-                                    .media
-                                    .as_ref()
-                                    .map(|x| {
-                                        x.content_id.clone().split("/").last().unwrap().to_string()
-                                    })
-                                    .unwrap_or("".to_string()),
-                                ..Default::default()
-                            }),
-                            index: 0,
-                            position_ms: status.current_time.map(|x| x as u32).unwrap_or(0),
-                            is_playing: true,
-                            current_item_id: status.current_item_id,
-                            items,
-                        });
-                    }
-                    None => {
-                        return Ok(Playback {
-                            current_track: None,
-                            index: 0,
-                            position_ms: 0,
-                            is_playing: false,
-                            current_item_id: None,
-                            items: vec![],
-                        });
+                            return Ok(Playback {
+                                current_track: Some(Track {
+                                    uri: status
+                                        .media
+                                        .as_ref()
+                                        .map(|x| {
+                                            x.content_id
+                                                .clone()
+                                                .split("/")
+                                                .last()
+                                                .unwrap()
+                                                .to_string()
+                                        })
+                                        .unwrap_or("".to_string()),
+                                    ..Default::default()
+                                }),
+                                index: 0,
+                                position_ms: status.current_time.map(|x| x as u32).unwrap_or(0),
+                                is_playing: true,
+                                current_item_id: status.current_item_id,
+                                items,
+                            });
+                        }
+                        None => {
+                            return Ok(Playback {
+                                current_track: None,
+                                index: 0,
+                                position_ms: 0,
+                                is_playing: false,
+                                current_item_id: None,
+                                items: vec![],
+                            });
+                        }
                     }
                 }
+
+                return Ok(Playback {
+                    current_track: None,
+                    index: 0,
+                    position_ms: 0,
+                    is_playing: false,
+                    current_item_id: None,
+                    items: vec![],
+                });
             }
         }
         Err(Error::msg("Cast device is not connected"))

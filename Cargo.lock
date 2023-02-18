@@ -4296,6 +4296,7 @@ dependencies = [
  "async-trait",
  "chromecast",
  "futures",
+ "futures-util",
  "hyper",
  "jsonrpsee",
  "local-ip-addr",

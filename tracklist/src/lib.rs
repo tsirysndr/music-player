@@ -153,4 +153,9 @@ impl Tracklist {
         self.current_track = None;
         self.playback_state.is_playing = false;
     }
+
+    pub fn load_tracks(&mut self, tracks: Vec<Track>) {
+        self.clear();
+        self.tracks = tracks;
+    }
 }

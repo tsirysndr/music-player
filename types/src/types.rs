@@ -31,6 +31,16 @@ pub struct Playback {
     pub items: Vec<(Track, i32)>,
 }
 
+pub struct CurrentPlayback {
+    pub current: Option<Playback>,
+}
+
+impl CurrentPlayback {
+    pub fn new() -> Self {
+        Self { current: None }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Song {
     pub title: String,

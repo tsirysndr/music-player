@@ -1,5 +1,6 @@
 use std::{
     sync::{Arc, Mutex},
+    thread,
     time::Duration,
 };
 
@@ -8,8 +9,9 @@ use anyhow::Error;
 use async_trait::async_trait;
 use music_player_tracklist::Tracklist;
 use music_player_types::types::{
-    Album, Artist, Device, Playback, Playlist, Track, UPNP_DLNA_DEVICE,
+    Album, Artist, CurrentPlayback, Device, Playback, Playlist, Track, UPNP_DLNA_DEVICE,
 };
+use tokio::sync::mpsc;
 use upnp_client::{
     device_client::DeviceClient,
     media_renderer::MediaRendererClient,
@@ -24,9 +26,12 @@ pub struct Dlna {
     description: String,
     enabled: bool,
     client: Option<MediaRendererClient>,
+    dlna_player: Option<DlnaPlayer>,
     location: Option<String>,
     media_server_client: Option<MediaServerClient>,
+    cmd_tx: Option<mpsc::UnboundedSender<DlnaPlayerCommand>>,
     tracklist: Arc<Mutex<Tracklist>>,
+    current_playback: Arc<Mutex<CurrentPlayback>>,
 }
 
 impl Dlna {
@@ -38,9 +43,12 @@ impl Dlna {
             description: "UPnP/DLNA addon".to_string(),
             enabled: true,
             client: None,
+            dlna_player: None,
             media_server_client: None,
+            cmd_tx: None,
             location: None,
             tracklist: Arc::new(Mutex::new(Tracklist::new(vec![]))),
+            current_playback: Arc::new(Mutex::new(CurrentPlayback::new())),
         }
     }
 
@@ -51,6 +59,19 @@ impl Dlna {
         let location = player.location.clone().unwrap();
         let device_client = futures::executor::block_on(DeviceClient::new(&location).connect())?;
         player.client = Some(MediaRendererClient::new(device_client));
+
+        let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<DlnaPlayerCommand>();
+        let tracklist = Arc::new(Mutex::new(Tracklist::new(vec![])));
+
+        let current_playback = Arc::new(Mutex::new(CurrentPlayback::new()));
+        player.current_playback = current_playback.clone();
+        player.cmd_tx = Some(cmd_tx.clone());
+        player.dlna_player = Some(DlnaPlayer::new(
+            location,
+            tracklist,
+            current_playback,
+            cmd_rx,
+        ));
         Ok(Some(Box::new(player)))
     }
 
@@ -62,28 +83,6 @@ impl Dlna {
         let device_client = futures::executor::block_on(DeviceClient::new(&location).connect())?;
         player.media_server_client = Some(MediaServerClient::new(device_client));
         Ok(Some(Box::new(player)))
-    }
-
-    async fn preload_next_track(&mut self) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            let (_, next_tracks) = self.tracklist.lock().unwrap().tracks();
-            if let Some(next_track) = next_tracks.first() {
-                let content_type = get_content_type(&next_track.uri).await;
-                let options = LoadOptions {
-                    dlna_features: Some(
-                        "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
-                            .to_string(),
-                    ),
-                    content_type,
-                    metadata: Some(next_track.clone().into()),
-                    object_class: Some(ObjectClass::Audio),
-                    ..Default::default()
-                };
-                client.set_next(&next_track.uri, options).await?;
-            }
-            return Ok(());
-        }
-        Err(Error::msg("No device connected"))
     }
 }
 
@@ -131,7 +130,7 @@ impl Browseable for Dlna {
             client
                 .browse("musicdb://artists", "BrowseDirectChildren")
                 .await?;
-            let mut result = vec![];
+            let result = vec![];
             return Ok(result);
         }
         Err(Error::msg("No device connected"))
@@ -142,7 +141,7 @@ impl Browseable for Dlna {
             client
                 .browse("musicdb://songs", "BrowseDirectChildren")
                 .await?;
-            let mut result = vec![];
+            let result = vec![];
             return Ok(result);
         }
         Err(Error::msg("No device connected"))
@@ -177,59 +176,72 @@ impl Browseable for Dlna {
 #[async_trait]
 impl Player for Dlna {
     async fn play(&mut self) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            client.play().await?;
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Play)
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn pause(&mut self) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            client.pause().await?;
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Pause)
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn stop(&mut self) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            client.stop().await?;
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Stop)
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn next(&mut self) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            if self.tracklist.lock().unwrap().next_track().is_some() {
-                client.next().await?;
-                tokio::time::sleep(Duration::from_secs(1)).await;
-                self.preload_next_track().await?;
-            }
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Next)
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn previous(&mut self) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            if self.tracklist.lock().unwrap().previous_track().is_some() {
-                let (current_track, _) = self.tracklist.lock().unwrap().current_track();
-                let current_track = current_track.unwrap();
-                let options = build_load_options(current_track.clone(), &current_track.uri).await;
-                client.load(&current_track.uri, options).await?;
-                tokio::time::sleep(Duration::from_secs(1)).await;
-                self.preload_next_track().await?;
-            }
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Previous)
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            client.seek(position as u64).await?;
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Seek(position))
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
@@ -240,122 +252,84 @@ impl Player for Dlna {
         tracks: Vec<Track>,
         start_index: Option<i32>,
     ) -> Result<(), Error> {
-        self.tracklist = Arc::new(Mutex::new(Tracklist::new(
-            tracks.clone().into_iter().map(Into::into).collect(),
-        )));
-
-        if let Some(client) = &self.client {
-            let start_index = start_index.unwrap_or(0);
-            let (current_track, _) = self
-                .tracklist
-                .lock()
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
                 .unwrap()
-                .play_track_at(start_index as usize);
-            let current_track = current_track.unwrap();
-
-            let options = build_load_options(current_track.clone(), &current_track.uri).await;
-
-            client.load(&current_track.uri, options).await?;
-            // sleep to wait for the track to be loaded
-            tokio::time::sleep(Duration::from_secs(3)).await;
-            self.preload_next_track().await?;
+                .send(DlnaPlayerCommand::LoadTracks(tracks, start_index))
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn play_next(&mut self, track: Track) -> Result<(), Error> {
-        if let Some(client) = &self.client {
-            let content_type = get_content_type(&track.uri).await;
-            let options = LoadOptions {
-                dlna_features: Some(
-                    "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
-                        .to_string(),
-                ),
-                content_type,
-                metadata: Some(track.clone().into()),
-                object_class: Some(ObjectClass::Audio),
-                ..Default::default()
-            };
-            client.set_next(&track.uri, options).await?;
-            self.tracklist
-                .lock()
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
                 .unwrap()
-                .insert_next(track.clone().into());
+                .send(DlnaPlayerCommand::PlayNext(track))
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn load(&mut self, track: Track) -> Result<(), Error> {
-        self.tracklist = Arc::new(Mutex::new(Tracklist::new(vec![track.clone().into()])));
-        let options = build_load_options(track.clone(), &track.uri).await;
-        if let Some(client) = &self.client {
-            self.tracklist.lock().unwrap().play_track_at(0);
-            let (current_track, _) = self.tracklist.lock().unwrap().current_track();
-            let current_track = current_track.unwrap();
-            client.load(&current_track.uri, options).await?;
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::Load(track))
+                .map_err(|_| Error::msg("Failed to send command"))?;
             return Ok(());
         }
         Err(Error::msg("No device connected"))
     }
 
     async fn get_current_playback(&mut self) -> Result<Playback, Error> {
-        if let Some(client) = &self.client {
-            let position = client.get_position().await?;
-            let duration = client.get_duration().await?;
-            let transport_info = client.get_transport_info().await?;
-            if duration != 0 && position >= (duration - 10) && position < (duration - 5) {
-                self.preload_next_track().await?;
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
-            if duration != 0 && position >= (duration - 2) {
-                self.next().await?;
-            }
-            let (previous_tracks, next_tracks) = self.tracklist.lock().unwrap().tracks();
-            let tracks: Vec<Track> = previous_tracks
-                .iter()
-                .map(|t| t.clone().into())
-                .chain(next_tracks.iter().map(|t| t.clone().into()))
-                .collect();
-            let items: Vec<(Track, i32)> = tracks
-                .iter()
-                .enumerate()
-                .map(|(i, t)| (t.clone(), (i + 1) as i32))
-                .collect();
-            let (current_track, index) = self.tracklist.lock().unwrap().current_track();
-            return match current_track {
-                Some(track) => Ok(Playback {
-                    current_track: Some(track.clone().into()),
-                    index: index as u32,
-                    position_ms: position * 1000 as u32,
-                    is_playing: transport_info.current_transport_state == "PLAYING",
-                    current_item_id: Some(index as i32),
-                    items,
-                }),
-                None => Ok(Playback {
-                    current_track: None,
-                    index: 0,
-                    position_ms: 0,
-                    is_playing: false,
-                    current_item_id: None,
-                    items: vec![],
-                }),
-            };
+        if self.client.is_some() {
+            let current_playback = self.current_playback.lock().unwrap();
+            let playback = current_playback.current.clone();
+            return Ok(playback.unwrap_or_default());
         }
         Err(Error::msg("device not connected"))
     }
 
     async fn get_current_tracklist(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
-        todo!()
+        if self.client.is_some() {
+            let tracklist = self.tracklist.lock().unwrap();
+            let (previous_tracks, next_tracks) = tracklist.tracks();
+            return Ok((
+                previous_tracks.into_iter().map(Into::into).collect(),
+                next_tracks.into_iter().map(Into::into).collect(),
+            ));
+        }
+        Err(Error::msg("device not connected"))
     }
 
     async fn play_track_at(&mut self, position: u32) -> Result<(), Error> {
-        todo!()
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::PlayTrackAt(position))
+                .map_err(|_| Error::msg("Failed to send command"))?;
+            return Ok(());
+        }
+        Err(Error::msg("No device connected"))
     }
 
     async fn remove_track_at(&mut self, position: u32) -> Result<(), Error> {
-        todo!()
+        if self.client.is_some() {
+            self.cmd_tx
+                .as_ref()
+                .unwrap()
+                .send(DlnaPlayerCommand::RemoveTrackAt(position))
+                .map_err(|_| Error::msg("Failed to send command"))?;
+            return Ok(());
+        }
+        Err(Error::msg("No device connected"))
     }
 
     fn device_type(&self) -> String {
@@ -408,5 +382,273 @@ where
         object_class: Some(ObjectClass::Audio),
         autoplay: true,
         ..Default::default()
+    }
+}
+
+#[derive(Debug)]
+enum DlnaPlayerCommand {
+    Play,
+    Pause,
+    Stop,
+    Next,
+    Previous,
+    Seek(u32),
+    Load(Track),
+    LoadTracks(Vec<Track>, Option<i32>),
+    PlayNext(Track),
+    PlayTrackAt(u32),
+    RemoveTrackAt(u32),
+}
+
+struct DlnaPlayer {}
+
+impl DlnaPlayer {
+    pub fn new(
+        location: String,
+        tracklist: Arc<Mutex<Tracklist>>,
+        current_playback: Arc<Mutex<CurrentPlayback>>,
+        mut cmd_rx: mpsc::UnboundedReceiver<DlnaPlayerCommand>,
+    ) -> Self {
+        let device_client =
+            futures::executor::block_on(DeviceClient::new(location.as_str()).connect()).unwrap();
+        let player_internal = Arc::new(Mutex::new(DlnaPlayerInternal {
+            client: MediaRendererClient::new(device_client),
+            tracklist,
+            current_playback,
+        }));
+        let player_internal_clone = Arc::clone(&player_internal);
+        thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                while let Some(cmd) = cmd_rx.recv().await {
+                    player_internal_clone
+                        .lock()
+                        .unwrap()
+                        .handle_command(cmd)
+                        .await
+                        .unwrap();
+                }
+            });
+        });
+
+        thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                loop {
+                    player_internal
+                        .lock()
+                        .unwrap()
+                        .update_current_playback()
+                        .await;
+                    tokio::time::sleep(Duration::from_millis(200)).await;
+                }
+            });
+        });
+
+        DlnaPlayer {}
+    }
+}
+
+#[derive(Clone)]
+struct DlnaPlayerInternal {
+    client: MediaRendererClient,
+    tracklist: Arc<Mutex<Tracklist>>,
+    current_playback: Arc<Mutex<CurrentPlayback>>,
+}
+
+impl DlnaPlayerInternal {
+    pub async fn update_current_playback(&mut self) {
+        match self.get_current_playback().await {
+            Ok(playback) => {
+                let mut current_playback = self.current_playback.lock().unwrap();
+                current_playback.current = Some(playback);
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+            }
+        }
+    }
+    pub async fn get_current_playback(&self) -> Result<Playback, Error> {
+        let position = self.client.get_position().await?;
+        let duration = self.client.get_duration().await?;
+        let transport_info = self.client.get_transport_info().await?;
+        if duration != 0 && position >= (duration - 10) && position < (duration - 5) {
+            self.preload_next_track().await?;
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+        if duration != 0 && position >= (duration - 2) {
+            self.handle_next().await?;
+        }
+        let tracklist = self.tracklist.lock().unwrap();
+        let (previous_tracks, next_tracks) = tracklist.tracks();
+        let tracks: Vec<Track> = previous_tracks
+            .iter()
+            .map(|t| t.clone().into())
+            .chain(next_tracks.iter().map(|t| t.clone().into()))
+            .collect();
+        let items: Vec<(Track, i32)> = tracks
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (t.clone(), (i + 1) as i32))
+            .collect();
+        let (current_track, index) = tracklist.current_track();
+        return match current_track {
+            Some(track) => Ok(Playback {
+                current_track: Some(track.clone().into()),
+                index: index as u32,
+                position_ms: position * 1000 as u32,
+                is_playing: transport_info.current_transport_state == "PLAYING",
+                current_item_id: Some(index as i32),
+                items,
+            }),
+            None => Ok(Playback {
+                current_track: None,
+                index: 0,
+                position_ms: 0,
+                is_playing: false,
+                current_item_id: None,
+                items: vec![],
+            }),
+        };
+    }
+
+    async fn handle_play(&self) -> Result<(), Error> {
+        self.client.play().await
+    }
+
+    async fn handle_pause(&self) -> Result<(), Error> {
+        self.client.pause().await
+    }
+
+    async fn handle_stop(&self) -> Result<(), Error> {
+        self.client.stop().await
+    }
+
+    async fn handle_next(&self) -> Result<(), Error> {
+        let mut tracklist = self.tracklist.lock().unwrap();
+        if tracklist.next_track().is_some() {
+            drop(tracklist);
+            self.client.next().await?;
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            self.preload_next_track().await?;
+        }
+        Ok(())
+    }
+
+    async fn handle_previous(&self) -> Result<(), Error> {
+        let mut tracklist = self.tracklist.lock().unwrap();
+        if tracklist.previous_track().is_some() {
+            let (current_track, _) = tracklist.current_track();
+            let current_track = current_track.unwrap();
+            let options = build_load_options(current_track.clone(), &current_track.uri).await;
+            drop(tracklist);
+            self.client.load(&current_track.uri, options).await?;
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            self.preload_next_track().await?;
+        }
+        Ok(())
+    }
+
+    async fn handle_seek(&self, position: u32) -> Result<(), Error> {
+        self.client.seek(position as u64).await
+    }
+
+    async fn handle_load(&mut self, track: Track) -> Result<(), Error> {
+        let mut tracklist = self.tracklist.lock().unwrap();
+        tracklist.load_tracks(vec![track.clone().into()]);
+        let options = build_load_options(track.clone(), &track.uri).await;
+        tracklist.play_track_at(0);
+        let (current_track, _) = tracklist.current_track();
+        let current_track = current_track.unwrap();
+        self.client.load(&current_track.uri, options).await?;
+        Ok(())
+    }
+
+    async fn preload_next_track(&self) -> Result<(), Error> {
+        let (_, next_tracks) = self.tracklist.lock().unwrap().tracks();
+        if let Some(next_track) = next_tracks.first() {
+            let content_type = get_content_type(&next_track.uri).await;
+            let options = LoadOptions {
+                dlna_features: Some(
+                    "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
+                        .to_string(),
+                ),
+                content_type,
+                metadata: Some(next_track.clone().into()),
+                object_class: Some(ObjectClass::Audio),
+                ..Default::default()
+            };
+            self.client.set_next(&next_track.uri, options).await?;
+        }
+        Ok(())
+    }
+
+    async fn handle_load_tracks(
+        &self,
+        tracks: Vec<Track>,
+        start_index: Option<i32>,
+    ) -> Result<(), Error> {
+        let mut tracklist = self.tracklist.lock().unwrap();
+        tracklist.load_tracks(tracks.into_iter().map(Into::into).collect());
+        let start_index = start_index.unwrap_or(0);
+        let (current_track, _) = tracklist.play_track_at(start_index as usize);
+        let current_track = current_track.unwrap();
+
+        let options = build_load_options(current_track.clone(), &current_track.uri).await;
+
+        self.client.load(&current_track.uri, options).await?;
+        // sleep to wait for the track to be loaded
+        tokio::time::sleep(Duration::from_secs(3)).await;
+        drop(tracklist);
+        self.preload_next_track().await?;
+        Ok(())
+    }
+
+    async fn handle_play_next(&self, track: Track) -> Result<(), Error> {
+        let content_type = get_content_type(&track.uri).await;
+        let options = LoadOptions {
+            dlna_features: Some(
+                "DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"
+                    .to_string(),
+            ),
+            content_type,
+            metadata: Some(track.clone().into()),
+            object_class: Some(ObjectClass::Audio),
+            ..Default::default()
+        };
+        self.client.set_next(&track.uri, options).await?;
+        self.tracklist
+            .lock()
+            .unwrap()
+            .insert_next(track.clone().into());
+        Ok(())
+    }
+
+    async fn handle_play_track_at(&self, _position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    async fn handle_remove_track_at(&self, _position: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    pub async fn handle_command(&mut self, cmd: DlnaPlayerCommand) -> Result<(), Error> {
+        match cmd {
+            DlnaPlayerCommand::Play => self.handle_play().await,
+            DlnaPlayerCommand::Pause => self.handle_pause().await,
+            DlnaPlayerCommand::Stop => self.handle_stop().await,
+            DlnaPlayerCommand::Next => self.handle_next().await,
+            DlnaPlayerCommand::Previous => self.handle_previous().await,
+            DlnaPlayerCommand::Seek(position) => self.handle_seek(position).await,
+            DlnaPlayerCommand::Load(track) => self.handle_load(track).await,
+            DlnaPlayerCommand::LoadTracks(tracks, start_index) => {
+                self.handle_load_tracks(tracks, start_index).await
+            }
+            DlnaPlayerCommand::PlayNext(track) => self.handle_play_next(track).await,
+            DlnaPlayerCommand::PlayTrackAt(position) => self.handle_play_track_at(position).await,
+            DlnaPlayerCommand::RemoveTrackAt(position) => {
+                self.handle_remove_track_at(position).await
+            }
+        }
     }
 }

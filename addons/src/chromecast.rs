@@ -4,7 +4,7 @@ use crate::{Addon, Player};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures_util::Future;
-use music_player_types::types::{Album, Artist, Device, Playback, Track, CHROMECAST_DEVICE};
+use music_player_types::types::{Album, Artist, Device, Playback, Track, CHROMECAST_DEVICE, CurrentPlayback};
 use rust_cast::{
     channels::{
         media::{Image, Media, Metadata, MusicTrackMediaMetadata, StatusEntry, StreamType},
@@ -379,16 +379,6 @@ impl<'a> From<Device> for Chromecast<'a> {
             port: Some(device.port),
             ..Chromecast::new()
         }
-    }
-}
-
-pub struct CurrentPlayback {
-    pub current: Option<Playback>,
-}
-
-impl CurrentPlayback {
-    pub fn new() -> Self {
-        Self { current: None }
     }
 }
 

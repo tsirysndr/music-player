@@ -459,3 +459,47 @@ fn stop() {
     tracklist.stop();
     assert_eq!(tracklist.current_track(), (None, 1));
 }
+
+#[test]
+fn load_tracks() {
+    let mut tracklist = Tracklist::new_empty();
+    let track = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        track: Some(6),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    let track2 = Track {
+        id: "2a81ab806a5d2bf9cad8917e7f89f1a5".to_owned(),
+        track: Some(6),
+        title: "Wet Dreamz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    let track3 = Track {
+        id: "5d7f5f595064177eb70e4c57a5e3ef45".to_owned(),
+        track: Some(9),
+        title: "No Role Modelz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    let track4 = Track {
+        id: "e2f90d9be6548928fb55875b9b42f8d8".to_owned(),
+        track: Some(7),
+        title: "St. Tropez".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    let track5 = Track {
+        id: "53fc91928a293df6cd9765a5938446eb".to_owned(),
+        track: Some(12),
+        title: "Love Yourz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        ..Default::default()
+    };
+    let tracks = vec![track, track2, track3, track4, track5];
+    tracklist.load_tracks(tracks.clone());
+    assert_eq!(tracklist.len(), 5);
+    assert_eq!(tracklist.tracks(), (vec![], tracks));
+}

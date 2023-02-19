@@ -160,9 +160,10 @@ Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your br
 - [ ] Android Library
 - [ ] iOS Library
 - [ ] Mobile version (React Native)
-- [ ] Stream to Chromecast
+- [x] Stream to Chromecast
 - [ ] Stream to Airplay
-- [ ] Stream to Kodi
+- [x] Stream to Kodi
+- [x] Stream to UPnP Media Renderer
 - [ ] Stream from Youtube (audio only)
 - [ ] Stream from Spotify
 - [ ] Stream from Soundcloud

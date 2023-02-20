@@ -25,10 +25,8 @@ impl LibraryQuery {
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Track>, Error> {
-        println!("lock device ...");
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
-        println!("lock device done");
 
         if device.client.is_some() {
             let source = device.client.as_mut().unwrap();
@@ -56,9 +54,7 @@ impl LibraryQuery {
                 .collect());
         }
 
-        println!("lock db ...");
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        println!("lock db done");
         let results = TrackRepository::new(db.lock().await.get_connection())
             .find_all(100)
             .await?;

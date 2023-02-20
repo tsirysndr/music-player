@@ -472,10 +472,6 @@ impl DlnaPlayerInternal {
         let position = self.client.get_position().await?;
         let duration = self.client.get_duration().await?;
         let transport_info = self.client.get_transport_info().await?;
-        if duration != 0 && position >= (duration - 10) && position < (duration - 5) {
-            self.preload_next_track().await?;
-            tokio::time::sleep(Duration::from_millis(500)).await;
-        }
         if duration != 0 && position >= (duration - 2) {
             self.handle_next().await?;
         }
@@ -541,8 +537,8 @@ impl DlnaPlayerInternal {
             let (current_track, _) = tracklist.current_track();
             let current_track = current_track.unwrap();
             let options = build_load_options(current_track.clone(), &current_track.uri).await;
-            drop(tracklist);
             self.client.load(&current_track.uri, options).await?;
+            drop(tracklist);
             tokio::time::sleep(Duration::from_secs(1)).await;
             self.preload_next_track().await?;
         }

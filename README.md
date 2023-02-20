@@ -16,6 +16,9 @@
   <a href="https://codecov.io/gh/tsirysndr/music-player" target="_blank">
     <img src="https://codecov.io/gh/tsirysndr/music-player/branch/chore/tests/graph/badge.svg?token=" />
   </a>
+  <a href="https://github.com/tsirysndr/music-player/releases" target="_blank">
+    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/tsirysndr/music-player/total">
+   </a>
   <a href="https://github.com/tsirysndr/music-player/actions/workflows/ci.yml" target="_blank">
     <img src="https://github.com/tsirysndr/music-player/actions/workflows/ci.yml/badge.svg" />
   </a>

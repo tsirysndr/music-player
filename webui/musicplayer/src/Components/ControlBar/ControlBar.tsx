@@ -51,9 +51,9 @@ const SpeakerButton = styled(Button)`
 
 const ButtonGroup = styled.div`
   display: flex;
-  flex: 1;
   justify-content: flex-end;
   padding-right: 25px;
+  width: 200px;
 `;
 
 export type ControlBarProps = {

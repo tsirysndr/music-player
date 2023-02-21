@@ -9,10 +9,11 @@ import { Kodi, Airplayaudio, Chromecast } from "@styled-icons/simple-icons";
 import { Speaker } from "@styled-icons/remix-fill";
 
 const Container = styled.div`
-  max-height: calc(100vh - 153px); /* - 90px */
+  height: calc(100vh - 153px); /* - 90px */
   padding-top: 15px;
   padding-bottom: 15px;
   overflow-y: auto;
+  width: 350px;
 `;
 
 const List = styled.div`
@@ -80,6 +81,17 @@ const Disconnect = styled.button`
   width: 80px;
   padding-bottom: 4px;
   cursor: pointer;
+`;
+
+const Placeholder = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 273px);
+  text-align: center;
+  padding-left: 20px;
+  padding-right: 20px;
+  font-size: 14px;
 `;
 
 export type ArtworkProps = {
@@ -166,6 +178,12 @@ const DeviceList: FC<DeviceListProps> = ({
       </CurrentDeviceWrapper>
       <Title>Select another output device</Title>
       <List>
+        {castDevices.length === 0 && (
+          <Placeholder>
+            No devices found. Please make sure your device is connected to the
+            same network as this device.
+          </Placeholder>
+        )}
         {castDevices.map((device) => (
           <div
             key={device.id}

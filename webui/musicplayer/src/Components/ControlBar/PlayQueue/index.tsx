@@ -9,7 +9,7 @@ import { useTheme } from "@emotion/react";
 
 const Container = styled.div`
   height: calc(100vh - 113px);
-  width: 356px;
+  width: 370px;
 `;
 
 const Header = styled.div`

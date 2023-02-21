@@ -9,11 +9,12 @@ import { Kodi, Airplayaudio, Chromecast } from "@styled-icons/simple-icons";
 import { Speaker } from "@styled-icons/remix-fill";
 
 const Container = styled.div`
-  height: calc(100vh - 153px); /* - 90px */
+  max-height: calc(100vh - 153px); /* - 90px */
   padding-top: 15px;
   padding-bottom: 15px;
   overflow-y: auto;
-  width: 350px;
+  width: 370px;
+  min-height: 200px;
 `;
 
 const List = styled.div`
@@ -21,6 +22,7 @@ const List = styled.div`
   padding-left: 15px;
   padding-right: 15px;
   overflow-y: auto;
+  min-height: 200px;
 `;
 
 const Icon = styled.div`
@@ -87,7 +89,7 @@ const Placeholder = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(100vh - 273px);
+  height: 300px;
   text-align: center;
   padding-left: 20px;
   padding-right: 20px;

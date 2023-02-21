@@ -6,15 +6,24 @@ import { useCover } from "../../../Hooks/useCover";
 import { useTimeFormat } from "../../../Hooks/useFormat";
 import { Link } from "react-router-dom";
 
+const FlexContainer = styled.div`
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+`;
+
 const Container = styled.div`
   height: 76px;
-  width: 531px;
+  min-width: 531px;
+  max-width: 800px;
   display: flex;
   align-items: center;
   border: 1px solid ${(props) => props.theme.colors.currentTrackBorder};
   border-radius: 5px;
   margin-left: 30px;
   padding-left: 8px;
+  flex: 1;
 `;
 
 const AlbumCover = styled.img`
@@ -116,7 +125,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
   const { cover } = useCover(nowPlaying?.cover);
   const { formatTime } = useTimeFormat();
   return (
-    <>
+    <FlexContainer>
       {(!nowPlaying || !nowPlaying!.title) && (
         <Container>
           <NoCover>
@@ -182,7 +191,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
           </Wrapper>
         </Container>
       )}
-    </>
+    </FlexContainer>
   );
 };
 

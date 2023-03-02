@@ -33,7 +33,7 @@ jobs:
           key: ${{ matrix.platform }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install dependencies (mac) only)
         if: matrix.platform == 'macos-latest'
-        run: brew install protobuf
+        run: brew install protobuf openssl
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-20.04'
         run: |

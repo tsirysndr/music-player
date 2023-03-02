@@ -16,6 +16,8 @@ jobs:
             choco install checksum
             choco install archiver
             choco install nodejs-lts
+            choco install openssl
+            vcpkg install openssl-windows:x64-windows
             refreshenv
         - name: Build
           run: |

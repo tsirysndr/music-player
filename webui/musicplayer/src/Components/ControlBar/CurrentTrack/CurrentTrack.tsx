@@ -43,7 +43,7 @@ const NoCover = styled.div`
 const TrackInfo = styled.div`
   display: flex;
   flex-direction: column;
-  width: 90%;
+  width: 430px;
   overflow: hidden;
 `;
 
@@ -52,7 +52,7 @@ const Wrapper = styled.div`
   flex: 1;
   flex-direction: column;
   align-items: center;
-  width: 90%;
+  width: 430px;
   overflow: hidden;
 `;
 

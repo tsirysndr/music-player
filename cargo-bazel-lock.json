@@ -1,5 +1,5 @@
 {
-  "checksum": "3387d9a2498240b090a929d2c775d474178f7414cea2dfdb686066040e827bad",
+  "checksum": "6f019e8c38280d3df781405cbe39a78f071676bd328961378fdc5c7d3ddab6cd",
   "crates": {
     "Inflector 0.11.4": {
       "name": "Inflector",
@@ -125,7 +125,7 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -145,7 +145,7 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             }
           ],
@@ -228,7 +228,7 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             }
           ],
@@ -286,7 +286,7 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -517,7 +517,7 @@
               "target": "h2"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -569,7 +569,7 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             },
             {
@@ -682,7 +682,7 @@
               "target": "bytestring"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -805,7 +805,7 @@
               "target": "futures_util"
             },
             {
-              "id": "mio 0.8.5",
+              "id": "mio 0.8.6",
               "target": "mio"
             },
             {
@@ -1036,7 +1036,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -1056,7 +1056,7 @@
               "target": "mime"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -1088,7 +1088,7 @@
               "target": "socket2"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             },
             {
@@ -1187,7 +1187,7 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             }
           ],
@@ -1333,7 +1333,7 @@
         "deps": {
           "common": [
             {
-              "id": "gimli 0.27.1",
+              "id": "gimli 0.27.2",
               "target": "gimli"
             }
           ],
@@ -1696,7 +1696,7 @@
             ],
             "cfg(not(all(target_arch = \"arm\", target_os = \"none\")))": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ]
@@ -1775,7 +1775,7 @@
           "selects": {
             "cfg(not(all(target_arch = \"arm\", target_os = \"none\")))": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ]
@@ -2674,7 +2674,7 @@
               "target": "concurrent_queue"
             },
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -2682,7 +2682,7 @@
               "target": "futures_lite"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             }
           ],
@@ -2754,7 +2754,7 @@
               "target": "futures_lite"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -2814,7 +2814,7 @@
               "target": "async_graphql_value"
             },
             {
-              "id": "async-stream 0.3.3",
+              "id": "async-stream 0.3.4",
               "target": "async_stream"
             },
             {
@@ -2838,7 +2838,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -2858,7 +2858,7 @@
               "target": "num_traits"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -3386,7 +3386,7 @@
               "target": "polling"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             },
             {
@@ -3552,7 +3552,7 @@
                 "target": "libc"
               },
               {
-                "id": "signal-hook 0.3.14",
+                "id": "signal-hook 0.3.15",
                 "target": "signal_hook"
               }
             ],
@@ -3835,7 +3835,7 @@
               "target": "memchr"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -3847,7 +3847,7 @@
               "target": "pin_utils"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             }
           ],
@@ -3951,13 +3951,13 @@
       },
       "license": "MIT"
     },
-    "async-stream 0.3.3": {
+    "async-stream 0.3.4": {
       "name": "async-stream",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/async-stream/0.3.3/download",
-          "sha256": "dad5c83079eae9969be7fadefe640a1c566901f05ff91ab221de4b6f68d9507e"
+          "url": "https://crates.io/api/v1/crates/async-stream/0.3.4/download",
+          "sha256": "ad445822218ce64be7a341abfb0b1ea43b5c23aa83902542a4542e78309d8e5e"
         }
       },
       "targets": [
@@ -3984,6 +3984,10 @@
             {
               "id": "futures-core 0.3.26",
               "target": "futures_core"
+            },
+            {
+              "id": "pin-project-lite 0.2.9",
+              "target": "pin_project_lite"
             }
           ],
           "selects": {}
@@ -3992,13 +3996,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "async-stream-impl 0.3.3",
+              "id": "async-stream-impl 0.3.4",
               "target": "async_stream_impl"
             }
           ],
           "selects": {}
         },
-        "version": "0.3.3"
+        "version": "0.3.4"
       },
       "license": "MIT"
     },
@@ -4052,13 +4056,13 @@
       },
       "license": "MIT"
     },
-    "async-stream-impl 0.3.3": {
+    "async-stream-impl 0.3.4": {
       "name": "async-stream-impl",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/async-stream-impl/0.3.3/download",
-          "sha256": "10f203db73a71dfa2fb6dd22763990fa26f3d2625a6da2da900d23b87d26be27"
+          "url": "https://crates.io/api/v1/crates/async-stream-impl/0.3.4/download",
+          "sha256": "e4655ae1a7b0cdf149156f780c5bf3f1352bc53cbd9e0a361a7ef7b22947e965"
         }
       },
       "targets": [
@@ -4098,7 +4102,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.3.3"
+        "version": "0.3.4"
       },
       "license": "MIT"
     },
@@ -4671,13 +4675,13 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "axum 0.6.4": {
+    "axum 0.6.7": {
       "name": "axum",
-      "version": "0.6.4",
+      "version": "0.6.7",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/axum/0.6.4/download",
-          "sha256": "e5694b64066a2459918d8074c2ce0d5a88f409431994c2356617c8ae0c4721fc"
+          "url": "https://crates.io/api/v1/crates/axum/0.6.7/download",
+          "sha256": "2fb79c228270dcf2426e74864cabc94babb5dbab01a4314e702d2f16540e1591"
         }
       },
       "targets": [
@@ -4714,7 +4718,7 @@
         "deps": {
           "common": [
             {
-              "id": "axum 0.6.4",
+              "id": "axum 0.6.7",
               "target": "build_script_build"
             },
             {
@@ -4734,7 +4738,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -4806,7 +4810,7 @@
           ],
           "selects": {}
         },
-        "version": "0.6.4"
+        "version": "0.6.7"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -4879,7 +4883,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -5471,7 +5475,7 @@
               "target": "cexpr"
             },
             {
-              "id": "clang-sys 1.4.0",
+              "id": "clang-sys 1.6.0",
               "target": "clang_sys"
             },
             {
@@ -5946,7 +5950,7 @@
               "target": "atomic_waker"
             },
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -5961,13 +5965,13 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "borsh 0.10.1": {
+    "borsh 0.10.2": {
       "name": "borsh",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/borsh/0.10.1/download",
-          "sha256": "a3ef05d137e34b7ac51dbec170ee523a9b728cff71385796771d259771d592f8"
+          "url": "https://crates.io/api/v1/crates/borsh/0.10.2/download",
+          "sha256": "40f9ca3698b2e4cb7c15571db0abc5551dca417a21ae8140460b50309bb2cc62"
         }
       },
       "targets": [
@@ -6017,23 +6021,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "borsh-derive 0.10.1",
+              "id": "borsh-derive 0.10.2",
               "target": "borsh_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.10.1"
+        "version": "0.10.2"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "borsh-derive 0.10.1": {
+    "borsh-derive 0.10.2": {
       "name": "borsh-derive",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/borsh-derive/0.10.1/download",
-          "sha256": "190b1188f062217531748807129459c8c14641b648e887e39681a433db7fc939"
+          "url": "https://crates.io/api/v1/crates/borsh-derive/0.10.2/download",
+          "sha256": "598b3eacc6db9c3ee57b22707ad8f6a8d2f6d442bfe24ffeb8cbb70ca59e6a35"
         }
       },
       "targets": [
@@ -6058,11 +6062,11 @@
         "deps": {
           "common": [
             {
-              "id": "borsh-derive-internal 0.10.1",
+              "id": "borsh-derive-internal 0.10.2",
               "target": "borsh_derive_internal"
             },
             {
-              "id": "borsh-schema-derive-internal 0.10.1",
+              "id": "borsh-schema-derive-internal 0.10.2",
               "target": "borsh_schema_derive_internal"
             },
             {
@@ -6081,17 +6085,17 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.10.1"
+        "version": "0.10.2"
       },
       "license": "Apache-2.0"
     },
-    "borsh-derive-internal 0.10.1": {
+    "borsh-derive-internal 0.10.2": {
       "name": "borsh-derive-internal",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/borsh-derive-internal/0.10.1/download",
-          "sha256": "b0fcf747a3e4eb47869441664df09d0eb88dcc9a85d499860efb82c2cfe6affc"
+          "url": "https://crates.io/api/v1/crates/borsh-derive-internal/0.10.2/download",
+          "sha256": "186b734fa1c9f6743e90c95d7233c9faab6360d1a96d4ffa19d9cfd1e9350f8a"
         }
       },
       "targets": [
@@ -6131,17 +6135,17 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.10.1"
+        "version": "0.10.2"
       },
       "license": "Apache-2.0"
     },
-    "borsh-schema-derive-internal 0.10.1": {
+    "borsh-schema-derive-internal 0.10.2": {
       "name": "borsh-schema-derive-internal",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/borsh-schema-derive-internal/0.10.1/download",
-          "sha256": "f671d085f791c5fd3331c843ded45454b034b6188bf0f78ed28e7fd66a8b3f69"
+          "url": "https://crates.io/api/v1/crates/borsh-schema-derive-internal/0.10.2/download",
+          "sha256": "99b7ff1008316626f485991b960ade129253d4034014616b94f309a15366cc49"
         }
       },
       "targets": [
@@ -6181,7 +6185,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.10.1"
+        "version": "0.10.2"
       },
       "license": "Apache-2.0"
     },
@@ -6327,13 +6331,13 @@
       },
       "license": "BSD-3-Clause/MIT"
     },
-    "bstr 1.2.0": {
+    "bstr 1.3.0": {
       "name": "bstr",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/bstr/1.2.0/download",
-          "sha256": "b7f0778972c64420fdedc63f09919c8a88bda7b25135357fd25a5d9f3257e832"
+          "url": "https://crates.io/api/v1/crates/bstr/1.3.0/download",
+          "sha256": "5ffdb39cb703212f3c11973452c2861b972f757b021158f3516ba10f2fa8b2c1"
         }
       },
       "targets": [
@@ -6373,7 +6377,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.2.0"
+        "version": "1.3.0"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -7328,6 +7332,141 @@
       },
       "license": "MIT/Apache-2.0"
     },
+    "chromecast 0.18.1": {
+      "name": "chromecast",
+      "version": "0.18.1",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/chromecast/0.18.1/download",
+          "sha256": "5453602895cb7a51331fef2f2cffd8234b8a82ff0d1e30f6125925305b878b6b"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "chromecast",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "chromecast",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "thread_safe"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "byteorder 1.4.3",
+              "target": "byteorder"
+            },
+            {
+              "id": "chromecast 0.18.1",
+              "target": "build_script_build"
+            },
+            {
+              "id": "log 0.4.17",
+              "target": "log"
+            },
+            {
+              "id": "openssl 0.10.45",
+              "target": "openssl"
+            },
+            {
+              "id": "protobuf 3.2.0",
+              "target": "protobuf"
+            },
+            {
+              "id": "serde 1.0.152",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.93",
+              "target": "serde_json"
+            }
+          ],
+          "selects": {
+            "aarch64-linux-android": [
+              {
+                "id": "openssl 0.10.45",
+                "target": "openssl"
+              }
+            ],
+            "aarch64-unknown-linux-gnu": [
+              {
+                "id": "openssl 0.10.45",
+                "target": "openssl"
+              }
+            ],
+            "armv7-linux-androideabi": [
+              {
+                "id": "openssl 0.10.45",
+                "target": "openssl"
+              }
+            ],
+            "i686-linux-android": [
+              {
+                "id": "openssl 0.10.45",
+                "target": "openssl"
+              }
+            ],
+            "x86_64-linux-android": [
+              {
+                "id": "openssl 0.10.45",
+                "target": "openssl"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "serde_derive 1.0.152",
+              "target": "serde_derive"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.18.1"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "protobuf-codegen 3.2.0",
+              "target": "protobuf_codegen"
+            }
+          ],
+          "selects": {}
+        }
+      },
+      "license": "MIT"
+    },
     "chrono 0.4.23": {
       "name": "chrono",
       "version": "0.4.23",
@@ -7458,13 +7597,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clang-sys 1.4.0": {
+    "clang-sys 1.6.0": {
       "name": "clang-sys",
-      "version": "1.4.0",
+      "version": "1.6.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clang-sys/1.4.0/download",
-          "sha256": "fa2e27ae6ab525c3d369ded447057bca5438d86dc3a68f6faafb8269ba82ebf3"
+          "url": "https://crates.io/api/v1/crates/clang-sys/1.6.0/download",
+          "sha256": "77ed9a53e5d4d9c573ae844bfac6872b159cb1d1585a83b29e7a64b7eef7332a"
         }
       },
       "targets": [
@@ -7513,7 +7652,7 @@
         "deps": {
           "common": [
             {
-              "id": "clang-sys 1.4.0",
+              "id": "clang-sys 1.6.0",
               "target": "build_script_build"
             },
             {
@@ -7532,7 +7671,7 @@
           "selects": {}
         },
         "edition": "2015",
-        "version": "1.4.0"
+        "version": "1.6.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -7623,7 +7762,7 @@
               "target": "indexmap"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -8603,7 +8742,7 @@
               "target": "percent_encoding"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             }
           ],
@@ -9096,7 +9235,7 @@
             ],
             "cfg(target_os = \"windows\")": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               },
               {
@@ -9740,11 +9879,11 @@
                 "target": "libc"
               },
               {
-                "id": "mio 0.8.5",
+                "id": "mio 0.8.6",
                 "target": "mio"
               },
               {
-                "id": "signal-hook 0.3.14",
+                "id": "signal-hook 0.3.15",
                 "target": "signal_hook"
               },
               {
@@ -10415,7 +10554,7 @@
               "target": "num"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -10496,13 +10635,13 @@
       },
       "license": "MIT"
     },
-    "cxx 1.0.89": {
+    "cxx 1.0.91": {
       "name": "cxx",
-      "version": "1.0.89",
+      "version": "1.0.91",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cxx/1.0.89/download",
-          "sha256": "bc831ee6a32dd495436e317595e639a587aa9907bef96fe6e6abc290ab6204e9"
+          "url": "https://crates.io/api/v1/crates/cxx/1.0.91/download",
+          "sha256": "86d3488e7665a7a483b57e25bdd90d0aeb2bc7608c8d0346acf2ad3f1caf1d62"
         }
       },
       "targets": [
@@ -10544,7 +10683,7 @@
         "deps": {
           "common": [
             {
-              "id": "cxx 1.0.89",
+              "id": "cxx 1.0.91",
               "target": "build_script_build"
             },
             {
@@ -10558,13 +10697,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "cxxbridge-macro 1.0.89",
+              "id": "cxxbridge-macro 1.0.91",
               "target": "cxxbridge_macro"
             }
           ],
           "selects": {}
         },
-        "version": "1.0.89"
+        "version": "1.0.91"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -10577,7 +10716,7 @@
               "target": "cc"
             },
             {
-              "id": "cxxbridge-flags 1.0.89",
+              "id": "cxxbridge-flags 1.0.91",
               "target": "cxxbridge_flags"
             }
           ],
@@ -10587,13 +10726,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "cxx-build 1.0.89": {
+    "cxx-build 1.0.91": {
       "name": "cxx-build",
-      "version": "1.0.89",
+      "version": "1.0.91",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cxx-build/1.0.89/download",
-          "sha256": "94331d54f1b1a8895cd81049f7eaaaef9d05a7dcb4d1fd08bf3ff0806246789d"
+          "url": "https://crates.io/api/v1/crates/cxx-build/1.0.91/download",
+          "sha256": "48fcaf066a053a41a81dfb14d57d99738b767febb8b735c3016e469fac5da690"
         }
       },
       "targets": [
@@ -10626,7 +10765,7 @@
               "target": "codespan_reporting"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -10649,17 +10788,17 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.89"
+        "version": "1.0.91"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "cxxbridge-flags 1.0.89": {
+    "cxxbridge-flags 1.0.91": {
       "name": "cxxbridge-flags",
-      "version": "1.0.89",
+      "version": "1.0.91",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cxxbridge-flags/1.0.89/download",
-          "sha256": "48dcd35ba14ca9b40d6e4b4b39961f23d835dbb8eed74565ded361d93e1feb8a"
+          "url": "https://crates.io/api/v1/crates/cxxbridge-flags/1.0.91/download",
+          "sha256": "a2ef98b8b717a829ca5603af80e1f9e2e48013ab227b68ef37872ef84ee479bf"
         }
       },
       "targets": [
@@ -10685,17 +10824,17 @@
           "default"
         ],
         "edition": "2018",
-        "version": "1.0.89"
+        "version": "1.0.91"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "cxxbridge-macro 1.0.89": {
+    "cxxbridge-macro 1.0.91": {
       "name": "cxxbridge-macro",
-      "version": "1.0.89",
+      "version": "1.0.91",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/cxxbridge-macro/1.0.89/download",
-          "sha256": "81bbeb29798b407ccd82a3324ade1a7286e0d29851475990b612670f6f5124d2"
+          "url": "https://crates.io/api/v1/crates/cxxbridge-macro/1.0.91/download",
+          "sha256": "086c685979a698443656e5cf7856c95c642295a38599f12fb1ff76fb28d19892"
         }
       },
       "targets": [
@@ -10735,7 +10874,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.89"
+        "version": "1.0.91"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -11124,7 +11263,7 @@
               "target": "lock_api"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -12084,7 +12223,7 @@
         "deps": {
           "common": [
             {
-              "id": "string_cache 0.8.4",
+              "id": "string_cache 0.8.5",
               "target": "string_cache"
             }
           ],
@@ -12517,7 +12656,7 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -12836,13 +12975,13 @@
       },
       "license": "MIT"
     },
-    "fastrand 1.8.0": {
+    "fastrand 1.9.0": {
       "name": "fastrand",
-      "version": "1.8.0",
+      "version": "1.9.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/fastrand/1.8.0/download",
-          "sha256": "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
+          "url": "https://crates.io/api/v1/crates/fastrand/1.9.0/download",
+          "sha256": "e51093e27b0797c359783294ca4f0a911c270184cb10f85783b118614a1501be"
         }
       },
       "targets": [
@@ -12867,7 +13006,7 @@
         "deps": {
           "common": [],
           "selects": {
-            "cfg(target_arch = \"wasm32\")": [
+            "cfg(all(target_arch = \"wasm32\", not(target_os = \"wasi\")))": [
               {
                 "id": "instant 0.1.12",
                 "target": "instant"
@@ -12876,7 +13015,7 @@
           }
         },
         "edition": "2018",
-        "version": "1.8.0"
+        "version": "1.9.0"
       },
       "license": "Apache-2.0 OR MIT"
     },
@@ -13898,7 +14037,7 @@
         "deps": {
           "common": [
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -14233,7 +14372,7 @@
               "target": "pin_utils"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             }
           ],
@@ -15078,13 +15217,13 @@
       },
       "license": "Apache-2.0 OR MIT"
     },
-    "gimli 0.27.1": {
+    "gimli 0.27.2": {
       "name": "gimli",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/gimli/0.27.1/download",
-          "sha256": "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
+          "url": "https://crates.io/api/v1/crates/gimli/0.27.2/download",
+          "sha256": "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
         }
       },
       "targets": [
@@ -15111,7 +15250,7 @@
           "read-core"
         ],
         "edition": "2018",
-        "version": "0.27.1"
+        "version": "0.27.2"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -15191,7 +15330,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -15375,7 +15514,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -15613,7 +15752,7 @@
               "target": "aho_corasick"
             },
             {
-              "id": "bstr 1.2.0",
+              "id": "bstr 1.3.0",
               "target": "bstr"
             },
             {
@@ -16026,7 +16165,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -16299,7 +16438,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -16307,7 +16446,7 @@
               "target": "indexmap"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             },
             {
@@ -16315,7 +16454,7 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             },
             {
@@ -17076,13 +17215,13 @@
       },
       "license": "Apache-2.0 / MIT / MPL-2.0"
     },
-    "http 0.2.8": {
+    "http 0.2.9": {
       "name": "http",
-      "version": "0.2.8",
+      "version": "0.2.9",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/http/0.2.8/download",
-          "sha256": "75f43d41e26995c17e71ee126451dd3941010b0514a81a9d11f3b341debc2399"
+          "url": "https://crates.io/api/v1/crates/http/0.2.9/download",
+          "sha256": "bd6effc99afb63425aff9b05836f029929e345a6148a14b7ecd5ab67af944482"
         }
       },
       "targets": [
@@ -17122,7 +17261,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.2.8"
+        "version": "0.2.9"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -17161,7 +17300,7 @@
               "target": "bytes"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -17664,7 +17803,7 @@
               "target": "h2"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -17758,7 +17897,7 @@
         "deps": {
           "common": [
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -17969,7 +18108,7 @@
         "deps": {
           "common": [
             {
-              "id": "cxx 1.0.89",
+              "id": "cxx 1.0.91",
               "target": "cxx"
             },
             {
@@ -17989,7 +18128,7 @@
         "deps": {
           "common": [
             {
-              "id": "cxx-build 1.0.89",
+              "id": "cxx-build 1.0.91",
               "target": "cxx_build"
             }
           ],
@@ -18231,7 +18370,7 @@
               "target": "same_file"
             },
             {
-              "id": "thread_local 1.1.4",
+              "id": "thread_local 1.1.7",
               "target": "thread_local"
             },
             {
@@ -19426,7 +19565,7 @@
               "target": "gloo_net"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -19462,7 +19601,7 @@
               "target": "tokio_rustls"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             },
             {
@@ -19841,7 +19980,7 @@
         "deps": {
           "common": [
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -21138,7 +21277,7 @@
               "target": "ogg_pager"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
@@ -21661,7 +21800,7 @@
               "target": "phf"
             },
             {
-              "id": "string_cache 0.8.4",
+              "id": "string_cache 0.8.5",
               "target": "string_cache"
             },
             {
@@ -22174,13 +22313,13 @@
       },
       "license": "Unlicense/MIT"
     },
-    "memmap2 0.5.8": {
+    "memmap2 0.5.9": {
       "name": "memmap2",
-      "version": "0.5.8",
+      "version": "0.5.9",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/memmap2/0.5.8/download",
-          "sha256": "4b182332558b18d807c4ce1ca8ca983b34c3ee32765e47b3f0f69b90355cc1dc"
+          "url": "https://crates.io/api/v1/crates/memmap2/0.5.9/download",
+          "sha256": "2af2c65375e552a67fe3829ca63e8a7c27a378a62824594f43b2851d682b5ec2"
         }
       },
       "targets": [
@@ -22214,7 +22353,7 @@
           }
         },
         "edition": "2018",
-        "version": "0.5.8"
+        "version": "0.5.9"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -22739,13 +22878,13 @@
       },
       "license": "ISC"
     },
-    "mio 0.8.5": {
+    "mio 0.8.6": {
       "name": "mio",
-      "version": "0.8.5",
+      "version": "0.8.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/mio/0.8.5/download",
-          "sha256": "e5d732bc30207a6423068df043e3d02e0735b155ad7ce1a6f76fe2baa5b158de"
+          "url": "https://crates.io/api/v1/crates/mio/0.8.6/download",
+          "sha256": "5b9d9a46eff5b4ff64b45a9e316a6d1e0bc719ef429cbec4dc630684212bfdf9"
         }
       },
       "targets": [
@@ -22799,14 +22938,14 @@
             ],
             "cfg(windows)": [
               {
-                "id": "windows-sys 0.42.0",
+                "id": "windows-sys 0.45.0",
                 "target": "windows_sys"
               }
             ]
           }
         },
         "edition": "2018",
-        "version": "0.8.5"
+        "version": "0.8.6"
       },
       "license": "MIT"
     },
@@ -22868,7 +23007,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -23107,9 +23246,9 @@
       },
       "license": "MIT"
     },
-    "music-player-addons 0.1.1": {
+    "music-player-addons 0.1.2": {
       "name": "music-player-addons",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [
         {
@@ -23137,6 +23276,22 @@
               "target": "anyhow"
             },
             {
+              "id": "chromecast 0.18.1",
+              "target": "chromecast"
+            },
+            {
+              "id": "futures 0.3.26",
+              "target": "futures"
+            },
+            {
+              "id": "futures-util 0.3.26",
+              "target": "futures_util"
+            },
+            {
+              "id": "hyper 0.14.24",
+              "target": "hyper"
+            },
+            {
               "id": "jsonrpsee 0.16.2",
               "target": "jsonrpsee"
             },
@@ -23149,15 +23304,15 @@
               "target": "md5"
             },
             {
-              "id": "rust_cast 0.18.1",
-              "target": "rust_cast"
-            },
-            {
               "id": "surf 2.3.2",
               "target": "surf"
             },
             {
-              "id": "upnp-client 0.1.3",
+              "id": "tokio 1.25.0",
+              "target": "tokio"
+            },
+            {
+              "id": "upnp-client 0.1.7",
               "target": "upnp_client"
             },
             {
@@ -23177,13 +23332,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "MIT"
     },
-    "music-player-audio 0.1.0": {
+    "music-player-audio 0.1.1": {
       "name": "music-player-audio",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "repository": null,
       "targets": [
         {
@@ -23278,13 +23433,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.0"
+        "version": "0.1.1"
       },
       "license": "MIT"
     },
-    "music-player-client 0.1.2": {
+    "music-player-client 0.1.3": {
       "name": "music-player-client",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "repository": null,
       "targets": [
         {
@@ -23348,7 +23503,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.2"
+        "version": "0.1.3"
       },
       "license": "MIT"
     },
@@ -23390,7 +23545,7 @@
         "deps": {
           "common": [
             {
-              "id": "async-stream 0.3.3",
+              "id": "async-stream 0.3.4",
               "target": "async_stream"
             },
             {
@@ -23429,9 +23584,9 @@
       },
       "license": "MIT"
     },
-    "music-player-entity 0.1.6": {
+    "music-player-entity 0.1.7": {
       "name": "music-player-entity",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "repository": null,
       "targets": [
         {
@@ -23469,18 +23624,22 @@
             {
               "id": "serde 1.0.152",
               "target": "serde"
+            },
+            {
+              "id": "upnp-client 0.1.7",
+              "target": "upnp_client"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.6"
+        "version": "0.1.7"
       },
       "license": "MIT"
     },
-    "music-player-graphql 0.1.5": {
+    "music-player-graphql 0.1.6": {
       "name": "music-player-graphql",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "repository": null,
       "targets": [
         {
@@ -23552,7 +23711,7 @@
               "target": "mdns_sd"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -23568,7 +23727,7 @@
               "target": "serde"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             },
             {
@@ -23580,7 +23739,7 @@
               "target": "tokio"
             },
             {
-              "id": "upnp-client 0.1.3",
+              "id": "upnp-client 0.1.7",
               "target": "upnp_client"
             },
             {
@@ -23600,7 +23759,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.5"
+        "version": "0.1.6"
       },
       "license": "MIT"
     },
@@ -23661,9 +23820,9 @@
       },
       "license": "MIT"
     },
-    "music-player-playback 0.1.9": {
+    "music-player-playback 0.1.10": {
       "name": "music-player-playback",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "repository": null,
       "targets": [
         {
@@ -23763,13 +23922,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.9"
+        "version": "0.1.10"
       },
       "license": "MIT"
     },
-    "music-player-scanner 0.1.6": {
+    "music-player-scanner 0.1.7": {
       "name": "music-player-scanner",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "repository": null,
       "targets": [
         {
@@ -23840,13 +23999,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.6"
+        "version": "0.1.7"
       },
       "license": "MIT"
     },
-    "music-player-server 0.1.11": {
+    "music-player-server 0.1.12": {
       "name": "music-player-server",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "repository": null,
       "targets": [
         {
@@ -23918,7 +24077,7 @@
               "target": "md5"
             },
             {
-              "id": "music-player-server 0.1.11",
+              "id": "music-player-server 0.1.12",
               "target": "build_script_build"
             },
             {
@@ -23965,7 +24124,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.11"
+        "version": "0.1.12"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -24040,9 +24199,9 @@
       },
       "license": "MIT"
     },
-    "music-player-storage 0.1.3": {
+    "music-player-storage 0.1.4": {
       "name": "music-player-storage",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "repository": null,
       "targets": [
         {
@@ -24097,13 +24256,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.3"
+        "version": "0.1.4"
       },
       "license": "MIT"
     },
-    "music-player-tracklist 0.1.6": {
+    "music-player-tracklist 0.1.7": {
       "name": "music-player-tracklist",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "repository": null,
       "targets": [
         {
@@ -24138,13 +24297,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.6"
+        "version": "0.1.7"
       },
       "license": "MIT"
     },
-    "music-player-types 0.1.2": {
+    "music-player-types 0.1.3": {
       "name": "music-player-types",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "repository": null,
       "targets": [
         {
@@ -24192,7 +24351,7 @@
               "target": "tantivy"
             },
             {
-              "id": "upnp-client 0.1.3",
+              "id": "upnp-client 0.1.7",
               "target": "upnp_client"
             },
             {
@@ -24203,13 +24362,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.2"
+        "version": "0.1.3"
       },
       "license": "MIT"
     },
-    "music-player-webui 0.1.9": {
+    "music-player-webui 0.1.10": {
       "name": "music-player-webui",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "repository": null,
       "targets": [
         {
@@ -24326,7 +24485,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.9"
+        "version": "0.1.10"
       },
       "license": "MIT"
     },
@@ -24374,7 +24533,7 @@
               "alias": "ffi"
             },
             {
-              "id": "num_enum 0.5.9",
+              "id": "num_enum 0.5.10",
               "target": "num_enum"
             },
             {
@@ -24433,7 +24592,7 @@
               "alias": "ffi"
             },
             {
-              "id": "num_enum 0.5.9",
+              "id": "num_enum 0.5.10",
               "target": "num_enum"
             },
             {
@@ -25595,13 +25754,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "num_enum 0.5.9": {
+    "num_enum 0.5.10": {
       "name": "num_enum",
-      "version": "0.5.9",
+      "version": "0.5.10",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/num_enum/0.5.9/download",
-          "sha256": "8d829733185c1ca374f17e52b762f24f535ec625d2cc1f070e34c8a9068f341b"
+          "url": "https://crates.io/api/v1/crates/num_enum/0.5.10/download",
+          "sha256": "3e0072973714303aa6e3631c7e8e777970cf4bdd25dc4932e41031027b8bcc4e"
         }
       },
       "targets": [
@@ -25631,23 +25790,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "num_enum_derive 0.5.9",
+              "id": "num_enum_derive 0.5.10",
               "target": "num_enum_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.5.9"
+        "version": "0.5.10"
       },
       "license": "BSD-3-Clause OR MIT OR Apache-2.0"
     },
-    "num_enum_derive 0.5.9": {
+    "num_enum_derive 0.5.10": {
       "name": "num_enum_derive",
-      "version": "0.5.9",
+      "version": "0.5.10",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/num_enum_derive/0.5.9/download",
-          "sha256": "2be1598bf1c313dcdd12092e3f1920f463462525a21b7b4e11b4168353d0123e"
+          "url": "https://crates.io/api/v1/crates/num_enum_derive/0.5.10/download",
+          "sha256": "0629cbd6b897944899b1f10496d9c4a7ac5878d45fd61bc22e9e79bfbbc29597"
         }
       },
       "targets": [
@@ -25695,7 +25854,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.5.9"
+        "version": "0.5.10"
       },
       "license": "BSD-3-Clause OR MIT OR Apache-2.0"
     },
@@ -26135,13 +26294,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "once_cell 1.17.0": {
+    "once_cell 1.17.1": {
       "name": "once_cell",
-      "version": "1.17.0",
+      "version": "1.17.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/once_cell/1.17.0/download",
-          "sha256": "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
+          "url": "https://crates.io/api/v1/crates/once_cell/1.17.1/download",
+          "sha256": "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
         }
       },
       "targets": [
@@ -26171,7 +26330,7 @@
           "unstable"
         ],
         "edition": "2021",
-        "version": "1.17.0"
+        "version": "1.17.1"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -26298,7 +26457,8 @@
           "**"
         ],
         "crate_features": [
-          "default"
+          "default",
+          "vendored"
         ],
         "deps": {
           "common": [
@@ -26319,7 +26479,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -26446,6 +26606,51 @@
       },
       "license": "MIT/Apache-2.0"
     },
+    "openssl-src 111.25.0+1.1.1t": {
+      "name": "openssl-src",
+      "version": "111.25.0+1.1.1t",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/openssl-src/111.25.0+1.1.1t/download",
+          "sha256": "3173cd3626c43e3854b1b727422a276e568d9ec5fe8cec197822cf52cfb743d6"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "openssl_src",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "openssl_src",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "default"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "cc 1.0.79",
+              "target": "cc"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "111.25.0+1.1.1t"
+      },
+      "license": "MIT/Apache-2.0"
+    },
     "openssl-sys 0.9.80": {
       "name": "openssl-sys",
       "version": "0.9.80",
@@ -26486,6 +26691,10 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": [
+          "openssl-src",
+          "vendored"
+        ],
         "deps": {
           "common": [
             {
@@ -26515,6 +26724,10 @@
             {
               "id": "cc 1.0.79",
               "target": "cc"
+            },
+            {
+              "id": "openssl-src 111.25.0+1.1.1t",
+              "target": "openssl_src"
             },
             {
               "id": "pkg-config 0.3.26",
@@ -26616,13 +26829,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "ouroboros 0.15.5": {
+    "ouroboros 0.15.6": {
       "name": "ouroboros",
-      "version": "0.15.5",
+      "version": "0.15.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/ouroboros/0.15.5/download",
-          "sha256": "dfbb50b356159620db6ac971c6d5c9ab788c9cc38a6f49619fca2a27acb062ca"
+          "url": "https://crates.io/api/v1/crates/ouroboros/0.15.6/download",
+          "sha256": "e1358bd1558bd2a083fed428ffeda486fbfb323e698cdda7794259d592ca72db"
         }
       },
       "targets": [
@@ -26661,23 +26874,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "ouroboros_macro 0.15.5",
+              "id": "ouroboros_macro 0.15.6",
               "target": "ouroboros_macro"
             }
           ],
           "selects": {}
         },
-        "version": "0.15.5"
+        "version": "0.15.6"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "ouroboros_macro 0.15.5": {
+    "ouroboros_macro 0.15.6": {
       "name": "ouroboros_macro",
-      "version": "0.15.5",
+      "version": "0.15.6",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/ouroboros_macro/0.15.5/download",
-          "sha256": "4a0d9d1a6191c4f391f87219d1ea42b23f09ee84d64763cd05ee6ea88d9f384d"
+          "url": "https://crates.io/api/v1/crates/ouroboros_macro/0.15.6/download",
+          "sha256": "5f7d21ccd03305a674437ee1248f3ab5d4b1db095cf1caf49f1713ddf61956b7"
         }
       },
       "targets": [
@@ -26728,7 +26941,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.15.5"
+        "version": "0.15.6"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -26925,7 +27138,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -27739,7 +27952,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -28536,13 +28749,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "plist 1.4.0": {
+    "plist 1.4.1": {
       "name": "plist",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/plist/1.4.0/download",
-          "sha256": "5329b8f106a176ab0dce4aae5da86bfcb139bb74fb00882859e03745011f3635"
+          "url": "https://crates.io/api/v1/crates/plist/1.4.1/download",
+          "sha256": "9469799ca90293a376f68f6fcb8f11990d9cff55602cfba0ba83893c973a7f46"
         }
       },
       "targets": [
@@ -28571,7 +28784,7 @@
         "deps": {
           "common": [
             {
-              "id": "base64 0.13.1",
+              "id": "base64 0.21.0",
               "target": "base64"
             },
             {
@@ -28591,14 +28804,14 @@
               "target": "serde"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.4.0"
+        "version": "1.4.1"
       },
       "license": "MIT"
     },
@@ -28956,7 +29169,7 @@
               "alias": "serde_json_1"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time",
               "alias": "time_03"
             },
@@ -29252,7 +29465,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -30032,7 +30245,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -30173,7 +30386,7 @@
               "target": "anyhow"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -31697,13 +31910,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "rend 0.3.6": {
+    "rend 0.4.0": {
       "name": "rend",
-      "version": "0.3.6",
+      "version": "0.4.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/rend/0.3.6/download",
-          "sha256": "79af64b4b6362ffba04eef3a4e10829718a4896dac19daa741851c86781edf95"
+          "url": "https://crates.io/api/v1/crates/rend/0.4.0/download",
+          "sha256": "581008d2099240d37fb08d77ad713bcaec2c4d89d50b5b21a8bb1996bbab68ab"
         }
       },
       "targets": [
@@ -31748,14 +31961,14 @@
               "target": "bytecheck"
             },
             {
-              "id": "rend 0.3.6",
+              "id": "rend 0.4.0",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.3.6"
+        "version": "0.4.0"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -31840,13 +32053,13 @@
                 "target": "libc"
               },
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ],
             "cfg(any(target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"illumos\", target_os = \"netbsd\", target_os = \"openbsd\", target_os = \"solaris\"))": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ],
@@ -31878,13 +32091,13 @@
       },
       "license": null
     },
-    "rkyv 0.7.39": {
+    "rkyv 0.7.40": {
       "name": "rkyv",
-      "version": "0.7.39",
+      "version": "0.7.40",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/rkyv/0.7.39/download",
-          "sha256": "cec2b3485b07d96ddfd3134767b8a447b45ea4eb91448d0a35180ec0ffd5ed15"
+          "url": "https://crates.io/api/v1/crates/rkyv/0.7.40/download",
+          "sha256": "c30f1d45d9aa61cbc8cd1eb87705470892289bb2d01943e7803b873a57404dc3"
         }
       },
       "targets": [
@@ -31941,11 +32154,11 @@
               "target": "ptr_meta"
             },
             {
-              "id": "rend 0.3.6",
+              "id": "rend 0.4.0",
               "target": "rend"
             },
             {
-              "id": "rkyv 0.7.39",
+              "id": "rkyv 0.7.40",
               "target": "build_script_build"
             },
             {
@@ -31959,13 +32172,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rkyv_derive 0.7.39",
+              "id": "rkyv_derive 0.7.40",
               "target": "rkyv_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.7.39"
+        "version": "0.7.40"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -31974,13 +32187,13 @@
       },
       "license": "MIT"
     },
-    "rkyv_derive 0.7.39": {
+    "rkyv_derive 0.7.40": {
       "name": "rkyv_derive",
-      "version": "0.7.39",
+      "version": "0.7.40",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/rkyv_derive/0.7.39/download",
-          "sha256": "6eaedadc88b53e36dd32d940ed21ae4d850d5916f2581526921f553a72ac34c4"
+          "url": "https://crates.io/api/v1/crates/rkyv_derive/0.7.40/download",
+          "sha256": "ff26ed6c7c4dfc2aa9480b86a60e3c7233543a270a680e10758a507c5a4ce476"
         }
       },
       "targets": [
@@ -32023,7 +32236,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.7.39"
+        "version": "0.7.40"
       },
       "license": "MIT"
     },
@@ -32458,112 +32671,6 @@
       },
       "license": "MIT/BSD-3-Clause"
     },
-    "rust_cast 0.18.1": {
-      "name": "rust_cast",
-      "version": "0.18.1",
-      "repository": {
-        "Git": {
-          "remote": "https://github.com/tsirysndr/rust-cast.git",
-          "commitish": {
-            "Rev": "3a36506"
-          }
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "rust_cast",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "include": [
-                "**/*.rs"
-              ],
-              "exclude": []
-            }
-          }
-        },
-        {
-          "BuildScript": {
-            "crate_name": "build_script_build",
-            "crate_root": "build.rs",
-            "srcs": {
-              "include": [
-                "**/*.rs"
-              ],
-              "exclude": []
-            }
-          }
-        }
-      ],
-      "library_target_name": "rust_cast",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": [
-          "thread_safe"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "byteorder 1.4.3",
-              "target": "byteorder"
-            },
-            {
-              "id": "log 0.4.17",
-              "target": "log"
-            },
-            {
-              "id": "openssl 0.10.45",
-              "target": "openssl"
-            },
-            {
-              "id": "protobuf 3.2.0",
-              "target": "protobuf"
-            },
-            {
-              "id": "rust_cast 0.18.1",
-              "target": "build_script_build"
-            },
-            {
-              "id": "serde 1.0.152",
-              "target": "serde"
-            },
-            {
-              "id": "serde_json 1.0.93",
-              "target": "serde_json"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "serde_derive 1.0.152",
-              "target": "serde_derive"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.18.1"
-      },
-      "build_script_attrs": {
-        "data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "protobuf-codegen 3.2.0",
-              "target": "protobuf_codegen"
-            }
-          ],
-          "selects": {}
-        }
-      },
-      "license": "MIT"
-    },
     "rust_decimal 1.28.1": {
       "name": "rust_decimal",
       "version": "1.28.1",
@@ -32616,7 +32723,7 @@
               "target": "arrayvec"
             },
             {
-              "id": "borsh 0.10.1",
+              "id": "borsh 0.10.2",
               "target": "borsh"
             },
             {
@@ -32640,7 +32747,7 @@
               "target": "rand"
             },
             {
-              "id": "rkyv 0.7.39",
+              "id": "rkyv 0.7.40",
               "target": "rkyv"
             },
             {
@@ -33657,7 +33764,7 @@
         "deps": {
           "common": [
             {
-              "id": "async-stream 0.3.3",
+              "id": "async-stream 0.3.4",
               "target": "async_stream"
             },
             {
@@ -33677,11 +33784,11 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
-              "id": "ouroboros 0.15.5",
+              "id": "ouroboros 0.15.6",
               "target": "ouroboros"
             },
             {
@@ -33709,7 +33816,7 @@
               "target": "sqlx"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             },
             {
@@ -34053,7 +34160,7 @@
               "target": "serde_json"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             },
             {
@@ -36168,13 +36275,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "signal-hook 0.3.14": {
+    "signal-hook 0.3.15": {
       "name": "signal-hook",
-      "version": "0.3.14",
+      "version": "0.3.15",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/signal-hook/0.3.14/download",
-          "sha256": "a253b5e89e2698464fc26b545c9edceb338e18a89effeeecfea192c3025be29d"
+          "url": "https://crates.io/api/v1/crates/signal-hook/0.3.15/download",
+          "sha256": "732768f1176d21d09e076c23a93123d40bba92d50c4058da34d45c8de8e682b9"
         }
       },
       "targets": [
@@ -36220,18 +36327,18 @@
               "target": "libc"
             },
             {
-              "id": "signal-hook 0.3.14",
+              "id": "signal-hook 0.3.15",
               "target": "build_script_build"
             },
             {
-              "id": "signal-hook-registry 1.4.0",
+              "id": "signal-hook-registry 1.4.1",
               "target": "signal_hook_registry"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.3.14"
+        "version": "0.3.15"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -36279,12 +36386,12 @@
               "target": "libc"
             },
             {
-              "id": "mio 0.8.5",
+              "id": "mio 0.8.6",
               "target": "mio",
               "alias": "mio_0_8"
             },
             {
-              "id": "signal-hook 0.3.14",
+              "id": "signal-hook 0.3.15",
               "target": "signal_hook"
             }
           ],
@@ -36295,13 +36402,13 @@
       },
       "license": "Apache-2.0/MIT"
     },
-    "signal-hook-registry 1.4.0": {
+    "signal-hook-registry 1.4.1": {
       "name": "signal-hook-registry",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/signal-hook-registry/1.4.0/download",
-          "sha256": "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
+          "url": "https://crates.io/api/v1/crates/signal-hook-registry/1.4.1/download",
+          "sha256": "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
         }
       },
       "targets": [
@@ -36333,7 +36440,7 @@
           "selects": {}
         },
         "edition": "2015",
-        "version": "1.4.0"
+        "version": "1.4.1"
       },
       "license": "Apache-2.0/MIT"
     },
@@ -36416,13 +36523,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "slab 0.4.7": {
+    "slab 0.4.8": {
       "name": "slab",
-      "version": "0.4.7",
+      "version": "0.4.8",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/slab/0.4.7/download",
-          "sha256": "4614a76b2a8be0058caa9dbbaf66d988527d86d003c11a94fbd335d7661edcef"
+          "url": "https://crates.io/api/v1/crates/slab/0.4.8/download",
+          "sha256": "6528351c9bc8ab22353f9d776db39a20288e8d6c37ef8cfe3317cf875eecfc2d"
         }
       },
       "targets": [
@@ -36463,14 +36570,14 @@
         "deps": {
           "common": [
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.4.7"
+        "version": "0.4.8"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -36774,7 +36881,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -37315,7 +37422,7 @@
               "target": "num_bigint"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -37367,11 +37474,11 @@
               "target": "thiserror"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             },
             {
-              "id": "tokio-stream 0.1.11",
+              "id": "tokio-stream 0.1.12",
               "target": "tokio_stream"
             },
             {
@@ -37459,7 +37566,7 @@
               "target": "heck"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -37541,7 +37648,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -38042,13 +38149,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "string_cache 0.8.4": {
+    "string_cache 0.8.5": {
       "name": "string_cache",
-      "version": "0.8.4",
+      "version": "0.8.5",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/string_cache/0.8.4/download",
-          "sha256": "213494b7a2b503146286049378ce02b482200519accc31872ee8be91fa820a08"
+          "url": "https://crates.io/api/v1/crates/string_cache/0.8.5/download",
+          "sha256": "fcac566e671100a4d4c4a2fb55ceb6c3d3554b9d4fb30b70ddacde3c96ac7986"
         }
       },
       "targets": [
@@ -38082,7 +38189,7 @@
               "target": "debug_unreachable"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -38105,9 +38212,9 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.8.4"
+        "version": "0.8.5"
       },
-      "license": "MIT / Apache-2.0"
+      "license": "MIT OR Apache-2.0"
     },
     "string_cache_codegen 0.5.2": {
       "name": "string_cache_codegen",
@@ -38455,7 +38562,7 @@
               "target": "mime_guess"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -39918,7 +40025,7 @@
               "target": "measure_time"
             },
             {
-              "id": "memmap2 0.5.8",
+              "id": "memmap2 0.5.9",
               "target": "memmap2"
             },
             {
@@ -39930,7 +40037,7 @@
               "target": "num_cpus"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -39999,7 +40106,7 @@
               "target": "thiserror"
             },
             {
-              "id": "time 0.3.17",
+              "id": "time 0.3.19",
               "target": "time"
             },
             {
@@ -40194,7 +40301,7 @@
               "target": "combine"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -40370,7 +40477,7 @@
                 "target": "ndk_sys"
               },
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ],
@@ -40590,7 +40697,7 @@
               "target": "glob"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -40598,7 +40705,7 @@
               "target": "ignore"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -40742,7 +40849,7 @@
               "target": "heck"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
@@ -40922,11 +41029,11 @@
           "selects": {
             "cfg(target_os = \"macos\")": [
               {
-                "id": "plist 1.4.0",
+                "id": "plist 1.4.1",
                 "target": "plist"
               },
               {
-                "id": "time 0.3.17",
+                "id": "time 0.3.19",
                 "target": "time"
               }
             ]
@@ -41046,7 +41153,7 @@
         "deps": {
           "common": [
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -41405,7 +41512,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "fastrand 1.8.0",
+              "id": "fastrand 1.9.0",
               "target": "fastrand"
             },
             {
@@ -41717,13 +41824,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "thread_local 1.1.4": {
+    "thread_local 1.1.7": {
       "name": "thread_local",
-      "version": "1.1.4",
+      "version": "1.1.7",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/thread_local/1.1.4/download",
-          "sha256": "5516c27b78311c50bf42c071425c560ac799b11c30b31f87e3081965fe5e0180"
+          "url": "https://crates.io/api/v1/crates/thread_local/1.1.7/download",
+          "sha256": "3fdd6f064ccff2d6567adcb3873ca630700f00b5ad3f060c25b5dcfd9a4ce152"
         }
       },
       "targets": [
@@ -41748,16 +41855,20 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "cfg-if 1.0.0",
+              "target": "cfg_if"
+            },
+            {
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "1.1.4"
+        "edition": "2021",
+        "version": "1.1.7"
       },
-      "license": "Apache-2.0/MIT"
+      "license": "MIT OR Apache-2.0"
     },
     "tide 0.16.0": {
       "name": "tide",
@@ -42115,13 +42226,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "time 0.3.17": {
+    "time 0.3.19": {
       "name": "time",
-      "version": "0.3.17",
+      "version": "0.3.19",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/time/0.3.17/download",
-          "sha256": "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
+          "url": "https://crates.io/api/v1/crates/time/0.3.19/download",
+          "sha256": "53250a3b3fed8ff8fd988587d8925d26a83ac3845d9e03b220b37f34c2b8d6c2"
         }
       },
       "targets": [
@@ -42174,13 +42285,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "time-macros 0.2.6",
+              "id": "time-macros 0.2.7",
               "target": "time_macros"
             }
           ],
           "selects": {}
         },
-        "version": "0.3.17"
+        "version": "0.3.19"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -42263,13 +42374,13 @@
       },
       "license": "MIT OR Apache-2.0"
     },
-    "time-macros 0.2.6": {
+    "time-macros 0.2.7": {
       "name": "time-macros",
-      "version": "0.2.6",
+      "version": "0.2.7",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/time-macros/0.2.6/download",
-          "sha256": "d967f99f534ca7e495c575c62638eebc2898a8c84c119b89e250477bc4ba16b2"
+          "url": "https://crates.io/api/v1/crates/time-macros/0.2.7/download",
+          "sha256": "a460aeb8de6dcb0f381e1ee05f1cd56fcf5a5f6eb8187ff3d8f0b11078d38b7c"
         }
       },
       "targets": [
@@ -42306,7 +42417,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.6"
+        "version": "0.2.7"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -42530,7 +42641,7 @@
               "target": "memchr"
             },
             {
-              "id": "mio 0.8.5",
+              "id": "mio 0.8.6",
               "target": "mio"
             },
             {
@@ -42569,7 +42680,7 @@
                 "target": "libc"
               },
               {
-                "id": "signal-hook-registry 1.4.0",
+                "id": "signal-hook-registry 1.4.1",
                 "target": "signal_hook_registry"
               }
             ],
@@ -42760,13 +42871,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "tokio-stream 0.1.11": {
+    "tokio-stream 0.1.12": {
       "name": "tokio-stream",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tokio-stream/0.1.11/download",
-          "sha256": "d660770404473ccd7bc9f8b28494a811bc18542b915c0855c51e8f419d5223ce"
+          "url": "https://crates.io/api/v1/crates/tokio-stream/0.1.12/download",
+          "sha256": "8fb52b74f05dbf495a8fba459fdc331812b96aa086d9eb78101fa0d4569c3313"
         }
       },
       "targets": [
@@ -42811,7 +42922,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.11"
+        "version": "0.1.12"
       },
       "license": "MIT"
     },
@@ -42874,13 +42985,13 @@
       },
       "license": "MIT"
     },
-    "tokio-util 0.7.6": {
+    "tokio-util 0.7.7": {
       "name": "tokio-util",
-      "version": "0.7.6",
+      "version": "0.7.7",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/tokio-util/0.7.6/download",
-          "sha256": "bc6a3b08b64e6dfad376fa2432c7b1f01522e37a623c3050bc95db2d3ff21583"
+          "url": "https://crates.io/api/v1/crates/tokio-util/0.7.7/download",
+          "sha256": "5427d89453009325de0d8f342c9490009f76e999cb7672d77e46267448f7e6b2"
         }
       },
       "targets": [
@@ -42944,7 +43055,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.7.6"
+        "version": "0.7.7"
       },
       "license": "MIT"
     },
@@ -43127,11 +43238,11 @@
         "deps": {
           "common": [
             {
-              "id": "async-stream 0.3.3",
+              "id": "async-stream 0.3.4",
               "target": "async_stream"
             },
             {
-              "id": "axum 0.6.4",
+              "id": "axum 0.6.7",
               "target": "axum"
             },
             {
@@ -43155,7 +43266,7 @@
               "target": "h2"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -43188,11 +43299,11 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-stream 0.1.11",
+              "id": "tokio-stream 0.1.12",
               "target": "tokio_stream"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             },
             {
@@ -43343,7 +43454,7 @@
               "target": "futures_core"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -43457,7 +43568,7 @@
               "target": "rand"
             },
             {
-              "id": "slab 0.4.7",
+              "id": "slab 0.4.8",
               "target": "slab"
             },
             {
@@ -43465,7 +43576,7 @@
               "target": "tokio"
             },
             {
-              "id": "tokio-util 0.7.6",
+              "id": "tokio-util 0.7.7",
               "target": "tokio_util"
             },
             {
@@ -43541,7 +43652,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -43799,7 +43910,7 @@
         "deps": {
           "common": [
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             }
           ],
@@ -43980,7 +44091,7 @@
               "target": "nu_ansi_term"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -43996,7 +44107,7 @@
               "target": "smallvec"
             },
             {
-              "id": "thread_local 1.1.4",
+              "id": "thread_local 1.1.7",
               "target": "thread_local"
             },
             {
@@ -44208,7 +44319,7 @@
               "target": "bytes"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -44297,7 +44408,7 @@
               "target": "bytes"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -44866,13 +44977,13 @@
       },
       "license": "ISC"
     },
-    "upnp-client 0.1.3": {
+    "upnp-client 0.1.7": {
       "name": "upnp-client",
-      "version": "0.1.3",
+      "version": "0.1.7",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/upnp-client/0.1.3/download",
-          "sha256": "c12606b2078fa168d479223e756021fde1ad6e5934647714177e95598110ae76"
+          "url": "https://crates.io/api/v1/crates/upnp-client/0.1.7/download",
+          "sha256": "707a259c0ef8bde8be3519694e2c5be39d1e1e70be716960546015446efce52e"
         }
       },
       "targets": [
@@ -44901,7 +45012,7 @@
               "target": "anyhow"
             },
             {
-              "id": "async-stream 0.3.3",
+              "id": "async-stream 0.3.4",
               "target": "async_stream"
             },
             {
@@ -44917,7 +45028,7 @@
               "target": "futures_util"
             },
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -44968,7 +45079,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.1.3"
+        "version": "0.1.7"
       },
       "license": "MIT"
     },
@@ -45946,7 +46057,7 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -46378,7 +46489,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -47057,7 +47168,7 @@
           "selects": {
             "cfg(windows)": [
               {
-                "id": "once_cell 1.17.0",
+                "id": "once_cell 1.17.1",
                 "target": "once_cell"
               }
             ]
@@ -47899,10 +48010,15 @@
         "crate_features": [
           "Win32",
           "Win32_Foundation",
+          "Win32_Networking",
+          "Win32_Networking_WinSock",
+          "Win32_Security",
           "Win32_Storage",
           "Win32_Storage_FileSystem",
           "Win32_System",
+          "Win32_System_IO",
           "Win32_System_LibraryLoader",
+          "Win32_System_Pipes",
           "Win32_System_SystemServices",
           "Win32_System_WindowsProgramming",
           "default"
@@ -49159,7 +49275,7 @@
         "deps": {
           "common": [
             {
-              "id": "http 0.2.8",
+              "id": "http 0.2.9",
               "target": "http"
             },
             {
@@ -49171,7 +49287,7 @@
               "target": "log"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -49430,7 +49546,7 @@
               "target": "libc"
             },
             {
-              "id": "once_cell 1.17.0",
+              "id": "once_cell 1.17.1",
               "target": "once_cell"
             },
             {
@@ -49966,7 +50082,7 @@
   "binary_crates": [
     "alloc-no-stdlib 2.0.4",
     "alloc-stdlib 0.2.2",
-    "borsh 0.10.1",
+    "borsh 0.10.2",
     "brotli 3.3.4",
     "brotli-decompressor 2.3.4",
     "cc 1.0.79",
@@ -49993,21 +50109,21 @@
   "workspace_members": {
     "app 0.1.0": "webui/musicplayer/src-tauri",
     "music-player 0.2.0-alpha.10": "",
-    "music-player-addons 0.1.1": "addons",
-    "music-player-audio 0.1.0": "audio",
-    "music-player-client 0.1.2": "client",
+    "music-player-addons 0.1.2": "addons",
+    "music-player-audio 0.1.1": "audio",
+    "music-player-client 0.1.3": "client",
     "music-player-discovery 0.1.2": "discovery",
-    "music-player-entity 0.1.6": "entity",
-    "music-player-graphql 0.1.5": "graphql",
+    "music-player-entity 0.1.7": "entity",
+    "music-player-graphql 0.1.6": "graphql",
     "music-player-migration 0.1.5": "migration",
-    "music-player-playback 0.1.9": "playback",
-    "music-player-scanner 0.1.6": "scanner",
-    "music-player-server 0.1.11": "server",
+    "music-player-playback 0.1.10": "playback",
+    "music-player-scanner 0.1.7": "scanner",
+    "music-player-server 0.1.12": "server",
     "music-player-settings 0.1.2": "settings",
-    "music-player-storage 0.1.3": "storage",
-    "music-player-tracklist 0.1.6": "tracklist",
-    "music-player-types 0.1.2": "types",
-    "music-player-webui 0.1.9": "webui"
+    "music-player-storage 0.1.4": "storage",
+    "music-player-tracklist 0.1.7": "tracklist",
+    "music-player-types 0.1.3": "types",
+    "music-player-webui 0.1.10": "webui"
   },
   "conditions": {
     "aarch64-apple-darwin": [
@@ -50020,7 +50136,13 @@
     "aarch64-pc-windows-msvc": [
       "aarch64-pc-windows-msvc"
     ],
+    "aarch64-unknown-linux-gnu": [
+      "aarch64-unknown-linux-gnu"
+    ],
     "aarch64-uwp-windows-msvc": [],
+    "armv7-linux-androideabi": [
+      "armv7-linux-androideabi"
+    ],
     "asmjs-unknown-emscripten": [],
     "cfg(all(any(target_arch = \"x86_64\", target_arch = \"aarch64\"), target_os = \"hermit\"))": [],
     "cfg(all(any(target_os = \"macos\", target_os = \"ios\"), not(feature = \"unix_sysv\")))": [
@@ -50040,6 +50162,9 @@
     "cfg(all(target_arch = \"wasm32\", not(target_os = \"emscripten\")))": [
       "wasm32-unknown-unknown",
       "wasm32-wasi"
+    ],
+    "cfg(all(target_arch = \"wasm32\", not(target_os = \"wasi\")))": [
+      "wasm32-unknown-unknown"
     ],
     "cfg(all(target_arch = \"wasm32\", target_os = \"unknown\"))": [
       "wasm32-unknown-unknown"
@@ -50605,6 +50730,9 @@
       "i686-pc-windows-msvc",
       "x86_64-pc-windows-msvc"
     ],
+    "i686-linux-android": [
+      "i686-linux-android"
+    ],
     "i686-pc-windows-gnu": [],
     "i686-pc-windows-msvc": [
       "i686-pc-windows-msvc"
@@ -50614,6 +50742,9 @@
     "wasm32-unknown-emscripten": [],
     "wasm32-unknown-unknown": [
       "wasm32-unknown-unknown"
+    ],
+    "x86_64-linux-android": [
+      "x86_64-linux-android"
     ],
     "x86_64-pc-windows-gnu": [],
     "x86_64-pc-windows-gnullvm": [],

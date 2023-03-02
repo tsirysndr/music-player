@@ -3,13 +3,14 @@
     windows_subsystem = "windows"
 )]
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use async_graphql::{Request, Response, Schema};
 use futures::{
     future::Either::{Left, Right},
     stream::StreamExt,
 };
+use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
 use music_player_graphql::{
     scan_devices,
     schema::{
@@ -28,7 +29,6 @@ use music_player_playback::{
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
-use music_player_types::types::Device;
 use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
@@ -98,6 +98,8 @@ async fn main() {
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
+    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
+    let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
@@ -140,6 +142,8 @@ async fn main() {
     .data(tracklist)
     .data(devices)
     .data(current_device)
+    .data(source_device)
+    .data(receiver_device)
     .finish();
 
     let config = read_settings().unwrap();

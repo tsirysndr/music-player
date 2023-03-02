@@ -14,6 +14,10 @@ rust-version = "1.59"
 [build-dependencies]
 tauri-build = { version = "1.2.1", features = [] }
 
+[dependencies.music-player-addons]
+path = "../../../addons"
+version = "0.1.2"
+
 [dependencies.music-player-graphql]
 path = "../../../graphql"
 version = "0.1.3"

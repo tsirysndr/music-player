@@ -44,6 +44,8 @@ jobs:
         run: |
           choco install protoc
           choco install checksum
+          choco install openssl
+          vcpkg install openssl-windows:x64-windows
       - name: Install Node Modules
         run: |
           cd webui/musicplayer

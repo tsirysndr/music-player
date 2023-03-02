@@ -4530,7 +4530,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-tracklist"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "atlist-rs",
  "music-player-entity",

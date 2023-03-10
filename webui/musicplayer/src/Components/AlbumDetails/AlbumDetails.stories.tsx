@@ -1,7 +1,7 @@
 import { linkTo } from "@storybook/addon-links";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import _ from "lodash";
-import AlbumDetails from "../Components/AlbumDetails";
+import AlbumDetails from "./AlbumDetails";
 
 export default {
   title: "Components/AlbumDetails",

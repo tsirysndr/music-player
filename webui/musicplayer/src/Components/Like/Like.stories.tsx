@@ -1,5 +1,5 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import Like from "../Components/Like";
+import Like from "./Like";
 
 export default {
   title: "Components/Like",

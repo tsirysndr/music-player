@@ -1,5 +1,5 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import ContextMenu from "../Components/ContextMenu";
+import ContextMenu from "./ContextMenu";
 
 export default {
   title: "Components/ContextMenu",

@@ -1,5 +1,5 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import Library from "../Components/Library/Library";
+import Library from "./Library";
 
 export default {
   title: "Components/Library",

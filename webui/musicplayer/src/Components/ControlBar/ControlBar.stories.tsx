@@ -1,5 +1,5 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import ControlBar from "../Components/ControlBar";
+import ControlBar from "./ControlBar";
 
 export default {
   title: "Components/ControlBar",

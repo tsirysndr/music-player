@@ -1,5 +1,5 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import Playlists from "../Components/Playlists";
+import Playlists from "./Playlists";
 
 export default {
   title: "Components/Playlists",

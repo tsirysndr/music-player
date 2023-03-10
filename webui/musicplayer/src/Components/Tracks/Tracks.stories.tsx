@@ -1,7 +1,7 @@
 import { linkTo } from "@storybook/addon-links";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import _ from "lodash";
-import Tracks from "../Components/Tracks";
+import Tracks from "./Tracks";
 
 export default {
   title: "Components/Tracks",

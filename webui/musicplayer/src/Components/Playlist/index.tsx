@@ -1,3 +1,3 @@
-import Playlist from "./Playlist";
+import PlaylistWithData from "./PlaylistWithData";
 
-export default Playlist;
+export default PlaylistWithData;

@@ -1,3 +1,3 @@
-import Albums from "./Albums";
+import AlbumsWithData from "./AlbumsWithData";
 
-export default Albums;
+export default AlbumsWithData;

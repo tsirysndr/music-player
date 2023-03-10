@@ -68,12 +68,6 @@ const SearchResultsWithData: FC = () => {
       onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
       onClickArtist={({ id }) => navigate(`/artists/${id}`)}
       onClickLibraryItem={(item) => navigate(`/${item}`)}
-      onPlay={() => play()}
-      onPause={() => pause()}
-      onNext={() => next()}
-      onPrevious={() => previous()}
-      onShuffle={() => {}}
-      onRepeat={() => {}}
       nowPlaying={nowPlaying}
       onPlayTrack={(id, position) => {}}
       nextTracks={nextTracks}
@@ -101,14 +95,8 @@ const SearchResultsWithData: FC = () => {
         playPlaylist({ variables: { playlistId, position, shuffle } })
       }
       recentPlaylists={recentPlaylists}
-      devices={devices}
-      castDevices={castDevices}
       currentDevice={currentDevice}
       currentCastDevice={currentCastDevice}
-      connectToDevice={(id) => connectToDevice({ variables: { id } })}
-      disconnectFromDevice={() => disconnectFromDevice()}
-      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
-      disconnectFromCastDevice={() => disconnectFromCastDevice()}
     />
   );
 };

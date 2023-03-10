@@ -131,47 +131,15 @@ const Tracks = styled.div`
 `;
 
 export type AlbumDetailsProps = {
-  onClickAlbum: (album: any) => void;
   onBack: () => void;
-  onClickLibraryItem: (item: string) => void;
   album: any;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
   nowPlaying: any;
-  nextTracks: Track[];
-  previousTracks: Track[];
   onPlayAlbum: (id: string, shuffle: boolean, position?: number) => void;
   onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
-  onSearch: (query: string) => void;
-  folders: any[];
-  playlists: any[];
-  onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onDeletePlaylist: (id: string) => void;
-  onEditFolder: (id: string, name: string) => void;
-  onEditPlaylist: (id: string, name: string, description?: string) => void;
   recentPlaylists: any[];
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
-  devices: Device[];
-  castDevices: Device[];
-  currentDevice?: Device;
   currentCastDevice?: Device;
-  connectToDevice: (deviceId: string) => void;
-  disconnectFromDevice: () => void;
-  connectToCastDevice: (deviceId: string) => void;
-  disconnectFromCastDevice: () => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
@@ -195,9 +163,9 @@ const AlbumDetails: FC<AlbumDetailsProps> = (props) => {
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
-        <Sidebar active="albums" {...props} />
+        <Sidebar active="albums" />
         <Content>
-          <ControlBar {...props} />
+          <ControlBar />
           <MainContent displayHeader={false}>
             <Scrollable>
               <BackButton onClick={onBack}>

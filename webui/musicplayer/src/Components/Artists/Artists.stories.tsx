@@ -1,6 +1,5 @@
 import { linkTo } from "@storybook/addon-links";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import _ from "lodash";
 import Artists from "./Artists";
 
 export default {
@@ -25,15 +24,6 @@ export const Default = Template.bind({});
 Default.args = {
   onClickArtist(artist) {
     linkTo("Components/ArtistDetails", "Default")();
-  },
-  onClickLibraryItem(item) {
-    linkTo(
-      `Components/${item
-        .split("-")
-        .map((x) => _.capitalize(x))
-        .join("")}`,
-      "Default"
-    )();
   },
   artists: [
     {
@@ -65,8 +55,5 @@ Default.args = {
       name: "Oasis",
     },
   ],
-  devices: [],
-  currentDevice: undefined,
-  connectToDevice: (_id) => {},
-  disconnectFromDevice: () => {},
+  currentCastDevice: undefined,
 };

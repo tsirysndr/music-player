@@ -1,7 +1,6 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { linkTo } from "@storybook/addon-links";
 import Albums from "./Albums";
-import _ from "lodash";
 
 export default {
   title: "Components/Albums",
@@ -86,17 +85,5 @@ Default.args = {
   onClickAlbum(album) {
     linkTo("Components/AlbumDetails", "Default")();
   },
-  onClickLibraryItem(item) {
-    linkTo(
-      `Components/${item
-        .split("-")
-        .map((x) => _.capitalize(x))
-        .join("")}`,
-      "Default"
-    )();
-  },
-  devices: [],
-  currentDevice: undefined,
-  connectToDevice: (_id) => {},
-  disconnectFromDevice: () => {},
+  currentCastDevice: undefined,
 };

@@ -161,45 +161,13 @@ const Playlist: FC<PlaylistProps> = ({ playlist }) => {
 };
 
 export type FolderProps = {
-  onBack: () => void;
-  onClickLibraryItem: (item: string) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
-  nowPlaying: any;
-  nextTracks: Track[];
-  previousTracks: Track[];
   onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
-  onSearch: (query: string) => void;
-  folders: any[];
   playlists: any[];
   mainPlaylists: any[];
-  onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onDeletePlaylist: (id: string) => void;
-  onEditFolder: (id: string, name: string) => void;
-  onEditPlaylist: (id: string, name: string, description?: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
   folder?: any;
-  devices: Device[];
-  castDevices: Device[];
-  currentDevice?: Device;
   currentCastDevice?: Device;
-  connectToDevice: (deviceId: string) => void;
-  disconnectFromDevice: () => void;
-  connectToCastDevice: (deviceId: string) => void;
-  disconnectFromCastDevice: () => void;
 };
 
 const Folder: FC<FolderProps> = (props) => {
@@ -218,9 +186,9 @@ const Folder: FC<FolderProps> = (props) => {
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
-        <Sidebar active="artists" {...props} playlists={mainPlaylists} />
+        <Sidebar active="artists" playlists={mainPlaylists} />
         <Content>
-          <ControlBar {...props} />
+          <ControlBar />
           <MainContent displayHeader={false}>
             <Scrollable>
               {folder?.playlists?.length > 0 && (

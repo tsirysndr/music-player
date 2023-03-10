@@ -1,3 +1,3 @@
-import Sidebar from "./Sidebar";
+import SidebarWithData from "./SidebarWithData";
 
-export default Sidebar;
+export default SidebarWithData;

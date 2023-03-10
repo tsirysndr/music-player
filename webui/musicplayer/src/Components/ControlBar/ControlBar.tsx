@@ -58,14 +58,14 @@ const ButtonGroup = styled.div`
 
 export type ControlBarProps = {
   nowPlaying?: {
-    album: string;
-    artist: string;
-    title: string;
-    cover: string;
+    album?: string;
+    artist?: string;
+    title?: string;
+    cover?: string;
     duration: number;
     progress: number;
     isPlaying?: boolean;
-    albumId: string;
+    albumId?: string;
   };
   castDevices: Device[];
   currentCastDevice?: Device;

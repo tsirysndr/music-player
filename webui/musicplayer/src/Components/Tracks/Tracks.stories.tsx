@@ -1,6 +1,4 @@
-import { linkTo } from "@storybook/addon-links";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import _ from "lodash";
 import Tracks from "./Tracks";
 
 export default {
@@ -37,18 +35,6 @@ Default.args = {
       time: "3:25",
     },
   ],
-  onClickLibraryItem(item) {
-    linkTo(
-      `Components/${item
-        .split("-")
-        .map((x) => _.capitalize(x))
-        .join("")}`,
-      "Default"
-    )();
-  },
   nowPlaying: {},
-  devices: [],
-  currentDevice: undefined,
-  connectToDevice: (_id) => {},
-  disconnectFromDevice: () => {},
+  currentCastDevice: undefined,
 };

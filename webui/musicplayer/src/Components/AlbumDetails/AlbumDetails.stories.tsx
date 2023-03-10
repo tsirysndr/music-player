@@ -1,6 +1,5 @@
 import { linkTo } from "@storybook/addon-links";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import _ from "lodash";
 import AlbumDetails from "./AlbumDetails";
 
 export default {
@@ -193,18 +192,5 @@ Default.args = {
     ],
   },
   onBack: linkTo("Components/Albums", "Default"),
-  onClickLibraryItem(item) {
-    linkTo(
-      `Components/${item
-        .split("-")
-        .map((x) => _.capitalize(x))
-        .join("")}`,
-      "Default"
-    )();
-  },
   nowPlaying: {},
-  devices: [],
-  currentDevice: undefined,
-  connectToDevice: (_id) => {},
-  disconnectFromDevice: () => {},
 };

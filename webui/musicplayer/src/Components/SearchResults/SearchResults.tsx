@@ -35,12 +35,6 @@ export type SearchResultsProps = {
   onClickAlbum: (album: any) => void;
   onClickArtist: (artist: any) => void;
   onClickLibraryItem: (item: string) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
   nowPlaying: any;
   onPlayTrack: (id: string, postion?: number) => void;
   nextTracks: Track[];
@@ -64,14 +58,8 @@ export type SearchResultsProps = {
     position?: number
   ) => void;
   recentPlaylists: any[];
-  devices: Device[];
-  castDevices: Device[];
   currentDevice?: Device;
   currentCastDevice?: Device;
-  connectToDevice: (deviceId: string) => void;
-  disconnectFromDevice: () => void;
-  connectToCastDevice: (deviceId: string) => void;
-  disconnectFromCastDevice: () => void;
 };
 
 const SearchResults: FC<SearchResultsProps> = (props) => {
@@ -81,9 +69,9 @@ const SearchResults: FC<SearchResultsProps> = (props) => {
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
-        <Sidebar active={""} {...props} />
+        <Sidebar active={""} />
         <Content>
-          <ControlBar {...props} />
+          <ControlBar />
           <div>
             <Tabs
               activeKey={activeKey}

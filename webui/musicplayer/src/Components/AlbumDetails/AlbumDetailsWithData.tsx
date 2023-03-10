@@ -1,26 +1,13 @@
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import AlbumDetails from "./AlbumDetails";
 import { useGetAlbumQuery } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import { useSearch } from "../../Hooks/useSearch";
-import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 const AlbumDetailsWithData: FC = () => {
   const params = useParams();
-  const {
-    devices,
-    castDevices,
-    currentDevice,
-    currentCastDevice,
-    connectToDevice,
-    disconnectFromDevice,
-    connectToCastDevice,
-    disconnectFromCastDevice,
-  } = useDevices();
   const { data, loading, refetch } = useGetAlbumQuery({
     variables: {
       id: params.id!,
@@ -34,21 +21,7 @@ const AlbumDetailsWithData: FC = () => {
 
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const {
-    play,
-    pause,
-    next,
-    previous,
-    nowPlaying,
-    nextTracks,
-    previousTracks,
-    playAlbum,
-    playNext,
-    playTrackAt,
-    removeTrackAt,
-    playPlaylist,
-  } = usePlayback();
-  const { onSearch } = useSearch();
+  const { nowPlaying, playAlbum, playNext } = usePlayback();
   const album =
     !loading && data
       ? {
@@ -65,63 +38,21 @@ const AlbumDetailsWithData: FC = () => {
           })),
         }
       : { tracks: [] };
-  const {
-    folders,
-    mainPlaylists,
-    recentPlaylists,
-    createFolder,
-    createPlaylist,
-    addTrackToPlaylist,
-    deleteFolder,
-    deletePlaylist,
-    renameFolder,
-    renamePlaylist,
-  } = usePlaylist();
+  const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
   return (
     <AlbumDetails
       onBack={() => navigate(-1)}
-      onClickLibraryItem={(item) => navigate(`/${item}`)}
-      onClickAlbum={() => {}}
-      onPlay={() => play()}
-      onPause={() => pause()}
-      onNext={() => next()}
-      onPrevious={() => previous()}
-      onShuffle={() => {}}
-      onRepeat={() => {}}
       album={album}
       nowPlaying={nowPlaying}
-      nextTracks={nextTracks}
-      previousTracks={previousTracks}
       onPlayAlbum={(albumId, shuffle, position) =>
         playAlbum({ variables: { albumId, position, shuffle } })
       }
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}
-      onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
-      onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
-      onSearch={(query) => navigate(`/search?q=${query}`)}
-      folders={folders}
-      playlists={mainPlaylists}
-      onCreateFolder={(name) => createFolder({ variables: { name } })}
       onCreatePlaylist={(name) => createPlaylist({ variables: { name } })}
       onAddTrackToPlaylist={(playlistId, trackId) =>
         addTrackToPlaylist({ variables: { playlistId, trackId } })
       }
-      onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
-      onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
-      onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
-      onEditPlaylist={(id, name) => renamePlaylist({ variables: { id, name } })}
-      onPlayPlaylist={(playlistId, shuffle, position) =>
-        playPlaylist({ variables: { playlistId, position, shuffle } })
-      }
       recentPlaylists={recentPlaylists}
-      devices={devices}
-      castDevices={castDevices}
-      currentDevice={currentDevice}
-      currentCastDevice={currentCastDevice}
-      connectToDevice={(id) => connectToDevice({ variables: { id } })}
-      disconnectFromDevice={() => disconnectFromDevice()}
-      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
-      disconnectFromCastDevice={() => disconnectFromCastDevice()}
     />
   );
 };

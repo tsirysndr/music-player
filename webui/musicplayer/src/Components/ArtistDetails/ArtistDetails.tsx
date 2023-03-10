@@ -11,7 +11,6 @@ import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
-import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
 import { useTheme } from "@emotion/react";
 import ListeningOn from "../ListeningOn";

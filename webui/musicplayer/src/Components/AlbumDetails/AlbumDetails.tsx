@@ -11,7 +11,6 @@ import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
 import _ from "lodash";
-import { Track } from "../../Types";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";
 import { useTheme } from "@emotion/react";

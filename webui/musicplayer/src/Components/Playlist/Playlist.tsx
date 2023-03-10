@@ -1,7 +1,5 @@
 import styled from "@emotion/styled";
-import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
-import { Link } from "react-router-dom";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
@@ -11,7 +9,6 @@ import PlaylistIcon from "../Icons/PlaylistAlt";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
-import { Track } from "../../Types";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";

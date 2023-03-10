@@ -10,21 +10,8 @@ import { useSearch } from "../../Hooks/useSearch";
 const SearchResultsWithData: FC = () => {
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
+  const { currentDevice, currentCastDevice } = useDevices();
   const {
-    devices,
-    castDevices,
-    currentDevice,
-    currentCastDevice,
-    connectToDevice,
-    disconnectFromDevice,
-    connectToCastDevice,
-    disconnectFromCastDevice,
-  } = useDevices();
-  const {
-    play,
-    pause,
-    next,
-    previous,
     nowPlaying,
     nextTracks,
     previousTracks,
@@ -35,20 +22,18 @@ const SearchResultsWithData: FC = () => {
   } = usePlayback();
   const {
     folders,
-    playlists,
     recentPlaylists,
     mainPlaylists,
     createFolder,
     createPlaylist,
     addTrackToPlaylist,
-    movePlaylistToFolder,
     deleteFolder,
     deletePlaylist,
     renameFolder,
     renamePlaylist,
   } = usePlaylist();
   const [params] = useSearchParams();
-  const { onSearch, results, query } = useSearch();
+  const { onSearch, results } = useSearch();
   const q = useMemo(() => params.get("q"), [params]);
 
   useEffect(() => {

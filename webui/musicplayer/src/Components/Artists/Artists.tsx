@@ -1,7 +1,6 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
-import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
 import ControlBar from "../ControlBar";
 import Artist from "../Icons/Artist";
@@ -63,42 +62,8 @@ const ArtistName = styled.div`
 
 export type ArtistsProps = {
   artists: any[];
-  onClickLibraryItem: (item: string) => void;
   onClickArtist: (artist: any) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
-  nowPlaying: any;
-  nextTracks: Track[];
-  previousTracks: Track[];
-  onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
-  onSearch: (query: string) => void;
-  folders: any[];
-  playlists: any[];
-  onCreateFolder: (name: string) => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onDeletePlaylist: (id: string) => void;
-  onEditFolder: (id: string, name: string) => void;
-  onEditPlaylist: (id: string, name: string, description?: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
-  devices: Device[];
-  castDevices: Device[];
-  currentDevice?: Device;
   currentCastDevice?: Device;
-  connectToDevice: (deviceId: string) => void;
-  disconnectFromDevice: () => void;
-  connectToCastDevice: (deviceId: string) => void;
-  disconnectFromCastDevice: () => void;
 };
 
 const Artists: FC<ArtistsProps> = (props) => {
@@ -107,9 +72,9 @@ const Artists: FC<ArtistsProps> = (props) => {
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
-        <Sidebar active="artists" {...props} />
+        <Sidebar active="artists" />
         <Content>
-          <ControlBar {...props} />
+          <ControlBar />
           <Scrollable>
             <MainContent title="Artists" placeholder="Filter Artists">
               <Wrapper>

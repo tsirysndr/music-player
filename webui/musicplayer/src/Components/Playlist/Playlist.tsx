@@ -1,7 +1,5 @@
 import styled from "@emotion/styled";
-import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
-import { Link } from "react-router-dom";
 import Button from "../Button";
 import ControlBar from "../ControlBar";
 import ArrowBack from "../Icons/ArrowBack";
@@ -11,7 +9,6 @@ import PlaylistIcon from "../Icons/PlaylistAlt";
 import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
-import { Track } from "../../Types";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 import { Device } from "../../Types/Device";
@@ -124,28 +121,9 @@ const Header = styled.div`
 export type PlaylistProps = {
   playlist: any;
   onBack: () => void;
-  onClickLibraryItem: (item: string) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
   nowPlaying: any;
-  nextTracks: Track[];
-  previousTracks: Track[];
   onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
-  onSearch: (query: string) => void;
-  folders: any[];
-  playlists: any[];
-  onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onDeletePlaylist: (id: string) => void;
-  onEditFolder: (id: string, name: string) => void;
-  onEditPlaylist: (id: string, name: string, description?: string) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
   onPlayPlaylist: (
     playlistId: string,
@@ -153,14 +131,7 @@ export type PlaylistProps = {
     position?: number
   ) => void;
   recentPlaylists: any[];
-  devices: Device[];
-  castDevices: Device[];
-  currentDevice?: Device;
   currentCastDevice?: Device;
-  connectToDevice: (deviceId: string) => void;
-  disconnectFromDevice: () => void;
-  connectToCastDevice: (deviceId: string) => void;
-  disconnectFromCastDevice: () => void;
 };
 
 const Playlist: FC<PlaylistProps> = (props) => {
@@ -194,9 +165,9 @@ const Playlist: FC<PlaylistProps> = (props) => {
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
-        <Sidebar active="artists" {...props} />
+        <Sidebar active="artists" />
         <Content>
-          <ControlBar {...props} />
+          <ControlBar />
           <MainContent displayHeader={false}>
             <Scrollable>
               <BackButton onClick={onBack}>

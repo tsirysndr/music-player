@@ -11,7 +11,6 @@ import MainContent from "../MainContent";
 import Sidebar from "../Sidebar";
 import TracksTable from "../TracksTable";
 import AlbumIcon from "../Icons/AlbumCover";
-import { Track } from "../../Types";
 import { Device } from "../../Types/Device";
 import { useTheme } from "@emotion/react";
 import ListeningOn from "../ListeningOn";
@@ -146,51 +145,20 @@ const AlbumTitle = styled.div`
 
 export type ArtistDetailsProps = {
   onBack: () => void;
-  onClickLibraryItem: (item: string) => void;
   artist: any;
   tracks: any[];
   albums: any[];
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
-  onRepeat: () => void;
-  nowPlaying: any;
-  nextTracks: Track[];
-  previousTracks: Track[];
   onPlayArtistTracks: (
     artistId: string,
     shuffle: boolean,
     position?: number
   ) => void;
   onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
-  onSearch: (query: string) => void;
-  folders: any[];
-  playlists: any[];
-  onCreateFolder: (name: string) => void;
   onCreatePlaylist: (name: string, description?: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onDeletePlaylist: (id: string) => void;
-  onEditFolder: (id: string, name: string) => void;
-  onEditPlaylist: (id: string, name: string, description?: string) => void;
   recentPlaylists: any[];
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
-  devices: Device[];
-  castDevices: Device[];
   currentDevice?: Device;
   currentCastDevice?: Device;
-  connectToDevice: (deviceId: string) => void;
-  disconnectFromDevice: () => void;
-  connectToCastDevice: (deviceId: string) => void;
-  disconnectFromCastDevice: () => void;
 };
 
 const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
@@ -211,9 +179,9 @@ const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
       <Container>
-        <Sidebar active="artists" {...props} />
+        <Sidebar active="artists" />
         <Content>
-          <ControlBar {...props} />
+          <ControlBar />
           <MainContent displayHeader={false}>
             <Scrollable>
               <BackButton onClick={onBack}>

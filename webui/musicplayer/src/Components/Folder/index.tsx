@@ -1,3 +1,3 @@
-import Folder from "./Folder";
+import FolderWithData from "./FolderWithData";
 
-export default Folder;
+export default FolderWithData;

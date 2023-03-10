@@ -2,6 +2,7 @@ import { Client as Styletron } from "styletron-engine-atomic";
 import { Provider as StyletronProvider } from "styletron-react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { PLACEMENT, SnackbarProvider } from "baseui/snackbar";
+import { MockedProvider } from "@apollo/client/testing";
 import Providers from "../src/Providers";
 import "../src/index.css";
 
@@ -33,12 +34,14 @@ const reactRouterDecorator = (Story) => {
 export const decorators = [
   reactRouterDecorator,
   (Story) => (
-    <StyletronProvider value={engine}>
-      <Providers>
-        <SnackbarProvider placement={PLACEMENT.bottom}>
-          <Story />
-        </SnackbarProvider>
-      </Providers>
-    </StyletronProvider>
+    <MockedProvider mocks={[]} addTypename={false}>
+      <StyletronProvider value={engine}>
+        <Providers>
+          <SnackbarProvider placement={PLACEMENT.bottom}>
+            <Story />
+          </SnackbarProvider>
+        </Providers>
+      </StyletronProvider>
+    </MockedProvider>
   ),
 ];

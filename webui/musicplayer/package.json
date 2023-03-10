@@ -49,7 +49,7 @@
     "tauri:dev": "cross-env BROWSER=none REACT_APP_NATIVE_WRAPPER=tauri react-scripts start",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "storybook": "start-storybook -p 6006 -s public",
+    "storybook": "start-storybook -p 6007 -s public",
     "build-storybook": "build-storybook -s public",
     "graphql:generate": "graphql-codegen --config codegen.yml"
   },
@@ -87,15 +87,15 @@
     "@graphql-codegen/typescript": "2.7.5",
     "@graphql-codegen/typescript-operations": "2.5.5",
     "@graphql-codegen/typescript-react-apollo": "3.3.5",
-    "@storybook/addon-actions": "^6.5.12",
-    "@storybook/addon-essentials": "^6.5.12",
-    "@storybook/addon-interactions": "^6.5.12",
-    "@storybook/addon-links": "^6.5.12",
-    "@storybook/builder-webpack5": "^6.5.12",
-    "@storybook/manager-webpack5": "^6.5.12",
-    "@storybook/node-logger": "^6.5.12",
+    "@storybook/addon-actions": "^6.5.16",
+    "@storybook/addon-essentials": "^6.5.16",
+    "@storybook/addon-interactions": "^6.5.16",
+    "@storybook/addon-links": "^6.5.16",
+    "@storybook/builder-webpack5": "^6.5.16",
+    "@storybook/manager-webpack5": "^6.5.16",
+    "@storybook/node-logger": "^6.5.16",
     "@storybook/preset-create-react-app": "^4.1.2",
-    "@storybook/react": "^6.5.12",
+    "@storybook/react": "^6.5.16",
     "@storybook/testing-library": "^0.0.13",
     "@types/react-custom-scrollbars": "^4.0.10",
     "babel-plugin-named-exports-order": "^0.0.2",
@@ -103,6 +103,6 @@
     "msw": "^0.47.4",
     "msw-storybook-addon": "^1.6.3",
     "prop-types": "^15.8.1",
-    "webpack": "^5.74.0"
+    "webpack": "^5.75.0"
   }
 }

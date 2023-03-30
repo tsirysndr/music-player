@@ -6,34 +6,32 @@ jobs:
   compile:
     name: Compile
     runs-on: windows-latest
-  
+
     steps:
-        - uses: actions/checkout@master
-        - name: Install dependencies
-          run: |
-            choco install protoc
-            choco install rust
-            choco install checksum
-            choco install archiver
-            choco install nodejs-lts
-            choco install openssl
-            vcpkg install openssl-windows:x64-windows
-            refreshenv
-        - name: Build
-          run: |
-            cd webui\musicplayer
-            npm install -g yarn
-            yarn install --network-timeout 1000000000
-            yarn build
-            cd ..\..
-            cargo build --release
-            arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe
-            checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz" > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
-        - name: Releasing assets
-          uses: softprops/action-gh-release@v1
-          with:
-            files: |
-              music-player_x86_64-pc-windows-gnu.tar.gz
-              music-player_x86_64-pc-windows-gnu.tar.gz.sha256
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@master
+      - name: Install dependencies
+        run: |
+          choco install protoc
+          choco install rust
+          choco install checksum
+          choco install archiver
+          choco install nodejs-lts
+          refreshenv
+      - name: Build
+        run: |
+          cd webui\musicplayer
+          npm install -g yarn
+          yarn install --network-timeout 1000000000
+          yarn build
+          cd ..\..
+          cargo build --release
+          arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe
+          checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz" > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
+      - name: Releasing assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            music-player_x86_64-pc-windows-gnu.tar.gz
+            music-player_x86_64-pc-windows-gnu.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -5,7 +5,7 @@ on:
 jobs:
   release:
     name: release ${{ matrix.target }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -59,4 +59,4 @@ jobs:
       - name: "✏️ Generate release changelog"
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
+          token: ${{ secrets.GITHUB_TOKEN }}

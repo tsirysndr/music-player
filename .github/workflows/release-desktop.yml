@@ -13,9 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-20.04, windows-latest]
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.platform }}
-    
+
     steps:
       - uses: actions/checkout@v3
       - name: setup node
@@ -33,9 +33,9 @@ jobs:
           key: ${{ matrix.platform }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install dependencies (mac) only)
         if: matrix.platform == 'macos-latest'
-        run: brew install protobuf openssl
+        run: brew install protobuf
       - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev protobuf-compiler
@@ -44,8 +44,6 @@ jobs:
         run: |
           choco install protoc
           choco install checksum
-          choco install openssl
-          vcpkg install openssl-windows:x64-windows
       - name: Install Node Modules
         run: |
           cd webui/musicplayer
@@ -63,13 +61,13 @@ jobs:
         run: |
           cd webui/musicplayer
           npx @tauri-apps/cli build
-      - name:  Build App (macos arch64-apple-darwin)
+      - name: Build App (macos arch64-apple-darwin)
         if: matrix.platform == 'macos-latest'
         run: |
           cd webui/musicplayer
           npx @tauri-apps/cli build --target aarch64-apple-darwin
       - name: List files
-        if: matrix.platform == 'ubuntu-20.04' || matrix.platform == 'macos-latest'
+        if: matrix.platform == 'ubuntu-22.04' || matrix.platform == 'macos-latest'
         run: |
           ls target/release/bundle/*
       - name: List files (windows)
@@ -78,7 +76,7 @@ jobs:
           dir target\release\bundle
           dir target\release\bundle\*
       - name: Set env
-        if: matrix.platform == 'ubuntu-20.04' || matrix.platform == 'macos-latest'
+        if: matrix.platform == 'ubuntu-22.04' || matrix.platform == 'macos-latest'
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Create archive (macos)
         if: matrix.platform == 'macos-latest'
@@ -111,16 +109,16 @@ jobs:
             target/aarch64-apple-darwin/release/bundle/dmg/Music_Player_${{ env.RELEASE_VERSION }}_aarch64.dmg
             target/aarch64-apple-darwin/release/bundle/dmg/Music_Player_${{ env.RELEASE_VERSION }}_aarch64.dmg.sha256
       - name: Hash files (ubuntu)
-        if: matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
-           rm -f target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb
-           rm -f target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage
-           mv target/release/bundle/appimage/music-player*.AppImage target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage
-           mv target/release/bundle/deb/music-player*.deb target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb
-           shasum -a 256 target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage > target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage.sha256
-           shasum -a 256 target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb > target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb.sha256 
+          rm -f target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb
+          rm -f target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage
+          mv target/release/bundle/appimage/music-player*.AppImage target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage
+          mv target/release/bundle/deb/music-player*.deb target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb
+          shasum -a 256 target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage > target/release/bundle/appimage/music-player_${{ env.RELEASE_VERSION }}_amd64.AppImage.sha256
+          shasum -a 256 target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb > target/release/bundle/deb/music-player_${{ env.RELEASE_VERSION }}_amd64.deb.sha256
       - name: Releasing artifacts (ubuntu)
-        if: matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-22.04'
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -131,9 +129,9 @@ jobs:
       - name: Hash files (windows)
         if: matrix.platform == 'windows-latest'
         run: |
-           Remove-Item -Force target/release/bundle/msi/Music Player_x64_en-US.msi
-           move target/release/bundle/msi/Music*.msi target/release/bundle/msi/Music Player_x64_en-US.msi
-           checksum -t sha256  -f="target/release/bundle/msi/Music Player_x64_en-US.msi" > target/release/bundle/msi/Music_Player_x64_en-US.msi.sha256
+          Remove-Item -Force target/release/bundle/msi/Music Player_x64_en-US.msi
+          move target/release/bundle/msi/Music*.msi target/release/bundle/msi/Music Player_x64_en-US.msi
+          checksum -t sha256  -f="target/release/bundle/msi/Music Player_x64_en-US.msi" > target/release/bundle/msi/Music_Player_x64_en-US.msi.sha256
       - name: Releasing artifacts (windows)
         if: matrix.platform == 'windows-latest'
         uses: softprops/action-gh-release@v1
@@ -141,4 +139,3 @@ jobs:
           files: |
             target/release/bundle/msi/Music Player_x64_en-US.msi
             target/release/bundle/msi/Music_Player_x64_en-US.msi.sha256
-        

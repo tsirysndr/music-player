@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions-rs/cargo@v1
       - name: Installing needed dependencies
-        run: brew install protobuf openssl
+        run: brew install protobuf
       - name: Install aarch64-apple-darwin toolchain
         if: matrix.target == 'aarch64-apple-darwin'
         run: rustup target add aarch64-apple-darwin

@@ -5,7 +5,7 @@ on:
 jobs:
   release:
     name: release ${{ matrix.target }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -118,7 +118,7 @@ jobs:
         if: matrix.target == 'x86_64-linux-android'
         run: |
           echo "RUSTFLAGS=-C linker=x86_64-linux-android-clang -L$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android/33 -lc++ -lstdc++ -lc" >> $GITHUB_ENV
-          
+
       - name: Build webui
         run: |
           cd webui/musicplayer
@@ -150,4 +150,4 @@ jobs:
       - name: "✏️ Generate release changelog"
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
+          token: ${{ secrets.GITHUB_TOKEN }}

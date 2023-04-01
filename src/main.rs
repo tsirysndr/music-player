@@ -40,7 +40,7 @@ use music_player_playback::{
 use music_player_server::event::{Event, TrackEvent};
 use music_player_server::server::MusicPlayerServer;
 use music_player_settings::{read_settings, Settings};
-use music_player_storage::Database;
+use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
 use network::{IoEvent, Network};
@@ -172,11 +172,30 @@ A simple music player written in Rust"#,
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = cli().get_matches();
 
+    let parsed = parse_args(matches.clone()).await;
+
+    if parsed.is_ok() {
+        return Ok(());
+    }
+
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
     let cloned_peer_map = Arc::clone(&peer_map);
 
+    let mut mode = match connect_to_server().await {
+        true => "client".to_string(),
+        false => "server".to_string(),
+    };
+
+    mode = env::var("MUSIC_PLAYER_MODE").unwrap_or(mode);
+    if mode == "server" {
+        migration::run().await;
+    }
+
+    let db_conn = Database::new().await;
+    let searcher = Searcher::new();
+    let db = Arc::new(Mutex::new(Database::new().await));
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cloned_tracklist = Arc::clone(&tracklist);
@@ -245,12 +264,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::clone(&tracklist),
     );
 
-    let parsed = parse_args(matches.clone()).await;
-
-    if parsed.is_ok() {
-        return Ok(());
-    }
-
     let err = parsed.err().unwrap().to_string();
     if !err.eq("No subcommand found") {
         if err.eq("transport error") {
@@ -262,28 +275,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(err.into());
     }
 
-    let mut mode = match connect_to_server().await {
-        true => "client".to_string(),
-        false => "server".to_string(),
-    };
-
-    mode = env::var("MUSIC_PLAYER_MODE").unwrap_or(mode);
-
     if mode == "server" {
-        migration::run().await;
-
         thread::spawn(|| {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
-            runtime.block_on(auto_scan_music_library());
+            runtime.block_on(auto_scan_music_library(db_conn, searcher));
         });
     }
 
     let tracklist_ws = Arc::clone(&tracklist);
     let tracklist_webui = Arc::clone(&tracklist);
-    let db = Arc::new(Mutex::new(Database::new().await));
     let db_ws = Arc::clone(&db);
 
     let peer_map_ws = Arc::clone(&peer_map);

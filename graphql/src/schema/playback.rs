@@ -13,8 +13,6 @@ use super::objects::{
     current_track::CurrentlyPlayingSong, player_state::PlayerState, track::Track,
 };
 
-use music_player_types::types;
-
 #[derive(Default)]
 pub struct PlaybackQuery;
 

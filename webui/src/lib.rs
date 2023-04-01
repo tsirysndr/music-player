@@ -23,7 +23,7 @@ use music_player_graphql::{
 };
 use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
-use music_player_storage::Database;
+use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
 use music_player_types::types::Device;
 use owo_colors::OwoColorize;
@@ -139,6 +139,7 @@ pub async fn start_webui(
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
+    let searcher = Arc::new(Mutex::new(Searcher::new()));
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -151,6 +152,7 @@ pub async fn start_webui(
     .data(current_device)
     .data(source_device)
     .data(receiver_device)
+    .data(searcher)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
 

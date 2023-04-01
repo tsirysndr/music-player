@@ -1,6 +1,6 @@
 use futures::future::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
-use music_player_storage::Database;
+use music_player_storage::{searcher::Searcher, Database};
 use sea_orm::{ActiveModelTrait, EntityTrait, PaginatorTrait};
 use std::env;
 
@@ -14,39 +14,42 @@ async fn scan_directory() {
     );
     env::set_var("DATABASE_URL", "sqlite:///tmp/music-player.sqlite3");
     migration::run().await;
-    super::scan_directory(move |song, db| {
-        async move {
-            let item: artist::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
+    let db = Database::new().await;
+    super::scan_directory(
+        move |song, db| {
+            async move {
+                let item: artist::ActiveModel = song.try_into().unwrap();
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
 
-            let item: album::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
+                let item: album::ActiveModel = song.try_into().unwrap();
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
 
-            let item: track::ActiveModel = song.try_into().unwrap();
+                let item: track::ActiveModel = song.try_into().unwrap();
 
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
 
-            let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
+                let item: artist_tracks::ActiveModel = song.try_into().unwrap();
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
             }
-        }
-        .boxed()
-    })
+            .boxed()
+        },
+        &db,
+        &Searcher::new(),
+    )
     .await
     .unwrap_or_default();
-
-    let db = Database::new().await;
 
     let conn = db.get_connection();
     assert_eq!(artist::Entity::find().count(conn).await.unwrap(), 1);

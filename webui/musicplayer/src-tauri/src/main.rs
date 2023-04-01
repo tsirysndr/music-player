@@ -27,7 +27,7 @@ use music_player_playback::{
     player::{Player, PlayerEvent},
 };
 use music_player_settings::{read_settings, Settings};
-use music_player_storage::Database;
+use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
 use tauri::Manager;
 use tokio::sync::{mpsc, Mutex};
@@ -100,6 +100,7 @@ async fn main() {
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
+    let searcher = Arc::new(Mutex::new(Searcher::new()));
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
@@ -144,6 +145,7 @@ async fn main() {
     .data(current_device)
     .data(source_device)
     .data(receiver_device)
+    .data(searcher)
     .finish();
 
     let config = read_settings().unwrap();

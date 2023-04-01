@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{env, sync::Arc};
 
 use async_graphql::Schema;
 use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
@@ -7,7 +7,7 @@ use music_player_playback::{
     config::AudioFormat,
     player::PlayerCommand,
 };
-use music_player_storage::Database;
+use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
 use music_player_types::types::Device;
 use tokio::sync::{
@@ -45,6 +45,7 @@ pub async fn setup_schema() -> (
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
+    let searcher = Arc::new(Mutex::new(Searcher::new()));
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
@@ -67,6 +68,7 @@ pub async fn setup_schema() -> (
         .data(Arc::clone(&current_device))
         .data(Arc::clone(&source_device))
         .data(Arc::clone(&receiver_device))
+        .data(Arc::clone(&searcher))
         .finish(),
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

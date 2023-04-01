@@ -13,6 +13,7 @@ use music_player_playback::{
     player::{Player, PlayerEngine},
 };
 use music_player_settings::{read_settings, Settings};
+use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
 use std::sync::Arc;
@@ -48,7 +49,11 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("scan") {
-        scan_music_library(true).await.map_err(|e| e.to_string())?;
+        let db = Database::new().await;
+        let searcher = Searcher::new();
+        scan_music_library(true, db, searcher)
+            .await
+            .map_err(|e| e.to_string())?;
         return Ok(());
     }
 

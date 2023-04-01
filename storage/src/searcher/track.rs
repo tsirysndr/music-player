@@ -7,13 +7,13 @@ use tantivy::{
     doc,
     query::{FuzzyTermQuery, PhraseQuery},
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
-    Document, Index, IndexReader, IndexWriter, ReloadPolicy, Term,
+    Document, Index, IndexReader, ReloadPolicy, Term,
 };
 #[derive(Clone)]
 pub struct TrackSearcher {
-    pub schema: Schema,
-    pub index: Index,
-    pub reader: IndexReader,
+    schema: Schema,
+    index: Index,
+    reader: IndexReader,
 }
 
 impl TrackSearcher {
@@ -57,8 +57,6 @@ impl TrackSearcher {
     }
 
     pub fn insert(&self, song: Song, str_id: &str) -> tantivy::Result<()> {
-        let mut index_writer: IndexWriter = self.index.writer(50_000_000).unwrap();
-
         let id = self.schema.get_field("id").unwrap();
         let title = self.schema.get_field("title").unwrap();
         let artist = self.schema.get_field("artist").unwrap();
@@ -83,9 +81,9 @@ impl TrackSearcher {
             album_id => format!("{:x}", md5::compute(song.album.to_owned()))
         );
 
-        index_writer.add_document(doc)?;
-        index_writer.commit()?;
-
+        let mut writer = self.index.writer_with_num_threads(64, 192_000_000)?;
+        writer.add_document(doc)?;
+        writer.commit()?;
         Ok(())
     }
 

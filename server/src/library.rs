@@ -1,7 +1,7 @@
 use futures::future::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_scanner::scan_directory;
-use music_player_storage::repo::album::AlbumRepository;
+use music_player_storage::{repo::album::AlbumRepository, searcher::Searcher};
 use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
@@ -32,35 +32,39 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<ScanRequest>,
     ) -> Result<tonic::Response<ScanResponse>, tonic::Status> {
-        scan_directory(move |song, db| {
-            async move {
-                let item: artist::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
+        scan_directory(
+            move |song, db| {
+                async move {
+                    let item: artist::ActiveModel = song.try_into().unwrap();
+                    match item.insert(db.get_connection()).await {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
 
-                let item: album::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
+                    let item: album::ActiveModel = song.try_into().unwrap();
+                    match item.insert(db.get_connection()).await {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
 
-                let item: track::ActiveModel = song.try_into().unwrap();
+                    let item: track::ActiveModel = song.try_into().unwrap();
 
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
+                    match item.insert(db.get_connection()).await {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
 
-                let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
+                    let item: artist_tracks::ActiveModel = song.try_into().unwrap();
+                    match item.insert(db.get_connection()).await {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
                 }
-            }
-            .boxed()
-        })
+                .boxed()
+            },
+            &Database::new().await,
+            &Searcher::new(),
+        )
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
 

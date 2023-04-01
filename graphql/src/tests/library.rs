@@ -3,6 +3,7 @@ use futures_util::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_playback::player::Player;
 use music_player_scanner::scan_directory;
+use music_player_storage::{searcher::Searcher, Database};
 use sea_orm::ActiveModelTrait;
 use std::{sync::Arc, thread, time::Duration};
 
@@ -293,35 +294,41 @@ async fn search() {
         Arc::clone(&tracklist),
     );
 
-    scan_directory(move |song, db| {
-        async move {
-            let item: artist::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
+    let db = Database::new().await;
+    let searcher = Searcher::new();
+    scan_directory(
+        move |song, db| {
+            async move {
+                let item: artist::ActiveModel = song.try_into().unwrap();
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
 
-            let item: album::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
+                let item: album::ActiveModel = song.try_into().unwrap();
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
 
-            let item: track::ActiveModel = song.try_into().unwrap();
+                let item: track::ActiveModel = song.try_into().unwrap();
 
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
-            }
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
 
-            let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-            match item.insert(db.get_connection()).await {
-                Ok(_) => (),
-                Err(_) => (),
+                let item: artist_tracks::ActiveModel = song.try_into().unwrap();
+                match item.insert(db.get_connection()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
             }
-        }
-        .boxed()
-    })
+            .boxed()
+        },
+        &db,
+        &searcher,
+    )
     .await
     .unwrap_or_default();
 

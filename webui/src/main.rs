@@ -5,8 +5,10 @@ use music_player_playback::{
     config::AudioFormat,
     player::Player,
 };
+use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
+use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -19,6 +21,7 @@ async fn main() -> std::io::Result<()> {
     let cloned_tracklist = tracklist.clone();
     let cloned_cmd_tx = Arc::clone(&cmd_tx);
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
+    let db = Arc::new(Mutex::new(Database::new().await));
     let (_, _) = Player::new(
         move || backend(None, audio_format),
         move |_| {},

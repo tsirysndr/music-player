@@ -1,28 +1,21 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    io::Write,
-    sync::{Arc, Mutex},
-    thread,
-};
-
+use anyhow::Error;
 use futures::future::BoxFuture;
-use music_player_storage::{
-    searcher::{self, Searcher},
-    Database,
-};
+use music_player_storage::{searcher::Searcher, Database};
 use music_player_types::types::{Album, Artist, Song};
+use std::{io::Write, thread};
 
-use lofty::{AudioFile, LoftyError, Probe, Tag};
+use lofty::{AudioFile, Probe, Tag};
 use music_player_settings::{get_application_directory, read_settings, Settings};
 use walkdir::WalkDir;
 
 pub async fn scan_directory(
     save: impl for<'a> Fn(&'a Song, &'a Database) -> BoxFuture<'a, ()> + 'static,
-) -> Result<Vec<Song>, LoftyError> {
-    let db = Database::new().await;
-    let searcher = Arc::new(Mutex::new(Searcher::new()));
+    db: &Database,
+    searcher: &Searcher,
+) -> Result<Vec<Song>, Error> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
 
@@ -35,6 +28,29 @@ pub async fn scan_directory(
         "audio/m4a",
         "audio/aac",
     ];
+
+    let cloned_db = db.clone();
+
+    let (tx, rx) = std::sync::mpsc::channel::<(Album, Song, Artist)>();
+    let searcher = searcher.clone();
+
+    thread::spawn(move || {
+        for (album, track, artist) in rx {
+            let id = format!("{:x}", md5::compute(track.uri.as_ref().unwrap()));
+            match searcher.insert_artist(artist) {
+                Ok(_) => {}
+                Err(e) => println!("Error inserting artist: {}", e),
+            };
+            match searcher.insert_album(album) {
+                Ok(_) => {}
+                Err(e) => println!("Error inserting album: {}", e),
+            };
+            match searcher.insert_song(track, &id) {
+                Ok(_) => {}
+                Err(e) => println!("Error inserting song: {}", e),
+            };
+        }
+    });
 
     for entry in WalkDir::new(settings.music_directory)
         .follow_links(true)
@@ -67,7 +83,7 @@ pub async fn scan_directory(
                     let album = song.album.clone();
                     let cover = extract_and_save_album_cover(tag, &album);
                     song.cover = cover.clone();
-                    save(&song, &db).await;
+                    save(&song, &cloned_db).await;
                     songs.push(song);
 
                     let mut track: Song = tag.try_into().unwrap();
@@ -79,29 +95,9 @@ pub async fn scan_directory(
                     let mut album: Album = tag.try_into().unwrap();
                     album.cover = cover.clone();
 
-                    let id = format!("{:x}", md5::compute(track.uri.as_ref().unwrap()));
-                    let searcher = Arc::clone(&searcher);
-                    thread::spawn(move || match searcher.lock() {
-                        Ok(searcher) => {
-                            match searcher.insert_artist(artist) {
-                                Ok(_) => {}
-                                Err(e) => println!("Error inserting artist: {}", e),
-                            };
-                            match searcher.insert_album(album) {
-                                Ok(_) => {}
-                                Err(e) => println!("Error inserting album: {}", e),
-                            };
-                            match searcher.insert_song(track, &id) {
-                                Ok(_) => {}
-                                Err(e) => println!("Error inserting song: {}", e),
-                            };
-                        }
-                        Err(e) => {
-                            println!("Error: {:?}", e);
-                        }
-                    });
+                    tx.send((album, track, artist)).unwrap();
                 }
-                Err(e) => println!("ERROR: {}", e),
+                Err(e) => println!("ERROR: {}, {}", e, path),
             }
         }
     }

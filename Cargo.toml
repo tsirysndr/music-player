@@ -1,6 +1,6 @@
 [package]
 name = "music-player"
-version = "0.2.0-alpha.11"
+version = "0.2.0-alpha.12"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -39,7 +39,7 @@ path = "src/main.rs"
 
 [dependencies.music-player-server]
 path = "server"
-version = "0.1.12"
+version = "0.1.13"
 
 [dependencies.music-player-playback]
 path = "playback"
@@ -47,7 +47,7 @@ version = "0.1.10"
 
 [dependencies.music-player-scanner]
 path = "scanner"
-version = "0.1.6"
+version = "0.1.8"
 
 [dependencies.music-player-entity]
 path = "entity"
@@ -63,11 +63,11 @@ version = "0.1.2"
 
 [dependencies.music-player-storage]
 path = "storage"
-version = "0.1.3"
+version = "0.1.4"
 
 [dependencies.music-player-addons]
 path = "addons"
-version = "0.1.3"
+version = "0.1.4"
 
 [dependencies.music-player-tracklist]
 path = "tracklist"
@@ -75,11 +75,11 @@ version = "0.1.7"
 
 [dependencies.music-player-client]
 path = "client"
-version = "0.1.3"
+version = "0.1.4"
 
 [dependencies.music-player-webui]
 path = "webui"
-version = "0.1.11"
+version = "0.1.12"
 
 [dependencies.music-player-discovery]
 path = "discovery"

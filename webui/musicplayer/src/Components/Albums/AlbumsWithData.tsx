@@ -6,12 +6,15 @@ import { resourceUriResolver } from "../../ResourceUriResolver";
 import { useNavigate } from "react-router-dom";
 
 const AlbumsWithData: FC = () => {
-  const { data, loading } = useGetAlbumsQuery({
+  const { data, loading, refetch } = useGetAlbumsQuery({
     fetchPolicy: "cache-and-network",
   });
   const navigate = useNavigate();
   const { currentCastDevice } = useDevices();
   const albums = !loading && data ? data.albums : [];
+  const onFilter = (filter: string) => {
+    refetch({ filter });
+  };
   return (
     <Albums
       albums={albums.map((album) => ({
@@ -23,6 +26,7 @@ const AlbumsWithData: FC = () => {
       }))}
       onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
       currentCastDevice={currentCastDevice}
+      onFilter={onFilter}
     />
   );
 };

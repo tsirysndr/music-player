@@ -72,6 +72,7 @@ export type AlbumsProps = {
   albums: any[];
   onClickAlbum: (album: any) => void;
   currentCastDevice?: Device;
+  onFilter: (filter: string) => void;
 };
 
 export type AlbumProps = {
@@ -97,7 +98,7 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 };
 
 const Albums: FC<AlbumsProps> = (props) => {
-  const { albums, onClickAlbum, currentCastDevice } = props;
+  const { albums, onClickAlbum, currentCastDevice, onFilter } = props;
   return (
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
@@ -106,7 +107,11 @@ const Albums: FC<AlbumsProps> = (props) => {
         <Content>
           <ControlBar />
           <Scrollable>
-            <MainContent title="Albums" placeholder="Filter Albums">
+            <MainContent
+              title="Albums"
+              placeholder="Filter Albums"
+              onFilter={onFilter}
+            >
               <Wrapper>
                 <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
                   {albums.map((item) => (

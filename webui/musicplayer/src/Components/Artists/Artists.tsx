@@ -64,10 +64,11 @@ export type ArtistsProps = {
   artists: any[];
   onClickArtist: (artist: any) => void;
   currentCastDevice?: Device;
+  onFilter: (filter: string) => void;
 };
 
 const Artists: FC<ArtistsProps> = (props) => {
-  const { onClickArtist, artists, currentCastDevice } = props;
+  const { onClickArtist, artists, currentCastDevice, onFilter } = props;
   return (
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
@@ -76,7 +77,11 @@ const Artists: FC<ArtistsProps> = (props) => {
         <Content>
           <ControlBar />
           <Scrollable>
-            <MainContent title="Artists" placeholder="Filter Artists">
+            <MainContent
+              title="Artists"
+              placeholder="Filter Artists"
+              onFilter={onFilter}
+            >
               <Wrapper>
                 <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
                   {artists.map((item) => (

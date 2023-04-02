@@ -46,13 +46,22 @@ impl TrackRepository {
     ) -> Result<Vec<track_entity::Model>, Error> {
         let results = match filter {
             Some(filter) => {
-                track_entity::Entity::find()
-                    .filter(track_entity::Column::Title.like(format!("%{}%", filter).as_str()))
-                    .limit(limit)
-                    .order_by_asc(track_entity::Column::Title)
-                    .find_with_related(artist_entity::Entity)
-                    .all(&self.db)
-                    .await?
+                if filter.is_empty() {
+                    track_entity::Entity::find()
+                        .limit(limit)
+                        .order_by_asc(track_entity::Column::Title)
+                        .find_with_related(artist_entity::Entity)
+                        .all(&self.db)
+                        .await?
+                } else {
+                    track_entity::Entity::find()
+                        .filter(track_entity::Column::Title.like(format!("%{}%", filter).as_str()))
+                        .limit(limit)
+                        .order_by_asc(track_entity::Column::Title)
+                        .find_with_related(artist_entity::Entity)
+                        .all(&self.db)
+                        .await?
+                }
             }
             None => {
                 track_entity::Entity::find()

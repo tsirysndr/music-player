@@ -338,6 +338,7 @@ export type QueryAlbumArgs = {
 
 
 export type QueryAlbumsArgs = {
+  filter?: InputMaybe<Scalars['String']>;
   limit?: InputMaybe<Scalars['Int']>;
   offset?: InputMaybe<Scalars['Int']>;
 };
@@ -349,6 +350,7 @@ export type QueryArtistArgs = {
 
 
 export type QueryArtistsArgs = {
+  filter?: InputMaybe<Scalars['String']>;
   limit?: InputMaybe<Scalars['Int']>;
   offset?: InputMaybe<Scalars['Int']>;
 };
@@ -380,6 +382,7 @@ export type QueryTrackArgs = {
 
 
 export type QueryTracksArgs = {
+  filter?: InputMaybe<Scalars['String']>;
   limit?: InputMaybe<Scalars['Int']>;
   offset?: InputMaybe<Scalars['Int']>;
 };
@@ -530,6 +533,7 @@ export type PlaylistFragmentFragment = { __typename?: 'Playlist', id: string, na
 export type FolderFragmentFragment = { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
 
 export type GetAlbumsQueryVariables = Exact<{
+  filter?: InputMaybe<Scalars['String']>;
   offset?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 }>;
@@ -538,6 +542,7 @@ export type GetAlbumsQueryVariables = Exact<{
 export type GetAlbumsQuery = { __typename?: 'Query', albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null }> }> };
 
 export type GetArtistsQueryVariables = Exact<{
+  filter?: InputMaybe<Scalars['String']>;
   offset?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 }>;
@@ -546,6 +551,7 @@ export type GetArtistsQueryVariables = Exact<{
 export type GetArtistsQuery = { __typename?: 'Query', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }> };
 
 export type GetTracksQueryVariables = Exact<{
+  filter?: InputMaybe<Scalars['String']>;
   offset?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 }>;
@@ -1224,8 +1230,8 @@ export function useOnDeviceDisconnectedSubscription(baseOptions?: Apollo.Subscri
 export type OnDeviceDisconnectedSubscriptionHookResult = ReturnType<typeof useOnDeviceDisconnectedSubscription>;
 export type OnDeviceDisconnectedSubscriptionResult = Apollo.SubscriptionResult<OnDeviceDisconnectedSubscription>;
 export const GetAlbumsDocument = gql`
-    query GetAlbums($offset: Int, $limit: Int) {
-  albums(offset: $offset, limit: $limit) {
+    query GetAlbums($filter: String, $offset: Int, $limit: Int) {
+  albums(filter: $filter, offset: $offset, limit: $limit) {
     ...AlbumFragment
     tracks {
       ...TrackFragment
@@ -1247,6 +1253,7 @@ ${TrackFragmentFragmentDoc}`;
  * @example
  * const { data, loading, error } = useGetAlbumsQuery({
  *   variables: {
+ *      filter: // value for 'filter'
  *      offset: // value for 'offset'
  *      limit: // value for 'limit'
  *   },
@@ -1264,8 +1271,8 @@ export type GetAlbumsQueryHookResult = ReturnType<typeof useGetAlbumsQuery>;
 export type GetAlbumsLazyQueryHookResult = ReturnType<typeof useGetAlbumsLazyQuery>;
 export type GetAlbumsQueryResult = Apollo.QueryResult<GetAlbumsQuery, GetAlbumsQueryVariables>;
 export const GetArtistsDocument = gql`
-    query GetArtists($offset: Int, $limit: Int) {
-  artists(offset: $offset, limit: $limit) {
+    query GetArtists($filter: String, $offset: Int, $limit: Int) {
+  artists(filter: $filter, offset: $offset, limit: $limit) {
     ...ArtistFragment
   }
 }
@@ -1283,6 +1290,7 @@ export const GetArtistsDocument = gql`
  * @example
  * const { data, loading, error } = useGetArtistsQuery({
  *   variables: {
+ *      filter: // value for 'filter'
  *      offset: // value for 'offset'
  *      limit: // value for 'limit'
  *   },
@@ -1300,8 +1308,8 @@ export type GetArtistsQueryHookResult = ReturnType<typeof useGetArtistsQuery>;
 export type GetArtistsLazyQueryHookResult = ReturnType<typeof useGetArtistsLazyQuery>;
 export type GetArtistsQueryResult = Apollo.QueryResult<GetArtistsQuery, GetArtistsQueryVariables>;
 export const GetTracksDocument = gql`
-    query GetTracks($offset: Int, $limit: Int) {
-  tracks(offset: $offset, limit: $limit) {
+    query GetTracks($filter: String, $offset: Int, $limit: Int) {
+  tracks(filter: $filter, offset: $offset, limit: $limit) {
     ...TrackFragment
     artists {
       id
@@ -1327,6 +1335,7 @@ ${AlbumFragmentFragmentDoc}`;
  * @example
  * const { data, loading, error } = useGetTracksQuery({
  *   variables: {
+ *      filter: // value for 'filter'
  *      offset: // value for 'offset'
  *      limit: // value for 'limit'
  *   },

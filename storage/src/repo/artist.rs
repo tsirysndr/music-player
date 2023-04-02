@@ -53,6 +53,13 @@ impl ArtistRepository {
     ) -> Result<Vec<artist_entity::Model>, Error> {
         match filter {
             Some(filter) => {
+                if filter.is_empty() {
+                    let results = artist_entity::Entity::find()
+                        .order_by_asc(artist_entity::Column::Name)
+                        .all(&self.db)
+                        .await?;
+                    return Ok(results);
+                }
                 let results = artist_entity::Entity::find()
                     .filter(artist_entity::Column::Name.like(format!("%{}%", filter).as_str()))
                     .order_by_asc(artist_entity::Column::Name)

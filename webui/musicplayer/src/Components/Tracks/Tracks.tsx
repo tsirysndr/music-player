@@ -28,6 +28,7 @@ export type TracksProps = {
   onPlayNext: (id: string) => void;
   recentPlaylists: any[];
   currentCastDevice?: Device;
+  onFilter: (filter: string) => void;
 };
 
 const Tracks: FC<TracksProps> = (props) => {
@@ -40,6 +41,7 @@ const Tracks: FC<TracksProps> = (props) => {
     onAddTrackToPlaylist,
     recentPlaylists,
     currentCastDevice,
+    onFilter,
   } = props;
   return (
     <>
@@ -48,7 +50,7 @@ const Tracks: FC<TracksProps> = (props) => {
         <Sidebar active="tracks" />
         <Content>
           <ControlBar />
-          <MainContent title="Tracks">
+          <MainContent title="Tracks" onFilter={onFilter}>
             <TracksTable
               tracks={tracks}
               currentTrackId={nowPlaying.id}

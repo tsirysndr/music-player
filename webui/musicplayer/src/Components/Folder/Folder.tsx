@@ -103,6 +103,7 @@ export type FolderProps = {
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
   folder?: any;
   currentCastDevice?: Device;
+  onFilter: (value: string) => void;
 };
 
 const Folder: FC<FolderProps> = (props) => {
@@ -112,6 +113,7 @@ const Folder: FC<FolderProps> = (props) => {
     folder,
     onMovePlaylists,
     currentCastDevice,
+    onFilter,
   } = props;
   const [isMovePlaylistsModalOpen, setIsMovePlaylistsModalOpen] =
     useState(false);
@@ -126,7 +128,11 @@ const Folder: FC<FolderProps> = (props) => {
             <Scrollable>
               {folder?.playlists?.length > 0 && (
                 <Scrollable>
-                  <MainContent title="Playlists" placeholder="Filter Playlists">
+                  <MainContent
+                    title="Playlists"
+                    placeholder="Filter Playlists"
+                    onFilter={onFilter}
+                  >
                     <Wrapper>
                       <Grid
                         gridColumns={[2, 3, 4, 6]}

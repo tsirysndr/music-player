@@ -19,6 +19,7 @@ export type MainContentProps = {
   placeholder?: string;
   children?: ReactNode;
   displayHeader?: boolean;
+  onFilter?: (value: string) => void;
 };
 
 const MainContent: FC<MainContentProps> = ({
@@ -26,13 +27,14 @@ const MainContent: FC<MainContentProps> = ({
   placeholder,
   children,
   displayHeader,
+  onFilter,
 }) => {
   return (
     <div>
       {displayHeader && (
         <Header>
           <Title>{title}</Title>
-          <Filter placeholder={placeholder} />
+          <Filter placeholder={placeholder} onChange={onFilter!} />
         </Header>
       )}
 

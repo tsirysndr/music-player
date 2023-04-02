@@ -8,7 +8,7 @@ import { usePlaylist } from "../../Hooks/usePlaylist";
 import { resourceUriResolver } from "../../ResourceUriResolver";
 
 const TracksWithData: FC = () => {
-  const { data, loading } = useGetTracksQuery({
+  const { data, loading, refetch } = useGetTracksQuery({
     fetchPolicy: "cache-and-network",
   });
   const { formatTime } = useTimeFormat();
@@ -16,6 +16,11 @@ const TracksWithData: FC = () => {
   const { currentCastDevice } = useDevices();
   const tracks = !loading && data ? data.tracks : [];
   const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
+
+  const onFilter = (filter: string) => {
+    refetch({ filter });
+  };
+
   return (
     <Tracks
       tracks={tracks.slice(0, 100).map((track) => ({
@@ -41,6 +46,7 @@ const TracksWithData: FC = () => {
       }
       recentPlaylists={recentPlaylists}
       currentCastDevice={currentCastDevice}
+      onFilter={onFilter}
     />
   );
 };

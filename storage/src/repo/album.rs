@@ -41,6 +41,13 @@ impl AlbumRepository {
     ) -> Result<Vec<album_entity::Model>, Error> {
         match filter {
             Some(filter) => {
+                if filter.is_empty() {
+                    let results = album_entity::Entity::find()
+                        .order_by_asc(album_entity::Column::Title)
+                        .all(&self.db)
+                        .await?;
+                    return Ok(results);
+                }
                 let results = album_entity::Entity::find()
                     .filter(album_entity::Column::Title.like(format!("%{}%", filter).as_str()))
                     .order_by_asc(album_entity::Column::Title)

@@ -5,10 +5,13 @@ import { useGetArtistsQuery } from "../../Hooks/GraphQL";
 import { useDevices } from "../../Hooks/useDevices";
 
 const ArtistsWithData: FC = () => {
-  const { data, loading } = useGetArtistsQuery();
+  const { data, loading, refetch } = useGetArtistsQuery();
   const navigate = useNavigate();
   const { currentCastDevice } = useDevices();
   const artists = !loading && data ? data.artists : [];
+  const onFilter = (filter: string) => {
+    refetch({ filter });
+  };
   return (
     <Artists
       artists={artists.map((artist) => ({
@@ -18,6 +21,7 @@ const ArtistsWithData: FC = () => {
       }))}
       onClickArtist={({ id }) => navigate(`/artists/${id}`)}
       currentCastDevice={currentCastDevice}
+      onFilter={onFilter}
     />
   );
 };

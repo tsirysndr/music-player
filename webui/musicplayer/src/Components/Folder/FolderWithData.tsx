@@ -22,6 +22,9 @@ const FolderWithData: FC = () => {
   const { currentCastDevice } = useDevices();
   const { playlists, mainPlaylists, createPlaylist, movePlaylistsToFolder } =
     usePlaylist();
+
+  const onFilter = (value: string) => {};
+
   return (
     <Folder
       onPlayNext={(trackId) => playNext({ variables: { trackId } })}
@@ -35,6 +38,7 @@ const FolderWithData: FC = () => {
       }
       folder={data?.folder}
       currentCastDevice={currentCastDevice}
+      onFilter={onFilter}
     />
   );
 };

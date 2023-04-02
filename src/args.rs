@@ -85,7 +85,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
             return Ok(());
         }
 
-        let result = client.albums(0, 10000).await?;
+        let result = client.albums(None, 0, 10000).await?;
 
         let mut builder = Builder::default();
         builder.set_columns(["id", "name"]);
@@ -103,7 +103,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
     if let Some(_) = matches.subcommand_matches("artists") {
         let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
-        let result = client.artists(0, 10000).await?;
+        let result = client.artists(None, 0, 10000).await?;
 
         let mut builder = Builder::default();
         builder.set_columns(["id", "name"]);
@@ -204,7 +204,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
     if let Some(_matches) = matches.subcommand_matches("tracks") {
         let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
-        let result = client.songs(0, 10000).await?;
+        let result = client.songs(None, 0, 10000).await?;
 
         let mut builder = Builder::default();
         builder.set_columns(["id", "title"]);

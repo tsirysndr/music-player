@@ -85,6 +85,7 @@ async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
     let request = tonic::Request::new(GetArtistsRequest {
         offset: 0,
         limit: 10,
+        filter: "".to_string(),
     });
     let response = client.get_artists(request).await?;
     let response = response.into_inner();
@@ -118,6 +119,7 @@ async fn get_albums() {
     let request = tonic::Request::new(GetAlbumsRequest {
         offset: 0,
         limit: 10,
+        filter: "".to_string(),
     });
     let response = client.get_albums(request).await.unwrap();
     let response = response.into_inner();
@@ -150,6 +152,7 @@ async fn get_tracks() {
     let request = tonic::Request::new(GetTracksRequest {
         offset: 0,
         limit: 10,
+        filter: "".to_string(),
     });
     let response = client.get_tracks(request).await.unwrap();
     let response = response.into_inner();

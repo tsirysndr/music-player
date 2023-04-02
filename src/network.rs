@@ -91,7 +91,7 @@ impl<'a> Network<'a> {
     }
 
     async fn get_tracks(&mut self) -> Result<(), Error> {
-        let tracks = self.library.songs(0, 10000).await?;
+        let tracks = self.library.songs(None, 0, 10000).await?;
         let mut app = self.app.lock().await;
         app.track_table = TrackTable {
             tracks,
@@ -101,7 +101,7 @@ impl<'a> Network<'a> {
     }
 
     async fn get_albums(&mut self) -> Result<(), Error> {
-        let albums = self.library.albums(0, 10000).await?;
+        let albums = self.library.albums(None, 0, 10000).await?;
         let mut app = self.app.lock().await;
         app.album_table = AlbumTable {
             albums,
@@ -133,7 +133,7 @@ impl<'a> Network<'a> {
     }
 
     async fn get_artists(&mut self) -> Result<(), Error> {
-        let artists = self.library.artists(0, 10000).await?;
+        let artists = self.library.artists(None, 0, 10000).await?;
         let mut app = self.app.lock().await;
         app.artist_table = ArtistTable {
             artists,

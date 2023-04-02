@@ -114,7 +114,12 @@ impl Addon for Dlna {
 
 #[async_trait]
 impl Browseable for Dlna {
-    async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
+    async fn albums(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Album>, Error> {
         if let Some(client) = &self.media_server_client {
             client
                 .browse("musicdb://albums", "BrowseDirectChildren")
@@ -125,7 +130,12 @@ impl Browseable for Dlna {
         Err(Error::msg("No device connected"))
     }
 
-    async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
+    async fn artists(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Artist>, Error> {
         if let Some(client) = &self.media_server_client {
             client
                 .browse("musicdb://artists", "BrowseDirectChildren")
@@ -136,7 +146,12 @@ impl Browseable for Dlna {
         Err(Error::msg("No device connected"))
     }
 
-    async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
+    async fn tracks(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Track>, Error> {
         if let Some(client) = &self.media_server_client {
             client
                 .browse("musicdb://songs", "BrowseDirectChildren")

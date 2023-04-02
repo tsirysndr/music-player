@@ -899,6 +899,8 @@ pub struct GetAlbumsRequest {
     pub limit: i32,
     #[prost(int32, tag = "2")]
     pub offset: i32,
+    #[prost(string, tag = "3")]
+    pub filter: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -913,6 +915,8 @@ pub struct GetArtistsRequest {
     pub limit: i32,
     #[prost(int32, tag = "2")]
     pub offset: i32,
+    #[prost(string, tag = "3")]
+    pub filter: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -927,6 +931,8 @@ pub struct GetTracksRequest {
     pub limit: i32,
     #[prost(int32, tag = "2")]
     pub offset: i32,
+    #[prost(string, tag = "3")]
+    pub filter: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

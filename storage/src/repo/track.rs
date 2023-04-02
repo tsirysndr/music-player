@@ -39,14 +39,30 @@ impl TrackRepository {
         })
     }
 
-    pub async fn find_all(&self, limit: u64) -> Result<Vec<track_entity::Model>, Error> {
-        let results: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
-            track_entity::Entity::find()
-                .limit(limit)
-                .order_by_asc(track_entity::Column::Title)
-                .find_with_related(artist_entity::Entity)
-                .all(&self.db)
-                .await?;
+    pub async fn find_all(
+        &self,
+        filter: Option<String>,
+        limit: u64,
+    ) -> Result<Vec<track_entity::Model>, Error> {
+        let results = match filter {
+            Some(filter) => {
+                track_entity::Entity::find()
+                    .filter(track_entity::Column::Title.like(format!("%{}%", filter).as_str()))
+                    .limit(limit)
+                    .order_by_asc(track_entity::Column::Title)
+                    .find_with_related(artist_entity::Entity)
+                    .all(&self.db)
+                    .await?
+            }
+            None => {
+                track_entity::Entity::find()
+                    .limit(limit)
+                    .order_by_asc(track_entity::Column::Title)
+                    .find_with_related(artist_entity::Entity)
+                    .all(&self.db)
+                    .await?
+            }
+        };
 
         let albums: Vec<(track_entity::Model, Option<album_entity::Model>)> =
             track_entity::Entity::find()

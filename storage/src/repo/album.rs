@@ -1,6 +1,6 @@
 use anyhow::Error;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
-use sea_orm::{DatabaseConnection, EntityTrait, ModelTrait, QueryOrder};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter, QueryOrder};
 
 pub struct AlbumRepository {
     db: DatabaseConnection,
@@ -35,11 +35,26 @@ impl AlbumRepository {
         Ok(album)
     }
 
-    pub async fn find_all(&self) -> Result<Vec<album_entity::Model>, Error> {
-        let results = album_entity::Entity::find()
-            .order_by_asc(album_entity::Column::Title)
-            .all(&self.db)
-            .await?;
-        Ok(results)
+    pub async fn find_all(
+        &self,
+        filter: Option<String>,
+    ) -> Result<Vec<album_entity::Model>, Error> {
+        match filter {
+            Some(filter) => {
+                let results = album_entity::Entity::find()
+                    .filter(album_entity::Column::Title.like(format!("%{}%", filter).as_str()))
+                    .order_by_asc(album_entity::Column::Title)
+                    .all(&self.db)
+                    .await?;
+                Ok(results)
+            }
+            None => {
+                let results = album_entity::Entity::find()
+                    .order_by_asc(album_entity::Column::Title)
+                    .all(&self.db)
+                    .await?;
+                Ok(results)
+            }
+        }
     }
 }

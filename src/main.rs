@@ -46,6 +46,7 @@ use music_player_webui::start_webui;
 use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
 use scan::auto_scan_music_library;
+use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use tokio::sync::Mutex;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -191,6 +192,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     mode = env::var("MUSIC_PLAYER_MODE").unwrap_or(mode);
     if mode == "server" {
         migration::run().await;
+        let db = Database::new().await;
+        let conn = db.get_connection();
+        conn.execute(Statement::from_string(
+            DbBackend::Sqlite,
+            "PRAGMA case_sensitive_like=OFF;".to_owned(),
+        ))
+        .await?;
     }
 
     let db_conn = Database::new().await;

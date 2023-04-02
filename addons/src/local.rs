@@ -78,35 +78,50 @@ impl StreamingAddon for Local {
 
 #[async_trait]
 impl Browseable for Local {
-    async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
+    async fn albums(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Album>, Error> {
         let response = self
             .client
             .as_mut()
             .unwrap()
             .library
-            .albums(offset, limit)
+            .albums(filter, offset, limit)
             .await?;
         Ok(response.into_iter().map(Into::into).collect())
     }
 
-    async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
+    async fn artists(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Artist>, Error> {
         let response = self
             .client
             .as_mut()
             .unwrap()
             .library
-            .artists(offset, limit)
+            .artists(filter, offset, limit)
             .await?;
         Ok(response.into_iter().map(Into::into).collect())
     }
 
-    async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
+    async fn tracks(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Track>, Error> {
         let response = self
             .client
             .as_mut()
             .unwrap()
             .library
-            .songs(offset, limit)
+            .songs(filter, offset, limit)
             .await?;
         Ok(response.into_iter().map(Into::into).collect())
     }

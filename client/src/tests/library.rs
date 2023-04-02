@@ -21,7 +21,7 @@ async fn albums() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
     let host = "0.0.0.0".to_owned();
     let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
-    let response = client.albums(0, 100).await?;
+    let response = client.albums(None, 0, 100).await?;
     assert_eq!(response.len(), 1);
     assert_eq!(response[0].id, "216ccc791352fbbffc11268b984db19a");
     assert_eq!(response[0].title, "2014 Forest Hills Drive");
@@ -47,7 +47,7 @@ async fn artists() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
     let host = env::var("MUSIC_PLAYER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
-    let response = client.artists(0, 100).await?;
+    let response = client.artists(None, 0, 100).await?;
     assert_eq!(response.len(), 1);
     assert_eq!(response[0].id, "b03cc90c455d92d8e9a0ce331e6de54d");
     assert_eq!(response[0].name, "J. Cole");
@@ -59,7 +59,7 @@ async fn songs() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("MUSIC_PLAYER_PORT").unwrap_or_else(|_| "50051".to_string());
     let host = env::var("MUSIC_PLAYER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let mut client = LibraryClient::new(host, port.parse().unwrap()).await?;
-    let response = client.songs(0, 100).await?;
+    let response = client.songs(None, 0, 100).await?;
     assert_eq!(response.len(), 2);
     assert_eq!(response[0].id, "dd77dd0ea2de5208e4987001a59ba8e4");
     assert_eq!(response[0].title, "Fire Squad");

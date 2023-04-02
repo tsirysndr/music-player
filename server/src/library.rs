@@ -1,10 +1,10 @@
 use futures::future::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_scanner::scan_directory;
-use music_player_storage::{repo::album::AlbumRepository, searcher::Searcher};
 use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
+use music_player_storage::{repo::album::AlbumRepository, searcher::Searcher};
 use sea_orm::ActiveModelTrait;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -82,10 +82,15 @@ impl LibraryService for Library {
 
     async fn get_artists(
         &self,
-        _request: tonic::Request<GetArtistsRequest>,
+        request: tonic::Request<GetArtistsRequest>,
     ) -> Result<tonic::Response<GetArtistsResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let filter = match request.filter.as_str() {
+            "" => None,
+            _ => Some(request.filter),
+        };
         let results = ArtistRepository::new(&self.db.lock().await.get_connection())
-            .find_all()
+            .find_all(filter)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -97,10 +102,15 @@ impl LibraryService for Library {
 
     async fn get_albums(
         &self,
-        _request: tonic::Request<GetAlbumsRequest>,
+        request: tonic::Request<GetAlbumsRequest>,
     ) -> Result<tonic::Response<GetAlbumsResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let filter = match request.filter.as_str() {
+            "" => None,
+            _ => Some(request.filter),
+        };
         let results = AlbumRepository::new(&self.db.lock().await.get_connection())
-            .find_all()
+            .find_all(filter)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -112,10 +122,15 @@ impl LibraryService for Library {
 
     async fn get_tracks(
         &self,
-        _request: tonic::Request<GetTracksRequest>,
+        request: tonic::Request<GetTracksRequest>,
     ) -> Result<tonic::Response<GetTracksResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let filter = match request.filter.as_str() {
+            "" => None,
+            _ => Some(request.filter),
+        };
         let tracks = TrackRepository::new(&self.db.lock().await.get_connection())
-            .find_all(100)
+            .find_all(filter, 100)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 

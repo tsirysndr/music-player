@@ -29,13 +29,19 @@ pub async fn scan_directory(
         "audio/aac",
     ];
 
-    let cloned_db = db.clone();
+    let total = WalkDir::new(&settings.music_directory)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .count();
 
-    let (tx, rx) = std::sync::mpsc::channel::<(Album, Song, Artist)>();
+    let cloned_db = db.clone();
+    let (done_tx, done_rx) = std::sync::mpsc::channel::<()>();
+    let (tx, rx) = std::sync::mpsc::channel::<(Album, Song, Artist, usize)>();
     let searcher = searcher.clone();
 
     thread::spawn(move || {
-        for (album, track, artist) in rx {
+        while let Ok((album, track, artist, index)) = rx.recv() {
             let id = format!("{:x}", md5::compute(track.uri.as_ref().unwrap()));
             match searcher.insert_artist(artist) {
                 Ok(_) => {}
@@ -49,13 +55,19 @@ pub async fn scan_directory(
                 Ok(_) => {}
                 Err(e) => println!("Error inserting song: {}", e),
             };
+
+            if index + 1 == total {
+                done_tx.send(()).unwrap();
+                break;
+            }
         }
     });
 
-    for entry in WalkDir::new(settings.music_directory)
+    for (index, entry) in WalkDir::new(&settings.music_directory)
         .follow_links(true)
         .into_iter()
         .filter_map(|e| e.ok())
+        .enumerate()
     {
         let path = format!("{}", entry.path().display());
         let guess = mime_guess::from_path(&path);
@@ -95,12 +107,13 @@ pub async fn scan_directory(
                     let mut album: Album = tag.try_into().unwrap();
                     album.cover = cover.clone();
 
-                    tx.send((album, track, artist)).unwrap();
+                    tx.send((album, track, artist, index)).unwrap();
                 }
                 Err(e) => println!("ERROR: {}, {}", e, path),
             }
         }
     }
+    done_rx.recv().unwrap();
     Ok(songs)
 }
 

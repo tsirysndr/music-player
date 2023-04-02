@@ -199,6 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "PRAGMA case_sensitive_like=OFF;".to_owned(),
         ))
         .await?;
+        db.create_indexes().await;
     }
 
     let db_conn = Database::new().await;

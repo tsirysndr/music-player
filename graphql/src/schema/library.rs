@@ -23,6 +23,7 @@ impl LibraryQuery {
     async fn tracks(
         &self,
         ctx: &Context<'_>,
+        filter: Option<String>,
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Track>, Error> {
@@ -32,7 +33,7 @@ impl LibraryQuery {
         if device.client.is_some() {
             let source = device.client.as_mut().unwrap();
             let result = source
-                .tracks(offset.unwrap_or(0), limit.unwrap_or(100))
+                .tracks(filter, offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
             let base_url = device
@@ -57,7 +58,7 @@ impl LibraryQuery {
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = TrackRepository::new(db.lock().await.get_connection())
-            .find_all(100)
+            .find_all(filter, 100)
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -66,6 +67,7 @@ impl LibraryQuery {
     async fn artists(
         &self,
         ctx: &Context<'_>,
+        filter: Option<String>,
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Artist>, Error> {
@@ -75,7 +77,7 @@ impl LibraryQuery {
         if device.client.is_some() {
             let source = device.client.as_mut().unwrap();
             let artists = source
-                .artists(offset.unwrap_or(0), limit.unwrap_or(100))
+                .artists(filter, offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
             let base_url = device
@@ -100,7 +102,7 @@ impl LibraryQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let results = ArtistRepository::new(db.lock().await.get_connection())
-            .find_all()
+            .find_all(filter)
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -109,6 +111,7 @@ impl LibraryQuery {
     async fn albums(
         &self,
         ctx: &Context<'_>,
+        filter: Option<String>,
         offset: Option<i32>,
         limit: Option<i32>,
     ) -> Result<Vec<Album>, Error> {
@@ -118,7 +121,7 @@ impl LibraryQuery {
         if device.client.is_some() {
             let source = device.client.as_mut().unwrap();
             let albums = source
-                .albums(offset.unwrap_or(0), limit.unwrap_or(100))
+                .albums(filter, offset.unwrap_or(0), limit.unwrap_or(100))
                 .await?;
 
             let base_url = device
@@ -144,7 +147,7 @@ impl LibraryQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let results = AlbumRepository::new(db.lock().await.get_connection())
-            .find_all()
+            .find_all(filter)
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())

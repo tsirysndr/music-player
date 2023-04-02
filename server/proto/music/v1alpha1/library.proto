@@ -17,6 +17,7 @@ message SearchResponse {}
 message GetAlbumsRequest {
     int32 limit = 1;
     int32 offset = 2;
+    string filter = 3;
 }
 
 message GetAlbumsResponse { repeated metadata.v1alpha1.Album albums = 1; }
@@ -24,6 +25,7 @@ message GetAlbumsResponse { repeated metadata.v1alpha1.Album albums = 1; }
 message GetArtistsRequest {
     int32 limit = 1;
     int32 offset = 2;
+    string filter = 3;
 }
 
 message GetArtistsResponse { repeated metadata.v1alpha1.Artist artists = 1; }
@@ -31,6 +33,7 @@ message GetArtistsResponse { repeated metadata.v1alpha1.Artist artists = 1; }
 message GetTracksRequest {
     int32 limit = 1;
     int32 offset = 2;
+    string filter = 3;
 }
 
 message GetTracksResponse { repeated metadata.v1alpha1.Track tracks = 1; }

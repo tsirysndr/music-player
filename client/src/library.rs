@@ -25,8 +25,21 @@ impl LibraryClient {
         Ok(response.into_inner().album)
     }
 
-    pub async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
-        let request = tonic::Request::new(GetAlbumsRequest { offset, limit });
+    pub async fn albums(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Album>, Error> {
+        let filter = match filter {
+            Some(filter) => filter,
+            None => "".to_string(),
+        };
+        let request = tonic::Request::new(GetAlbumsRequest {
+            offset,
+            limit,
+            filter,
+        });
         let response = self.client.get_albums(request).await?;
         Ok(response.into_inner().albums.into_iter().collect())
     }
@@ -37,14 +50,40 @@ impl LibraryClient {
         Ok(response.into_inner().artist)
     }
 
-    pub async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
-        let request = tonic::Request::new(GetArtistsRequest { offset, limit });
+    pub async fn artists(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Artist>, Error> {
+        let filter = match filter {
+            Some(filter) => filter,
+            None => "".to_string(),
+        };
+        let request = tonic::Request::new(GetArtistsRequest {
+            offset,
+            limit,
+            filter,
+        });
         let response = self.client.get_artists(request).await?;
         Ok(response.into_inner().artists.into_iter().collect())
     }
 
-    pub async fn songs(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
-        let request = tonic::Request::new(GetTracksRequest { offset, limit });
+    pub async fn songs(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Track>, Error> {
+        let filter = match filter {
+            Some(filter) => filter,
+            None => "".to_string(),
+        };
+        let request = tonic::Request::new(GetTracksRequest {
+            offset,
+            limit,
+            filter,
+        });
         let response = self.client.get_tracks(request).await?;
         Ok(response.into_inner().tracks.into_iter().collect())
     }

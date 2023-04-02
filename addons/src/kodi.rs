@@ -75,15 +75,30 @@ impl StreamingAddon for Kodi {
 
 #[async_trait]
 impl Browseable for Kodi {
-    async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error> {
+    async fn albums(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Album>, Error> {
         todo!()
     }
 
-    async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error> {
+    async fn artists(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Artist>, Error> {
         todo!()
     }
 
-    async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error> {
+    async fn tracks(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Track>, Error> {
         todo!()
     }
 

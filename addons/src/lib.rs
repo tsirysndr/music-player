@@ -32,9 +32,24 @@ pub trait LyricsAddon {
 
 #[async_trait]
 pub trait Browseable {
-    async fn albums(&mut self, offset: i32, limit: i32) -> Result<Vec<Album>, Error>;
-    async fn artists(&mut self, offset: i32, limit: i32) -> Result<Vec<Artist>, Error>;
-    async fn tracks(&mut self, offset: i32, limit: i32) -> Result<Vec<Track>, Error>;
+    async fn albums(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Album>, Error>;
+    async fn artists(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Artist>, Error>;
+    async fn tracks(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Track>, Error>;
     async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error>;
     async fn album(&mut self, id: &str) -> Result<Album, Error>;
     async fn artist(&mut self, id: &str) -> Result<Artist, Error>;

@@ -47,11 +47,26 @@ impl ArtistRepository {
         Ok(artist)
     }
 
-    pub async fn find_all(&self) -> Result<Vec<artist_entity::Model>, Error> {
-        let results = artist_entity::Entity::find()
-            .order_by_asc(artist_entity::Column::Name)
-            .all(&self.db)
-            .await?;
-        Ok(results)
+    pub async fn find_all(
+        &self,
+        filter: Option<String>,
+    ) -> Result<Vec<artist_entity::Model>, Error> {
+        match filter {
+            Some(filter) => {
+                let results = artist_entity::Entity::find()
+                    .filter(artist_entity::Column::Name.like(format!("%{}%", filter).as_str()))
+                    .order_by_asc(artist_entity::Column::Name)
+                    .all(&self.db)
+                    .await?;
+                Ok(results)
+            }
+            None => {
+                let results = artist_entity::Entity::find()
+                    .order_by_asc(artist_entity::Column::Name)
+                    .all(&self.db)
+                    .await?;
+                Ok(results)
+            }
+        }
     }
 }

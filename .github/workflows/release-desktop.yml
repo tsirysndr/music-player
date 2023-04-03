@@ -129,7 +129,6 @@ jobs:
       - name: Hash files (windows)
         if: matrix.platform == 'windows-latest'
         run: |
-          Remove-Item -Force "target/release/bundle/msi/Music Player_x64_en-US.msi"
           move target/release/bundle/msi/Music*.msi target/release/bundle/msi/Music_Player_x64_en-US.msi
           checksum -t sha256  -f="target/release/bundle/msi/Music_Player_x64_en-US.msi" > target/release/bundle/msi/Music_Player_x64_en-US.msi.sha256
       - name: Releasing artifacts (windows)

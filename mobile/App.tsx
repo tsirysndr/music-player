@@ -6,10 +6,4 @@
  */
 import Storybook from './.storybook';
 
-/*
-function App(): JSX.Element {
-  return <Storybook />;
-}
-*/
-
 export default Storybook;

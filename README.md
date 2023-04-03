@@ -87,15 +87,15 @@ Or download the latest release for your platform [here](https://github.com/tsiry
 
 **Latest (Desktop):**
 
-- `Mac`: arm64: [music-player-desktop_v0.2.0-alpha.11_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/music-player-desktop_v0.2.0-alpha.11_aarch64-apple-darwin.tar.gz) intel: [Music_Player_v0.2.0-alpha.11_x64.dmg](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/Music_Player_v0.2.0-alpha.11_x64.dmg)
-- `Linux`: [music-player_v0.2.0-alpha.11_amd64.deb](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/music-player_v0.2.0-alpha.11_amd64.deb)
-- `Windows`: [Music_Player_x64_en-US.msi](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/Music_Player_x64_en-US.msi)
+- `Mac`: arm64: [music-player-desktop_v0.2.0-alpha.12_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/music-player-desktop_v0.2.0-alpha.12_aarch64-apple-darwin.tar.gz) intel: [Music_Player_v0.2.0-alpha.12_x64.dmg](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/Music_Player_v0.2.0-alpha.12_x64.dmg)
+- `Linux`: [music-player_v0.2.0-alpha.12_amd64.deb](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/music-player_v0.2.0-alpha.12_amd64.deb)
+- `Windows`: [Music_Player_x64_en-US.msi](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/Music_Player_x64_en-US.msi)
 
 **Latest (CLI):**
 
-- `Mac`: arm64: [music-player_v0.2.0-alpha.11_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/music-player_v0.2.0-alpha.11_aarch64-apple-darwin.tar.gz) intel: [music-player_v0.2.0-alpha.11_x86_64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/music-player_v0.2.0-alpha.11_x86_64-apple-darwin.tar.gz)
-- `Linux`: [music-player_v0.2.0-alpha.11_x86_64-unknown-linux-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/music-player_v0.2.0-alpha.11_x86_64-unknown-linux-gnu.tar.gz)
-- `Windows`: [music-player_x86_64-pc-windows-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.11/music-player_x86_64-pc-windows-gnu.tar.gz)
+- `Mac`: arm64: [music-player_v0.2.0-alpha.12_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/music-player_v0.2.0-alpha.12_aarch64-apple-darwin.tar.gz) intel: [music-player_v0.2.0-alpha.12_x86_64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/music-player_v0.2.0-alpha.12_x86_64-apple-darwin.tar.gz)
+- `Linux`: [music-player_v0.2.0-alpha.12_x86_64-unknown-linux-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/music-player_v0.2.0-alpha.12_x86_64-unknown-linux-gnu.tar.gz)
+- `Windows`: [music-player_x86_64-pc-windows-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0-alpha.12/music-player_x86_64-pc-windows-gnu.tar.gz)
 
 [Other version...](https://github.com/tsirysndr/music-player/releases)
 

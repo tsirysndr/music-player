@@ -5,6 +5,7 @@ import SvgMic from '../Icons/Mic';
 
 const Container = styled.View`
   width: 100%;
+  margin-bottom: 50px;
 `;
 
 const Placeholder = styled.View`
@@ -69,6 +70,9 @@ const ArtistName = styled.Text`
   font-size: 14px;
   margin-top: 10px;
   text-align: center;
+  width: 150px;
+  margin-right: 8px;
+  margin-left: 10px;
 `;
 
 export type ArtistProps = {
@@ -89,7 +93,9 @@ const Artist: FC<ArtistProps> = props => {
             </NoArtistCover>
           )}
         </>
-        <ArtistName>{artist.name}</ArtistName>
+        <ArtistName ellipsizeMode="tail" numberOfLines={1}>
+          {artist.name}
+        </ArtistName>
       </ArtistCover>
     </TouchableWithoutFeedback>
   );

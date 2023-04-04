@@ -4,9 +4,9 @@ import {TouchableWithoutFeedback} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Albums from '../../Components/Albums';
 import Artists from '../../Components/Artists';
+import Songs from '../../Components/Songs';
 
-const Container = styled.View`
-  flex: 1;
+const Container = styled.ScrollView`
   width: 100%;
 `;
 
@@ -33,7 +33,7 @@ const Settings = styled.View`
 
 const Home: FC = () => {
   return (
-    <Container>
+    <Container showsVerticalScrollIndicator={false}>
       <Header>
         <Title>Library</Title>
         <Settings>
@@ -44,6 +44,7 @@ const Home: FC = () => {
       </Header>
       <Albums />
       <Artists />
+      <Songs />
     </Container>
   );
 };

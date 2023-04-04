@@ -1,3 +1,3 @@
-import Songs from './Songs';
+import SongsWithData from './SongsWithData';
 
-export default Songs;
+export default SongsWithData;

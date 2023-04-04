@@ -27,6 +27,7 @@
     "react-hook-form": "^7.43.9",
     "react-native": "0.71.5",
     "react-native-screens": "^3.20.0",
+    "react-native-svg": "^13.9.0",
     "react-native-vector-icons": "^9.2.0",
     "shortid": "^2.2.16",
     "subscriptions-transport-ws": "^0.11.0",

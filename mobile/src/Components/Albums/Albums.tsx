@@ -1,7 +1,25 @@
 import styled from '@emotion/native';
 import React, {FC} from 'react';
-import {FlatList, TouchableWithoutFeedback, View} from 'react-native';
+import {FlatList, TouchableWithoutFeedback} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+
+const Container = styled.View`
+  width: 100%;
+  margin-bottom: 50px;
+`;
+
+const Placeholder = styled.View`
+  width: 100%;
+  height: 228px;
+  align-items: center;
+  justify-content: center;
+`;
+
+const PlaceholderText = styled.Text`
+  font-family: 'Gilroy-Bold';
+  font-size: 16px;
+  color: #a7a7a9;
+`;
 
 const Header = styled.View`
   margin: 0 20px;
@@ -72,22 +90,24 @@ export type AlbumProps = {
 
 const Album: FC<AlbumProps> = ({album, onPress}) => (
   <>
-    {false && (
+    {!album.cover && (
       <TouchableWithoutFeedback onPress={() => onPress(album)}>
-        <NoAlbumCover>
-          <Feather name="disc" size={100} color="#bdb9b958" />
-        </NoAlbumCover>
-        <AlbumInfo>
-          <AlbumTitle ellipsizeMode="tail" numberOfLines={1}>
-            {album.title}
-          </AlbumTitle>
-          <Artist ellipsizeMode="tail" numberOfLines={2}>
-            {album.artist}
-          </Artist>
-        </AlbumInfo>
+        <AlbumCover>
+          <NoAlbumCover>
+            <Feather name="disc" size={100} color="#bdb9b958" />
+          </NoAlbumCover>
+          <AlbumInfo>
+            <AlbumTitle ellipsizeMode="tail" numberOfLines={1}>
+              {album.title}
+            </AlbumTitle>
+            <Artist ellipsizeMode="tail" numberOfLines={2}>
+              {album.artist}
+            </Artist>
+          </AlbumInfo>
+        </AlbumCover>
       </TouchableWithoutFeedback>
     )}
-    {true && (
+    {album.cover && (
       <TouchableWithoutFeedback onPress={() => onPress(album)}>
         <AlbumCover>
           <Cover
@@ -118,22 +138,33 @@ export type AlbumsProps = {
 const Albums: FC<AlbumsProps> = props => {
   const {albums, onSeeAll, onAlbumPress} = props;
   return (
-    <View>
+    <Container>
       <Header>
         <Title>Albums</Title>
-        <TouchableWithoutFeedback onPress={onSeeAll}>
-          <SeeAll>See All</SeeAll>
-        </TouchableWithoutFeedback>
-      </Header>
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={albums}
-        renderItem={({item}) => (
-          <Album key={item.id} album={item} onPress={onAlbumPress} />
+        {albums.length > 0 && (
+          <TouchableWithoutFeedback onPress={onSeeAll}>
+            <SeeAll>See All</SeeAll>
+          </TouchableWithoutFeedback>
         )}
-      />
-    </View>
+      </Header>
+      <>
+        {albums.length > 0 && (
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={albums}
+            renderItem={({item}) => (
+              <Album key={item.id} album={item} onPress={onAlbumPress} />
+            )}
+          />
+        )}
+        {albums.length === 0 && (
+          <Placeholder>
+            <PlaceholderText>No Albums</PlaceholderText>
+          </Placeholder>
+        )}
+      </>
+    </Container>
   );
 };
 

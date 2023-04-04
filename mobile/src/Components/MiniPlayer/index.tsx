@@ -1,3 +1,3 @@
-import MiniPlayer from './MiniPlayer';
+import MiniPlayerWithData from './MiniPlayerWithData';
 
-export default MiniPlayer;
+export default MiniPlayerWithData;

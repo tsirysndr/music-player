@@ -3,6 +3,8 @@ import React, {FC} from 'react';
 import {TouchableWithoutFeedback} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Albums from '../../Components/Albums';
+import Artists from '../../Components/Artists';
+
 const Container = styled.View`
   flex: 1;
   width: 100%;
@@ -41,6 +43,7 @@ const Home: FC = () => {
         </Settings>
       </Header>
       <Albums />
+      <Artists />
     </Container>
   );
 };

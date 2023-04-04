@@ -8,7 +8,7 @@ export default {
   component: Albums,
   argTypes: {
     onAlbumPress: {action: 'onAlbumPress'},
-    onSeeAllPress: {action: 'onSeeAllPress'},
+    onSeeAll: {action: 'onSeeAll'},
   },
 } as ComponentMeta<typeof Albums>;
 
@@ -18,4 +18,10 @@ export const Default = Template.bind({});
 
 Default.args = {
   albums,
+};
+
+export const Empty = Template.bind({});
+
+Empty.args = {
+  albums: [],
 };

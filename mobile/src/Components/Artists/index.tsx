@@ -1,3 +1,3 @@
-import Artists from './Artists';
+import ArtistsWithData from './ArtistsWithData';
 
-export default Artists;
+export default ArtistsWithData;

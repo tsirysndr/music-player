@@ -1,3 +1,3 @@
-import Devices from './Devices';
+import DevicesWithData from './DevicesWithData';
 
-export default Devices;
+export default DevicesWithData;

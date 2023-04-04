@@ -1,7 +1,10 @@
 import styled from '@emotion/native';
 import React, {FC} from 'react';
+import MiniPlayer from '../../Components/MiniPlayer';
 
-import {View} from 'react-native';
+const Container = styled.View`
+  flex: 1;
+`;
 
 const Title = styled.Text`
   color: #fff;
@@ -11,9 +14,12 @@ const Title = styled.Text`
 
 const AlbumDetails: FC = () => {
   return (
-    <View>
-      <Title>AlbumDetails</Title>
-    </View>
+    <>
+      <Container>
+        <Title>AlbumDetails</Title>
+      </Container>
+      <MiniPlayer />
+    </>
   );
 };
 

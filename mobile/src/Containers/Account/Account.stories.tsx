@@ -1,10 +1,12 @@
+import React from 'react';
+import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import Account from './Account';
 
-const AccountMeta = {
+export default {
   title: 'Account',
   component: Account,
-};
+} as ComponentMeta<typeof Account>;
 
-export default AccountMeta;
+const Template: ComponentStory<typeof Account> = args => <Account {...args} />;
 
-export const Default = {};
+export const Default = Template.bind({});

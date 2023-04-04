@@ -1,10 +1,9 @@
+import {ComponentMeta} from '@storybook/react-native';
 import Home from './Home';
 
-const HomeMeta = {
+export default {
   title: 'Home',
   component: Home,
-};
-
-export default HomeMeta;
+} as ComponentMeta<typeof Home>;
 
 export const Default = {};

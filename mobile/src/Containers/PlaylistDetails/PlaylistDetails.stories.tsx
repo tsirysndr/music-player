@@ -1,10 +1,9 @@
+import {ComponentMeta} from '@storybook/react-native';
 import PlaylistDetails from './PlaylistDetails';
 
-const PlaylistDetailsMeta = {
+export default {
   title: 'PlaylistDetails',
   component: PlaylistDetails,
-};
-
-export default PlaylistDetailsMeta;
+} as ComponentMeta<typeof PlaylistDetails>;
 
 export const Default = {};

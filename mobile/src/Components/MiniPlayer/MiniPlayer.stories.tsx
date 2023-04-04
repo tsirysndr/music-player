@@ -1,10 +1,14 @@
+import React from 'react';
+import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import MiniPlayer from './MiniPlayer';
 
-const MiniPlayerMeta = {
+export default {
   title: 'MiniPlayer',
   component: MiniPlayer,
-};
+} as ComponentMeta<typeof MiniPlayer>;
 
-export default MiniPlayerMeta;
+const Template: ComponentStory<typeof MiniPlayer> = args => (
+  <MiniPlayer {...args} />
+);
 
-export const Default = {};
+export const Default = Template.bind({});

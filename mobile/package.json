@@ -12,7 +12,8 @@
     "storybook-watch": "sb-rn-watcher",
     "storybook:ondevice": "sb-rn-get-stories && STORYBOOK_ENABLED=true react-native start",
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "build-storybook": "build-storybook",
+    "android:reverse": "adb reverse tcp:8081 tcp:8081"
   },
   "dependencies": {
     "@apollo/client": "^3.7.11",
@@ -27,7 +28,9 @@
     "react-native": "0.71.5",
     "react-native-screens": "^3.20.0",
     "react-native-vector-icons": "^9.2.0",
-    "subscriptions-transport-ws": "^0.11.0"
+    "shortid": "^2.2.16",
+    "subscriptions-transport-ws": "^0.11.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -45,7 +48,9 @@
     "@tsconfig/react-native": "^2.0.3",
     "@types/jest": "^29.2.1",
     "@types/react": "^18.0.24",
+    "@types/react-native-vector-icons": "^6.4.13",
     "@types/react-test-renderer": "^18.0.0",
+    "@types/uuid": "^9.0.1",
     "babel-jest": "^29.2.1",
     "babel-loader": "^8.3.0",
     "eslint": "^8.19.0",

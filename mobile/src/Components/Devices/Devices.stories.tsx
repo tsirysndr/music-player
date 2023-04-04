@@ -1,10 +1,12 @@
+import React from 'react';
+import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import Devices from './Devices';
 
-const DevicesMeta = {
+export default {
   title: 'Devices',
   component: Devices,
-};
+} as ComponentMeta<typeof Devices>;
 
-export default DevicesMeta;
+const Template: ComponentStory<typeof Devices> = args => <Devices {...args} />;
 
-export const Default = {};
+export const Default = Template.bind({});

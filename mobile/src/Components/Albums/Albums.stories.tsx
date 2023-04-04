@@ -1,10 +1,21 @@
+import React from 'react';
+import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import Albums from './Albums';
+import {albums} from '../../Mocks/Albums';
 
-const AlbumsMeta = {
+export default {
   title: 'Albums',
   component: Albums,
+  argTypes: {
+    onAlbumPress: {action: 'onAlbumPress'},
+    onSeeAllPress: {action: 'onSeeAllPress'},
+  },
+} as ComponentMeta<typeof Albums>;
+
+const Template: ComponentStory<typeof Albums> = args => <Albums {...args} />;
+
+export const Default = Template.bind({});
+
+Default.args = {
+  albums,
 };
-
-export default AlbumsMeta;
-
-export const Default = {};

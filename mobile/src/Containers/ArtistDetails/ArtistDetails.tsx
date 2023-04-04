@@ -1,11 +1,18 @@
-import React from 'react';
+import styled from '@emotion/native';
+import React, {FC} from 'react';
 
-import {View, Text} from 'react-native';
+import {View} from 'react-native';
 
-const ArtistDetails = () => {
+const Title = styled.Text`
+  color: #fff;
+  font-family: 'Gilroy-Bold';
+  font-size: 24px;
+`;
+
+const ArtistDetails: FC = () => {
   return (
     <View>
-      <Text>ArtistDetails</Text>
+      <Title>ArtistDetails</Title>
     </View>
   );
 };

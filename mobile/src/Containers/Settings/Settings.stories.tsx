@@ -1,10 +1,14 @@
+import React from 'react';
+import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import Settings from './Settings';
 
-const SettingsMeta = {
+export default {
   title: 'Settings',
   component: Settings,
-};
+} as ComponentMeta<typeof Settings>;
 
-export default SettingsMeta;
+const Template: ComponentStory<typeof Settings> = args => (
+  <Settings {...args} />
+);
 
-export const Default = {};
+export const Default = Template.bind({});

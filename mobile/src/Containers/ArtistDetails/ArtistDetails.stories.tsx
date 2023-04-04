@@ -1,8 +1,14 @@
+import React from 'react';
+import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import ArtistDetails from './ArtistDetails';
 
-const ArtistDetailsMeta = {
+export default {
   title: 'ArtistDetails',
   component: ArtistDetails,
-};
+} as ComponentMeta<typeof ArtistDetails>;
 
-export default ArtistDetailsMeta;
+const Template: ComponentStory<typeof ArtistDetails> = args => (
+  <ArtistDetails {...args} />
+);
+
+export const Default = Template.bind({});

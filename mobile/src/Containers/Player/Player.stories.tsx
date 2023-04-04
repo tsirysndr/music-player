@@ -1,10 +1,9 @@
+import {ComponentMeta} from '@storybook/react-native';
 import Player from './Player';
 
-const PlayerMeta = {
+export default {
   title: 'Player',
   component: Player,
-};
-
-export default PlayerMeta;
+} as ComponentMeta<typeof Player>;
 
 export const Default = {};

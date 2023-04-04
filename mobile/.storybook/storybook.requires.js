@@ -52,6 +52,7 @@ const getStories = () => {
     "./src/Components/Button/Button.stories.js": require("../src/Components/Button/Button.stories.js"),
     "./src/Components/Devices/Devices.stories.tsx": require("../src/Components/Devices/Devices.stories.tsx"),
     "./src/Components/MiniPlayer/MiniPlayer.stories.tsx": require("../src/Components/MiniPlayer/MiniPlayer.stories.tsx"),
+    "./src/Components/Progressbar/Progressbar.stories.tsx": require("../src/Components/Progressbar/Progressbar.stories.tsx"),
     "./src/Components/Songs/Songs.stories.tsx": require("../src/Components/Songs/Songs.stories.tsx"),
     "./src/Containers/Account/Account.stories.tsx": require("../src/Containers/Account/Account.stories.tsx"),
     "./src/Containers/AlbumDetails/AlbumDetails.stories.tsx": require("../src/Containers/AlbumDetails/AlbumDetails.stories.tsx"),

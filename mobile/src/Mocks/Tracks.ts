@@ -1,5 +1,12 @@
 export const tracks = [
   {
+    id: '0',
+    title: 'Bankroll',
+    artist: 'Future, Lil Uzi Vert',
+    cover:
+      'https://resources.tidal.com/images/fe6787d5/4ba5/4d3e/8576/48943ee6a768/320x320.jpg',
+  },
+  {
     id: '1',
     title: 'Otherside',
     artist: 'Red Hot Chilli Peppers',

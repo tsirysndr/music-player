@@ -20,6 +20,7 @@
     "@apollo/react-components": "^4.0.0",
     "@emotion/native": "^11.10.6",
     "@emotion/react": "^11.10.6",
+    "@react-native-community/blur": "^4.3.0",
     "@react-navigation/native": "^6.1.6",
     "graphql": "15.7.2",
     "lodash": "^4.17.21",

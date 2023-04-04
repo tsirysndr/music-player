@@ -26,8 +26,8 @@ const Progressbar: FC<ProgressbarProps> = ({
       <Slider
         minimumValue={0}
         maximumValue={100}
-        minimumTrackTintColor="#ab28fc"
-        maximumTrackTintColor="#5f5f5f"
+        minimumTrackTintColor="#fff"
+        maximumTrackTintColor="#636363"
         thumbTintColor={thumbTintColor}
         value={progress}
         onValueChange={onValueChange}

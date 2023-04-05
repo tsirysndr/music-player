@@ -3,7 +3,7 @@ import React, {FC} from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const Container = styled.View`
+const Container = styled.TouchableOpacity`
   flex-direction: row;
   height: 60px;
   width: 100%;

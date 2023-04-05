@@ -2,7 +2,6 @@ import styled from '@emotion/native';
 import React, {FC} from 'react';
 import CurrentTrack from '../../Components/CurrentTrack';
 import {BlurView as DefaultBlurView} from '@react-native-community/blur';
-import {tracks} from '../../Mocks/Tracks';
 import PlayerControls from '../../Components/PlayerControls';
 
 const Background = styled.ImageBackground`
@@ -13,6 +12,17 @@ const Background = styled.ImageBackground`
   bottom: 0;
   right: 0;
   width: 100%;
+`;
+
+const NoBackground = styled.View`
+  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  background-color: #000;
 `;
 
 const BlurView = styled(DefaultBlurView)`
@@ -28,19 +38,28 @@ const Header = styled.View`
   height: 100px;
 `;
 
-const Player: FC = () => {
+export type PlayerProps = {
+  track: any;
+};
+
+const Player: FC<PlayerProps> = ({track}) => {
   return (
     <>
-      <Background
-        source={{
-          uri: tracks[0].cover,
-        }}
-      />
-      <BlurView
-        blurType="dark"
-        blurAmount={32}
-        reducedTransparencyFallbackColor="white"
-      />
+      {track.cover && (
+        <>
+          <Background
+            source={{
+              uri: track.cover,
+            }}
+          />
+          <BlurView
+            blurType="dark"
+            blurAmount={32}
+            reducedTransparencyFallbackColor="white"
+          />
+        </>
+      )}
+      {!track.cover && <NoBackground />}
       <Header />
       <CurrentTrack />
       <PlayerControls />

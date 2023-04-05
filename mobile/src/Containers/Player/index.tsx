@@ -1,3 +1,3 @@
-import Player from './Player';
+import Player from './PlayerWithData';
 
 export default Player;

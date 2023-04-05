@@ -1,16 +1,38 @@
 import React from 'react';
 import CurrentTrack from './CurrentTrack';
-import {tracks} from '../../Mocks/Tracks';
+import {useRecoilState} from 'recoil';
+import {currentTrackState} from './CurrentTrackState';
+import {playQueueState} from '../PlayQueue/PlayQueueState';
 
 const CurrentTrackWithData = () => {
+  const [currentTrack, setCurrentTrack] = useRecoilState(currentTrackState);
+  const [{previousTracks, nextTracks, position}, setPlayQueue] =
+    useRecoilState(playQueueState);
+  const tracks = [...previousTracks, ...nextTracks];
+
+  const onPageSelected = (e: any) => {
+    setPlayQueue({
+      nextTracks: tracks.slice(e.nativeEvent.position),
+      previousTracks: tracks.slice(0, e.nativeEvent.position),
+      position: e.nativeEvent.position,
+    });
+    setCurrentTrack(tracks[e.nativeEvent.position]);
+  };
+
+  const onLike = () => {
+    setCurrentTrack({
+      ...currentTrack!,
+      liked: !currentTrack!.liked,
+    });
+  };
+
   return (
     <CurrentTrack
-      track={tracks[0]}
-      initialPage={0}
-      onPageSelected={_e => {
-        // console.log(_e.nativeEvent.position);
-      }}
+      track={currentTrack}
+      initialPage={position}
+      onPageSelected={onPageSelected}
       tracks={tracks}
+      onLike={onLike}
     />
   );
 };

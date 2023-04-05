@@ -13,7 +13,8 @@
     "storybook:ondevice": "sb-rn-get-stories && STORYBOOK_ENABLED=true react-native start",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
-    "android:reverse": "adb reverse tcp:8081 tcp:8081"
+    "android:reverse": "adb reverse tcp:8081 tcp:8081",
+    "graphql:generate": "graphql-codegen --config codegen.yml"
   },
   "dependencies": {
     "@apollo/client": "^3.7.11",
@@ -33,12 +34,18 @@
     "react-native-pager-view": "^6.2.0",
     "react-native-screens": "^3.20.0",
     "react-native-svg": "^13.9.0",
+    "react-native-uuid": "^2.0.1",
     "react-native-vector-icons": "^9.2.0",
+    "recoil": "^0.7.7",
     "shortid": "^2.2.16",
-    "subscriptions-transport-ws": "^0.11.0",
-    "uuid": "^9.0.0"
+    "subscriptions-transport-ws": "^0.11.0"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^2.13.7",
+    "@graphql-codegen/introspection": "2.2.1",
+    "@graphql-codegen/typescript": "2.7.5",
+    "@graphql-codegen/typescript-operations": "2.5.5",
+    "@graphql-codegen/typescript-react-apollo": "3.3.5",
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",

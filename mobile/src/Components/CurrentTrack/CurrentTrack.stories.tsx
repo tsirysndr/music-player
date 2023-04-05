@@ -8,6 +8,7 @@ export default {
   component: CurrentTrack,
   argTypes: {
     onPageSelected: {action: 'onPageSelected'},
+    onLike: {action: 'onLike'},
   },
 } as ComponentMeta<typeof CurrentTrack>;
 

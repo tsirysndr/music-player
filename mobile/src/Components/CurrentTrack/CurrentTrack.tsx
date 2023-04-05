@@ -1,10 +1,11 @@
-import React, {FC} from 'react';
+import React, {FC, useEffect} from 'react';
 import styled from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {Dimensions} from 'react-native';
 import DefaultPagerView from 'react-native-pager-view';
+import {Track} from '../../Types';
 
 const NoAlbumCover = styled.View<{width: number}>`
   width: 180px;
@@ -96,19 +97,25 @@ const AlbumCover: FC<AlbumCoverProps> = ({cover}) => {
 };
 
 export type CurrentTrackProps = {
-  track: any;
+  track?: Track;
   onPageSelected: (event: any) => void;
   initialPage: number;
   tracks: any;
+  onLike: () => void;
 };
 
 const CurrentTrack: FC<CurrentTrackProps> = props => {
   const screenWidth = Math.round(Dimensions.get('window').width);
-  const {initialPage, onPageSelected, track, tracks} = props;
+  const {initialPage, onPageSelected, track, tracks, onLike} = props;
+  useEffect(() => {
+    (pagerRef.current as any).setPage(initialPage);
+  }, [initialPage]);
+  const pagerRef = React.useRef(null);
   return (
     <Container>
       <>
         <PagerView
+          ref={pagerRef}
           height={screenWidth - 60}
           initialPage={initialPage}
           onPageSelected={onPageSelected}>
@@ -118,16 +125,16 @@ const CurrentTrack: FC<CurrentTrackProps> = props => {
         </PagerView>
         <TrackRow>
           <TrackInfo>
-            <TrackTitle>{track.title}</TrackTitle>
-            <TrackArtist>{track.artist}</TrackArtist>
+            <TrackTitle>{track?.title}</TrackTitle>
+            <TrackArtist>{track?.artist}</TrackArtist>
           </TrackInfo>
-          {!track.like && (
-            <Button>
+          {!track?.liked && (
+            <Button onPress={onLike}>
               <Ionicons name="heart-outline" size={24} color="#cbcbcb" />
             </Button>
           )}
-          {track.like && (
-            <Button>
+          {track?.liked && (
+            <Button onPress={onLike}>
               <Ionicons name="heart" size={24} color="#ab28fc" />
             </Button>
           )}

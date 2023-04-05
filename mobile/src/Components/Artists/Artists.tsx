@@ -2,6 +2,7 @@ import styled from '@emotion/native';
 import React, {FC} from 'react';
 import {FlatList, TouchableWithoutFeedback} from 'react-native';
 import SvgMic from '../Icons/Mic';
+import {Artist as ArtistType} from '../../Types';
 
 const Container = styled.View`
   width: 100%;
@@ -76,8 +77,8 @@ const ArtistName = styled.Text`
 `;
 
 export type ArtistProps = {
-  artist: any;
-  onPress: (artist: any) => void;
+  artist: ArtistType;
+  onPress: (artist: ArtistType) => void;
 };
 
 const Artist: FC<ArtistProps> = props => {
@@ -86,8 +87,8 @@ const Artist: FC<ArtistProps> = props => {
     <TouchableWithoutFeedback onPress={() => onPress(artist)}>
       <ArtistCover>
         <>
-          {artist.cover && <ArtistImage source={{uri: artist.cover}} />}
-          {!artist.cover && (
+          {artist.picture && <ArtistImage source={{uri: artist.picture}} />}
+          {!artist.picture && (
             <NoArtistCover>
               <SvgMic />
             </NoArtistCover>

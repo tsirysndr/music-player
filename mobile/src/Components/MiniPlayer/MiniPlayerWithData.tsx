@@ -1,11 +1,13 @@
 import React, {FC} from 'react';
 import MiniPlayer from './MiniPlayer';
-import {tracks} from '../../Mocks/Tracks';
+import {useRecoilValue} from 'recoil';
+import {currentTrackState} from '../CurrentTrack/CurrentTrackState';
 
 const MiniPlayerWithData: FC = () => {
+  const currentTrack = useRecoilValue(currentTrackState);
   return (
     <MiniPlayer
-      track={tracks[0]}
+      track={currentTrack}
       progress={30}
       onSkipNext={() => {}}
       onPlay={() => {}}

@@ -1,4 +1,6 @@
 import styled from '@emotion/native';
+import {MockedProvider} from '@apollo/client/testing';
+import {RecoilRoot} from 'recoil';
 
 export const parameters = {
   controls: {
@@ -18,8 +20,12 @@ const Container = styled.View`
 
 export const decorators = [
   Story => (
-    <Container>
-      <Story />
-    </Container>
+    <MockedProvider mocks={[]} addTypename={true}>
+      <RecoilRoot>
+        <Container>
+          <Story />
+        </Container>
+      </RecoilRoot>
+    </MockedProvider>
   ),
 ];

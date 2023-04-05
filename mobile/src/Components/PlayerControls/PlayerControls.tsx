@@ -29,6 +29,8 @@ const TimeContainer = styled.View`
 const Button = styled.TouchableOpacity`
   justify-content: center;
   align-items: center;
+  min-height: 40px;
+  min-width: 40px;
 `;
 
 const Row = styled.View`

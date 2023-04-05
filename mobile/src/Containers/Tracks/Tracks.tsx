@@ -1,23 +1,23 @@
-import styled from '@emotion/native';
 import React, {FC} from 'react';
-import MiniPlayer from '../../Components/MiniPlayer';
 import Header from '../../Components/Header';
+import styled from '@emotion/native';
+import MiniPlayer from '../../Components/MiniPlayer';
 
 const Container = styled.View`
   flex: 1;
 `;
 
-export type AlbumsProps = {
+export type TracksProps = {
   onGoBack: () => void;
 };
 
-const Albums: FC<AlbumsProps> = props => {
+const Tracks: FC<TracksProps> = props => {
   const {onGoBack} = props;
   return (
     <>
       <Container>
         <Header
-          title="Albums"
+          title="Tracks"
           onGoBack={onGoBack}
           onSearch={() => {}}
           onFilter={() => {}}
@@ -28,4 +28,4 @@ const Albums: FC<AlbumsProps> = props => {
   );
 };
 
-export default Albums;
+export default Tracks;

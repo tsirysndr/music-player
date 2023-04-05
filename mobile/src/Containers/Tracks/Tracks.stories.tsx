@@ -1,15 +1,15 @@
 import React from 'react';
 import {ComponentMeta, ComponentStory} from '@storybook/react-native';
-import Albums from './Albums';
+import Tracks from './Tracks';
 
 export default {
-  title: 'AlbumsScreen',
-  component: Albums,
+  title: 'Tracks',
+  component: Tracks,
   argTypes: {
     onGoBack: {action: 'onGoBack'},
   },
-} as ComponentMeta<typeof Albums>;
+} as ComponentMeta<typeof Tracks>;
 
-const Template: ComponentStory<typeof Albums> = args => <Albums {...args} />;
+const Template: ComponentStory<typeof Tracks> = args => <Tracks {...args} />;
 
 export const Default = Template.bind({});

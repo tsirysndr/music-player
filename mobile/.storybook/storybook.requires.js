@@ -52,6 +52,7 @@ const getStories = () => {
     "./src/Components/Button/Button.stories.js": require("../src/Components/Button/Button.stories.js"),
     "./src/Components/CurrentTrack/CurrentTrack.stories.tsx": require("../src/Components/CurrentTrack/CurrentTrack.stories.tsx"),
     "./src/Components/Devices/Devices.stories.tsx": require("../src/Components/Devices/Devices.stories.tsx"),
+    "./src/Components/Header/Header.stories.tsx": require("../src/Components/Header/Header.stories.tsx"),
     "./src/Components/MiniPlayer/MiniPlayer.stories.tsx": require("../src/Components/MiniPlayer/MiniPlayer.stories.tsx"),
     "./src/Components/PlayerControls/PlayerControls.stories.tsx": require("../src/Components/PlayerControls/PlayerControls.stories.tsx"),
     "./src/Components/Progressbar/Progressbar.stories.tsx": require("../src/Components/Progressbar/Progressbar.stories.tsx"),
@@ -67,6 +68,7 @@ const getStories = () => {
     "./src/Containers/Playlists/Playlists.stories.tsx": require("../src/Containers/Playlists/Playlists.stories.tsx"),
     "./src/Containers/Search/Search.stories.tsx": require("../src/Containers/Search/Search.stories.tsx"),
     "./src/Containers/Settings/Settings.stories.tsx": require("../src/Containers/Settings/Settings.stories.tsx"),
+    "./src/Containers/Tracks/Tracks.stories.tsx": require("../src/Containers/Tracks/Tracks.stories.tsx"),
   };
 };
 

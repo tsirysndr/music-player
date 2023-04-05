@@ -1,22 +1,27 @@
 import styled from '@emotion/native';
 import React, {FC} from 'react';
 import MiniPlayer from '../../Components/MiniPlayer';
+import Header from '../../Components/Header';
 
 const Container = styled.View`
   flex: 1;
 `;
 
-const Title = styled.Text`
-  color: #fff;
-  font-family: 'Gilroy-Bold';
-  font-size: 24px;
-`;
+export type ArtistsProps = {
+  onGoBack: () => void;
+};
 
-const Artists: FC = () => {
+const Artists: FC<ArtistsProps> = props => {
+  const {onGoBack} = props;
   return (
     <>
       <Container>
-        <Title>Artists</Title>
+        <Header
+          title="Artists"
+          onGoBack={onGoBack}
+          onSearch={() => {}}
+          onFilter={() => {}}
+        />
       </Container>
       <MiniPlayer />
     </>

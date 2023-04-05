@@ -28,12 +28,6 @@ const Header = styled.View`
   height: 100px;
 `;
 
-const Title = styled.Text`
-  color: #fff;
-  font-family: 'Gilroy-Bold';
-  font-size: 24px;
-`;
-
 const Player: FC = () => {
   return (
     <>

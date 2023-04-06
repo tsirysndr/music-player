@@ -1,6 +1,6 @@
 import styled from '@emotion/native';
 import React, {FC} from 'react';
-import {TouchableWithoutFeedback} from 'react-native';
+import {TouchableOpacity, TouchableWithoutFeedback} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 
 const Container = styled.View`
@@ -76,7 +76,7 @@ export type TrackProps = {
 const Track: FC<TrackProps> = props => {
   const {item, onPress} = props;
   return (
-    <TouchableWithoutFeedback onPress={() => onPress(item)}>
+    <TouchableOpacity onPress={() => onPress(item)}>
       <TrackRow>
         {item.cover && <Cover source={{uri: item.cover}} />}
         {!item.cover && (
@@ -93,7 +93,7 @@ const Track: FC<TrackProps> = props => {
           </TrackArtist>
         </TrackInfo>
       </TrackRow>
-    </TouchableWithoutFeedback>
+    </TouchableOpacity>
   );
 };
 

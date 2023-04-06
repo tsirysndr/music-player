@@ -1,6 +1,5 @@
 import styled from "@emotion/styled";
-import { Cell, Grid } from "baseui/layout-grid";
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import { useCover } from "../../Hooks/useCover";
 import ControlBar from "../ControlBar";
 import MainContent from "../MainContent";
@@ -8,6 +7,7 @@ import Sidebar from "../Sidebar";
 import AlbumIcon from "../Icons/AlbumCover";
 import { Device } from "../../Types/Device";
 import ListeningOn from "../ListeningOn";
+import { FixedSizeGrid as Grid } from "react-window";
 
 const Container = styled.div`
   display: flex;
@@ -99,6 +99,38 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 
 const Albums: FC<AlbumsProps> = (props) => {
   const { albums, onClickAlbum, currentCastDevice, onFilter } = props;
+  // convert albums array to matrix of 4 columns using reduce
+  const data = useMemo(
+    () =>
+      albums.reduce((resultArray, item, index) => {
+        const chunkIndex = Math.floor(index / 4);
+        if (!resultArray[chunkIndex]) {
+          resultArray[chunkIndex] = []; // start a new chunk
+        }
+        resultArray[chunkIndex].push(item);
+        return resultArray;
+      }, []),
+    [albums]
+  );
+
+  const Cell = ({ rowIndex, columnIndex, style }: any) => (
+    <>
+      {data[rowIndex][columnIndex] && (
+        <div style={style}>
+          <Album onClick={onClickAlbum} album={data[rowIndex][columnIndex]} />
+        </div>
+      )}
+    </>
+  );
+
+  const vw = (percent: number) => {
+    const w = Math.max(
+      document.documentElement.clientWidth,
+      window.innerWidth || 0
+    );
+    return (percent * w) / 100;
+  };
+
   return (
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
@@ -113,12 +145,15 @@ const Albums: FC<AlbumsProps> = (props) => {
               onFilter={onFilter}
             >
               <Wrapper>
-                <Grid gridColumns={[2, 3, 4, 6]} gridMargins={[8, 16, 18]}>
-                  {albums.map((item) => (
-                    <Cell key={item.id}>
-                      <Album onClick={onClickAlbum} album={item} />
-                    </Cell>
-                  ))}
+                <Grid
+                  columnCount={4}
+                  columnWidth={247}
+                  rowCount={data.length}
+                  rowHeight={319}
+                  height={Math.min(data.length, 10) * 319}
+                  width={vw(100) - 300}
+                >
+                  {Cell}
                 </Grid>
               </Wrapper>
             </MainContent>

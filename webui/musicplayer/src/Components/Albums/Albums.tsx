@@ -67,6 +67,11 @@ const Title = styled.div`
 const Scrollable = styled.div`
   height: calc(100vh - 100px);
   overflow-y: auto;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 `;
 
 export type AlbumsProps = {
@@ -110,29 +115,6 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 
 const Albums: FC<AlbumsProps> = (props) => {
   const { albums, onClickAlbum, currentCastDevice, onFilter } = props;
-  // convert albums array to matrix of 4 columns using reduce
-  const data = useMemo(
-    () =>
-      albums.reduce((resultArray, item, index) => {
-        const chunkIndex = Math.floor(index / 4);
-        if (!resultArray[chunkIndex]) {
-          resultArray[chunkIndex] = []; // start a new chunk
-        }
-        resultArray[chunkIndex].push(item);
-        return resultArray;
-      }, []),
-    [albums]
-  );
-
-  const Cell = ({ rowIndex, columnIndex, style }: any) => (
-    <>
-      {data[rowIndex][columnIndex] && (
-        <div style={style}>
-          <Album onClick={onClickAlbum} album={data[rowIndex][columnIndex]} />
-        </div>
-      )}
-    </>
-  );
 
   const vh = (percent: number) => {
     const h = Math.max(
@@ -150,6 +132,31 @@ const Albums: FC<AlbumsProps> = (props) => {
     return (percent * w) / 100;
   };
 
+  const columnCount = Math.floor((vw(100) - 284) / 247);
+  // convert albums array to matrix of 4 columns using reduce
+  const data = useMemo(
+    () =>
+      albums.reduce((resultArray, item, index) => {
+        const chunkIndex = Math.floor(index / columnCount);
+        if (!resultArray[chunkIndex]) {
+          resultArray[chunkIndex] = []; // start a new chunk
+        }
+        resultArray[chunkIndex].push(item);
+        return resultArray;
+      }, []),
+    [albums, columnCount]
+  );
+
+  const Cell = ({ rowIndex, columnIndex, style }: any) => (
+    <>
+      {data[rowIndex][columnIndex] && (
+        <div style={style}>
+          <Album onClick={onClickAlbum} album={data[rowIndex][columnIndex]} />
+        </div>
+      )}
+    </>
+  );
+
   return (
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
@@ -165,7 +172,7 @@ const Albums: FC<AlbumsProps> = (props) => {
             >
               <Wrapper>
                 <Grid
-                  columnCount={4}
+                  columnCount={columnCount}
                   columnWidth={247}
                   rowCount={data.length}
                   rowHeight={319}

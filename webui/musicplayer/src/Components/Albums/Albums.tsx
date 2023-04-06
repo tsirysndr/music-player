@@ -86,7 +86,17 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
   const { cover } = useCover(album.cover);
   return (
     <>
-      {cover && <AlbumCover src={cover} onClick={() => onClick(album)} />}
+      {cover && (
+        <AlbumCover
+          src={cover}
+          onClick={() => onClick(album)}
+          placeholder={
+            <NoAlbumCover>
+              <AlbumIcon />
+            </NoAlbumCover>
+          }
+        />
+      )}
       {!cover && (
         <NoAlbumCover onClick={() => onClick(album)}>
           <AlbumIcon />

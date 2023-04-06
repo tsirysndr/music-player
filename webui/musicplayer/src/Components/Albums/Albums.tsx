@@ -8,6 +8,7 @@ import AlbumIcon from "../Icons/AlbumCover";
 import { Device } from "../../Types/Device";
 import ListeningOn from "../ListeningOn";
 import { FixedSizeGrid as Grid } from "react-window";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const Container = styled.div`
   display: flex;
@@ -21,7 +22,7 @@ const Content = styled.div`
   flex: 1;
 `;
 
-const AlbumCover = styled.img`
+const AlbumCover = styled(LazyLoadImage)`
   height: 220px;
   width: 220px;
   border-radius: 3px;
@@ -123,6 +124,14 @@ const Albums: FC<AlbumsProps> = (props) => {
     </>
   );
 
+  const vh = (percent: number) => {
+    const h = Math.max(
+      document.documentElement.clientHeight,
+      window.innerHeight || 0
+    );
+    return (percent * h) / 100;
+  };
+
   const vw = (percent: number) => {
     const w = Math.max(
       document.documentElement.clientWidth,
@@ -150,7 +159,10 @@ const Albums: FC<AlbumsProps> = (props) => {
                   columnWidth={247}
                   rowCount={data.length}
                   rowHeight={319}
-                  height={Math.min(data.length, 10) * 319}
+                  height={Math.max(
+                    Math.min(data.length, 3) * 319,
+                    vh(100) - 100
+                  )}
                   width={vw(100) - 300}
                 >
                   {Cell}

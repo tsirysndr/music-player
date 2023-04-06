@@ -2,6 +2,7 @@ import styled from '@emotion/native';
 import React, {FC} from 'react';
 import {TouchableOpacity, TouchableWithoutFeedback} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import {Track as TrackType} from '../../Types';
 
 const Container = styled.View`
   width: 100%;
@@ -35,10 +36,11 @@ const TrackRow = styled.View`
   margin-bottom: 15px;
 `;
 
-const TrackTitle = styled.Text`
+const TrackTitle = styled.Text<{active?: boolean}>`
   color: #fff;
   font-family: 'Gilroy-Bold';
   font-size: 16px;
+  ${props => props.active && 'color: #ab28fc;'}
 `;
 
 const TrackArtist = styled.Text`
@@ -70,11 +72,12 @@ const NoCover = styled.View`
 
 export type TrackProps = {
   item: any;
+  active: boolean;
   onPress: (item: any) => void;
 };
 
 const Track: FC<TrackProps> = props => {
-  const {item, onPress} = props;
+  const {item, active, onPress} = props;
   return (
     <TouchableOpacity onPress={() => onPress(item)}>
       <TrackRow>
@@ -85,7 +88,7 @@ const Track: FC<TrackProps> = props => {
           </NoCover>
         )}
         <TrackInfo>
-          <TrackTitle ellipsizeMode="tail" numberOfLines={1}>
+          <TrackTitle active={active} ellipsizeMode="tail" numberOfLines={1}>
             {item.title}
           </TrackTitle>
           <TrackArtist ellipsizeMode="tail" numberOfLines={1}>
@@ -98,13 +101,14 @@ const Track: FC<TrackProps> = props => {
 };
 
 export type SongsProps = {
-  tracks: any;
+  tracks: TrackType[];
+  currentTrack?: TrackType;
   onSeeAll: () => void;
   onPressTrack: (item: any) => void;
 };
 
 const Songs: FC<SongsProps> = props => {
-  const {tracks, onSeeAll, onPressTrack} = props;
+  const {tracks, currentTrack, onSeeAll, onPressTrack} = props;
   return (
     <Container>
       <Header>
@@ -114,7 +118,12 @@ const Songs: FC<SongsProps> = props => {
         </TouchableWithoutFeedback>
       </Header>
       {tracks.map((item: any) => (
-        <Track key={item.id} item={item} onPress={onPressTrack} />
+        <Track
+          key={item.id}
+          item={item}
+          active={item.id === currentTrack?.id}
+          onPress={onPressTrack}
+        />
       ))}
     </Container>
   );

@@ -5,9 +5,14 @@ import {useRecoilState} from 'recoil';
 import {currentTrackState} from '../CurrentTrack/CurrentTrackState';
 
 const SongsWithData: FC = () => {
-  const [_, setCurrentTrack] = useRecoilState(currentTrackState);
+  const [currentTrack, setCurrentTrack] = useRecoilState(currentTrackState);
   return (
-    <Songs tracks={tracks} onPressTrack={setCurrentTrack} onSeeAll={() => {}} />
+    <Songs
+      tracks={tracks}
+      currentTrack={currentTrack}
+      onPressTrack={setCurrentTrack}
+      onSeeAll={() => {}}
+    />
   );
 };
 

@@ -38,11 +38,15 @@ const FilterButton = styled.TouchableOpacity`
   align-items: center;
 `;
 
+const NoTitle = styled.View`
+  flex: 1;
+`;
+
 export type HeaderProps = {
   onGoBack: () => void;
-  onSearch: () => void;
-  onFilter: () => void;
-  title: string;
+  onSearch?: () => void;
+  onFilter?: () => void;
+  title?: string;
 };
 
 const Header: FC<HeaderProps> = props => {
@@ -52,13 +56,18 @@ const Header: FC<HeaderProps> = props => {
       <BackButton onPress={onGoBack}>
         <Feather name="arrow-left" size={24} color="#fff" />
       </BackButton>
-      <Title>{title}</Title>
-      <SearchButton onPress={onSearch}>
-        <Feather name="search" size={24} color="#fff" />
-      </SearchButton>
-      <FilterButton onPress={onFilter}>
-        <MaterialIcons name="filter-list" size={24} color="#fff" />
-      </FilterButton>
+      {!title && <NoTitle />}
+      {title && <Title>{title}</Title>}
+      {onSearch && (
+        <SearchButton onPress={onSearch}>
+          <Feather name="search" size={24} color="#fff" />
+        </SearchButton>
+      )}
+      {onFilter && (
+        <FilterButton onPress={onFilter}>
+          <MaterialIcons name="filter-list" size={24} color="#fff" />
+        </FilterButton>
+      )}
     </Container>
   );
 };

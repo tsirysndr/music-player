@@ -28,4 +28,6 @@ export const NoCover = Template.bind({});
 
 NoCover.args = {
   track: tracks[3],
+  initialPage: 3,
+  tracks,
 };

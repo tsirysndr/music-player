@@ -1,6 +1,7 @@
 import React from 'react';
 import {ComponentMeta, ComponentStory} from '@storybook/react-native';
 import Tracks from './Tracks';
+import {tracks} from '../../Mocks/Tracks';
 
 export default {
   title: 'Tracks',
@@ -13,3 +14,7 @@ export default {
 const Template: ComponentStory<typeof Tracks> = args => <Tracks {...args} />;
 
 export const Default = Template.bind({});
+
+Default.args = {
+  tracks,
+};

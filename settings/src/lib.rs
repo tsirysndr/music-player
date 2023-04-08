@@ -35,6 +35,16 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         }
     };
 
+    let music_directory = match env::consts::OS {
+        "android" => "/storage/emulated/0/Music".to_owned(),
+        _ => {
+            let mut tmp = PathBuf::new();
+            tmp.push("/tmp");
+            let music_dir = dirs::audio_dir().unwrap_or(tmp);
+            music_dir.to_str().unwrap().to_owned()
+        }
+    };
+
     let path = format!("{}/music-player", config_dir);
     let covers_path = format!("{}/covers", path);
 
@@ -59,11 +69,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             "musicbrainz".to_string(),
             "lastfm".to_string(),
         ]),
-        music_directory: dirs::audio_dir()
-            .unwrap_or(tmp)
-            .to_str()
-            .unwrap()
-            .to_string(),
+        music_directory,
         host: "0.0.0.0".to_string(),
         device_name: "Music Player".to_string(),
         device_id,

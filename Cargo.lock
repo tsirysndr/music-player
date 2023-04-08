@@ -4508,7 +4508,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-settings"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "config 0.13.3",
  "dirs",

@@ -27,10 +27,15 @@ pub struct Settings {
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
-    let path = format!(
-        "{}/music-player",
-        dirs::config_dir().unwrap().to_str().unwrap()
-    );
+    let config_dir = match env::consts::OS {
+        "android" => "/storage/emulated/0/.config/music-player".to_owned(),
+        _ => {
+            let config_dir = dirs::config_dir().unwrap();
+            format!("{}/music-player", config_dir.to_str().unwrap())
+        }
+    };
+
+    let path = format!("{}/music-player", config_dir);
     let covers_path = format!("{}/covers", path);
 
     fs::create_dir_all(&covers_path).unwrap();
@@ -98,12 +103,14 @@ pub fn read_settings() -> Result<Config, ConfigError> {
 }
 
 pub fn get_application_directory() -> String {
-    let path = env::var("MUSIC_PLAYER_APPLICATION_DIRECTORY").unwrap_or_else(|_| {
-        format!(
-            "{}/music-player",
-            dirs::config_dir().unwrap().to_str().unwrap()
-        )
-    });
+    let config_dir = match env::consts::OS {
+        "android" => "/storage/emulated/0/.config/music-player".to_owned(),
+        _ => {
+            let config_dir = dirs::config_dir().unwrap();
+            format!("{}/music-player", config_dir.to_str().unwrap())
+        }
+    };
+    let path = env::var("MUSIC_PLAYER_APPLICATION_DIRECTORY").unwrap_or_else(|_| config_dir);
     let albums = format!("{}/albums", path);
     let artists = format!("{}/artists", path);
     let playlists = format!("{}/playlists", path);

@@ -1,6 +1,6 @@
 use std::{
     cmp::min,
-    fs,
+    env, fs,
     io::{self, Read, Seek, SeekFrom},
     path::Path,
     sync::{
@@ -17,6 +17,7 @@ use hyper::{
     header::{self, CONTENT_RANGE},
     Body, Response, StatusCode,
 };
+use music_player_settings::get_application_directory;
 use symphonia::core::io::MediaSource;
 use thiserror::Error;
 
@@ -408,7 +409,12 @@ impl AudioFileStreaming {
             mime_type: mime,
         });
 
-        let write_file = NamedTempFile::new()?;
+        let app_dir = get_application_directory();
+
+        let write_file = match env::consts::OS {
+            "android" => NamedTempFile::new_in(app_dir)?,
+            _ => NamedTempFile::new()?,
+        };
         write_file.as_file().set_len(file_size as u64)?;
 
         let read_file = write_file.reopen()?;

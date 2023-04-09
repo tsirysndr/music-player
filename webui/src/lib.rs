@@ -22,14 +22,13 @@ use music_player_graphql::{
     MusicPlayerSchema,
 };
 use music_player_playback::player::PlayerCommand;
-use music_player_settings::{read_settings, Settings};
+use music_player_settings::{get_application_directory, read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
-use music_player_types::types::Device;
 use owo_colors::OwoColorize;
 use rust_embed::RustEmbed;
 use sea_orm::EntityTrait;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
 #[derive(RustEmbed)]
@@ -161,10 +160,7 @@ pub async fn start_webui(
     HttpServer::new(move || {
         let cors = Cors::permissive();
 
-        let covers_path = format!(
-            "{}/music-player/covers",
-            dirs::config_dir().unwrap().to_str().unwrap()
-        );
+        let covers_path = format!("{}/covers", get_application_directory());
         App::new()
             .app_data(Data::new(Arc::clone(&db)))
             .app_data(Data::new(schema.clone()))

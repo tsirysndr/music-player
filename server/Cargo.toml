@@ -1,6 +1,6 @@
 [package]
 name = "music-player-server"
-version = "0.1.13"
+version = "0.1.15"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -21,11 +21,11 @@ version = "0.1.8"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.2"
+version = "0.1.4"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.4"
+version = "0.1.7"
 
 [dependencies.music-player-entity]
 path = "../entity"

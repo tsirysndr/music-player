@@ -27,8 +27,11 @@ pub struct Settings {
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
-    let config_dir = match env::consts::OS {
-        "android" => "/storage/emulated/0/.config/music-player".to_owned(),
+    let path = match env::consts::OS {
+        "android" => {
+            fs::create_dir_all("/storage/emulated/0/.config").unwrap();
+            "/storage/emulated/0/.config/music-player".to_owned()
+        },
         _ => {
             let config_dir = dirs::config_dir().unwrap();
             format!("{}/music-player", config_dir.to_str().unwrap())
@@ -45,7 +48,6 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         }
     };
 
-    let path = format!("{}/music-player", config_dir);
     let covers_path = format!("{}/covers", path);
 
     fs::create_dir_all(&covers_path).unwrap();

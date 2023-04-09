@@ -1,6 +1,6 @@
 [package]
 name = "music-player-webui"
-version = "0.1.12"
+version = "0.1.14"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -15,11 +15,11 @@ version = "0.1.8"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.2"
+version = "0.1.4"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies.music-player-playback]
 path = "../playback"

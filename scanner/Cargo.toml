@@ -1,6 +1,6 @@
 [package]
 name = "music-player-scanner"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -11,7 +11,7 @@ description = "The music library scanner for the music player"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.2"
+version = "0.1.3"
 
 [dependencies.music-player-entity]
 path = "../entity"

@@ -1,6 +1,6 @@
 [package]
 name = "music-player-graphql"
-version = "0.1.8"
+version = "0.1.10"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -21,11 +21,11 @@ version = "0.1.8"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.2"
+version = "0.1.4"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.4"
+version = "0.1.6"
 
 [dependencies.music-player-entity]
 path = "../entity"
@@ -49,7 +49,7 @@ version = "0.1.5"
 
 [dev-dependencies.music-player-migration]
 path = "../migration"
-version = "0.1.5"
+version = "0.1.6"
 
 [dev-dependencies]
 ctor = "0.1.26"

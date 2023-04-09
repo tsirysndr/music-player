@@ -29,8 +29,7 @@ pub struct Settings {
 pub fn read_settings() -> Result<Config, ConfigError> {
     let path = match env::consts::OS {
         "android" => {
-            fs::create_dir_all("/storage/emulated/0/.config").unwrap();
-            "/storage/emulated/0/.config/music-player".to_owned()
+            "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned()
         },
         _ => {
             let config_dir = dirs::config_dir().unwrap();
@@ -112,7 +111,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
 
 pub fn get_application_directory() -> String {
     let config_dir = match env::consts::OS {
-        "android" => "/storage/emulated/0/.config/music-player".to_owned(),
+        "android" => "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned(),
         _ => {
             let config_dir = dirs::config_dir().unwrap();
             format!("{}/music-player", config_dir.to_str().unwrap())

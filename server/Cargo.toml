@@ -25,7 +25,7 @@ version = "0.1.4"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.7"
+version = "0.1.6"
 
 [dependencies.music-player-entity]
 path = "../entity"

@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::{fs::File, path::Path};
-
 use music_player_settings::{read_settings, Settings};
 pub use sea_orm_migration::prelude::*;
+use sea_orm_migration::{cli::run_migrate, sea_orm::Database};
+use std::{env, fs::File, path::Path};
 
 mod m20220101_000001_create_table;
 mod m20221115_220318_add_folder_table;
@@ -26,6 +26,7 @@ impl MigratorTrait for Migrator {
 pub async fn run() {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
+    let url = settings.database_url.clone();
 
     std::env::set_var("DATABASE_URL", settings.database_url);
 
@@ -37,5 +38,13 @@ pub async fn run() {
         File::create(database_path).expect("Failed to create database file");
     }
 
-    cli::run_cli(Migrator).await;
+    match env::consts::OS {
+        "android" => {
+            let db = &Database::connect(&url).await.unwrap();
+            run_migrate(Migrator, db, None, false).await.unwrap();
+        }
+        _ => {
+            cli::run_cli(Migrator).await;
+        }
+    }
 }

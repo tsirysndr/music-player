@@ -4319,13 +4319,14 @@ dependencies = [
 
 [[package]]
 name = "music-player-audio"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "bytes",
  "futures-util",
  "hyper",
  "hyper-rustls",
+ "log",
  "md5",
  "mime_guess",
  "music-player-settings",
@@ -4433,7 +4434,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-playback"
-version = "0.1.10"
+version = "0.1.12"
 dependencies = [
  "async-trait",
  "cpal",

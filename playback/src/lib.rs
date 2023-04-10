@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 pub mod audio_backend;
 pub mod config;
 pub mod convert;

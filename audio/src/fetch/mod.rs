@@ -1,3 +1,12 @@
+use anyhow::Error;
+use futures_util::{future::IntoStream, StreamExt, TryFutureExt};
+use hyper::{
+    client::ResponseFuture,
+    header::{self, CONTENT_RANGE},
+    Body, Response, StatusCode,
+};
+use log::debug;
+use music_player_settings::get_application_directory;
 use std::{
     cmp::min,
     env, fs,
@@ -9,15 +18,6 @@ use std::{
     },
     time::Duration,
 };
-
-use anyhow::Error;
-use futures_util::{future::IntoStream, StreamExt, TryFutureExt};
-use hyper::{
-    client::ResponseFuture,
-    header::{self, CONTENT_RANGE},
-    Body, Response, StatusCode,
-};
-use music_player_settings::get_application_directory;
 use symphonia::core::io::MediaSource;
 use thiserror::Error;
 
@@ -268,6 +268,7 @@ impl AudioFile {
         let file_id = format!("{:x}", md5::compute(url.to_owned()));
         if cache.is_file_cached(file_id.as_str()) {
             println!("File is cached: {}", file_id);
+            debug!(">> File is cached: {}", file_id);
             return Ok(AudioFile::Cached(cache.open_file(file_id.as_str())?));
         }
 
@@ -280,10 +281,17 @@ impl AudioFile {
         // spawn a task to download the file
         tokio::spawn(complete_rx.map_ok(move |mut file| {
             println!("Download complete: {}", file.path().display());
+            debug!(">> Download complete: {}", file.path().display());
             let cache = Cache::new();
             match cache.save_file(&file_id, &mut file) {
-                Ok(_) => println!("Saved to cache: {}", file_id),
-                Err(e) => println!("Failed to save to cache: {}", e),
+                Ok(_) => {
+                    println!("Saved to cache: {}", file_id);
+                    debug!(">> Saved to cache: {}", file_id);
+                }
+                Err(e) => {
+                    println!("Failed to save to cache: {}", e);
+                    debug!(">> Failed to save to cache: {}", e);
+                }
             }
         }));
 

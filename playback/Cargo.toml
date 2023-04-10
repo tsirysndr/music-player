@@ -1,6 +1,6 @@
 [package]
 name = "music-player-playback"
-version = "0.1.10"
+version = "0.1.12"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"

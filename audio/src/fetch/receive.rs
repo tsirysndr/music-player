@@ -9,6 +9,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use hyper::StatusCode;
+use log::debug;
 use tempfile::NamedTempFile;
 use tokio::sync::{mpsc, oneshot};
 
@@ -343,6 +344,7 @@ async fn receive_data(
 
         let data_size = data.len();
         println!(" data_size: {}", data_size);
+        debug!(">> received {} bytes", data_size);
         file_data_tx.send(ReceivedData::Data(PartialFileData { offset, data }))?;
 
         actual_length += data_size;

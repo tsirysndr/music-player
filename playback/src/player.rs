@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use futures_util::{future::FusedFuture, Future};
-use log::{error, trace};
 use music_player_audio::fetch::{AudioFile, Subfile};
 use music_player_entity::track::Model as Track;
 use music_player_tracklist::{PlaybackState, Tracklist};
@@ -690,10 +689,12 @@ pub struct PlayerTrackLoader;
 impl PlayerTrackLoader {
     async fn load(song: &str) -> Option<PlayerLoadedTrackData> {
         let bytes_per_second = 40 * 1024; // 320kbps
+        debug!("Loading track: {}", song);
         let audio_file = match AudioFile::open(&song, bytes_per_second).await {
             Ok(audio_file) => audio_file,
             Err(e) => {
                 println!("Error: {}", e);
+                error!("Error: {}", e);
                 return None;
             }
         };
@@ -706,6 +707,7 @@ impl PlayerTrackLoader {
                         Ok(audio_file) => audio_file,
                         Err(e) => {
                             println!("Error: {}", e);
+                            error!("Error: {}", e);
                             return None;
                         }
                     };
@@ -716,6 +718,7 @@ impl PlayerTrackLoader {
                 };
 
                 println!(">> loading ...");
+                debug!(">> loading ...");
 
                 let mut format = Hint::new();
 
@@ -738,11 +741,13 @@ impl PlayerTrackLoader {
                 };
 
                 println!(">> loaded ...");
+                debug!(">> loaded ...");
 
                 return Some(PlayerLoadedTrackData { decoder });
             }
             Err(e) => {
                 println!("Error: {}", e);
+                error!("Error: {}", e);
                 return None;
             }
         }

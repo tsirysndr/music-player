@@ -9,11 +9,10 @@ use symphonia::core::probe::Hint;
 use symphonia::core::units::TimeBase;
 use url::Url;
 
-use log::info;
-
 pub fn print_format(path: &str) {
     if Url::parse(path).is_ok() {
         println!("+ {}", path.magenta());
+        debug!("+ {}", path);
         return;
     }
     let mut hint = Hint::new();
@@ -40,6 +39,7 @@ pub fn print_format(path: &str) {
         .unwrap();
 
     println!("+ {}", path);
+    debug!("+ {}", path);
     print_tracks(probed.format.tracks());
 
     // Prefer metadata that's provided in the container format, over other tags found during the
@@ -73,21 +73,27 @@ fn print_update(rev: &MetadataRevision) {
 fn print_tracks(tracks: &[Track]) {
     if !tracks.is_empty() {
         println!("|");
+        debug!("|");
         println!("| // Tracks //");
+        debug!("| // Tracks //");
 
         for (idx, track) in tracks.iter().enumerate() {
             let params = &track.codec_params;
 
             print!("|     [{:0>2}] Codec:           ", idx + 1);
+            debug!("|     [{:0>2}] Codec:           ", idx + 1);
 
             if let Some(codec) = symphonia::default::get_codecs().get_codec(params.codec) {
                 println!("{} ({})", codec.long_name, codec.short_name);
+                debug!("{} ({})", codec.long_name, codec.short_name);
             } else {
                 println!("Unknown (#{})", params.codec);
+                debug!("Unknown (#{})", params.codec);
             }
 
             if let Some(sample_rate) = params.sample_rate {
                 println!("|          Sample Rate:     {}", sample_rate);
+                debug!("|          Sample Rate:     {}", sample_rate);
             }
             if params.start_ts > 0 {
                 if let Some(tb) = params.time_base {
@@ -96,8 +102,14 @@ fn print_tracks(tracks: &[Track]) {
                         fmt_time(params.start_ts, tb),
                         params.start_ts
                     );
+                    debug!(
+                        "|          Start Time:      {} ({})",
+                        fmt_time(params.start_ts, tb),
+                        params.start_ts
+                    );
                 } else {
                     println!("|          Start Time:      {}", params.start_ts);
+                    debug!("|          Start Time:      {}", params.start_ts);
                 }
             }
             if let Some(n_frames) = params.n_frames {
@@ -107,34 +119,49 @@ fn print_tracks(tracks: &[Track]) {
                         fmt_time(n_frames, tb),
                         n_frames
                     );
+                    debug!(
+                        "|          Duration:        {} ({})",
+                        fmt_time(n_frames, tb),
+                        n_frames
+                    );
                 } else {
                     println!("|          Frames:          {}", n_frames);
+                    debug!("|          Frames:          {}", n_frames);
                 }
             }
             if let Some(tb) = params.time_base {
                 println!("|          Time Base:       {}", tb);
+                debug!("|          Time Base:       {}", tb);
             }
             if let Some(padding) = params.delay {
                 println!("|          Encoder Delay:   {}", padding);
+                debug!("|          Encoder Delay:   {}", padding);
             }
             if let Some(padding) = params.padding {
                 println!("|          Encoder Padding: {}", padding);
+                debug!("|          Encoder Padding: {}", padding);
             }
             if let Some(sample_format) = params.sample_format {
                 println!("|          Sample Format:   {:?}", sample_format);
+                debug!("|          Sample Format:   {:?}", sample_format);
             }
             if let Some(bits_per_sample) = params.bits_per_sample {
                 println!("|          Bits per Sample: {}", bits_per_sample);
+                debug!("|          Bits per Sample: {}", bits_per_sample);
             }
             if let Some(channels) = params.channels {
                 println!("|          Channel(s):      {}", channels.count());
+                debug!("|          Channel(s):      {}", channels.count());
                 println!("|          Channel Map:     {}", channels);
+                debug!("|          Channel Map:     {}", channels);
             }
             if let Some(channel_layout) = params.channel_layout {
                 println!("|          Channel Layout:  {:?}", channel_layout);
+                debug!("|          Channel Layout:  {:?}", channel_layout);
             }
             if let Some(language) = &track.language {
                 println!("|          Language:        {}", language);
+                debug!("|          Language:        {}", language);
             }
         }
     }
@@ -144,10 +171,14 @@ fn print_cues(cues: &[Cue]) {
     if !cues.is_empty() {
         println!("|");
         println!("| // Cues //");
+        debug!("|");
+        debug!("| // Cues //");
 
         for (idx, cue) in cues.iter().enumerate() {
             println!("|     [{:0>2}] Track:      {}", idx + 1, cue.index);
             println!("|          Timestamp:  {}", cue.start_ts);
+            debug!("|     [{:0>2}] Track:      {}", idx + 1, cue.index);
+            debug!("|          Timestamp:  {}", cue.start_ts);
 
             // Print tags associated with the Cue.
             if !cue.tags.is_empty() {
@@ -159,8 +190,13 @@ fn print_cues(cues: &[Cue]) {
                             "{}",
                             print_tag_item(tidx + 1, &format!("{:?}", std_key), &tag.value, 21)
                         );
+                        debug!(
+                            "{}",
+                            print_tag_item(tidx + 1, &format!("{:?}", std_key), &tag.value, 21)
+                        );
                     } else {
                         println!("{}", print_tag_item(tidx + 1, &tag.key, &tag.value, 21));
+                        debug!("{}", print_tag_item(tidx + 1, &tag.key, &tag.value, 21));
                     }
                 }
             }
@@ -168,9 +204,15 @@ fn print_cues(cues: &[Cue]) {
             // Print any sub-cues.
             if !cue.points.is_empty() {
                 println!("|          Sub-Cues:");
+                debug!("|          Sub-Cues:");
 
                 for (ptidx, pt) in cue.points.iter().enumerate() {
                     println!(
+                        "|                      [{:0>2}] Offset:    {:?}",
+                        ptidx + 1,
+                        pt.start_offset_ts
+                    );
+                    debug!(
                         "|                      [{:0>2}] Offset:    {:?}",
                         ptidx + 1,
                         pt.start_offset_ts
@@ -179,6 +221,10 @@ fn print_cues(cues: &[Cue]) {
                     // Start the number of sub-cue tags, but don't print them.
                     if !pt.tags.is_empty() {
                         println!(
+                            "|                           Sub-Tags:  {} (not listed)",
+                            pt.tags.len()
+                        );
+                        debug!(
                             "|                           Sub-Tags:  {} (not listed)",
                             pt.tags.len()
                         );
@@ -193,6 +239,8 @@ fn print_tags(tags: &[Tag]) {
     if !tags.is_empty() {
         println!("|");
         println!("| // Tags //");
+        debug!("|");
+        debug!("| // Tags //");
 
         let mut idx = 1;
 
@@ -203,6 +251,10 @@ fn print_tags(tags: &[Tag]) {
                     "{}",
                     print_tag_item(idx, &format!("{:?}", std_key), &tag.value, 4)
                 );
+                debug!(
+                    "{}",
+                    print_tag_item(idx, &format!("{:?}", std_key), &tag.value, 4)
+                )
             }
             idx += 1;
         }
@@ -210,6 +262,7 @@ fn print_tags(tags: &[Tag]) {
         // Print the remaining tags with keys truncated to 26 characters.
         for tag in tags.iter().filter(|tag| !tag.is_known()) {
             println!("{}", print_tag_item(idx, &tag.key, &tag.value, 4));
+            debug!("{}", print_tag_item(idx, &tag.key, &tag.value, 4));
             idx += 1;
         }
     }
@@ -219,31 +272,44 @@ fn print_visuals(visuals: &[Visual]) {
     if !visuals.is_empty() {
         println!("|");
         println!("| // Visuals //");
+        debug!("|");
+        debug!("| // Visuals //");
 
         for (idx, visual) in visuals.iter().enumerate() {
             if let Some(usage) = visual.usage {
                 println!("|     [{:0>2}] Usage:      {:?}", idx + 1, usage);
                 println!("|          Media Type: {}", visual.media_type);
+                debug!("|     [{:0>2}] Usage:      {:?}", idx + 1, usage);
+                debug!("|          Media Type: {}", visual.media_type);
             } else {
                 println!("|     [{:0>2}] Media Type: {}", idx + 1, visual.media_type);
+                debug!("|     [{:0>2}] Media Type: {}", idx + 1, visual.media_type);
             }
             if let Some(dimensions) = visual.dimensions {
                 println!(
                     "|          Dimensions: {} px x {} px",
                     dimensions.width, dimensions.height
                 );
+                debug!(
+                    "|          Dimensions: {} px x {} px",
+                    dimensions.width, dimensions.height
+                );
             }
             if let Some(bpp) = visual.bits_per_pixel {
                 println!("|          Bits/Pixel: {}", bpp);
+                debug!("|          Bits/Pixel: {}", bpp);
             }
             if let Some(ColorMode::Indexed(colors)) = visual.color_mode {
                 println!("|          Palette:    {} colors", colors);
+                debug!("|          Palette:    {} colors", colors);
             }
             println!("|          Size:       {} bytes", visual.data.len());
+            debug!("|          Size:       {} bytes", visual.data.len());
 
             // Print out tags similar to how regular tags are printed.
             if !visual.tags.is_empty() {
                 println!("|          Tags:");
+                debug!("|          Tags:");
             }
 
             for (tidx, tag) in visual.tags.iter().enumerate() {
@@ -252,8 +318,13 @@ fn print_visuals(visuals: &[Visual]) {
                         "{}",
                         print_tag_item(tidx + 1, &format!("{:?}", std_key), &tag.value, 21)
                     );
+                    debug!(
+                        "{}",
+                        print_tag_item(tidx + 1, &format!("{:?}", std_key), &tag.value, 21)
+                    );
                 } else {
                     println!("{}", print_tag_item(tidx + 1, &tag.key, &tag.value, 21));
+                    debug!("{}", print_tag_item(tidx + 1, &tag.key, &tag.value, 21));
                 }
             }
         }

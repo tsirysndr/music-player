@@ -5,7 +5,7 @@ use hyper::{
     header::RANGE,
     Request,
 };
-use hyper_rustls::{ConfigBuilderExt, HttpsConnector};
+use hyper_rustls::HttpsConnector;
 use rustls::{OwnedTrustAnchor, RootCertStore};
 
 struct NoCertificateVerification {}

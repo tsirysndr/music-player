@@ -4313,7 +4313,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-audio"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "bytes",

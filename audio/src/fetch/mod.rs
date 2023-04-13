@@ -363,12 +363,15 @@ impl AudioFileStreaming {
         // `Content-Range` > `Content-Length` will return the complete file with status code
         // 206 Partial Content.
 
+        debug!(">> Downloading file: {}", url);
         let mut streamer = Client::new().stream_from_url(url.as_str(), 0, MINIMUM_DOWNLOAD_SIZE)?;
 
         // Get the first chunk with the headers to get the file size.
         // The remainder of that chunk with possibly also a response body is then
         // further processed in `audio_file_fetch`.
         let response = streamer.next().await.ok_or(AudioFileError::NoData)??;
+
+        debug!(">> Got response: {:?}", response);
 
         let code = response.status();
         if code != StatusCode::PARTIAL_CONTENT {
@@ -419,10 +422,13 @@ impl AudioFileStreaming {
 
         let app_dir = get_application_directory();
 
+        debug!(">> Creating temp file in {:?}", app_dir);
+
         let write_file = match env::consts::OS {
             "android" => NamedTempFile::new_in(app_dir)?,
             _ => NamedTempFile::new()?,
         };
+        debug!(">> Created temp file: {:?}", write_file.path());
         write_file.as_file().set_len(file_size as u64)?;
 
         let read_file = write_file.reopen()?;

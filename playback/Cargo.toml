@@ -1,6 +1,6 @@
 [package]
 name = "music-player-playback"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -22,7 +22,7 @@ path = "../audio"
 version = "0.1.1"
 
 [dependencies]
-cpal = "0.14.0"
+cpal = "0.15"
 futures-util = "0.3.24"
 lazy_static = "1.4.0"
 librespot-protocol = "0.4.2"
@@ -31,7 +31,7 @@ parking_lot = "0.12.1"
 rand = { version = "0.8.5", features = ["small_rng"] }
 rand_distr = "0.4.3"
 rb = "0.4.1"
-rodio  = { version = "0.16" }
+rodio  = { version = "0.17.1" }
 symphonia = { version = "0.5.1", features = ["aac", "alac", "mp3", "isomp4", "flac"] }
 thiserror = "1.0.34"
 tokio = { version = "1.21.0", features = ["full"] }

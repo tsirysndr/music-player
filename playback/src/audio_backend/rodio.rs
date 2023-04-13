@@ -1,5 +1,5 @@
 use std::process::exit;
-use std::thread;
+use std::{thread, env};
 use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait};
@@ -143,7 +143,18 @@ fn create_sink(
         name.as_deref().unwrap_or("[unknown name]")
     );
 
-    let (stream, handle) = rodio::OutputStream::try_from_device(&rodio_device)?;
+    let (stream, handle) = match env::consts::OS {
+        "android" => {
+            let config = cpal::SupportedStreamConfig::new(
+                2,
+                cpal::SampleRate(44100),
+                cpal::SupportedBufferSize::Unknown,
+                cpal::SampleFormat::I16,
+            );
+            rodio::OutputStream::try_from_device_config(&rodio_device, config)?
+        }
+        _ => rodio::OutputStream::try_from_device(&rodio_device)?,
+    };
     let sink = rodio::Sink::try_new(&handle)?;
     Ok((sink, stream))
 }

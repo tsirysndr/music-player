@@ -160,7 +160,7 @@ Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your br
 - [x] GraphQL API 
 - [x] Web UI
 - [ ] Desktop version (using [gtk-rs](https://gtk-rs.org/))
-- [ ] Android Library
+- [x] Android Library (See [songbird-android](https://github.com/tsirysndr/songbird-android) and [songbird-android-rs](https://github.com/tsirysndr/songbird-android-rs))
 - [ ] iOS Library
 - [ ] Mobile version (React Native)
 - [x] Stream to Chromecast

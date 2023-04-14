@@ -73,6 +73,7 @@ const TrackDetails = styled.div`
   display: flex;
   min-width: 222px;
   flex-direction: column;
+  flex: 1;
 `;
 
 const AlbumCover = styled.img<{ current?: boolean }>`

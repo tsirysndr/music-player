@@ -4490,13 +4490,14 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.1.15"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "cuid",
  "futures",
  "futures-channel",
  "futures-util",
+ "log",
  "md5",
  "music-player-entity",
  "music-player-playback",
@@ -4510,6 +4511,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "tokio",
+ "tokio-stream",
  "tokio-tungstenite",
  "tonic",
  "tonic-build",

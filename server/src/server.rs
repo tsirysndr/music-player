@@ -2,6 +2,7 @@ use futures_channel::mpsc::{unbounded, UnboundedSender};
 use futures_util::{future, pin_mut, stream::TryStreamExt, StreamExt};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::{self, Arc};
 
 use music_player_playback::player::PlayerCommand;
@@ -9,9 +10,10 @@ use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
 use owo_colors::OwoColorize;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream, UnixListener};
 use tokio::sync::mpsc::UnboundedSender as TokioUnboundedSender;
 use tokio::sync::Mutex;
+use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 use tungstenite::Message;
 
@@ -69,6 +71,7 @@ impl MusicPlayerServer {
 
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());
+        debug!("Listening on {:?}", addr);
 
         Server::builder()
             .accept_http1(true)
@@ -97,6 +100,51 @@ impl MusicPlayerServer {
                 ),
             )))
             .serve(addr)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn start_over_unix_domain_socket(
+        &self,
+        path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let socket_path = PathBuf::from(path);
+
+        if socket_path.exists() {
+            std::fs::remove_file(&socket_path)?;
+        }
+
+        let listener = UnixListener::bind(socket_path)?;
+
+        debug!("Listening on {:?}", listener.local_addr()?);
+
+        Server::builder()
+            .accept_http1(true)
+            .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
+                Arc::clone(&self.db),
+            ))))
+            .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
+            .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
+                Arc::clone(&self.db),
+            ))))
+            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
+                Arc::clone(&self.db),
+            ))))
+            .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
+            .add_service(tonic_web::enable(PlaybackServiceServer::new(
+                Playback::new(Arc::clone(&self.tracklist), Arc::clone(&self.cmd_tx)),
+            )))
+            .add_service(tonic_web::enable(PlaylistServiceServer::new(
+                Playlist::new(Arc::clone(&self.db)),
+            )))
+            .add_service(tonic_web::enable(TracklistServiceServer::new(
+                Tracklist::new(
+                    Arc::clone(&self.tracklist),
+                    Arc::clone(&self.cmd_tx),
+                    Arc::clone(&self.db),
+                ),
+            )))
+            .serve_with_incoming(UnixListenerStream::new(listener))
             .await?;
         Ok(())
     }

@@ -39,7 +39,7 @@ path = "src/main.rs"
 
 [dependencies.music-player-server]
 path = "server"
-version = "0.1.13"
+version = "0.2.0"
 
 [dependencies.music-player-playback]
 path = "playback"

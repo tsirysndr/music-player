@@ -1,0 +1,3 @@
+*.jar
+protoc-gen-grpc-kotlin.sh
+client/

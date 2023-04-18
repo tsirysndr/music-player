@@ -1,0 +1,7 @@
+version: v1
+plugins:
+  - plugin: grpc-kotlin.sh
+    out: client/src/main/kotlin
+    opt: service=true,client=true,server=false
+  - plugin: kotlin
+    out: client/src/main/kotlin

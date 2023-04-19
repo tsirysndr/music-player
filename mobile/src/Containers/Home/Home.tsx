@@ -33,6 +33,10 @@ const Settings = styled.View`
   justify-content: center;
 `;
 
+const MiniPlayerWrapper = styled.View`
+  background-color: #000;
+`;
+
 const Home: FC = () => {
   return (
     <>
@@ -49,7 +53,9 @@ const Home: FC = () => {
         <Artists />
         <Songs />
       </Container>
-      <MiniPlayer />
+      <MiniPlayerWrapper>
+        <MiniPlayer />
+      </MiniPlayerWrapper>
     </>
   );
 };

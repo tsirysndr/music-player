@@ -9,6 +9,7 @@ import MiniPlayer from '../../Components/MiniPlayer';
 
 const Container = styled.ScrollView`
   width: 100%;
+  background-color: #000;
 `;
 
 const Header = styled.View`

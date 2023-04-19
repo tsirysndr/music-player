@@ -89,6 +89,7 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
   const {track, playing, progress, onPlay, onPause, onSkipNext} = props;
   return (
     <>
+      <Progressbar progress={progress} />
       <Container>
         <>
           {!track.cover && (
@@ -118,7 +119,6 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
           <Ionicons name="play-skip-forward" size={24} color="#fff" />
         </Button>
       </Container>
-      <Progressbar progress={progress} />
     </>
   );
 };

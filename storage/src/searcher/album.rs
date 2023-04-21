@@ -5,8 +5,8 @@ use tantivy::{
     collector::TopDocs,
     directory::MmapDirectory,
     doc,
-    query::{FuzzyTermQuery, PhraseQuery},
-    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
+    query::{FuzzyTermQuery, PhraseQuery, TermQuery},
+    schema::{IndexRecordOption, Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document, Index, IndexReader, ReloadPolicy, Term,
 };
 
@@ -58,6 +58,15 @@ impl AlbumSearcher {
         let artist = self.schema.get_field("artist").unwrap();
         let year = self.schema.get_field("year").unwrap();
         let cover = self.schema.get_field("cover").unwrap();
+
+        // check if album already exists
+        let searcher = self.reader.searcher();
+        let term = Term::from_field_text(id, &album.id);
+        let query = TermQuery::new(term, IndexRecordOption::Basic);
+        let top_docs = searcher.search(&query, &TopDocs::with_limit(1))?;
+        if top_docs.len() > 0 {
+            return Ok(());
+        }
 
         let doc: Document = doc!(
             id => album.id.clone(),

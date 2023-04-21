@@ -4534,7 +4534,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-storage"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "itertools",
@@ -8405,9 +8405,9 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "upnp-client"
-version = "0.1.7"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707a259c0ef8bde8be3519694e2c5be39d1e1e70be716960546015446efce52e"
+checksum = "4dbb5216f79dee3f90aaeb07d1f6da5f5f52ebc1abc5cc269a3677387b1c75cc"
 dependencies = [
  "anyhow",
  "async-stream 0.3.4",
@@ -8420,7 +8420,6 @@ dependencies = [
  "owo-colors",
  "serde",
  "serde_json",
- "socket2",
  "surf",
  "tokio",
  "url",

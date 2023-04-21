@@ -5,8 +5,8 @@ use tantivy::{
     collector::TopDocs,
     directory::MmapDirectory,
     doc,
-    query::{FuzzyTermQuery, PhraseQuery},
-    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
+    query::{FuzzyTermQuery, PhraseQuery, TermQuery},
+    schema::{IndexRecordOption, Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document, Index, IndexReader, ReloadPolicy, Term,
 };
 #[derive(Clone)]
@@ -66,6 +66,15 @@ impl TrackSearcher {
         let duration = self.schema.get_field("duration").unwrap();
         let artist_id = self.schema.get_field("artistId").unwrap();
         let album_id = self.schema.get_field("albumId").unwrap();
+
+        // Check if the song is already in the index
+        let searcher = self.reader.searcher();
+        let term = Term::from_field_text(id, str_id);
+        let query = TermQuery::new(term, IndexRecordOption::Basic);
+        let top_docs = searcher.search(&query, &TopDocs::with_limit(1))?;
+        if top_docs.len() > 0 {
+            return Ok(());
+        }
 
         let time = song.duration.as_secs_f32() as i64;
 

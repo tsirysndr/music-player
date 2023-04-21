@@ -5,8 +5,8 @@ use tantivy::{
     collector::TopDocs,
     directory::MmapDirectory,
     doc,
-    query::{FuzzyTermQuery, PhraseQuery},
-    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
+    query::{FuzzyTermQuery, PhraseQuery, TermQuery},
+    schema::{IndexRecordOption, Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document, Index, IndexReader, ReloadPolicy, Term,
 };
 #[derive(Clone)]
@@ -51,6 +51,17 @@ impl ArtistSearcher {
     pub fn insert(&self, artist: Artist) -> tantivy::Result<()> {
         let id = self.schema.get_field("id").unwrap();
         let name = self.schema.get_field("name").unwrap();
+
+        // Check if the artist already exists
+        let searcher = self.reader.searcher();
+        let query = TermQuery::new(
+            Term::from_field_text(name, artist.name.as_str()),
+            IndexRecordOption::Basic,
+        );
+        let top_docs = searcher.search(&query, &TopDocs::with_limit(1))?;
+        if top_docs.len() > 0 {
+            return Ok(());
+        }
 
         let doc: Document = doc!(
             id => artist.id.clone(),

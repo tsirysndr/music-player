@@ -10,13 +10,16 @@ import React from 'react';
 import {SafeAreaView, StyleSheet} from 'react-native';
 import {RecoilRoot} from 'recoil';
 import RootContainer from './src/Containers/RootContainer';
+import Providers from './src/Providers';
 
 const App = () => {
   return (
     <RecoilRoot>
-      <SafeAreaView style={styles.container}>
-        <RootContainer />
-      </SafeAreaView>
+      <Providers>
+        <SafeAreaView style={styles.container}>
+          <RootContainer />
+        </SafeAreaView>
+      </Providers>
     </RecoilRoot>
   );
 };

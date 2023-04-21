@@ -83,17 +83,18 @@ fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
 fn scan_upnp_dlna_devices(devices: Arc<Mutex<Vec<Device>>>) {
     thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let upnp_devices = discover_pnp_locations();
-            tokio::pin!(upnp_devices);
+            if let Ok(upnp_devices) = discover_pnp_locations().await {
+                tokio::pin!(upnp_devices);
 
-            while let Some(device) = upnp_devices.next().await {
-                if device.device_type.contains(MEDIA_RENDERER)
-                    || device.device_type.contains(MEDIA_SERVER)
-                {
-                    let mut devices = devices.lock().unwrap();
-                    if devices.iter().find(|d| d.id == device.udn).is_none() {
-                        devices.push(Device::from(device.clone()));
-                        SimpleBroker::<Device>::publish(Device::from(device.clone()));
+                while let Some(device) = upnp_devices.next().await {
+                    if device.device_type.contains(MEDIA_RENDERER)
+                        || device.device_type.contains(MEDIA_SERVER)
+                    {
+                        let mut devices = devices.lock().unwrap();
+                        if devices.iter().find(|d| d.id == device.udn).is_none() {
+                            devices.push(Device::from(device.clone()));
+                            SimpleBroker::<Device>::publish(Device::from(device.clone()));
+                        }
                     }
                 }
             }

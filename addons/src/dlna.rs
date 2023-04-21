@@ -57,7 +57,7 @@ impl Dlna {
     ) -> Result<Option<Box<dyn Player + Send>>, Error> {
         let mut player: Self = device.clone().into();
         let location = player.location.clone().unwrap();
-        let device_client = futures::executor::block_on(DeviceClient::new(&location).connect())?;
+        let device_client = futures::executor::block_on(DeviceClient::new(&location)?.connect())?;
         player.client = Some(MediaRendererClient::new(device_client));
 
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<DlnaPlayerCommand>();
@@ -80,7 +80,7 @@ impl Dlna {
     ) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
         let mut player: Self = device.clone().into();
         let location = player.location.clone().unwrap();
-        let device_client = futures::executor::block_on(DeviceClient::new(&location).connect())?;
+        let device_client = futures::executor::block_on(DeviceClient::new(&location)?.connect())?;
         player.media_server_client = Some(MediaServerClient::new(device_client));
         Ok(Some(Box::new(player)))
     }
@@ -425,7 +425,8 @@ impl DlnaPlayer {
         mut cmd_rx: mpsc::UnboundedReceiver<DlnaPlayerCommand>,
     ) -> Self {
         let device_client =
-            futures::executor::block_on(DeviceClient::new(location.as_str()).connect()).unwrap();
+            futures::executor::block_on(DeviceClient::new(location.as_str()).unwrap().connect())
+                .unwrap();
         let player_internal = Arc::new(Mutex::new(DlnaPlayerInternal {
             client: MediaRendererClient::new(device_client),
             tracklist,

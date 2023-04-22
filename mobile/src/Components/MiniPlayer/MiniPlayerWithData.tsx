@@ -3,8 +3,10 @@ import MiniPlayer from './MiniPlayer';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {currentTrackState} from '../CurrentTrack/CurrentTrackState';
 import {playerState} from '../PlayerControls/PlayerState';
+import {useNavigation} from '@react-navigation/native';
 
 const MiniPlayerWithData: FC = () => {
+  const navigation = useNavigation<any>();
   const currentTrack = useRecoilValue(currentTrackState);
   const [{isPlaying, progress}, setPlayerState] = useRecoilState(playerState);
   const onPlay = () => {
@@ -12,6 +14,9 @@ const MiniPlayerWithData: FC = () => {
   };
   const onPause = () => {
     setPlayerState(prevState => ({...prevState, isPlaying: false}));
+  };
+  const onOpenPlayer = () => {
+    navigation.navigate('Player');
   };
   return (
     <MiniPlayer
@@ -21,6 +26,7 @@ const MiniPlayerWithData: FC = () => {
       onPlay={onPlay}
       onPause={onPause}
       playing={isPlaying}
+      onOpenPlayer={onOpenPlayer}
     />
   );
 };

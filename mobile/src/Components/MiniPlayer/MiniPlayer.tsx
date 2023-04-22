@@ -84,10 +84,12 @@ export type MiniPlayerProps = {
   onPlay: () => void;
   onPause: () => void;
   onSkipNext: () => void;
+  onOpenPlayer: () => void;
 };
 
 const MiniPlayer: FC<MiniPlayerProps> = props => {
-  const {track, playing, progress, onPlay, onPause, onSkipNext} = props;
+  const {track, playing, progress, onPlay, onPause, onSkipNext, onOpenPlayer} =
+    props;
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   // listen to keyboard events
@@ -111,7 +113,7 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
   return (
     <>
       <Progressbar progress={progress} />
-      <Container>
+      <Container onPress={onOpenPlayer}>
         <>
           {!track.cover && (
             <NoCover>

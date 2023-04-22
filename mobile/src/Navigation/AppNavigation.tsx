@@ -93,7 +93,13 @@ const AppNavigator: FC = () => (
         }}>
         <RootStack.Screen name="Main" component={MainNavigator} />
       </RootStack.Group>
-      <RootStack.Group screenOptions={{presentation: 'modal'}}>
+      <RootStack.Group
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: false,
+          animationEnabled: false,
+          presentation: 'modal',
+        }}>
         <RootStack.Screen name="Player" component={Player} />
       </RootStack.Group>
     </RootStack.Navigator>

@@ -4522,7 +4522,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-settings"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "config 0.13.3",
  "dirs",
@@ -4534,7 +4534,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-storage"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "itertools",

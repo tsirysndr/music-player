@@ -1,4 +1,4 @@
-import React, {FC, useState, useEffect} from 'react';
+import React, {FC, useEffect} from 'react';
 import {TouchableWithoutFeedback} from 'react-native';
 import Octicons from 'react-native-vector-icons/Octicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -27,11 +27,11 @@ const IconWrapper = styled.View`
 `;
 
 export type SearchBarProps = {
+  query: string;
   onChange: (value: string) => void;
 };
 
 const SearchBar: FC<SearchBarProps> = props => {
-  const [search, setSearch] = useState<string>('');
   const {control, watch, reset} = useForm({
     defaultValues: {
       search: '',
@@ -42,7 +42,6 @@ const SearchBar: FC<SearchBarProps> = props => {
     const subscription = watch((value, {name, type}) => {
       if (type === 'change') {
         props.onChange(value[name!] as string);
-        setSearch(value[name!] as string);
       }
     });
     return () => subscription.unsubscribe();
@@ -50,7 +49,7 @@ const SearchBar: FC<SearchBarProps> = props => {
 
   const onReset = () => {
     reset();
-    setSearch('');
+    props.onChange('');
   };
 
   return (
@@ -72,7 +71,7 @@ const SearchBar: FC<SearchBarProps> = props => {
         name="search"
         defaultValue=""
       />
-      {search.length > 0 && (
+      {props.query.length > 0 && (
         <TouchableWithoutFeedback onPress={onReset}>
           <IconWrapper>
             <MaterialIcons name="close" size={24} color="#bdb9b9" />

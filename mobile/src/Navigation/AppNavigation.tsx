@@ -8,6 +8,9 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Feather from 'react-native-vector-icons/Feather';
 import IonicIcons from 'react-native-vector-icons/Ionicons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import Search from '../Containers/Search';
+import Account from '../Containers/Account';
+import Devices from '../Containers/Devices';
 
 const RootStack = createStackNavigator();
 const MainStack = createStackNavigator();
@@ -47,7 +50,7 @@ const Tabs: FC = () => (
     />
     <Tab.Screen
       name="Search"
-      component={Home}
+      component={Search}
       options={{
         headerShown: false,
         tabBarIcon: TabBarSearchIcon,
@@ -55,7 +58,7 @@ const Tabs: FC = () => (
     />
     <Tab.Screen
       name="Devices"
-      component={Home}
+      component={Devices}
       options={{
         headerShown: false,
         tabBarIcon: TabBarDevicesIcon,
@@ -63,7 +66,7 @@ const Tabs: FC = () => (
     />
     <Tab.Screen
       name="Account"
-      component={Home}
+      component={Account}
       options={{
         headerShown: false,
         tabBarIcon: TabBarAccountIcon,

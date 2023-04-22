@@ -1,7 +1,8 @@
 import styled from '@emotion/native';
-import React, {FC} from 'react';
+import React, {FC, useState, useEffect} from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import {Keyboard} from 'react-native';
 
 const Container = styled.TouchableOpacity`
   flex-direction: row;
@@ -87,6 +88,26 @@ export type MiniPlayerProps = {
 
 const MiniPlayer: FC<MiniPlayerProps> = props => {
   const {track, playing, progress, onPlay, onPause, onSkipNext} = props;
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // listen to keyboard events
+  useEffect(() => {
+    const subscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const subscription2 = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+    return () => {
+      subscription.remove();
+      subscription2.remove();
+    };
+  }, []);
+
+  if (keyboardVisible) {
+    return null;
+  }
+
   return (
     <>
       <Progressbar progress={progress} />

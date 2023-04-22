@@ -1,7 +1,6 @@
-import styled from '@emotion/native';
 import React, {FC} from 'react';
+import styled from '@emotion/native';
 import MiniPlayer from '../../Components/MiniPlayer';
-import SearchBar from './SearchBar';
 
 const Container = styled.View`
   flex: 1;
@@ -12,12 +11,10 @@ const MiniPlayerWrapper = styled.View`
   background-color: #000;
 `;
 
-const Search: FC = () => {
+const Devices: FC = () => {
   return (
     <>
-      <Container>
-        <SearchBar />
-      </Container>
+      <Container></Container>
       <MiniPlayerWrapper>
         <MiniPlayer />
       </MiniPlayerWrapper>
@@ -25,4 +22,4 @@ const Search: FC = () => {
   );
 };
 
-export default Search;
+export default Devices;

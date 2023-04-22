@@ -26,6 +26,16 @@ const TimeContainer = styled.View`
   margin-right: 14px;
 `;
 
+const PlayWrapper = styled.View`
+  background-color: #ffffff14;
+  height: 80px;
+  width: 80px;
+  border-radius: 40px;
+  align-items: center;
+  justify-content: center;
+  padding-left: 5px;
+`;
+
 const Button = styled.TouchableOpacity`
   justify-content: center;
   align-items: center;
@@ -94,16 +104,18 @@ const PlayerControls: FC<PlayerControlsProps> = props => {
         <Button onPress={onSkipPrevious}>
           <Ionicons name="ios-play-skip-back" size={28} color="#fff" />
         </Button>
-        {!isPlaying && (
-          <Button onPress={onPlay}>
-            <Ionicons name="ios-play" size={46} color="#fff" />
-          </Button>
-        )}
-        {isPlaying && (
-          <Button onPress={onPause}>
-            <Ionicons name="ios-pause" size={46} color="#fff" />
-          </Button>
-        )}
+        <PlayWrapper>
+          {!isPlaying && (
+            <Button onPress={onPlay}>
+              <Ionicons name="ios-play" size={46} color="#fff" />
+            </Button>
+          )}
+          {isPlaying && (
+            <Button onPress={onPause}>
+              <Ionicons name="ios-pause" size={46} color="#fff" />
+            </Button>
+          )}
+        </PlayWrapper>
         <Button onPress={onSkipNext}>
           <Ionicons name="ios-play-skip-forward" size={28} color="#fff" />
         </Button>

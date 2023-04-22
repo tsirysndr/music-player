@@ -55,7 +55,7 @@ impl ArtistSearcher {
         // Check if the artist already exists
         let searcher = self.reader.searcher();
         let query = TermQuery::new(
-            Term::from_field_text(name, artist.name.as_str()),
+            Term::from_field_text(id, &artist.id),
             IndexRecordOption::Basic,
         );
         let top_docs = searcher.search(&query, &TopDocs::with_limit(1))?;

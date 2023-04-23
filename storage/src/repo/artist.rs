@@ -1,6 +1,6 @@
 use anyhow::Error;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 
 pub struct ArtistRepository {
     db: DatabaseConnection,
@@ -50,28 +50,35 @@ impl ArtistRepository {
     pub async fn find_all(
         &self,
         filter: Option<String>,
+        offset: Option<u64>,
+        limit: Option<u64>,
     ) -> Result<Vec<artist_entity::Model>, Error> {
+        let mut query = match offset {
+            Some(offset) => artist_entity::Entity::find()
+                .order_by_asc(artist_entity::Column::Name)
+                .offset(offset),
+            None => artist_entity::Entity::find().order_by_asc(artist_entity::Column::Name),
+        };
+
+        query = match limit {
+            Some(limit) => query.limit(limit),
+            None => query,
+        };
+
         match filter {
             Some(filter) => {
                 if filter.is_empty() {
-                    let results = artist_entity::Entity::find()
-                        .order_by_asc(artist_entity::Column::Name)
-                        .all(&self.db)
-                        .await?;
+                    let results = query.all(&self.db).await?;
                     return Ok(results);
                 }
-                let results = artist_entity::Entity::find()
+                let results = query
                     .filter(artist_entity::Column::Name.like(format!("%{}%", filter).as_str()))
-                    .order_by_asc(artist_entity::Column::Name)
                     .all(&self.db)
                     .await?;
                 Ok(results)
             }
             None => {
-                let results = artist_entity::Entity::find()
-                    .order_by_asc(artist_entity::Column::Name)
-                    .all(&self.db)
-                    .await?;
+                let results = query.all(&self.db).await?;
                 Ok(results)
             }
         }

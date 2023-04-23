@@ -103,13 +103,8 @@ impl LibraryQuery {
                 .collect());
         }
 
-        let db = ctx.data::<Database>().unwrap();
-        let results = ArtistRepository::new(db.get_connection())
-            .find_all(filter, offset.map(|x| x as u64), limit.map(|x| x as u64))
-            .await?;
-
-        Ok(results.into_iter().map(Into::into).collect())
-    }
+    let db = ctx.data::<Database>().unwrap();
+    let results = ArtistRepository::new(db.get_connection());
 
     async fn albums(
         &self,

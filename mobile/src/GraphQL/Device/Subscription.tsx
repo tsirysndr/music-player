@@ -1,36 +1,37 @@
 import {gql} from '@apollo/client';
-import {TRACK_FRAGMENT} from '../Fragments';
 
-export const PLAYER_STATE = gql`
-  subscription PlayerStateChanged {
-    playerState {
-      isPlaying
+export const NEW_DEVICE = gql`
+  subscription OnNewDevice {
+    onNewDevice {
+      id
+      app
+      name
+      service
+      host
+      port
+      isConnected
     }
   }
 `;
 
-export const TRACK_TIME_POSITION = gql`
-  subscription TrackTimePositionChanged {
-    trackTimePosition {
-      positionMs
+export const ON_DEVICE_CONNECTED = gql`
+  subscription OnDeviceConnected {
+    onConnected {
+      id
+      name
+      service
+      app
     }
   }
 `;
 
-export const CURRENTLY_PLAYING_SONG = gql`
-  subscription CurrentlyPlayingSongChanged {
-    currentlyPlayingSong {
-      ...TrackFragment
-      artists {
-        id
-        name
-      }
-      album {
-        id
-        title
-        cover
-      }
+export const ON_DEVICE_DISCONNECTED = gql`
+  subscription OnDeviceDisconnected {
+    onDisconnected {
+      id
+      name
+      service
+      app
     }
   }
-  ${TRACK_FRAGMENT}
 `;

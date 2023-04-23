@@ -62,7 +62,7 @@ export type FiltersProps = {
 
 const Filters: FC<FiltersProps> = ({query, list, current, onSelectFilter}) => {
   return (
-    <>
+    <Container>
       {query && (
         <FlatList
           data={list}
@@ -76,7 +76,7 @@ const Filters: FC<FiltersProps> = ({query, list, current, onSelectFilter}) => {
           )}
         />
       )}
-    </>
+    </Container>
   );
 };
 

@@ -3,6 +3,7 @@ import {Track} from '../../Types';
 import styled, {css} from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome from 'react-native-vector-icons/FontAwesome5';
+import Config from 'react-native-config';
 
 const Container = styled.View`
   height: 80px;
@@ -72,11 +73,14 @@ export type TrackRowProps = {
 
 const TrackRow: FC<TrackRowProps> = props => {
   const {track, currentTrack, onPlay} = props;
+  const cover = track.cover?.startsWith('http')
+    ? track.cover
+    : `${Config.API_URL?.replace('/graphql', '/covers')}/${track.cover}`;
   return (
     <TrackWrapper>
       <TouchableTrack onPress={() => onPlay(track)}>
         <Container>
-          {track.cover && <Cover source={{uri: track.cover}} />}
+          {track.cover && <Cover source={{uri: cover}} />}
           {!track.cover && (
             <NoAlbumCover>
               <Feather name="disc" size={40} color="#a7a7a9" />

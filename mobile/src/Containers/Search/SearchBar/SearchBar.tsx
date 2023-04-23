@@ -61,6 +61,7 @@ const SearchBar: FC<SearchBarProps> = props => {
         control={control}
         render={({field: {onChange, onBlur, value}}) => (
           <SearchInput
+            autoCapitalize="none"
             onChangeText={onChange}
             onBlur={onBlur}
             value={value}

@@ -1,25 +1,33 @@
 import {gql} from '@apollo/client';
 
-export const NEXT = gql`
-  mutation Next {
-    next
+export const CONNECT_TO_DEVICE = gql`
+  mutation ConnectToDevice($id: ID!) {
+    connectToDevice(id: $id) {
+      id
+    }
   }
 `;
 
-export const PAUSE = gql`
-  mutation Pause {
-    pause
+export const DISCONNECT_FROM_DEVICE = gql`
+  mutation DisconnectFromDevice {
+    disconnectFromDevice {
+      id
+    }
   }
 `;
 
-export const PLAY = gql`
-  mutation Play {
-    play
+export const CONNECT_TO_CAST_DEVICE = gql`
+  mutation ConnectToCastDevice($id: ID!) {
+    connectToCastDevice(id: $id) {
+      id
+    }
   }
 `;
 
-export const PREVIOUS = gql`
-  mutation Previous {
-    previous
+export const DISCONNECT_FROM_CAST_DEVICE = gql`
+  mutation DisconnectFromCastDevice {
+    disconnectFromCastDevice {
+      id
+    }
   }
 `;

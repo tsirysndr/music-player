@@ -3,6 +3,7 @@ import React, {FC} from 'react';
 import MiniPlayer from '../../Components/MiniPlayer';
 import SearchBar from './SearchBar';
 import Filters from './Filters';
+import SearchResults from './SearchResults';
 
 const Container = styled.View`
   flex: 1;
@@ -19,6 +20,7 @@ const Search: FC = () => {
       <Container>
         <SearchBar />
         <Filters />
+        <SearchResults />
       </Container>
       <MiniPlayerWrapper>
         <MiniPlayer />

@@ -4,6 +4,7 @@ import styled from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
 import {TouchableWithoutFeedback} from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome5';
+import Config from 'react-native-config';
 
 const Container = styled.View`
   height: 80px;
@@ -59,10 +60,13 @@ export type AlbumRowProps = {
 
 const AlbumRow: FC<AlbumRowProps> = props => {
   const {album, onSelected} = props;
+  const cover = album.cover?.startsWith('http')
+    ? album.cover
+    : `${Config.API_URL?.replace('/graphql', '/covers')}/${album.cover}`;
   return (
     <TouchableWithoutFeedback onPress={() => onSelected()}>
       <Container>
-        {album.cover && <Cover source={{uri: album.cover}} />}
+        {album.cover && <Cover source={{uri: cover}} />}
         {!album.cover && (
           <NoAlbumCover>
             <Feather name="disc" size={40} color="#a7a7a9" />

@@ -1,25 +1,55 @@
 import {gql} from '@apollo/client';
-import {TRACK_FRAGMENT} from '../Fragments';
 
-export const GET_CURRENTLY_PLAYING = gql`
-  query CurrentlyPlayingSong {
-    currentlyPlayingSong {
-      track {
-        ...TrackFragment
-        artists {
-          id
-          name
-        }
-        album {
-          id
-          title
-          cover
-        }
-      }
-      index
-      isPlaying
-      positionMs
+export const LIST_DEVICES = gql`
+  query ListDevices {
+    listDevices {
+      id
+      app
+      name
+      service
+      host
+      port
+      isConnected
     }
   }
-  ${TRACK_FRAGMENT}
+`;
+
+export const LIST_CAST_DEVICES = gql`
+  query ListCastDevices {
+    listCastDevices {
+      id
+      app
+      name
+      service
+      host
+      port
+      isConnected
+    }
+  }
+`;
+
+export const CONNECTED_DEVICE = gql`
+  query ConnectedDevice {
+    connectedDevice {
+      id
+      name
+      app
+      host
+      port
+      isConnected
+    }
+  }
+`;
+
+export const CONNECTED_CAST_DEVICE = gql`
+  query ConnectedCastDevice {
+    connectedCastDevice {
+      id
+      name
+      app
+      host
+      port
+      isConnected
+    }
+  }
 `;

@@ -84,6 +84,13 @@ const SeeAll = styled.Text`
   font-size: 14px;
 `;
 
+const SeeAllContainer = styled.View`
+  height: 30px;
+  width: 60px;
+  align-items: flex-end;
+  justify-content: center;
+`;
+
 export type AlbumProps = {
   album: any;
   onPress: (album: any) => void;
@@ -147,7 +154,9 @@ const Albums: FC<AlbumsProps> = props => {
         <Title>Albums</Title>
         {albums.length > 0 && (
           <TouchableWithoutFeedback onPress={onSeeAll}>
-            <SeeAll>See All</SeeAll>
+            <SeeAllContainer>
+              <SeeAll>See All</SeeAll>
+            </SeeAllContainer>
           </TouchableWithoutFeedback>
         )}
       </Header>

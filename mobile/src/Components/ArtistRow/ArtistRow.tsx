@@ -2,7 +2,7 @@ import React, {FC} from 'react';
 import {Artist} from '../../Types';
 import styled from '@emotion/native';
 import SvgMic from '../Icons/Mic';
-import {TouchableWithoutFeedback} from 'react-native';
+import {TouchableWithoutFeedback, View} from 'react-native';
 
 const Container = styled.View`
   height: 100px;
@@ -23,6 +23,7 @@ const Name = styled.Text`
   font-family: 'Gilroy-Bold';
   font-size: 16px;
   margin-left: 15px;
+  width: 80%;
 `;
 
 const NoArtistCover = styled.View`
@@ -50,7 +51,9 @@ const ArtistRow: FC<ArtistRowProps> = props => {
             <SvgMic height={30} width={30} />
           </NoArtistCover>
         )}
-        <Name>{artist.name}</Name>
+        <Name numberOfLines={1} ellipsizeMode="tail">
+          {artist.name}
+        </Name>
       </Container>
     </TouchableWithoutFeedback>
   );

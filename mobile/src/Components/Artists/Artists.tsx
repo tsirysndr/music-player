@@ -76,6 +76,13 @@ const ArtistName = styled.Text`
   margin-left: 10px;
 `;
 
+const SeeAllContainer = styled.View`
+  height: 30px;
+  width: 60px;
+  align-items: flex-end;
+  justify-content: center;
+`;
+
 export type ArtistProps = {
   artist: ArtistType;
   onPress: (artist: ArtistType) => void;
@@ -115,7 +122,9 @@ const Artists: FC<ArtistsProps> = props => {
       <Header>
         <Title>Artists</Title>
         <TouchableWithoutFeedback onPress={onSeeAll}>
-          <SeeAll>See All</SeeAll>
+          <SeeAllContainer>
+            <SeeAll>See All</SeeAll>
+          </SeeAllContainer>
         </TouchableWithoutFeedback>
       </Header>
       <>

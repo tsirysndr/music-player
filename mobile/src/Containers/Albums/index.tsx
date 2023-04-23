@@ -1,3 +1,3 @@
-import Albums from './Albums';
+import Albums from './AlbumsWithData';
 
 export default Albums;

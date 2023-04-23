@@ -13,10 +13,11 @@ const Container = styled.View`
 export type ArtistsProps = {
   onGoBack: () => void;
   artists: Artist[];
+  fetchMore: () => void;
 };
 
 const Artists: FC<ArtistsProps> = props => {
-  const {artists, onGoBack} = props;
+  const {artists, onGoBack, fetchMore} = props;
   return (
     <>
       <Container>
@@ -32,6 +33,8 @@ const Artists: FC<ArtistsProps> = props => {
             <ArtistRow artist={item} onSelected={() => {}} />
           )}
           keyExtractor={item => item.id}
+          onEndReached={fetchMore}
+          onEndReachedThreshold={0.5}
         />
       </Container>
       <MiniPlayer />

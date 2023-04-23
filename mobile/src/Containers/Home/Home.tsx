@@ -7,6 +7,11 @@ import Artists from '../../Components/Artists';
 import Songs from '../../Components/Songs';
 import MiniPlayer from '../../Components/MiniPlayer';
 
+const MainContainer = styled.View`
+  flex: 1;
+  background-color: #000;
+`;
+
 const Container = styled.ScrollView`
   width: 100%;
   background-color: #000;
@@ -39,7 +44,7 @@ const MiniPlayerWrapper = styled.View`
 
 const Home: FC = () => {
   return (
-    <>
+    <MainContainer>
       <Container showsVerticalScrollIndicator={false}>
         <Header>
           <Title>Library</Title>
@@ -56,7 +61,7 @@ const Home: FC = () => {
       <MiniPlayerWrapper>
         <MiniPlayer />
       </MiniPlayerWrapper>
-    </>
+    </MainContainer>
   );
 };
 

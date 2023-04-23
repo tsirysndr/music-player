@@ -1,5 +1,5 @@
 import styled from '@emotion/native';
-import React, {FC} from 'react';
+import React, {FC, useCallback} from 'react';
 import MiniPlayer from '../../Components/MiniPlayer';
 import Header from '../../Components/Header';
 import {Album} from '../../Types';
@@ -12,11 +12,18 @@ const Container = styled.View`
 
 export type AlbumsProps = {
   onGoBack: () => void;
+  fetchMore: () => void;
   albums: Album[];
 };
 
 const Albums: FC<AlbumsProps> = props => {
-  const {albums, onGoBack} = props;
+  const {albums, onGoBack, fetchMore} = props;
+
+  const renderItem = useCallback(
+    ({item}: {item: Album}) => <AlbumRow album={item} onSelected={() => {}} />,
+    [],
+  );
+
   return (
     <>
       <Container>
@@ -28,10 +35,10 @@ const Albums: FC<AlbumsProps> = props => {
         />
         <FlatList
           data={albums}
-          renderItem={({item}) => (
-            <AlbumRow album={item} onSelected={() => {}} />
-          )}
+          renderItem={renderItem}
           keyExtractor={item => item.id}
+          onEndReached={fetchMore}
+          onEndReachedThreshold={0.5}
         />
       </Container>
       <MiniPlayer />

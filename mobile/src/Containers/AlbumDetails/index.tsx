@@ -1,3 +1,3 @@
-import AlbumDetails from './AlbumDetails';
+import AlbumDetails from './AlbumDetailsWithData';
 
 export default AlbumDetails;

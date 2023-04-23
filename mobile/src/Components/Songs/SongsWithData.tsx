@@ -3,8 +3,10 @@ import Songs from './Songs';
 import {useRecoilState} from 'recoil';
 import {currentTrackState} from '../CurrentTrack/CurrentTrackState';
 import {useGetTracksQuery} from '../../Hooks/GraphQL';
+import {useNavigation} from '@react-navigation/native';
 
 const SongsWithData: FC = () => {
+  const navigation = useNavigation<any>();
   const {data, loading} = useGetTracksQuery({
     variables: {
       limit: 10,
@@ -12,6 +14,7 @@ const SongsWithData: FC = () => {
   });
   const tracks = !loading && data ? data.tracks : [];
   const [currentTrack, setCurrentTrack] = useRecoilState(currentTrackState);
+  const onSeeAll = () => navigation.navigate('Tracks');
   return (
     <Songs
       tracks={tracks.map(track => ({
@@ -26,7 +29,7 @@ const SongsWithData: FC = () => {
       }))}
       currentTrack={currentTrack}
       onPressTrack={setCurrentTrack}
-      onSeeAll={() => {}}
+      onSeeAll={onSeeAll}
     />
   );
 };

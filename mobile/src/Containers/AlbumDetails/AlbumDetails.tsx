@@ -4,6 +4,7 @@ import MiniPlayer from '../../Components/MiniPlayer';
 
 const Container = styled.View`
   flex: 1;
+  background-color: #000;
 `;
 
 const Title = styled.Text`
@@ -12,14 +13,20 @@ const Title = styled.Text`
   font-size: 24px;
 `;
 
-const AlbumDetails: FC = () => {
+export type AlbumDetailsProps = {
+  album: any;
+  onGoBack: () => void;
+};
+
+const AlbumDetails: FC<AlbumDetailsProps> = props => {
+  const {album, onGoBack} = props;
   return (
-    <>
+    <Container>
       <Container>
-        <Title>AlbumDetails</Title>
+        <Title></Title>
       </Container>
       <MiniPlayer />
-    </>
+    </Container>
   );
 };
 

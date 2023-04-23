@@ -1,4 +1,4 @@
-import React, {FC} from 'react';
+import React, {FC, useCallback} from 'react';
 import Header from '../../Components/Header';
 import styled from '@emotion/native';
 import MiniPlayer from '../../Components/MiniPlayer';
@@ -13,10 +13,15 @@ const Container = styled.View`
 export type TracksProps = {
   onGoBack: () => void;
   tracks: Track[];
+  fetchMore: () => void;
 };
 
 const Tracks: FC<TracksProps> = props => {
-  const {tracks, onGoBack} = props;
+  const {tracks, onGoBack, fetchMore} = props;
+  const renderItem = useCallback(
+    ({item}: {item: Track}) => <TrackRow track={item} />,
+    [],
+  );
   return (
     <>
       <Container>
@@ -28,8 +33,10 @@ const Tracks: FC<TracksProps> = props => {
         />
         <FlatList
           data={tracks}
-          renderItem={({item}) => <TrackRow track={item} />}
+          renderItem={renderItem}
           keyExtractor={item => item.id}
+          onEndReached={fetchMore}
+          onEndReachedThreshold={0.5}
         />
       </Container>
       <MiniPlayer />

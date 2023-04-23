@@ -1,0 +1,29 @@
+{
+  "name": "songbird",
+  "reason": {
+    "react-jsx": 3
+  },
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".bs.js",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "bs-dependencies": [
+    "@rescript/react",
+    "rescript-react-native"
+  ],
+  "gentypeconfig": {
+    "language": "typescript",
+    "generatedFileExtension": ".gen.tsx",
+    "module": "es6",
+    "shims": {
+      "ReasonReact": "ReactShim"
+    }
+  }
+}

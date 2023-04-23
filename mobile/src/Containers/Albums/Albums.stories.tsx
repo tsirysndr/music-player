@@ -8,6 +8,7 @@ export default {
   component: Albums,
   argTypes: {
     onGoBack: {action: 'onGoBack'},
+    fetchMore: {action: 'fetchMore'},
   },
 } as ComponentMeta<typeof Albums>;
 

@@ -90,6 +90,13 @@ const Button = styled.TouchableOpacity`
   z-index: 1;
 `;
 
+const SeeAllContainer = styled.View`
+  height: 30px;
+  width: 60px;
+  align-items: flex-end;
+  justify-content: center;
+`;
+
 export type TrackProps = {
   item: any;
   active: boolean;
@@ -140,7 +147,9 @@ const Songs: FC<SongsProps> = props => {
       <Header>
         <Title>Tracks</Title>
         <TouchableWithoutFeedback onPress={onSeeAll}>
-          <SeeAll>See All</SeeAll>
+          <SeeAllContainer>
+            <SeeAll>See All</SeeAll>
+          </SeeAllContainer>
         </TouchableWithoutFeedback>
       </Header>
       {tracks.map((item: any) => (

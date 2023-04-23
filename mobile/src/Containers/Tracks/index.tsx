@@ -1,3 +1,3 @@
-import Tracks from './Tracks';
+import Tracks from './TracksWithData';
 
 export default Tracks;

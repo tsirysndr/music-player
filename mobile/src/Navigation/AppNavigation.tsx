@@ -2,7 +2,7 @@ import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import React, {FC} from 'react';
 import Home from '../Containers/Home';
-import {NavigationContainer} from '@react-navigation/native';
+import {NavigationContainer, DarkTheme} from '@react-navigation/native';
 import Player from '../Containers/Player';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Feather from 'react-native-vector-icons/Feather';
@@ -11,10 +11,27 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import Search from '../Containers/Search';
 import Account from '../Containers/Account';
 import Devices from '../Containers/Devices';
+import Albums from '../Containers/Albums';
+import Artists from '../Containers/Artists';
+import Tracks from '../Containers/Tracks';
+import ArtistDetails from '../Containers/ArtistDetails';
+import AlbumDetails from '../Containers/AlbumDetails';
 
 const RootStack = createStackNavigator();
 const MainStack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+export type MainStackParamList = {
+  Home: undefined;
+  Search: undefined;
+  Devices: undefined;
+  Account: undefined;
+  Albums: undefined;
+  Artists: undefined;
+  Tracks: undefined;
+  ArtistDetails: {artist: any};
+  AlbumDetails: {album: any};
+};
 
 const TabBarHomeIcon: FC<{color: string}> = ({color}) => (
   <IonicIcons name="headset-outline" size={24} color={color} />
@@ -78,11 +95,16 @@ const Tabs: FC = () => (
 const MainNavigator: FC = () => (
   <MainStack.Navigator screenOptions={{headerShown: false}}>
     <MainStack.Screen name="Tabs" component={Tabs} />
+    <MainStack.Screen name="Albums" component={Albums} />
+    <MainStack.Screen name="Artists" component={Artists} />
+    <MainStack.Screen name="Tracks" component={Tracks} />
+    <MainStack.Screen name="ArtistDetails" component={ArtistDetails} />
+    <MainStack.Screen name="AlbumDetails" component={AlbumDetails} />
   </MainStack.Navigator>
 );
 
 const AppNavigator: FC = () => (
-  <NavigationContainer>
+  <NavigationContainer theme={DarkTheme}>
     <RootStack.Navigator>
       <RootStack.Group
         screenOptions={{

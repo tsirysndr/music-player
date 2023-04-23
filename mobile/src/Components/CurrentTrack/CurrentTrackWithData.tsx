@@ -12,8 +12,8 @@ const CurrentTrackWithData = () => {
 
   const onPageSelected = (e: any) => {
     setPlayQueue({
-      nextTracks: tracks.slice(e.nativeEvent.position),
-      previousTracks: tracks.slice(0, e.nativeEvent.position),
+      nextTracks: tracks.slice(e.nativeEvent.position + 1),
+      previousTracks: tracks.slice(0, e.nativeEvent.position + 1),
       position: e.nativeEvent.position,
     });
     setCurrentTrack(tracks[e.nativeEvent.position]);

@@ -13,15 +13,18 @@ const Container = styled.View`
 export type AlbumsProps = {
   onGoBack: () => void;
   fetchMore: () => void;
+  onPressAlbum: (album: Album) => void;
   albums: Album[];
 };
 
 const Albums: FC<AlbumsProps> = props => {
-  const {albums, onGoBack, fetchMore} = props;
+  const {albums, onGoBack, fetchMore, onPressAlbum} = props;
 
   const renderItem = useCallback(
-    ({item}: {item: Album}) => <AlbumRow album={item} onSelected={() => {}} />,
-    [],
+    ({item}: {item: Album}) => (
+      <AlbumRow album={item} onPressAlbum={() => onPressAlbum(item)} />
+    ),
+    [onPressAlbum],
   );
 
   return (

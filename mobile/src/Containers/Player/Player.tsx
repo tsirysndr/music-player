@@ -3,6 +3,7 @@ import React, {FC} from 'react';
 import CurrentTrack from '../../Components/CurrentTrack';
 import {BlurView as DefaultBlurView} from '@react-native-community/blur';
 import PlayerControls from '../../Components/PlayerControls';
+import {useCover} from '../../Hooks/useCover';
 
 const Background = styled.ImageBackground`
   flex: 1;
@@ -43,13 +44,14 @@ export type PlayerProps = {
 };
 
 const Player: FC<PlayerProps> = ({track}) => {
+  const cover = useCover(track?.cover);
   return (
     <>
-      {track.cover && (
+      {track?.cover && (
         <>
           <Background
             source={{
-              uri: track.cover,
+              uri: cover,
             }}
           />
           <BlurView
@@ -59,7 +61,7 @@ const Player: FC<PlayerProps> = ({track}) => {
           />
         </>
       )}
-      {!track.cover && <NoBackground />}
+      {!track?.cover && <NoBackground />}
       <Header />
       <CurrentTrack />
       <PlayerControls />

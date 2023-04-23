@@ -2,6 +2,7 @@ import React, {FC} from 'react';
 import Albums from './Albums';
 import {useNavigation} from '@react-navigation/native';
 import {useGetAlbumsQuery} from '../../Hooks/GraphQL';
+import {Album} from '../../Types';
 
 const AlbumsWithData: FC = () => {
   const navigation = useNavigation<any>();
@@ -42,6 +43,9 @@ const AlbumsWithData: FC = () => {
         year: album.year!,
       }))}
       fetchMore={handleFetchMore}
+      onPressAlbum={(album: Album) =>
+        navigation.navigate('AlbumDetails', {album})
+      }
     />
   );
 };

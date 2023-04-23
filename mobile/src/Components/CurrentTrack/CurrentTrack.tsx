@@ -6,6 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {Dimensions} from 'react-native';
 import DefaultPagerView from 'react-native-pager-view';
 import {Track} from '../../Types';
+import {useCover} from '../../Hooks/useCover';
 
 const NoAlbumCover = styled.View<{width: number}>`
   width: 180px;
@@ -82,8 +83,9 @@ export type AlbumCoverProps = {
   cover?: string;
 };
 
-const AlbumCover: FC<AlbumCoverProps> = ({cover}) => {
+const AlbumCover: FC<AlbumCoverProps> = props => {
   const screenWidth = Math.round(Dimensions.get('window').width);
+  const cover = useCover(props.cover);
   return (
     <CoverWrapper>
       {cover && <Cover source={{uri: cover}} width={screenWidth - 60} />}

@@ -92,7 +92,7 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
   const {track, playing, progress, onPlay, onPause, onSkipNext, onOpenPlayer} =
     props;
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const cover = useCover(track.cover);
+  const cover = useCover(track?.cover);
 
   // listen to keyboard events
   useEffect(() => {
@@ -108,7 +108,7 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
     };
   }, []);
 
-  if (keyboardVisible) {
+  if (keyboardVisible || !track) {
     return null;
   }
 
@@ -122,7 +122,7 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
               <Feather name="music" size={30} color="#a7a7a9" />
             </NoCover>
           )}
-          {track.cover && <Cover source={{uri: cover}} />}
+          {track?.cover && <Cover source={{uri: cover}} />}
         </>
         <TrackInfo>
           <TrackTitle numberOfLines={1}>{track.title}</TrackTitle>

@@ -55,14 +55,14 @@ const Button = styled.TouchableOpacity`
 
 export type AlbumRowProps = {
   album: Album;
-  onSelected: () => void;
+  onPressAlbum: () => void;
 };
 
 const AlbumRow: FC<AlbumRowProps> = props => {
-  const {album, onSelected} = props;
+  const {album, onPressAlbum} = props;
   const cover = useCover(album.cover);
   return (
-    <TouchableWithoutFeedback onPress={() => onSelected()}>
+    <TouchableWithoutFeedback onPress={onPressAlbum}>
       <Container>
         {album.cover && <Cover source={{uri: cover}} />}
         {!album.cover && (

@@ -58,7 +58,11 @@ impl LibraryQuery {
 
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let results = TrackRepository::new(db.lock().await.get_connection())
-            .find_all(filter, 100)
+            .find_all(
+                filter,
+                Some(offset.unwrap_or(0) as u64),
+                limit.unwrap_or(100) as u64,
+            )
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -102,7 +106,7 @@ impl LibraryQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let results = ArtistRepository::new(db.lock().await.get_connection())
-            .find_all(filter)
+            .find_all(filter, offset.map(|x| x as u64), limit.map(|x| x as u64))
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -147,7 +151,7 @@ impl LibraryQuery {
         let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
 
         let results = AlbumRepository::new(db.lock().await.get_connection())
-            .find_all(filter)
+            .find_all(filter, offset.map(|x| x as u64), limit.map(|x| x as u64))
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())

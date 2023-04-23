@@ -2,7 +2,9 @@ import styled from '@emotion/native';
 import React, {FC} from 'react';
 import {TouchableWithoutFeedback} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {Track as TrackType} from '../../Types';
+import {useCover} from '../../Hooks/useCover';
 
 const Container = styled.View`
   width: 100%;
@@ -31,7 +33,7 @@ const SeeAll = styled.Text`
 const TrackRow = styled.View`
   flex-direction: row;
   align-items: center;
-  margin: 0 20px;
+  margin-left: 20px;
   height: 60px;
 `;
 
@@ -52,6 +54,7 @@ const TrackArtist = styled.Text`
 const TrackInfo = styled.View`
   flex-direction: column;
   margin-left: 20px;
+  flex: 1;
 `;
 
 const Cover = styled.Image`
@@ -79,6 +82,14 @@ const TouchableTrack = styled.TouchableOpacity`
   height: 70px;
 `;
 
+const Button = styled.TouchableOpacity`
+  height: 40px;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+`;
+
 export type TrackProps = {
   item: any;
   active: boolean;
@@ -87,11 +98,12 @@ export type TrackProps = {
 
 const Track: FC<TrackProps> = props => {
   const {item, active, onPress} = props;
+  const cover = useCover(item.cover);
   return (
     <TrackWrapper>
       <TouchableTrack onPress={() => onPress(item)}>
         <TrackRow>
-          {item.cover && <Cover source={{uri: item.cover}} />}
+          {item.cover && <Cover source={{uri: cover}} />}
           {!item.cover && (
             <NoCover>
               <Feather name="music" size={30} color="#a7a7a9" />
@@ -105,6 +117,9 @@ const Track: FC<TrackProps> = props => {
               {item.artist}
             </TrackArtist>
           </TrackInfo>
+          <Button>
+            <Ionicons name="ellipsis-vertical" color={'#ffffff99'} size={18} />
+          </Button>
         </TrackRow>
       </TouchableTrack>
     </TrackWrapper>

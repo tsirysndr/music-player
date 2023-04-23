@@ -89,8 +89,10 @@ impl LibraryService for Library {
             "" => None,
             _ => Some(request.filter),
         };
+        let offset = request.offset;
+        let limit = request.limit;
         let results = ArtistRepository::new(&self.db.lock().await.get_connection())
-            .find_all(filter)
+            .find_all(filter, Some(offset as u64), Some(limit as u64))
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -109,8 +111,10 @@ impl LibraryService for Library {
             "" => None,
             _ => Some(request.filter),
         };
+        let offset = request.offset;
+        let limit = request.limit;
         let results = AlbumRepository::new(&self.db.lock().await.get_connection())
-            .find_all(filter)
+            .find_all(filter, Some(offset as u64), Some(limit as u64))
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
@@ -129,8 +133,13 @@ impl LibraryService for Library {
             "" => None,
             _ => Some(request.filter),
         };
+        let offset = request.offset;
+        let limit = match request.limit {
+            0 => 100,
+            _ => request.limit,
+        };
         let tracks = TrackRepository::new(&self.db.lock().await.get_connection())
-            .find_all(filter, 100)
+            .find_all(filter, Some(offset as u64), limit as u64)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 

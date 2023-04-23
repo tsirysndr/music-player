@@ -2,6 +2,7 @@ import styled from '@emotion/native';
 import React, {FC} from 'react';
 import {FlatList, TouchableWithoutFeedback} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import {useCover} from '../../Hooks/useCover';
 
 const Container = styled.View`
   width: 100%;
@@ -88,46 +89,49 @@ export type AlbumProps = {
   onPress: (album: any) => void;
 };
 
-const Album: FC<AlbumProps> = ({album, onPress}) => (
-  <>
-    {!album.cover && (
-      <TouchableWithoutFeedback onPress={() => onPress(album)}>
-        <AlbumCover>
-          <NoAlbumCover>
-            <Feather name="disc" size={100} color="#bdb9b958" />
-          </NoAlbumCover>
-          <AlbumInfo>
-            <AlbumTitle ellipsizeMode="tail" numberOfLines={1}>
-              {album.title}
-            </AlbumTitle>
-            <Artist ellipsizeMode="tail" numberOfLines={2}>
-              {album.artist}
-            </Artist>
-          </AlbumInfo>
-        </AlbumCover>
-      </TouchableWithoutFeedback>
-    )}
-    {album.cover && (
-      <TouchableWithoutFeedback onPress={() => onPress(album)}>
-        <AlbumCover>
-          <Cover
-            source={{
-              uri: album.cover,
-            }}
-          />
-          <AlbumInfo>
-            <AlbumTitle ellipsizeMode="tail" numberOfLines={1}>
-              {album.title}
-            </AlbumTitle>
-            <Artist ellipsizeMode="tail" numberOfLines={2}>
-              {album.artist}
-            </Artist>
-          </AlbumInfo>
-        </AlbumCover>
-      </TouchableWithoutFeedback>
-    )}
-  </>
-);
+const Album: FC<AlbumProps> = ({album, onPress}) => {
+  const cover = useCover(album.cover);
+  return (
+    <>
+      {!album.cover && (
+        <TouchableWithoutFeedback onPress={() => onPress(album)}>
+          <AlbumCover>
+            <NoAlbumCover>
+              <Feather name="disc" size={100} color="#bdb9b958" />
+            </NoAlbumCover>
+            <AlbumInfo>
+              <AlbumTitle ellipsizeMode="tail" numberOfLines={1}>
+                {album.title}
+              </AlbumTitle>
+              <Artist ellipsizeMode="tail" numberOfLines={2}>
+                {album.artist}
+              </Artist>
+            </AlbumInfo>
+          </AlbumCover>
+        </TouchableWithoutFeedback>
+      )}
+      {album.cover && (
+        <TouchableWithoutFeedback onPress={() => onPress(album)}>
+          <AlbumCover>
+            <Cover
+              source={{
+                uri: cover,
+              }}
+            />
+            <AlbumInfo>
+              <AlbumTitle ellipsizeMode="tail" numberOfLines={1}>
+                {album.title}
+              </AlbumTitle>
+              <Artist ellipsizeMode="tail" numberOfLines={2}>
+                {album.artist}
+              </Artist>
+            </AlbumInfo>
+          </AlbumCover>
+        </TouchableWithoutFeedback>
+      )}
+    </>
+  );
+};
 
 export type AlbumsProps = {
   albums: any;

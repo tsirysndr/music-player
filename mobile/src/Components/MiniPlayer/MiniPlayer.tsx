@@ -3,6 +3,7 @@ import React, {FC, useState, useEffect} from 'react';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {Keyboard} from 'react-native';
+import {useCover} from '../../Hooks/useCover';
 
 const Container = styled.TouchableOpacity`
   flex-direction: row;
@@ -91,6 +92,7 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
   const {track, playing, progress, onPlay, onPause, onSkipNext, onOpenPlayer} =
     props;
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const cover = useCover(track.cover);
 
   // listen to keyboard events
   useEffect(() => {
@@ -120,11 +122,11 @@ const MiniPlayer: FC<MiniPlayerProps> = props => {
               <Feather name="music" size={30} color="#a7a7a9" />
             </NoCover>
           )}
-          {track.cover && <Cover source={{uri: track.cover}} />}
+          {track.cover && <Cover source={{uri: cover}} />}
         </>
         <TrackInfo>
-          <TrackTitle>{track.title}</TrackTitle>
-          <TrackArtist>{track.artist}</TrackArtist>
+          <TrackTitle numberOfLines={1}>{track.title}</TrackTitle>
+          <TrackArtist numberOfLines={1}>{track.artist}</TrackArtist>
         </TrackInfo>
         <>
           {!playing && (

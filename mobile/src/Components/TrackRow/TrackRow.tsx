@@ -2,15 +2,15 @@ import React, {FC} from 'react';
 import {Track} from '../../Types';
 import styled, {css} from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
-import FontAwesome from 'react-native-vector-icons/FontAwesome5';
-import Config from 'react-native-config';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useCover} from '../../Hooks/useCover';
 
 const Container = styled.View`
   height: 80px;
   width: 100%;
   flex-direction: row;
   align-items: center;
-  padding: 0 20px;
+  padding-left: 20px;
 `;
 
 const Cover = styled.Image`
@@ -55,6 +55,7 @@ const Button = styled.TouchableOpacity`
   width: 40px;
   align-items: center;
   justify-content: center;
+  z-index: 1;
 `;
 
 const TrackWrapper = styled.View`
@@ -73,9 +74,7 @@ export type TrackRowProps = {
 
 const TrackRow: FC<TrackRowProps> = props => {
   const {track, currentTrack, onPlay} = props;
-  const cover = track.cover?.startsWith('http')
-    ? track.cover
-    : `${Config.API_URL?.replace('/graphql', '/covers')}/${track.cover}`;
+  const cover = useCover(track.cover);
   return (
     <TrackWrapper>
       <TouchableTrack onPress={() => onPlay(track)}>
@@ -98,7 +97,7 @@ const TrackRow: FC<TrackRowProps> = props => {
             </Artist>
           </AlbumInfo>
           <Button>
-            <FontAwesome name="ellipsis-v" color={'#ffffff99'} size={18} />
+            <Ionicons name="ellipsis-vertical" color={'#ffffff99'} size={18} />
           </Button>
         </Container>
       </TouchableTrack>

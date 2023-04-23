@@ -3,15 +3,15 @@ import {Album} from '../../Types';
 import styled from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
 import {TouchableWithoutFeedback} from 'react-native';
-import FontAwesome from 'react-native-vector-icons/FontAwesome5';
-import Config from 'react-native-config';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useCover} from '../../Hooks/useCover';
 
 const Container = styled.View`
   height: 80px;
   width: 100%;
   flex-direction: row;
   align-items: center;
-  padding: 0 20px;
+  padding-left: 20px;
 `;
 
 const Cover = styled.Image`
@@ -60,9 +60,7 @@ export type AlbumRowProps = {
 
 const AlbumRow: FC<AlbumRowProps> = props => {
   const {album, onSelected} = props;
-  const cover = album.cover?.startsWith('http')
-    ? album.cover
-    : `${Config.API_URL?.replace('/graphql', '/covers')}/${album.cover}`;
+  const cover = useCover(album.cover);
   return (
     <TouchableWithoutFeedback onPress={() => onSelected()}>
       <Container>
@@ -81,7 +79,7 @@ const AlbumRow: FC<AlbumRowProps> = props => {
           </Artist>
         </AlbumInfo>
         <Button>
-          <FontAwesome name="ellipsis-v" color={'#ffffff99'} size={18} />
+          <Ionicons name="ellipsis-vertical" color={'#ffffff99'} size={18} />
         </Button>
       </Container>
     </TouchableWithoutFeedback>

@@ -88,8 +88,8 @@ const AlbumCover: FC<AlbumCoverProps> = props => {
   const cover = useCover(props.cover);
   return (
     <CoverWrapper>
-      {cover && <Cover source={{uri: cover}} width={screenWidth - 60} />}
-      {!cover && (
+      {props.cover && <Cover source={{uri: cover}} width={screenWidth - 60} />}
+      {!props.cover && (
         <NoAlbumCover width={screenWidth - 60}>
           <Feather name="disc" size={200} color="#a7a7a93a" />
         </NoAlbumCover>

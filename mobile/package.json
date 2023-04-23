@@ -71,6 +71,7 @@
     "@storybook/react-native": "^6.5.2",
     "@tsconfig/react-native": "^2.0.3",
     "@types/jest": "^29.2.1",
+    "@types/lodash": "^4.14.194",
     "@types/react": "^18.0.24",
     "@types/react-native-vector-icons": "^6.4.13",
     "@types/react-test-renderer": "^18.0.0",

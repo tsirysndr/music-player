@@ -1,4 +1,4 @@
-use music_player_playback::player::RepeatState;
+
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -10,7 +10,6 @@ use tui::{
 
 use crate::{
     app::{ActiveBlock, App, RouteId, LIBRARY_OPTIONS},
-    ui::util::SMALL_TERMINAL_WIDTH,
 };
 
 use self::util::{
@@ -207,7 +206,7 @@ where
     );
 }
 
-pub fn draw_search_results<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+pub fn draw_search_results<B>(_f: &mut Frame<B>, _app: &App, _layout_chunk: Rect)
 where
     B: Backend,
 {
@@ -482,7 +481,7 @@ where
     )
 }
 
-pub fn draw_home<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+pub fn draw_home<B>(_f: &mut Frame<B>, _app: &App, _layout_chunk: Rect)
 where
     B: Backend,
 {
@@ -544,7 +543,7 @@ where
     )
 }
 
-pub fn draw_artist_albums<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
+pub fn draw_artist_albums<B>(_f: &mut Frame<B>, _app: &App, _layout_chunk: Rect)
 where
     B: Backend,
 {

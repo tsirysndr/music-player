@@ -57,7 +57,7 @@ const Header: FC<HeaderProps> = props => {
         <Feather name="arrow-left" size={24} color="#fff" />
       </BackButton>
       {!title && <NoTitle />}
-      {title && <Title>{title}</Title>}
+      {title && <Title numberOfLines={1}>{title}</Title>}
       {onSearch && (
         <SearchButton onPress={onSearch}>
           <Feather name="search" size={24} color="#fff" />

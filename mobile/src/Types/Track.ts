@@ -1,4 +1,5 @@
 export type Track = {
+  trackNumber?: string;
   id: string;
   title: string;
   artist: string;

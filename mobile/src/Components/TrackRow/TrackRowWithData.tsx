@@ -7,9 +7,10 @@ import {playQueueState} from '../PlayQueue/PlayQueueState';
 
 export type TrackRowWithDataProps = {
   track: Track;
+  showAlbum?: boolean;
 };
 
-const TrackRowWithData: FC<TrackRowWithDataProps> = ({track}) => {
+const TrackRowWithData: FC<TrackRowWithDataProps> = ({track, showAlbum}) => {
   const [currentTrack, setCurrentTrack] = useRecoilState(currentTrackState);
   const [playQueue, setPlayQueue] = useRecoilState(playQueueState);
   const onPlay = (item: Track) => {
@@ -20,7 +21,14 @@ const TrackRowWithData: FC<TrackRowWithDataProps> = ({track}) => {
       position: playQueue.previousTracks.length,
     });
   };
-  return <TrackRow track={track} currentTrack={currentTrack} onPlay={onPlay} />;
+  return (
+    <TrackRow
+      track={track}
+      currentTrack={currentTrack}
+      onPlay={onPlay}
+      showAlbum={showAlbum}
+    />
+  );
 };
 
 export default TrackRowWithData;

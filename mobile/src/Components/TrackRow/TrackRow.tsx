@@ -66,24 +66,47 @@ const TouchableTrack = styled.TouchableOpacity`
   background-color: #000;
 `;
 
+const TrackNumber = styled.Text`
+  color: #fff;
+  font-family: 'Gilroy-Bold';
+  font-size: 16px;
+`;
+
+const TrackNumberWrapper = styled.View`
+  width: 30px;
+  height: 60px;
+  align-items: center;
+  justify-content: center;
+`;
+
 export type TrackRowProps = {
   track: Track;
   currentTrack?: Track;
   onPlay: (item: Track) => void;
+  showAlbum?: boolean;
 };
 
 const TrackRow: FC<TrackRowProps> = props => {
-  const {track, currentTrack, onPlay} = props;
+  const {track, currentTrack, onPlay, showAlbum} = props;
   const cover = useCover(track.cover);
   return (
     <TrackWrapper>
       <TouchableTrack onPress={() => onPlay(track)}>
         <Container>
-          {track.cover && <Cover source={{uri: cover}} />}
-          {!track.cover && (
-            <NoAlbumCover>
-              <Feather name="disc" size={40} color="#a7a7a9" />
-            </NoAlbumCover>
+          {showAlbum && (
+            <>
+              {track.cover && <Cover source={{uri: cover}} />}
+              {!track.cover && (
+                <NoAlbumCover>
+                  <Feather name="disc" size={40} color="#a7a7a9" />
+                </NoAlbumCover>
+              )}
+            </>
+          )}
+          {!showAlbum && (
+            <TrackNumberWrapper>
+              <TrackNumber>{track.trackNumber}</TrackNumber>
+            </TrackNumberWrapper>
           )}
           <AlbumInfo>
             <Title
@@ -103,6 +126,10 @@ const TrackRow: FC<TrackRowProps> = props => {
       </TouchableTrack>
     </TrackWrapper>
   );
+};
+
+TrackRow.defaultProps = {
+  showAlbum: true,
 };
 
 export default TrackRow;

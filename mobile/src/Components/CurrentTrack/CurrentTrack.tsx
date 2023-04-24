@@ -127,7 +127,7 @@ const CurrentTrack: FC<CurrentTrackProps> = props => {
         </PagerView>
         <TrackRow>
           <TrackInfo>
-            <TrackTitle>{track?.title}</TrackTitle>
+            <TrackTitle numberOfLines={2}>{track?.title}</TrackTitle>
             <TrackArtist>{track?.artist}</TrackArtist>
           </TrackInfo>
           {!track?.liked && (

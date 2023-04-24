@@ -17,11 +17,11 @@ use crate::api::music::v1alpha1::{
 };
 
 pub struct Library {
-    db: Arc<Mutex<Database>>,
+    db: Database,
 }
 
 impl Library {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub fn new(db: Database) -> Self {
         Self { db }
     }
 }
@@ -91,7 +91,7 @@ impl LibraryService for Library {
         };
         let offset = request.offset;
         let limit = request.limit;
-        let results = ArtistRepository::new(&self.db.lock().await.get_connection())
+        let results = ArtistRepository::new(&self.db.get_connection())
             .find_all(filter, Some(offset as u64), Some(limit as u64))
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -113,7 +113,7 @@ impl LibraryService for Library {
         };
         let offset = request.offset;
         let limit = request.limit;
-        let results = AlbumRepository::new(&self.db.lock().await.get_connection())
+        let results = AlbumRepository::new(&self.db.get_connection())
             .find_all(filter, Some(offset as u64), Some(limit as u64))
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -138,7 +138,7 @@ impl LibraryService for Library {
             0 => 100,
             _ => request.limit,
         };
-        let tracks = TrackRepository::new(&self.db.lock().await.get_connection())
+        let tracks = TrackRepository::new(&self.db.get_connection())
             .find_all(filter, Some(offset as u64), limit as u64)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -155,7 +155,7 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<GetTrackDetailsResponse>, tonic::Status> {
         let id = request.into_inner().id;
 
-        let track = TrackRepository::new(&self.db.lock().await.get_connection())
+        let track = TrackRepository::new(&self.db.get_connection())
             .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -170,7 +170,7 @@ impl LibraryService for Library {
         request: tonic::Request<GetAlbumDetailsRequest>,
     ) -> Result<tonic::Response<GetAlbumDetailsResponse>, tonic::Status> {
         let id = request.into_inner().id;
-        let album = AlbumRepository::new(&self.db.lock().await.get_connection())
+        let album = AlbumRepository::new(&self.db.get_connection())
             .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -186,7 +186,7 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<GetArtistDetailsResponse>, tonic::Status> {
         let id = request.into_inner().id;
 
-        let artist = ArtistRepository::new(&self.db.lock().await.get_connection())
+        let artist = ArtistRepository::new(&self.db.get_connection())
             .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;

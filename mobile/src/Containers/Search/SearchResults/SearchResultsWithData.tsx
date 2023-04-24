@@ -8,10 +8,10 @@ const SearchWithData: FC = () => {
   const navigation = useNavigation<any>();
   const props = useRecoilValue(searchState);
   const onPressAlbum = (album: any) => {
-    navigation.navigate('Album', {album});
+    navigation.navigate('AlbumDetails', {album});
   };
   const onPressArtist = (artist: any) => {
-    navigation.navigate('Artist', {artist});
+    navigation.navigate('ArtistDetails', {artist});
   };
   return (
     <SearchResults

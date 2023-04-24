@@ -8,11 +8,11 @@ use crate::api::music::v1alpha1::{
 };
 
 pub struct History {
-    db: Arc<Mutex<Database>>,
+    db: Database,
 }
 
 impl History {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub fn new(db: Database) -> Self {
         Self { db }
     }
 }

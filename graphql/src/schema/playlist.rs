@@ -4,9 +4,9 @@ use async_graphql::*;
 use cuid::cuid;
 use futures_util::Stream;
 use music_player_addons::CurrentSourceDevice;
-use music_player_entity::{folder as folder_entity,
-    playlist as playlist_entity, playlist_tracks as playlist_tracks_entity, select_result,
-    track as track_entity,
+use music_player_entity::{
+    folder as folder_entity, playlist as playlist_entity,
+    playlist_tracks as playlist_tracks_entity, select_result, track as track_entity,
 };
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
@@ -28,8 +28,7 @@ pub struct PlaylistQuery;
 #[Object]
 impl PlaylistQuery {
     async fn playlist(&self, ctx: &Context<'_>, id: ID) -> Result<Playlist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
 
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
@@ -48,8 +47,7 @@ impl PlaylistQuery {
     }
 
     async fn playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
 
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
@@ -68,8 +66,7 @@ impl PlaylistQuery {
     }
 
     async fn main_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         PlaylistRepository::new(db.get_connection())
             .main_playlists()
             .await
@@ -78,8 +75,7 @@ impl PlaylistQuery {
     }
 
     async fn recent_playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         PlaylistRepository::new(db.get_connection())
             .recent_playlists()
             .await
@@ -88,8 +84,7 @@ impl PlaylistQuery {
     }
 
     async fn folder(&self, ctx: &Context<'_>, id: ID) -> Result<Folder, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let results: Vec<(folder_entity::Model, Vec<playlist_entity::Model>)> =
             folder_entity::Entity::find_by_id(id.to_string())
                 .find_with_related(playlist_entity::Entity)
@@ -104,8 +99,7 @@ impl PlaylistQuery {
     }
 
     async fn folders(&self, ctx: &Context<'_>) -> Result<Vec<Folder>, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         folder_entity::Entity::find()
             .order_by_asc(folder_entity::Column::Name)
             .all(db.get_connection())
@@ -127,8 +121,7 @@ impl PlaylistMutation {
         description: Option<String>,
         folder_id: Option<ID>,
     ) -> Result<Playlist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let mut folder: Option<folder_entity::Model> = None;
         let folder_id = match folder_id {
             Some(folder_id) => {
@@ -170,8 +163,7 @@ impl PlaylistMutation {
     }
 
     async fn delete_playlist(&self, ctx: &Context<'_>, id: ID) -> Result<Playlist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let playlist = playlist_entity::Entity::find_by_id(id.to_string())
             .one(db.get_connection())
             .await?;
@@ -196,8 +188,7 @@ impl PlaylistMutation {
         id: ID,
         track_id: ID,
     ) -> Result<Playlist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let track = track_entity::Entity::find_by_id(track_id.to_string())
             .one(db.get_connection())
             .await?;
@@ -238,8 +229,7 @@ impl PlaylistMutation {
         id: ID,
         position: usize,
     ) -> Result<Playlist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let playlist_track = playlist_tracks_entity::Entity::find()
             .filter(playlist_tracks_entity::Column::PlaylistId.eq(id.to_string()))
             .all(db.get_connection())
@@ -270,8 +260,7 @@ impl PlaylistMutation {
         id: ID,
         name: String,
     ) -> Result<Playlist, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let playlist = playlist_entity::Entity::find_by_id(id.to_string())
             .one(db.get_connection())
             .await?;
@@ -294,8 +283,7 @@ impl PlaylistMutation {
     }
 
     async fn create_folder(&self, ctx: &Context<'_>, name: String) -> Result<Folder, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let folder = folder_entity::ActiveModel {
             id: ActiveValue::set(cuid().unwrap()),
             name: ActiveValue::Set(name),
@@ -315,8 +303,7 @@ impl PlaylistMutation {
     }
 
     async fn delete_folder(&self, ctx: &Context<'_>, id: ID) -> Result<Folder, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let folder = folder_entity::Entity::find_by_id(id.to_string())
             .one(db.get_connection())
             .await?;
@@ -340,8 +327,7 @@ impl PlaylistMutation {
         id: ID,
         name: String,
     ) -> Result<Folder, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let folder = folder_entity::Entity::find_by_id(id.to_string())
             .one(db.get_connection())
             .await?;
@@ -369,8 +355,7 @@ impl PlaylistMutation {
         id: ID,
         folder_id: ID,
     ) -> Result<Folder, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let folder = folder_entity::Entity::find_by_id(folder_id.to_string())
             .one(db.get_connection())
             .await?;
@@ -414,8 +399,7 @@ impl PlaylistMutation {
         ids: Vec<ID>,
         folder_id: ID,
     ) -> Result<Folder, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
 
         let folder = folder_entity::Entity::find_by_id(folder_id.to_string())
             .one(db.get_connection())

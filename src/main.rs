@@ -202,9 +202,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db.create_indexes().await;
     }
 
-    let db_conn = Database::new().await;
     let searcher = Searcher::new();
-    let db = Arc::new(Mutex::new(Database::new().await));
+    let db = Database::new().await;
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cloned_tracklist = Arc::clone(&tracklist);
@@ -290,13 +289,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .enable_all()
                 .build()
                 .unwrap();
-            runtime.block_on(auto_scan_music_library(db_conn, searcher));
+            let db = runtime.block_on(Database::new());
+            runtime.block_on(auto_scan_music_library(db, searcher));
         });
     }
 
     let tracklist_ws = Arc::clone(&tracklist);
     let tracklist_webui = Arc::clone(&tracklist);
-    let db_ws = Arc::clone(&db);
 
     let peer_map_ws = Arc::clone(&peer_map);
 
@@ -329,8 +328,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .enable_all()
                 .build()
                 .unwrap();
+            let db = runtime.block_on(Database::new());
             match runtime.block_on(
-                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db_ws).start_ws(),
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db).start_ws(),
             ) {
                 Ok(_) => {}
                 Err(e) => {

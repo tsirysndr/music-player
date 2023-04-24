@@ -132,7 +132,7 @@ async fn main() {
         Arc::clone(&cmd_rx),
         tracklist.clone(),
     );
-    let db = Arc::new(Mutex::new(Database::new().await));
+    let db = Database::new().await;
     let schema: MusicPlayerSchema = Schema::build(
         Query::default(),
         Mutation::default(),

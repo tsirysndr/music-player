@@ -12,11 +12,11 @@ use crate::api::music::v1alpha1::{
 use crate::api::objects::v1alpha1::Addon;
 
 pub struct Addons {
-    db: Arc<Mutex<Database>>,
+    db: Database,
 }
 
 impl Addons {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub fn new(db: Database) -> Self {
         Self { db }
     }
 }

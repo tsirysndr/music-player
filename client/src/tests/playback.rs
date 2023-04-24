@@ -37,7 +37,7 @@ async fn play() -> Result<(), Box<dyn std::error::Error>> {
                 Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -95,7 +95,7 @@ async fn pause() -> Result<(), Box<dyn std::error::Error>> {
                 Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -150,7 +150,7 @@ async fn stop() -> Result<(), Box<dyn std::error::Error>> {
                 Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -203,7 +203,7 @@ async fn next() -> Result<(), Box<dyn std::error::Error>> {
                 Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -256,7 +256,7 @@ async fn prev() -> Result<(), Box<dyn std::error::Error>> {
                 Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -310,7 +310,7 @@ async fn current() -> Result<(), Box<dyn std::error::Error>> {
                 Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

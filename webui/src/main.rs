@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
     let cloned_tracklist = tracklist.clone();
     let cloned_cmd_tx = Arc::clone(&cmd_tx);
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
-    let db = Arc::new(Mutex::new(Database::new().await));
+    let db = Database::new().await;
     let (_, _) = Player::new(
         move || backend(None, audio_format),
         move |_| {},

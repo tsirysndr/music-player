@@ -35,7 +35,7 @@ async fn get_tracklist_tracks() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), Arc::clone(&db)),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

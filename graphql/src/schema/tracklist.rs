@@ -92,7 +92,7 @@ impl TracklistMutation {
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
@@ -140,7 +140,7 @@ impl TracklistMutation {
         let result: Vec<(track_entity::Model, Vec<artist_entity::Model>)> =
             track_entity::Entity::find_by_id(id.clone())
                 .find_with_related(artist_entity::Entity)
-                .all(db.lock().await.get_connection())
+                .all(db.get_connection())
                 .await?;
 
         if result.len() == 0 {
@@ -153,7 +153,7 @@ impl TracklistMutation {
         let result: Vec<(track_entity::Model, Option<album_entity::Model>)> =
             track_entity::Entity::find_by_id(id.clone())
                 .find_also_related(album_entity::Entity)
-                .all(db.lock().await.get_connection())
+                .all(db.get_connection())
                 .await?;
         let (_, album) = result.into_iter().next().unwrap();
         track.album = album.unwrap();
@@ -275,7 +275,7 @@ impl TracklistMutation {
     }
 
     async fn play_next(&self, ctx: &Context<'_>, id: ID) -> Result<bool, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
@@ -324,9 +324,7 @@ impl TracklistMutation {
             receiver.play_next(track.into()).await?;
             return Ok(true);
         } else {
-            track = TrackRepository::new(db.lock().await.get_connection())
-                .find(&id)
-                .await?;
+            track = TrackRepository::new(db.get_connection()).find(&id).await?;
         }
 
         let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
@@ -365,7 +363,7 @@ impl TracklistMutation {
         let player_cmd = ctx
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
@@ -408,9 +406,7 @@ impl TracklistMutation {
             return Ok(true);
         }
 
-        let mut result = AlbumRepository::new(db.lock().await.get_connection())
-            .find(&id)
-            .await?;
+        let mut result = AlbumRepository::new(db.get_connection()).find(&id).await?;
 
         let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
         let mut device = current_device.lock().await;
@@ -453,7 +449,7 @@ impl TracklistMutation {
         let player_cmd = ctx
             .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
@@ -492,9 +488,7 @@ impl TracklistMutation {
             return Ok(true);
         }
 
-        let mut artist = ArtistRepository::new(db.lock().await.get_connection())
-            .find(&id)
-            .await?;
+        let mut artist = ArtistRepository::new(db.get_connection()).find(&id).await?;
 
         let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
         let mut device = current_device.lock().await;
@@ -537,8 +531,7 @@ impl TracklistMutation {
         let player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let db = db.lock().await;
+        let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();

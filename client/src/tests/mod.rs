@@ -27,7 +27,7 @@ pub async fn setup_new_params(
     Arc<Mutex<UnboundedSender<PlayerCommand>>>,
     Arc<Mutex<UnboundedReceiver<PlayerCommand>>>,
     Arc<Mutex<Tracklist>>,
-    Arc<tokio::sync::Mutex<Database>>,
+    Database,
     SocketAddr,
     String,
 ) {
@@ -50,7 +50,7 @@ pub async fn setup_new_params(
     let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
     let url = format!("http://{}:{}", settings.host, port);
 
-    let db = Arc::new(tokio::sync::Mutex::new(Database::new().await));
+    let db = Database::new().await;
 
     return (
         backend,

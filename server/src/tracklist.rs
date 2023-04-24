@@ -25,14 +25,14 @@ use crate::api::{
 pub struct Tracklist {
     state: Arc<std::sync::Mutex<TracklistState>>,
     cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
-    db: Arc<Mutex<Database>>,
+    db: Database,
 }
 
 impl Tracklist {
     pub fn new(
         state: Arc<std::sync::Mutex<TracklistState>>,
         cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
-        db: Arc<Mutex<Database>>,
+        db: Database,
     ) -> Self {
         Self { state, cmd_tx, db }
     }
@@ -49,7 +49,7 @@ impl TracklistService for Tracklist {
 
         let result: Vec<(track::Model, Vec<artist::Model>)> = track::Entity::find_by_id(id.clone())
             .find_with_related(artist::Entity)
-            .all(self.db.lock().await.get_connection())
+            .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
         if result.len() == 0 {
@@ -62,7 +62,7 @@ impl TracklistService for Tracklist {
         let result: Vec<(track::Model, Option<album::Model>)> =
             track::Entity::find_by_id(id.clone())
                 .find_also_related(album::Entity)
-                .all(self.db.lock().await.get_connection())
+                .all(self.db.get_connection())
                 .await
                 .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let (_, album) = result.into_iter().next().unwrap();

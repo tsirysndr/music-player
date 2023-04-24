@@ -54,7 +54,7 @@ pub async fn setup_schema() -> (
         "sqlite:///tmp/music-player.sqlite3",
     );
 
-    let db = Arc::new(Mutex::new(Database::new().await));
+    let db = Database::new().await;
     (
         Schema::build(
             Query::default(),

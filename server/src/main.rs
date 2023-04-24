@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
-    let db = Arc::new(Mutex::new(Database::new().await));
+    let db = Database::new().await;
 
     let (_, _) = Player::new(
         move || backend(None, audio_format),

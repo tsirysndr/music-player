@@ -53,7 +53,7 @@ async fn index_spa() -> impl Responder {
     handle_embedded_file("index.html")
 }
 
-async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<NamedFile, Error> {
+async fn index_file(db: Data<Database>, req: HttpRequest) -> Result<NamedFile, Error> {
     let id = req.match_info().get("id").unwrap();
     let id = id.split('.').next().unwrap();
     let mut path = PathBuf::new();
@@ -61,7 +61,7 @@ async fn index_file(db: Data<Arc<Mutex<Database>>>, req: HttpRequest) -> Result<
     println!("id: {}", id);
 
     let track = track_entity::Entity::find_by_id(id.to_owned())
-        .one(db.lock().await.get_connection())
+        .one(db.get_connection())
         .await
         .unwrap();
 
@@ -144,7 +144,7 @@ pub async fn start_webui(
         Mutation::default(),
         Subscription::default(),
     )
-    .data(Arc::new(Mutex::new(Database::new().await)))
+    .data(Database::new().await)
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
@@ -155,14 +155,12 @@ pub async fn start_webui(
     .finish();
     println!("Starting webui at {}", addr.bright_green());
 
-    let db = Arc::new(Mutex::new(Database::new().await));
-
     HttpServer::new(move || {
         let cors = Cors::permissive();
-
+        let db = futures::executor::block_on(Database::new());
         let covers_path = format!("{}/covers", get_application_directory());
         App::new()
-            .app_data(Data::new(Arc::clone(&db)))
+            .app_data(Data::new(db.clone()))
             .app_data(Data::new(schema.clone()))
             .wrap(cors)
             .service(index_graphql)

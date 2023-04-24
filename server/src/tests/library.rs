@@ -24,7 +24,7 @@ async fn scan() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -49,7 +49,7 @@ async fn search() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -71,7 +71,7 @@ async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -107,7 +107,7 @@ async fn get_albums() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -139,7 +139,7 @@ async fn get_tracks() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -189,7 +189,7 @@ async fn get_track_details() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -226,7 +226,7 @@ async fn get_album_details() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -262,7 +262,7 @@ async fn get_artist_details() {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                Arc::clone(&db),
+                db,
             ))))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

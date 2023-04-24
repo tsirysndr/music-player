@@ -13,12 +13,16 @@ export type SearchResultsProps = {
     artists: any[];
     playlists: any[];
   };
+  onPressAlbum: (album: any) => void;
+  onPressArtist: (artist: any) => void;
 };
 
 const SearchResults: FC<SearchResultsProps> = ({
   currentFilter,
   results,
   query,
+  onPressAlbum,
+  onPressArtist,
 }) => {
   return (
     <>
@@ -32,7 +36,7 @@ const SearchResults: FC<SearchResultsProps> = ({
         <FlatList
           data={results.albums}
           renderItem={({item}) => (
-            <AlbumRow album={item} onSelected={() => {}} />
+            <AlbumRow album={item} onPressAlbum={() => onPressAlbum(item)} />
           )}
         />
       )}
@@ -40,7 +44,7 @@ const SearchResults: FC<SearchResultsProps> = ({
         <FlatList
           data={results.artists}
           renderItem={({item}) => (
-            <ArtistRow artist={item} onSelected={() => {}} />
+            <ArtistRow artist={item} onSelected={() => onPressArtist(item)} />
           )}
         />
       )}

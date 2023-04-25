@@ -121,8 +121,8 @@ const CurrentTrack: FC<CurrentTrackProps> = props => {
           height={screenWidth - 60}
           initialPage={initialPage}
           onPageSelected={onPageSelected}>
-          {tracks.map((item: any) => (
-            <AlbumCover key={item.id} cover={item.cover} />
+          {tracks.map((item: any, index: number) => (
+            <AlbumCover key={index} cover={item.cover} />
           ))}
         </PagerView>
         <TrackRow>

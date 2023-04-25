@@ -3,16 +3,21 @@ import Albums from './Albums';
 import {useNavigation} from '@react-navigation/native';
 import {useGetAlbumsQuery} from '../../Hooks/GraphQL';
 import {Album} from '../../Types';
+import {MainStackParamList} from '../../Navigation/AppNavigation';
+import {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-const AlbumsWithData: FC = () => {
+type Props = NativeStackScreenProps<MainStackParamList, 'Albums'>;
+
+const AlbumsWithData: FC<Props> = ({route}) => {
   const navigation = useNavigation<any>();
+  const {params} = route;
   const {data, loading, fetchMore} = useGetAlbumsQuery({
     variables: {
       offset: 0,
       limit: 20,
     },
   });
-  const albums = !loading && data ? data.albums : [];
+  const albums = params?.albums || (!loading && data ? data.albums : []);
   const onGoBack = () => navigation.goBack();
 
   const handleFetchMore = () => {
@@ -42,7 +47,7 @@ const AlbumsWithData: FC = () => {
         cover: album.cover!,
         year: album.year!,
       }))}
-      fetchMore={handleFetchMore}
+      fetchMore={params?.albums ? () => {} : handleFetchMore}
       onPressAlbum={(album: Album) =>
         navigation.navigate('AlbumDetails', {album})
       }

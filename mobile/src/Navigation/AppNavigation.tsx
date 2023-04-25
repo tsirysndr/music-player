@@ -26,9 +26,9 @@ export type MainStackParamList = {
   Search: undefined;
   Devices: undefined;
   Account: undefined;
-  Albums: undefined;
+  Albums: {albums?: any[]};
   Artists: undefined;
-  Tracks: undefined;
+  Tracks: {tracks?: any[]};
   ArtistDetails: {artist: any};
   AlbumDetails: {album: any};
 };
@@ -95,11 +95,11 @@ const Tabs: FC = () => (
 const MainNavigator: FC = () => (
   <MainStack.Navigator screenOptions={{headerShown: false}}>
     <MainStack.Screen name="Tabs" component={Tabs} />
-    <MainStack.Screen name="Albums" component={Albums} />
+    <MainStack.Screen name="Albums" component={Albums as any} />
     <MainStack.Screen name="Artists" component={Artists} />
-    <MainStack.Screen name="Tracks" component={Tracks} />
-    <MainStack.Screen name="ArtistDetails" component={ArtistDetails} />
-    <MainStack.Screen name="AlbumDetails" component={AlbumDetails} />
+    <MainStack.Screen name="Tracks" component={Tracks as any} />
+    <MainStack.Screen name="ArtistDetails" component={ArtistDetails as any} />
+    <MainStack.Screen name="AlbumDetails" component={AlbumDetails as any} />
   </MainStack.Navigator>
 );
 

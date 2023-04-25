@@ -2,8 +2,13 @@ import React, {FC} from 'react';
 import Tracks from './Tracks';
 import {useNavigation} from '@react-navigation/native';
 import {useGetTracksQuery} from '../../Hooks/GraphQL';
+import {MainStackParamList} from '../../Navigation/AppNavigation';
+import {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-const TracksWithData: FC = () => {
+type Props = NativeStackScreenProps<MainStackParamList, 'Tracks'>;
+
+const TracksWithData: FC<Props> = ({route}) => {
+  const {params} = route;
   const navigation = useNavigation<any>();
   const {data, loading, fetchMore} = useGetTracksQuery({
     variables: {
@@ -11,7 +16,7 @@ const TracksWithData: FC = () => {
       limit: 10,
     },
   });
-  const tracks = !loading && data ? data.tracks : [];
+  const tracks = params?.tracks || (!loading && data ? data.tracks : []);
 
   const handleFetchMore = () => {
     fetchMore({
@@ -44,7 +49,7 @@ const TracksWithData: FC = () => {
         artistId: track.artists[0].id,
         albumId: track.album.id,
       }))}
-      fetchMore={handleFetchMore}
+      fetchMore={params?.tracks ? () => {} : handleFetchMore}
     />
   );
 };

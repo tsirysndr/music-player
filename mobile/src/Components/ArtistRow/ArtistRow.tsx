@@ -2,7 +2,7 @@ import React, {FC} from 'react';
 import {Artist} from '../../Types';
 import styled from '@emotion/native';
 import SvgMic from '../Icons/Mic';
-import {TouchableWithoutFeedback, View} from 'react-native';
+import {TouchableWithoutFeedback} from 'react-native';
 
 const Container = styled.View`
   height: 100px;

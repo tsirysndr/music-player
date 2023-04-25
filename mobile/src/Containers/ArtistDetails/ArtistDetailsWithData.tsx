@@ -12,7 +12,6 @@ const ArtistDetailsWithData: FC<Props> = ({route}) => {
   const {
     params: {artist},
   } = route;
-  console.log(artist);
 
   const {data, loading} = useGetArtistQuery({
     variables: {
@@ -25,11 +24,15 @@ const ArtistDetailsWithData: FC<Props> = ({route}) => {
   const onGoBack = () => navigation.goBack();
   const onPressAlbum = (album: any) =>
     navigation.navigate('AlbumDetails', {album});
+  const onSeeAllAlbums = () => navigation.navigate('Albums', {albums});
+  const onSeeAllTracks = () => navigation.navigate('Tracks', {tracks});
 
   return (
     <ArtistDetails
       onGoBack={onGoBack}
       onPressAlbum={onPressAlbum}
+      onSeeAllAlbums={onSeeAllAlbums}
+      onSeeAllTracks={onSeeAllTracks}
       artist={{
         ...artist,
         albums: albums.map(album => ({

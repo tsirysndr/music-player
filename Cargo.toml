@@ -39,7 +39,7 @@ path = "src/main.rs"
 
 [dependencies.music-player-server]
 path = "server"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-playback]
 path = "playback"
@@ -67,7 +67,7 @@ version = "0.1.6"
 
 [dependencies.music-player-addons]
 path = "addons"
-version = "0.1.4"
+version = "0.1.6"
 
 [dependencies.music-player-tracklist]
 path = "tracklist"
@@ -75,7 +75,7 @@ version = "0.1.7"
 
 [dependencies.music-player-client]
 path = "client"
-version = "0.1.4"
+version = "0.1.6"
 
 [dependencies.music-player-webui]
 path = "webui"
@@ -87,7 +87,7 @@ version = "0.1.2"
 
 [dependencies.music-player-graphql]
 path = "graphql"
-version = "0.1.7"
+version = "0.1.11"
 
 [dependencies.music-player-types]
 path = "types"

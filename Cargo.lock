@@ -4306,7 +4306,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-addons"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4351,7 +4351,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-client"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "envtestkit",
@@ -4398,7 +4398,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-graphql"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -4490,7 +4490,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "cuid",
@@ -4575,7 +4575,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-webui"
-version = "0.1.15"
+version = "0.1.16"
 dependencies = [
  "actix-cors",
  "actix-files",

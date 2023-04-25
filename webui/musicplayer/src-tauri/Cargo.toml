@@ -16,11 +16,11 @@ tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies.music-player-addons]
 path = "../../../addons"
-version = "0.1.5"
+version = "0.1.6"
 
 [dependencies.music-player-graphql]
 path = "../../../graphql"
-version = "0.1.8"
+version = "0.1.11"
 
 [dependencies.music-player-settings]
 path = "../../../settings"

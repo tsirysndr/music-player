@@ -80,6 +80,7 @@ const AlbumTitle = styled.Text`
   color: #fff;
   margin-top: 20px;
   font-size: 18px;
+  text-align: center;
 `;
 
 const Artist = styled.Text`
@@ -87,6 +88,7 @@ const Artist = styled.Text`
   color: #b3b2b2;
   margin-top: 5px;
   font-size: 14px;
+  text-align: center;
 `;
 
 const PlayButton = styled.TouchableOpacity`
@@ -130,6 +132,11 @@ const Buttons = styled.View`
   margin-top: 25px;
 `;
 
+const AlbumInfo = styled.View`
+  margin-left: 25px;
+  margin-right: 25px;
+`;
+
 export type AlbumDetailsProps = {
   album: any;
   onGoBack: () => void;
@@ -151,8 +158,10 @@ const AlbumDetails: FC<AlbumDetailsProps> = props => {
                 <DarkBackground />
                 <LinearGradient colors={['transparent', 'rgba(0, 0, 0, 1)']} />
                 <AlbumCover source={{uri: cover}} />
-                <AlbumTitle>{album.title}</AlbumTitle>
-                <Artist>Album by {album.artist}</Artist>
+                <AlbumInfo>
+                  <AlbumTitle>{album.title}</AlbumTitle>
+                  <Artist>Album by {album.artist}</Artist>
+                </AlbumInfo>
                 <Buttons>
                   <PlayButton>
                     <Play color="#fff" small />
@@ -170,11 +179,13 @@ const AlbumDetails: FC<AlbumDetailsProps> = props => {
                 <NoAlbumCover>
                   <Feather name="disc" size={100} color="#bdb9b958" />
                 </NoAlbumCover>
-                <AlbumTitle>{album.title}</AlbumTitle>
-                <Artist>Album by {album.artist}</Artist>
+                <AlbumInfo>
+                  <AlbumTitle>{album.title}</AlbumTitle>
+                  <Artist>Album by {album.artist}</Artist>
+                </AlbumInfo>
                 <Buttons>
                   <PlayButton>
-                    <Play color="#fff" />
+                    <Play color="#fff" small />
                     <PlayButtonText>Play</PlayButtonText>
                   </PlayButton>
                   <ShuffleButton>

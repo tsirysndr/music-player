@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import CurrentTrack from './CurrentTrack';
 import {useRecoilState} from 'recoil';
 import {currentTrackState} from './CurrentTrackState';
@@ -9,6 +9,7 @@ const CurrentTrackWithData = () => {
   const [{previousTracks, nextTracks, position}, setPlayQueue] =
     useRecoilState(playQueueState);
   const tracks = [...previousTracks, ...nextTracks];
+  const initialPage = useMemo(() => position, [position]);
 
   const onPageSelected = (e: any) => {
     setPlayQueue({
@@ -29,7 +30,7 @@ const CurrentTrackWithData = () => {
   return (
     <CurrentTrack
       track={currentTrack}
-      initialPage={position}
+      initialPage={initialPage}
       onPageSelected={onPageSelected}
       tracks={tracks}
       onLike={onLike}

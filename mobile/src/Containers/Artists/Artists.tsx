@@ -14,10 +14,11 @@ export type ArtistsProps = {
   onGoBack: () => void;
   artists: Artist[];
   fetchMore: () => void;
+  onPressArtist: (artist: Artist) => void;
 };
 
 const Artists: FC<ArtistsProps> = props => {
-  const {artists, onGoBack, fetchMore} = props;
+  const {artists, onGoBack, fetchMore, onPressArtist} = props;
   return (
     <>
       <Container>
@@ -30,7 +31,7 @@ const Artists: FC<ArtistsProps> = props => {
         <FlatList
           data={artists}
           renderItem={({item}) => (
-            <ArtistRow artist={item} onSelected={() => {}} />
+            <ArtistRow artist={item} onSelected={() => onPressArtist(item)} />
           )}
           keyExtractor={item => item.id}
           onEndReached={fetchMore}

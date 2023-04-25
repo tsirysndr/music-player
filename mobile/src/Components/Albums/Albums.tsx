@@ -96,7 +96,7 @@ export type AlbumProps = {
   onPress: (album: any) => void;
 };
 
-const Album: FC<AlbumProps> = ({album, onPress}) => {
+export const Album: FC<AlbumProps> = ({album, onPress}) => {
   const cover = useCover(album.cover);
   return (
     <>

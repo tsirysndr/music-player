@@ -31,6 +31,9 @@ const ArtistsWithData: FC = () => {
     });
   };
 
+  const onPressArtist = (artist: any) =>
+    navigation.navigate('ArtistDetails', {artist});
+
   return (
     <Artists
       onGoBack={onGoBack}
@@ -40,6 +43,7 @@ const ArtistsWithData: FC = () => {
         cover: artist.picture,
       }))}
       fetchMore={handleFetchMore}
+      onPressArtist={onPressArtist}
     />
   );
 };

@@ -118,8 +118,8 @@ const AppNavigator: FC = () => (
       <RootStack.Group
         screenOptions={{
           headerShown: false,
-          gestureEnabled: false,
-          animationEnabled: false,
+          gestureEnabled: true,
+          animationEnabled: true,
           presentation: 'modal',
         }}>
         <RootStack.Screen name="Player" component={Player} />

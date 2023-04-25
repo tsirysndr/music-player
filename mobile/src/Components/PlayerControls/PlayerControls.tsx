@@ -27,7 +27,7 @@ const TimeContainer = styled.View`
 `;
 
 const PlayWrapper = styled.View`
-  background-color: #ffffff14;
+  background-color: #ffffff2f;
   height: 80px;
   width: 80px;
   border-radius: 40px;

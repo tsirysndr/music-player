@@ -28,7 +28,7 @@ version = "0.1.3"
 
 [dependencies.music-player-storage]
 path = "../../../storage"
-version = "0.1.9"
+version = "0.1.10"
 
 [dependencies.music-player-playback]
 path = "../../../playback"

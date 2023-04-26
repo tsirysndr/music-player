@@ -12,7 +12,10 @@ const AlbumDetailsWithData: FC<Props> = ({route}) => {
   const {
     params: {album},
   } = route;
-  const {data, loading} = useGetAlbumQuery({variables: {id: album.id}});
+  const {data, loading} = useGetAlbumQuery({
+    variables: {id: album.id},
+    fetchPolicy: 'no-cache',
+  });
   const tracks = !loading && data ? data.album.tracks : [];
   const onGoBack = () => navigation.goBack();
   return (

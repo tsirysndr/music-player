@@ -21,6 +21,8 @@ import Filter from '../Containers/Filter';
 
 const RootStack = createStackNavigator();
 const MainStack = createStackNavigator();
+const HomeStack = createStackNavigator();
+const SearchStack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 export type MainStackParamList = {
@@ -62,7 +64,7 @@ const Tabs: FC = () => (
     }}>
     <Tab.Screen
       name="Library"
-      component={Home}
+      component={HomeStackScreen}
       options={{
         headerShown: false,
         tabBarIcon: TabBarHomeIcon,
@@ -70,7 +72,7 @@ const Tabs: FC = () => (
     />
     <Tab.Screen
       name="Search"
-      component={Search}
+      component={SearchStackScreen}
       options={{
         headerShown: false,
         tabBarIcon: TabBarSearchIcon,
@@ -95,16 +97,34 @@ const Tabs: FC = () => (
   </Tab.Navigator>
 );
 
+const HomeStackScreen: FC = () => (
+  <HomeStack.Navigator screenOptions={{headerShown: false}}>
+    <HomeStack.Screen name="Home" component={Home} />
+    <HomeStack.Screen name="Albums" component={Albums as any} />
+    <HomeStack.Screen name="Artists" component={Artists} />
+    <HomeStack.Screen name="Tracks" component={Tracks as any} />
+    <HomeStack.Screen name="ArtistDetails" component={ArtistDetails as any} />
+    <HomeStack.Screen name="AlbumDetails" component={AlbumDetails as any} />
+    <HomeStack.Screen name="Filter" component={Filter as any} />
+    <HomeStack.Screen name="Settings" component={Settings as any} />
+  </HomeStack.Navigator>
+);
+
+const SearchStackScreen: FC = () => (
+  <SearchStack.Navigator screenOptions={{headerShown: false}}>
+    <SearchStack.Screen name="SearchScreen" component={Search} />
+    <SearchStack.Screen name="Albums" component={Albums as any} />
+    <SearchStack.Screen name="Artists" component={Artists} />
+    <SearchStack.Screen name="Tracks" component={Tracks as any} />
+    <SearchStack.Screen name="ArtistDetails" component={ArtistDetails as any} />
+    <SearchStack.Screen name="AlbumDetails" component={AlbumDetails as any} />
+    <SearchStack.Screen name="Filter" component={Filter as any} />
+  </SearchStack.Navigator>
+);
+
 const MainNavigator: FC = () => (
   <MainStack.Navigator screenOptions={{headerShown: false}}>
     <MainStack.Screen name="Tabs" component={Tabs} />
-    <MainStack.Screen name="Albums" component={Albums as any} />
-    <MainStack.Screen name="Artists" component={Artists} />
-    <MainStack.Screen name="Tracks" component={Tracks as any} />
-    <MainStack.Screen name="ArtistDetails" component={ArtistDetails as any} />
-    <MainStack.Screen name="AlbumDetails" component={AlbumDetails as any} />
-    <MainStack.Screen name="Filter" component={Filter as any} />
-    <MainStack.Screen name="Settings" component={Settings as any} />
   </MainStack.Navigator>
 );
 

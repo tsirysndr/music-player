@@ -6,6 +6,7 @@ import ArtistRow from '../../Components/ArtistRow';
 import TrackRow from '../../Components/TrackRow';
 import {Album, Track} from '../../Types';
 import AlbumRow from '../../Components/AlbumRow';
+import MiniPlayer from '../../Components/MiniPlayer';
 
 const Container = styled.View`
   flex: 1;
@@ -77,6 +78,7 @@ const Filter: FC<FilterProps> = props => {
           />
         )}
       </Container>
+      <MiniPlayer />
     </>
   );
 };

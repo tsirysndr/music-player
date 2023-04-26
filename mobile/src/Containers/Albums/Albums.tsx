@@ -20,13 +20,11 @@ export type AlbumsProps = {
 };
 
 const Albums: FC<AlbumsProps> = props => {
-  const {albums, onGoBack, fetchMore, onPressAlbum, onSearch, onFilter} = props;
+  const {albums, onGoBack, fetchMore, onSearch, onFilter} = props;
 
   const renderItem = useCallback(
-    ({item}: {item: Album}) => (
-      <AlbumRow album={item} onPressAlbum={() => onPressAlbum(item)} />
-    ),
-    [onPressAlbum],
+    ({item}: {item: Album}) => <AlbumRow album={item} />,
+    [],
   );
 
   return (

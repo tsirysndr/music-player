@@ -1,3 +1,3 @@
-import AlbumRow from './AlbumRow';
+import AlbumRow from './AlbumRowWithData';
 
 export default AlbumRow;

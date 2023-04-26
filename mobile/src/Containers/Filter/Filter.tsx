@@ -33,13 +33,10 @@ const Filter: FC<FilterProps> = props => {
     artists,
     tracks,
     onPressArtist,
-    onPressAlbum,
   } = props;
   const renderAlbum = useCallback(
-    ({item}: {item: Album}) => (
-      <AlbumRow album={item} onPressAlbum={() => onPressAlbum(item)} />
-    ),
-    [onPressAlbum],
+    ({item}: {item: Album}) => <AlbumRow album={item} />,
+    [],
   );
   const renderTrack = ({item}: {item: Track}) => <TrackRow track={item} />;
   const renderArtist = useCallback(

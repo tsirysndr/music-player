@@ -4,6 +4,7 @@ import {useRecoilState} from 'recoil';
 import {currentTrackState} from '../CurrentTrack/CurrentTrackState';
 import {Track} from '../../Types';
 import {playQueueState} from '../PlayQueue/PlayQueueState';
+import {contextMenuState} from '../ContextMenu/ContextMenuState';
 
 export type TrackRowWithDataProps = {
   track: Track;
@@ -11,6 +12,7 @@ export type TrackRowWithDataProps = {
 };
 
 const TrackRowWithData: FC<TrackRowWithDataProps> = ({track, showAlbum}) => {
+  const [contextMenu, setContextMenu] = useRecoilState(contextMenuState);
   const [currentTrack, setCurrentTrack] = useRecoilState(currentTrackState);
   const [playQueue, setPlayQueue] = useRecoilState(playQueueState);
   const onPlay = (item: Track) => {
@@ -21,12 +23,21 @@ const TrackRowWithData: FC<TrackRowWithDataProps> = ({track, showAlbum}) => {
       position: playQueue.previousTracks.length,
     });
   };
+  const onContextMenu = (item: Track) => {
+    setContextMenu({
+      ...contextMenu,
+      visible: true,
+      type: 'track',
+      item,
+    });
+  };
   return (
     <TrackRow
       track={track}
       currentTrack={currentTrack}
       onPlay={onPlay}
       showAlbum={showAlbum}
+      onPressContextMenu={onContextMenu}
     />
   );
 };

@@ -56,10 +56,11 @@ const Button = styled.TouchableOpacity`
 export type AlbumRowProps = {
   album: Album;
   onPressAlbum: () => void;
+  onPressContextMenu: (album: Album) => void;
 };
 
 const AlbumRow: FC<AlbumRowProps> = props => {
-  const {album, onPressAlbum} = props;
+  const {album, onPressAlbum, onPressContextMenu} = props;
   const cover = useCover(album.cover);
   return (
     <TouchableWithoutFeedback onPress={onPressAlbum}>
@@ -78,7 +79,7 @@ const AlbumRow: FC<AlbumRowProps> = props => {
             {album.artist}
           </Artist>
         </AlbumInfo>
-        <Button>
+        <Button onPress={() => onPressContextMenu(album)}>
           <Ionicons name="ellipsis-vertical" color={'#ffffff99'} size={18} />
         </Button>
       </Container>

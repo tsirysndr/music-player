@@ -4,6 +4,7 @@ import styled, {css} from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useCover} from '../../Hooks/useCover';
+import ContextMenu from '../ContextMenu';
 
 const Container = styled.View`
   height: 80px;
@@ -84,47 +85,55 @@ export type TrackRowProps = {
   currentTrack?: Track;
   onPlay: (item: Track) => void;
   showAlbum?: boolean;
+  onPressContextMenu: (track: Track) => void;
 };
 
 const TrackRow: FC<TrackRowProps> = props => {
-  const {track, currentTrack, onPlay, showAlbum} = props;
+  const {track, currentTrack, onPlay, showAlbum, onPressContextMenu} = props;
   const cover = useCover(track.cover);
   return (
-    <TrackWrapper>
-      <TouchableTrack onPress={() => onPlay(track)}>
-        <Container>
-          {showAlbum && (
-            <>
-              {track.cover && <Cover source={{uri: cover}} />}
-              {!track.cover && (
-                <NoAlbumCover>
-                  <Feather name="disc" size={40} color="#a7a7a9" />
-                </NoAlbumCover>
-              )}
-            </>
-          )}
-          {!showAlbum && (
-            <TrackNumberWrapper>
-              <TrackNumber>{track.trackNumber}</TrackNumber>
-            </TrackNumberWrapper>
-          )}
-          <AlbumInfo>
-            <Title
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              active={track.id === currentTrack?.id}>
-              {track.title}
-            </Title>
-            <Artist numberOfLines={1} ellipsizeMode="tail">
-              {track.artist}
-            </Artist>
-          </AlbumInfo>
-          <Button>
-            <Ionicons name="ellipsis-vertical" color={'#ffffff99'} size={18} />
-          </Button>
-        </Container>
-      </TouchableTrack>
-    </TrackWrapper>
+    <>
+      <TrackWrapper>
+        <TouchableTrack onPress={() => onPlay(track)}>
+          <Container>
+            {showAlbum && (
+              <>
+                {track.cover && <Cover source={{uri: cover}} />}
+                {!track.cover && (
+                  <NoAlbumCover>
+                    <Feather name="disc" size={40} color="#a7a7a9" />
+                  </NoAlbumCover>
+                )}
+              </>
+            )}
+            {!showAlbum && (
+              <TrackNumberWrapper>
+                <TrackNumber>{track.trackNumber}</TrackNumber>
+              </TrackNumberWrapper>
+            )}
+            <AlbumInfo>
+              <Title
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                active={track.id === currentTrack?.id}>
+                {track.title}
+              </Title>
+              <Artist numberOfLines={1} ellipsizeMode="tail">
+                {track.artist}
+              </Artist>
+            </AlbumInfo>
+            <Button onPress={() => onPressContextMenu(track)}>
+              <Ionicons
+                name="ellipsis-vertical"
+                color={'#ffffff99'}
+                size={18}
+              />
+            </Button>
+          </Container>
+        </TouchableTrack>
+      </TrackWrapper>
+      <ContextMenu />
+    </>
   );
 };
 

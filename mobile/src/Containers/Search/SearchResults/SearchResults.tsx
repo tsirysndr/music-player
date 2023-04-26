@@ -21,7 +21,6 @@ const SearchResults: FC<SearchResultsProps> = ({
   currentFilter,
   results,
   query,
-  onPressAlbum,
   onPressArtist,
 }) => {
   return (
@@ -35,9 +34,7 @@ const SearchResults: FC<SearchResultsProps> = ({
       {currentFilter === 'Albums' && query !== '' && (
         <FlatList
           data={results.albums}
-          renderItem={({item}) => (
-            <AlbumRow album={item} onPressAlbum={() => onPressAlbum(item)} />
-          )}
+          renderItem={({item}) => <AlbumRow album={item} />}
         />
       )}
       {currentFilter === 'Artists' && query !== '' && (

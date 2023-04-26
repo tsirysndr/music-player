@@ -15,10 +15,12 @@ export type AlbumsProps = {
   fetchMore: () => void;
   onPressAlbum: (album: Album) => void;
   albums: Album[];
+  onSearch: () => void;
+  onFilter: () => void;
 };
 
 const Albums: FC<AlbumsProps> = props => {
-  const {albums, onGoBack, fetchMore, onPressAlbum} = props;
+  const {albums, onGoBack, fetchMore, onPressAlbum, onSearch, onFilter} = props;
 
   const renderItem = useCallback(
     ({item}: {item: Album}) => (
@@ -33,8 +35,8 @@ const Albums: FC<AlbumsProps> = props => {
         <Header
           title="Albums"
           onGoBack={onGoBack}
-          onSearch={() => {}}
-          onFilter={() => {}}
+          onSearch={onSearch}
+          onFilter={onFilter}
         />
         <FlatList
           data={albums}

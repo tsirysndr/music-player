@@ -50,6 +50,8 @@ const TracksWithData: FC<Props> = ({route}) => {
         albumId: track.album.id,
       }))}
       fetchMore={params?.tracks ? () => {} : handleFetchMore}
+      onSearch={() => navigation.navigate('Filter', {type: 'track'})}
+      onFilter={() => {}}
     />
   );
 };

@@ -44,6 +44,8 @@ const ArtistsWithData: FC = () => {
       }))}
       fetchMore={handleFetchMore}
       onPressArtist={onPressArtist}
+      onSearch={() => navigation.navigate('Filter', {type: 'artist'})}
+      onFilter={() => {}}
     />
   );
 };

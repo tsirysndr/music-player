@@ -15,18 +15,21 @@ export type ArtistsProps = {
   artists: Artist[];
   fetchMore: () => void;
   onPressArtist: (artist: Artist) => void;
+  onSearch: () => void;
+  onFilter: () => void;
 };
 
 const Artists: FC<ArtistsProps> = props => {
-  const {artists, onGoBack, fetchMore, onPressArtist} = props;
+  const {artists, onGoBack, fetchMore, onPressArtist, onSearch, onFilter} =
+    props;
   return (
     <>
       <Container>
         <Header
           title="Artists"
           onGoBack={onGoBack}
-          onSearch={() => {}}
-          onFilter={() => {}}
+          onSearch={onSearch}
+          onFilter={onFilter}
         />
         <FlatList
           data={artists}

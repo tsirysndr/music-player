@@ -16,6 +16,8 @@ import Artists from '../Containers/Artists';
 import Tracks from '../Containers/Tracks';
 import ArtistDetails from '../Containers/ArtistDetails';
 import AlbumDetails from '../Containers/AlbumDetails';
+import Settings from '../Containers/Settings';
+import Filter from '../Containers/Filter';
 
 const RootStack = createStackNavigator();
 const MainStack = createStackNavigator();
@@ -31,6 +33,7 @@ export type MainStackParamList = {
   Tracks: {tracks?: any[]};
   ArtistDetails: {artist: any};
   AlbumDetails: {album: any};
+  Filter: {type: string; tracks?: any[]; albums?: any[]};
 };
 
 const TabBarHomeIcon: FC<{color: string}> = ({color}) => (
@@ -100,6 +103,8 @@ const MainNavigator: FC = () => (
     <MainStack.Screen name="Tracks" component={Tracks as any} />
     <MainStack.Screen name="ArtistDetails" component={ArtistDetails as any} />
     <MainStack.Screen name="AlbumDetails" component={AlbumDetails as any} />
+    <MainStack.Screen name="Filter" component={Filter as any} />
+    <MainStack.Screen name="Settings" component={Settings as any} />
   </MainStack.Navigator>
 );
 

@@ -42,15 +42,25 @@ const NoTitle = styled.View`
   flex: 1;
 `;
 
+const SearchInput = styled.TextInput`
+  height: 50px;
+  width: 100%;
+  color: #fff;
+  font-family: Gilroy-Medium;
+  font-size: 16px;
+`;
+
 export type HeaderProps = {
   onGoBack: () => void;
   onSearch?: () => void;
   onFilter?: () => void;
+  onKeyPress?: (text: string) => void;
   title?: string;
+  placeholder?: string;
 };
 
 const Header: FC<HeaderProps> = props => {
-  const {onGoBack, onSearch, onFilter, title} = props;
+  const {onGoBack, onSearch, onFilter, title, placeholder, onKeyPress} = props;
   return (
     <Container>
       <BackButton onPress={onGoBack}>
@@ -67,6 +77,13 @@ const Header: FC<HeaderProps> = props => {
         <FilterButton onPress={onFilter}>
           <MaterialIcons name="filter-list" size={24} color="#fff" />
         </FilterButton>
+      )}
+      {placeholder && (
+        <SearchInput
+          placeholder={placeholder}
+          autoFocus={true}
+          onChangeText={onKeyPress}
+        />
       )}
     </Container>
   );

@@ -51,6 +51,8 @@ const AlbumsWithData: FC<Props> = ({route}) => {
       onPressAlbum={(album: Album) =>
         navigation.navigate('AlbumDetails', {album})
       }
+      onSearch={() => navigation.navigate('Filter', {type: 'album'})}
+      onFilter={() => {}}
     />
   );
 };

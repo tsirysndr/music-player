@@ -14,10 +14,12 @@ export type TracksProps = {
   onGoBack: () => void;
   tracks: Track[];
   fetchMore: () => void;
+  onSearch: () => void;
+  onFilter: () => void;
 };
 
 const Tracks: FC<TracksProps> = props => {
-  const {tracks, onGoBack, fetchMore} = props;
+  const {tracks, onGoBack, fetchMore, onSearch, onFilter} = props;
   const renderItem = useCallback(
     ({item}: {item: Track}) => <TrackRow track={item} />,
     [],
@@ -28,8 +30,8 @@ const Tracks: FC<TracksProps> = props => {
         <Header
           title="Tracks"
           onGoBack={onGoBack}
-          onSearch={() => {}}
-          onFilter={() => {}}
+          onSearch={onSearch}
+          onFilter={onFilter}
         />
         <FlatList
           data={tracks}

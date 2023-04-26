@@ -49,7 +49,7 @@ impl TrackRepository {
             Some(offset) => track_entity::Entity::find().offset(offset).limit(limit),
             None => track_entity::Entity::find().limit(limit),
         };
-        let results = match filter {
+        let results = match filter.clone() {
             Some(filter) => {
                 if filter.is_empty() {
                     query
@@ -80,11 +80,31 @@ impl TrackRepository {
             None => track_entity::Entity::find().limit(limit),
         };
 
-        let albums: Vec<(track_entity::Model, Option<album_entity::Model>)> = query
-            .order_by_asc(track_entity::Column::Title)
-            .find_also_related(album_entity::Entity)
-            .all(&self.db)
-            .await?;
+        let albums: Vec<(track_entity::Model, Option<album_entity::Model>)> = match filter {
+            Some(filter) => {
+                if filter.is_empty() {
+                    query
+                        .order_by_asc(track_entity::Column::Title)
+                        .find_also_related(album_entity::Entity)
+                        .all(&self.db)
+                        .await?
+                } else {
+                    query
+                        .filter(track_entity::Column::Title.like(format!("%{}%", filter).as_str()))
+                        .order_by_asc(track_entity::Column::Title)
+                        .find_also_related(album_entity::Entity)
+                        .all(&self.db)
+                        .await?
+                }
+            }
+            None => {
+                query
+                    .order_by_asc(track_entity::Column::Title)
+                    .find_also_related(album_entity::Entity)
+                    .all(&self.db)
+                    .await?
+            }
+        };
 
         let albums: Vec<Option<album_entity::Model>> = albums
             .into_iter()

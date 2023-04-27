@@ -1,6 +1,6 @@
 [package]
 name = "music-player-client"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -16,7 +16,7 @@ envtestkit = "1.1.2"
 
 [dependencies.music-player-server]
 path = "../server"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-settings]
 path = "../settings"
@@ -32,7 +32,7 @@ version = "0.1.10"
 
 [dev-dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.4"
+version = "0.1.10"
 
 [dev-dependencies.music-player-tracklist]
 path = "../tracklist"

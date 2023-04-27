@@ -9,7 +9,7 @@ use music_player_storage::{
     searcher::Searcher,
     Database,
 };
-use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
+use music_player_types::types::{RemoteCoverUrl, RemoteTrackUrl};
 use sea_orm::{ActiveModelTrait, ActiveValue};
 use tokio::sync::Mutex;
 
@@ -56,9 +56,13 @@ impl LibraryQuery {
                 .collect());
         }
 
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
-        let results = TrackRepository::new(db.lock().await.get_connection())
-            .find_all(filter, 100)
+        let db = ctx.data::<Database>().unwrap();
+        let results = TrackRepository::new(db.get_connection())
+            .find_all(
+                filter,
+                Some(offset.unwrap_or(0) as u64),
+                limit.unwrap_or(100) as u64,
+            )
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -99,10 +103,10 @@ impl LibraryQuery {
                 .collect());
         }
 
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
 
-        let results = ArtistRepository::new(db.lock().await.get_connection())
-            .find_all(filter)
+        let results = ArtistRepository::new(db.get_connection())
+            .find_all(filter, offset.map(|x| x as u64), limit.map(|x| x as u64))
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -144,10 +148,10 @@ impl LibraryQuery {
                 .collect());
         }
 
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
 
-        let results = AlbumRepository::new(db.lock().await.get_connection())
-            .find_all(filter)
+        let results = AlbumRepository::new(db.get_connection())
+            .find_all(filter, offset.map(|x| x as u64), limit.map(|x| x as u64))
             .await?;
 
         Ok(results.into_iter().map(Into::into).collect())
@@ -175,11 +179,9 @@ impl LibraryQuery {
                 .with_remote_cover_url(base_url.as_str()));
         }
 
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
 
-        let track = TrackRepository::new(db.lock().await.get_connection())
-            .find(&id)
-            .await?;
+        let track = TrackRepository::new(db.get_connection()).find(&id).await?;
 
         Ok(track.into())
     }
@@ -207,11 +209,9 @@ impl LibraryQuery {
                 .into());
         }
 
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
 
-        let artist = ArtistRepository::new(db.lock().await.get_connection())
-            .find(&id)
-            .await?;
+        let artist = ArtistRepository::new(db.get_connection()).find(&id).await?;
 
         Ok(artist.into())
     }
@@ -239,19 +239,15 @@ impl LibraryQuery {
                 .with_remote_track_url(base_url.as_str()));
         }
 
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
+        let db = ctx.data::<Database>().unwrap();
 
-        let album = AlbumRepository::new(db.lock().await.get_connection())
-            .find(&id)
-            .await?;
+        let album = AlbumRepository::new(db.get_connection()).find(&id).await?;
 
         Ok(album.into())
     }
 
     async fn search(&self, ctx: &Context<'_>, keyword: String) -> Result<SearchResult, Error> {
-        let db = ctx.data::<Arc<Mutex<Database>>>().unwrap();
         let searcher = ctx.data::<Arc<Mutex<Searcher>>>().unwrap();
-        let mut db = db.lock().await;
         let indexer = searcher.lock().await;
         let artists = indexer.artist.search(&keyword)?;
         let albums = indexer.album.search(&keyword)?;

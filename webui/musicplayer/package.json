@@ -8,6 +8,7 @@
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
     "@n8tb1t/use-scroll-position": "^2.0.3",
+    "@rescript/react": "^0.11.0",
     "@styled-icons/bootstrap": "^10.46.0",
     "@styled-icons/evaicons-outline": "^10.46.0",
     "@styled-icons/evil": "^10.46.0",
@@ -55,7 +56,10 @@
     "eject": "react-scripts eject",
     "storybook": "start-storybook -p 6007 -s public",
     "build-storybook": "build-storybook -s public",
-    "graphql:generate": "graphql-codegen --config codegen.yml"
+    "graphql:generate": "graphql-codegen --config codegen.yml",
+    "res:clean": "rescript clean",
+    "res:build": "rescript build",
+    "res:watch": "rescript build -w"
   },
   "eslintConfig": {
     "extends": [
@@ -105,9 +109,11 @@
     "@types/react-lazy-load-image-component": "^1.5.2",
     "babel-plugin-named-exports-order": "^0.0.2",
     "cross-env": "^7.0.3",
+    "gentype": "^4.5.0",
     "msw": "^0.47.4",
     "msw-storybook-addon": "^1.6.3",
     "prop-types": "^15.8.1",
+    "rescript": "^10.1.4",
     "webpack": "^5.75.0"
   }
 }

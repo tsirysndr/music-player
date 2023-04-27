@@ -128,10 +128,10 @@ fn handle_escape(app: &mut App) {
     }
 }
 
-fn handle_jump_to_album(app: &mut App) {}
+fn handle_jump_to_album(_app: &mut App) {}
 
-fn handle_jump_to_artist(app: &mut App) {}
+fn handle_jump_to_artist(_app: &mut App) {}
 
-fn handle_jump_to_artist_album(app: &mut App) {}
+fn handle_jump_to_artist_album(_app: &mut App) {}
 
-fn handle_jump_to_context(app: &mut App) {}
+fn handle_jump_to_context(_app: &mut App) {}

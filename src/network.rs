@@ -179,19 +179,19 @@ impl<'a> Network<'a> {
         Ok(())
     }
 
-    async fn get_album_tracks(&mut self, id: String) -> Result<(), Error> {
+    async fn get_album_tracks(&mut self, _id: String) -> Result<(), Error> {
         todo!()
     }
 
-    async fn add_item_to_queue(&mut self, id: String) -> Result<(), Error> {
+    async fn add_item_to_queue(&mut self, _id: String) -> Result<(), Error> {
         todo!()
     }
 
-    async fn shuffle(&mut self, enable: bool) -> Result<(), Error> {
+    async fn shuffle(&mut self, _enable: bool) -> Result<(), Error> {
         todo!()
     }
 
-    async fn repeat(&mut self, enable: bool) -> Result<(), Error> {
+    async fn repeat(&mut self, _enable: bool) -> Result<(), Error> {
         todo!()
     }
 

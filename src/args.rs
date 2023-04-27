@@ -120,10 +120,10 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("playlist") {
-        let mut client = PlaylistClient::new(settings.host.clone(), settings.port).await?;
+        let _client = PlaylistClient::new(settings.host.clone(), settings.port).await?;
 
         if let Some(matches) = matches.subcommand_matches("add") {
-            let id = matches.value_of("id").unwrap();
+            let _id = matches.value_of("id").unwrap();
 
             return Ok(());
         }
@@ -133,19 +133,19 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         }
 
         if let Some(matches) = matches.subcommand_matches("clear") {
-            let id = matches.value_of("id");
+            let _id = matches.value_of("id");
 
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("play") {
-            let id = matches.value_of("id");
+            let _id = matches.value_of("id");
 
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("remove") {
-            let id = matches.value_of("id").unwrap();
+            let _id = matches.value_of("id").unwrap();
 
             return Ok(());
         }
@@ -190,13 +190,13 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         }
 
         if let Some(matches) = matches.subcommand_matches("remove") {
-            let song = matches.value_of("song").unwrap();
+            let _song = matches.value_of("song").unwrap();
 
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("clear") {
-            let all = matches.is_present("all");
+            let _all = matches.is_present("all");
 
             return Ok(());
         }
@@ -218,7 +218,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("search") {
-        let client = LibraryClient::new(settings.host.clone(), settings.port).await?;
+        let _client = LibraryClient::new(settings.host.clone(), settings.port).await?;
 
         let query = matches.value_of("query").unwrap();
         todo!("search for {}", query);

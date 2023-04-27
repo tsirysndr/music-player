@@ -1,0 +1,41 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Gilroy-Bold.ttf",
+      "sha1": "41974af8909566e475240a2754b99adb1514f12b"
+    },
+    {
+      "path": "assets/fonts/Gilroy-ExtraBold.ttf",
+      "sha1": "12ce8c1c784d526b42478e2146c7df1e081c016b"
+    },
+    {
+      "path": "assets/fonts/Gilroy-Light.ttf",
+      "sha1": "8bcf41010fb1d9e92f4cdb6aa6b21eb56f676d29"
+    },
+    {
+      "path": "assets/fonts/Gilroy-Medium.ttf",
+      "sha1": "559519462fb59d81780a3bef29423fba23157926"
+    },
+    {
+      "path": "assets/fonts/Gilroy-Regular.ttf",
+      "sha1": "68c1ff568d37ce10f692a31e6639c44ae9490dcb"
+    },
+    {
+      "path": "assets/fonts/Gilroy-SemiBold.ttf",
+      "sha1": "c0709f3009db3cc2d8bd74fca39f3dfe885806f0"
+    },
+    {
+      "path": "assets/fonts/Graphik-Light.ttf",
+      "sha1": "7edc8fa58d23cf2b9855bb28872f25ef0762c635"
+    },
+    {
+      "path": "assets/fonts/Graphik-Medium.ttf",
+      "sha1": "67192f178afa150391399b199e695cc0c116ca85"
+    },
+    {
+      "path": "assets/fonts/Graphik-Regular.ttf",
+      "sha1": "aaca314761a7aee5db514e783a3d593da5e36e82"
+    }
+  ]
+}

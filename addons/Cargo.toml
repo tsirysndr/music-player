@@ -1,6 +1,6 @@
 [package]
 name = "music-player-addons"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -14,7 +14,7 @@ version = "0.1.5"
 
 [dependencies.music-player-client]
 path = "../client"
-version = "0.1.4"
+version = "0.1.6"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"

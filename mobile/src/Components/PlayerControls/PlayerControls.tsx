@@ -6,7 +6,7 @@ import {PlayerState} from '../../Types';
 
 const Container = styled.View`
   flex: 1;
-  width: 93%;
+  width: 100%;
 `;
 
 const Time = styled.Text`

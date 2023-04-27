@@ -122,7 +122,6 @@ const ContextMenu: FC<ContextMenuProps> = props => {
   return (
     <Modal
       isVisible={isVisible}
-      backdropOpacity={0.03}
       onBackdropPress={onClose}
       onSwipeComplete={onClose}
       swipeDirection={['down']}

@@ -18,7 +18,6 @@ import ArtistDetails from '../Containers/ArtistDetails';
 import AlbumDetails from '../Containers/AlbumDetails';
 import Settings from '../Containers/Settings';
 import Filter from '../Containers/Filter';
-import ContextMenu from '../Components/ContextMenu';
 
 const RootStack = createStackNavigator();
 const MainStack = createStackNavigator();
@@ -146,10 +145,9 @@ const AppNavigator: FC = () => (
           headerShown: false,
           gestureEnabled: true,
           animationEnabled: true,
-          presentation: 'transparentModal',
+          presentation: 'modal',
         }}>
         <RootStack.Screen name="Player" component={Player} />
-        <RootStack.Screen name="ContextMenu" component={ContextMenu} />
       </RootStack.Group>
     </RootStack.Navigator>
   </NavigationContainer>

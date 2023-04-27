@@ -7,6 +7,7 @@ import Artists from '../../Components/Artists';
 import Songs from '../../Components/Songs';
 import MiniPlayer from '../../Components/MiniPlayer';
 import {useNavigation} from '@react-navigation/native';
+import ContextMenu from '../../Components/ContextMenu';
 
 const MainContainer = styled.View`
   flex: 1;
@@ -50,12 +51,12 @@ const Home: FC = () => {
       <Container showsVerticalScrollIndicator={false}>
         <Header>
           <Title>Library</Title>
-          <Settings>
-            <TouchableWithoutFeedback
-              onPress={() => navigation.navigate('Settings')}>
+          <TouchableWithoutFeedback
+            onPress={() => navigation.navigate('Settings')}>
+            <Settings>
               <Ionicons name="ios-settings-outline" size={24} color="#bdb9b9" />
-            </TouchableWithoutFeedback>
-          </Settings>
+            </Settings>
+          </TouchableWithoutFeedback>
         </Header>
         <Albums />
         <Artists />
@@ -64,6 +65,7 @@ const Home: FC = () => {
       <MiniPlayerWrapper>
         <MiniPlayer />
       </MiniPlayerWrapper>
+      <ContextMenu />
     </MainContainer>
   );
 };

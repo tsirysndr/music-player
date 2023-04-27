@@ -3,7 +3,7 @@ import {Album, Track} from '../../Types';
 
 export const contextMenuState = atom<{
   visible: boolean;
-  type: string;
+  type: 'album' | 'track' | 'artist' | '';
   item?: Album | Track;
 }>({
   key: 'contextMenuState',

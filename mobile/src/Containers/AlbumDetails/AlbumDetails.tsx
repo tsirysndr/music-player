@@ -3,10 +3,12 @@ import React, {FC} from 'react';
 import MiniPlayer from '../../Components/MiniPlayer';
 import {useCover} from '../../Hooks/useCover';
 import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import DefaultLinearGradient from 'react-native-linear-gradient';
 import Shuffle from '../../Components/Icons/Shuffle';
 import Play from '../../Components/Icons/Play';
 import TrackRow from '../../Components/TrackRow';
+import {Album} from '../../Types';
 
 const Container = styled.View`
   flex: 1;
@@ -26,6 +28,17 @@ const BackButton = styled.TouchableOpacity`
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 1;
+`;
+
+const ContextButton = styled.TouchableOpacity`
+  width: 50px;
+  height: 50px;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  right: 0;
   z-index: 1;
 `;
 
@@ -140,16 +153,20 @@ const AlbumInfo = styled.View`
 export type AlbumDetailsProps = {
   album: any;
   onGoBack: () => void;
+  onContextMenu: (album: Album) => void;
 };
 
 const AlbumDetails: FC<AlbumDetailsProps> = props => {
-  const {album, onGoBack} = props;
+  const {album, onGoBack, onContextMenu} = props;
   const cover = useCover(album.cover);
   return (
     <Container>
       <BackButton onPress={onGoBack}>
         <Feather name="arrow-left" size={24} color="#fff" />
       </BackButton>
+      <ContextButton onPress={() => onContextMenu(album)}>
+        <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
+      </ContextButton>
       <ScrollContainer>
         <Container>
           <>

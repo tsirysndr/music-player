@@ -4,11 +4,15 @@ import AlbumDetails from './AlbumDetails';
 import {MainStackParamList} from '../../Navigation/AppNavigation';
 import {useNavigation} from '@react-navigation/native';
 import {useGetAlbumQuery} from '../../Hooks/GraphQL';
+import {Album} from '../../Types';
+import {contextMenuState} from '../../Components/ContextMenu/ContextMenuState';
+import {useRecoilState} from 'recoil';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'AlbumDetails'>;
 
 const AlbumDetailsWithData: FC<Props> = ({route}) => {
   const navigation = useNavigation<any>();
+  const [contextMenu, setContextMenu] = useRecoilState(contextMenuState);
   const {
     params: {album},
   } = route;
@@ -18,6 +22,15 @@ const AlbumDetailsWithData: FC<Props> = ({route}) => {
   });
   const tracks = !loading && data ? data.album.tracks : [];
   const onGoBack = () => navigation.goBack();
+  const onContextMenu = (item: Album) => {
+    setContextMenu({
+      ...contextMenu,
+      visible: true,
+      type: 'album',
+      enablePlayNext: true,
+      item,
+    });
+  };
   return (
     <AlbumDetails
       album={{
@@ -28,6 +41,7 @@ const AlbumDetailsWithData: FC<Props> = ({route}) => {
         })),
       }}
       onGoBack={onGoBack}
+      onContextMenu={onContextMenu}
     />
   );
 };

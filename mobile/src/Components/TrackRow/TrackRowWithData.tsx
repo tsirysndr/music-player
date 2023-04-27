@@ -29,6 +29,7 @@ const TrackRowWithData: FC<TrackRowWithDataProps> = ({track, showAlbum}) => {
       visible: true,
       type: 'track',
       item,
+      enablePlayNext: true,
     });
   };
   return (

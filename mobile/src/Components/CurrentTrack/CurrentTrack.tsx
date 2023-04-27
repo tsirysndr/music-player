@@ -1,7 +1,6 @@
 import React, {FC, useEffect} from 'react';
 import styled from '@emotion/native';
 import Feather from 'react-native-vector-icons/Feather';
-import FontAwesome from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {Dimensions} from 'react-native';
 import DefaultPagerView from 'react-native-pager-view';
@@ -39,7 +38,7 @@ const TrackRow = styled.View`
   justify-content: space-between;
   height: 120px;
   margin-left: 30px;
-  margin-right: 30px;
+  margin-right: 15px;
 `;
 
 const TrackInfo = styled.View`
@@ -60,12 +59,7 @@ const TrackArtist = styled.Text`
   margin-top: 3px;
 `;
 
-const Button = styled.TouchableOpacity`
-  height: 40px;
-  width: 40px;
-  justify-content: center;
-  align-items: flex-end;
-`;
+const Button = styled.TouchableOpacity``;
 
 const PagerView = styled(DefaultPagerView)<{height: number}>`
   width: 100%;
@@ -75,6 +69,13 @@ const PagerView = styled(DefaultPagerView)<{height: number}>`
 `;
 
 const CoverWrapper = styled.View`
+  align-items: center;
+  justify-content: center;
+`;
+
+const IconWrapper = styled.View`
+  height: 40px;
+  width: 40px;
   align-items: center;
   justify-content: center;
 `;
@@ -104,11 +105,13 @@ export type CurrentTrackProps = {
   initialPage: number;
   tracks: any;
   onLike: () => void;
+  onContextMenu: (item: Track) => void;
 };
 
 const CurrentTrack: FC<CurrentTrackProps> = props => {
   const screenWidth = Math.round(Dimensions.get('window').width);
-  const {initialPage, onPageSelected, track, tracks, onLike} = props;
+  const {initialPage, onPageSelected, track, tracks, onLike, onContextMenu} =
+    props;
   useEffect(() => {
     (pagerRef.current as any).setPage(initialPage);
   }, [initialPage]);
@@ -132,16 +135,22 @@ const CurrentTrack: FC<CurrentTrackProps> = props => {
           </TrackInfo>
           {!track?.liked && (
             <Button onPress={onLike}>
-              <Ionicons name="heart-outline" size={24} color="#cbcbcb" />
+              <IconWrapper>
+                <Ionicons name="heart-outline" size={24} color="#cbcbcb" />
+              </IconWrapper>
             </Button>
           )}
           {track?.liked && (
             <Button onPress={onLike}>
-              <Ionicons name="heart" size={24} color="#ab28fc" />
+              <IconWrapper>
+                <Ionicons name="heart" size={24} color="#ab28fc" />
+              </IconWrapper>
             </Button>
           )}
-          <Button>
-            <FontAwesome name="ellipsis-v" size={20} color="#cbcbcb" />
+          <Button onPress={() => onContextMenu(track!)}>
+            <IconWrapper>
+              <Ionicons name="ellipsis-vertical" size={20} color="#cbcbcb" />
+            </IconWrapper>
           </Button>
         </TrackRow>
       </>

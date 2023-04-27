@@ -3,8 +3,10 @@ import CurrentTrack from './CurrentTrack';
 import {useRecoilState} from 'recoil';
 import {currentTrackState} from './CurrentTrackState';
 import {playQueueState} from '../PlayQueue/PlayQueueState';
+import {contextMenuState} from '../ContextMenu/ContextMenuState';
 
 const CurrentTrackWithData = () => {
+  const [contextMenu, setContextMenu] = useRecoilState(contextMenuState);
   const [currentTrack, setCurrentTrack] = useRecoilState(currentTrackState);
   const [{previousTracks, nextTracks, position}, setPlayQueue] =
     useRecoilState(playQueueState);
@@ -27,11 +29,22 @@ const CurrentTrackWithData = () => {
     });
   };
 
+  const onContextMenu = () => {
+    setContextMenu({
+      ...contextMenu,
+      visible: true,
+      enablePlayNext: false,
+      type: 'track',
+      item: currentTrack,
+    });
+  };
+
   return (
     <CurrentTrack
       track={currentTrack}
       initialPage={initialPage}
       onPageSelected={onPageSelected}
+      onContextMenu={onContextMenu}
       tracks={tracks}
       onLike={onLike}
     />

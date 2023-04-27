@@ -59,6 +59,7 @@ const ContextMenuWithData: FC = () => {
       onClose={onClose}
       item={contextMenu.item}
       type={contextMenu.type}
+      enablePlayNext={contextMenu.enablePlayNext}
       onPlayNext={onPlayNext}
       onDownload={onDownload}
       onAddToPlaylist={onAddToPlaylist}

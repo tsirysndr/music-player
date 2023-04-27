@@ -91,6 +91,7 @@ export type ContextMenuProps = {
   onClose: () => void;
   item?: Artist | Album | Track;
   type: 'artist' | 'album' | 'track' | '';
+  enablePlayNext?: boolean;
   onPlayNext: (item: Album | Track) => void;
   onAddToPlaylist: (item: Album | Track) => void;
   onDownload: (item: Album | Track) => void;
@@ -109,6 +110,7 @@ const ContextMenu: FC<ContextMenuProps> = props => {
     onPlayNext,
     item,
     type,
+    enablePlayNext,
   } = props;
   const itemCover = {
     artist: (item as Artist)?.picture,
@@ -147,14 +149,16 @@ const ContextMenu: FC<ContextMenuProps> = props => {
           </MediaInfo>
         </MetadataRow>
         <Separator />
-        <Action onPress={() => onPlayNext(item as Album | Track)}>
-          <ActionWrapper>
-            <IconWrapper>
-              <MaterialIcons name="playlist-play" size={31} color="#ab28fc" />
-            </IconWrapper>
-            <ActionTitle>Play next</ActionTitle>
-          </ActionWrapper>
-        </Action>
+        {enablePlayNext && (
+          <Action onPress={() => onPlayNext(item as Album | Track)}>
+            <ActionWrapper>
+              <IconWrapper>
+                <MaterialIcons name="playlist-play" size={31} color="#ab28fc" />
+              </IconWrapper>
+              <ActionTitle>Play next</ActionTitle>
+            </ActionWrapper>
+          </Action>
+        )}
         {(type === 'track' || type === 'album') && (
           <>
             <Action onPress={() => onDownload(item as Album | Track)}>

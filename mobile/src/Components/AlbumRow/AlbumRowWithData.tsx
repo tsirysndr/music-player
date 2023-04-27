@@ -20,6 +20,7 @@ const AlbumRowWithData: FC<AlbumRowWithDataProps> = ({album}) => {
       ...contextMenu,
       visible: true,
       type: 'album',
+      enablePlayNext: true,
       item,
     });
   };

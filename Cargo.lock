@@ -4268,7 +4268,7 @@ dependencies = [
 
 [[package]]
 name = "music-player"
-version = "0.2.0-alpha.12"
+version = "0.2.0-alpha.13"
 dependencies = [
  "anyhow",
  "clap",
@@ -4522,7 +4522,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-settings"
-version = "0.1.6"
+version = "0.1.5"
 dependencies = [
  "config 0.13.3",
  "dirs",

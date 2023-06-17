@@ -11,7 +11,7 @@ fn read_settings() {
     env::remove_var("MUSIC_PLAYER_PORT");
     let settings = super::read_settings().unwrap();
     let mut tmp = PathBuf::new();
-    tmp.push("/tmp");
+    tmp.push("/tmp/audio");
     assert_eq!(settings.get_string("host").unwrap(), "0.0.0.0");
     assert_eq!(settings.get_int("port").unwrap(), 5051);
     assert_eq!(settings.get_int("ws_port").unwrap(), 5052);

@@ -52,13 +52,15 @@
             # Add additional build inputs here
             pkgs.pkgconfig
             pkgs.gnumake
-            pkgs.alsa-lib.dev
             pkgs.protobuf
             pkgs.zstd
           ] ++ lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
             pkgs.darwin.Security
+          ] ++ lib.optionals pkgs.stdenv.isLinux [
+            # Packages specific to Linux
+            pkgs.alsa-lib.dev
           ];
 
           # Additional environment variables can be set directly

@@ -29,10 +29,7 @@ fn read_settings() {
     );
     assert_eq!(
         settings.get_string("database_url").unwrap(),
-        format!(
-            "sqlite:{}/music-player/music-player.sqlite3",
-            dirs::config_dir().unwrap().to_str().unwrap()
-        )
+        "sqlite:///tmp/music-player.sqlite3"
     );
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");

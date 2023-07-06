@@ -56,6 +56,8 @@ Like [mpd](https://github.com/MusicPlayerDaemon/MPD) or [Mopidy](https://github.
 
 ## Installation
 
+Compiling from source, without Nix:
+
 ```bash
 # Install dependencies
 brew install protobuf # macOS
@@ -65,18 +67,35 @@ choco install protoc # Windows using Chocolatey Package Manager
 git clone https://github.com/tsirysndr/music-player.git
 cd music-player/webui/musicplayer
 nvm install # install node version specified in .nvmrc (optional on windows)
-npm install -g yarn
-yarn install && yarn build # build webui
+bun install && bun run build # build webui
 cd ../..
 cargo install --path .
 ```
 
-Note: Don't forget to add `~/.cargo/bin` to your `PATH` environment variable.
+With Nix:
+
+```bash
+git clone https://github.com/tsirysndr/music-player.git
+cd music-player
+nix develop --experimental-features "nix-command flakes"
+cd webui/musicplayer
+bun install && bun run build # build webui
+cd ../..
+cargo install --path .
+```
 
 ### macOS/Linux
 
+Using [Homebrew](https://brew.sh/):
+
 ```bash
 brew install tsirysndr/tap/musicplayer
+```
+
+Using [Nix](https://nixos.org/):
+
+```bash
+nix profile install --experimental-features "nix-command flakes" github:tsirysndr/music-player
 ```
 
 Or download the latest release for your platform [here](https://github.com/tsirysndr/music-player/releases).

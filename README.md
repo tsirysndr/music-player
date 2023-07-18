@@ -193,3 +193,12 @@ Open [http://localhost:5053/graphiql](http://localhost:5053/graphiql) in your br
 - [ ] Stream from DatPiff
 - [ ] Stream from Tidal
 - [ ] Stream from [MyVazo](https://myvazo.com/)
+
+## ✨ Star History
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=tsirysndr/music-player&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tsirysndr/music-player&type=Date" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tsirysndr/music-player&type=Date" />
+</picture>
+

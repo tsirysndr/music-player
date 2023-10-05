@@ -1,6 +1,9 @@
 ## Music Player (written in Rust)
 
 <p>
+  <a href="https://flakehub.com/flake/tsirysndr/music-player" target="_blank">
+    <img src="https://img.shields.io/endpoint?url=https://flakehub.com/f/tsirysndr/music-player/badge" />
+  </a>
   <a href="LICENSE" target="_blank">
     <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" />
   </a>

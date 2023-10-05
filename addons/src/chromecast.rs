@@ -257,7 +257,7 @@ impl<'a> Player for Chromecast<'a> {
         tracks: Vec<Track>,
         start_index: Option<i32>,
     ) -> Result<(), Error> {
-        let medias = tracks
+        let media = tracks
             .iter()
             .map(|track| Media {
                 content_id: track.uri.clone(),
@@ -289,12 +289,12 @@ impl<'a> Player for Chromecast<'a> {
         if let Some(cast_device) = &self.client {
             cast_device.media.queue_load(
                 transport_id,
-                medias.clone(),
+                media.clone(),
                 Some(start_index.unwrap_or(0)),
                 None,
             )?;
             println!("[chromecast] Tracks loaded");
-            println!("[chromecast] Playing track {:#?}", medias[0]);
+            println!("[chromecast] Playing track {:#?}", media[0]);
             return Ok(());
         }
 

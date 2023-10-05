@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 use music_player_addons::{
-    airplay::Airplay, chromecast::Chromecast, dlna::Dlna, kodi::Kodi, local::Local, Browseable,
+    airplay::Airplay, chromecast::Chromecast, dlna::Dlna, kodi::Kodi, local::Local, Browsable,
     Player,
 };
 use music_player_types::types::Device;
@@ -66,7 +66,7 @@ pub enum MutationType {
     Updated,
 }
 
-pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
+pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browsable + Send>>, Error> {
     let mut local: Local = device.clone().into();
     local.connect().await?;
     Ok(Some(Box::new(local)))

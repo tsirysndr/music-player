@@ -133,7 +133,7 @@ pub fn draw_input<B>(f: &mut Frame<B>, app: &App, layout_chunk: Rect)
 where
     B: Backend,
 {
-    // Check for the width and change the contraints accordingly
+    // Check for the width and change the constraints accordingly
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(100), Constraint::Percentage(10)].as_ref())
@@ -673,7 +673,7 @@ fn draw_table<B>(
     f: &mut Frame<B>,
     app: &App,
     layout_chunk: Rect,
-    table_layout: (&str, &TableHeader), // (title, header colums)
+    table_layout: (&str, &TableHeader), // (title, header columns)
     items: &[TableItem], // The nested vector must have the same length as the `header_columns`
     selected_index: usize,
     highlight_state: (bool, bool),

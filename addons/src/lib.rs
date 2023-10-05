@@ -31,7 +31,7 @@ pub trait LyricsAddon {
 }
 
 #[async_trait]
-pub trait Browseable {
+pub trait Browsable {
     async fn albums(
         &mut self,
         filter: Option<String>,
@@ -82,7 +82,7 @@ pub trait Player {
 }
 
 pub struct CurrentSourceDevice {
-    pub client: Option<Box<dyn Browseable + Send>>,
+    pub client: Option<Box<dyn Browsable + Send>>,
     pub source_device: Option<Device>,
 }
 
@@ -94,7 +94,7 @@ impl CurrentSourceDevice {
         }
     }
 
-    pub fn set_client(&mut self, client: Box<dyn Browseable + Send>) {
+    pub fn set_client(&mut self, client: Box<dyn Browsable + Send>) {
         self.client = Some(client);
     }
 
@@ -156,7 +156,7 @@ impl CurrentReceiverDevice {
 }
 
 pub struct CurrentDevice {
-    pub source: Option<Box<dyn Browseable + Send>>,
+    pub source: Option<Box<dyn Browsable + Send>>,
     pub receiver: Option<Box<dyn Player + Send>>,
     pub source_device: Option<Device>,
     pub receiver_device: Option<Device>,
@@ -172,7 +172,7 @@ impl CurrentDevice {
         }
     }
 
-    pub fn set_source(&mut self, source: Box<dyn Browseable + Send>) {
+    pub fn set_source(&mut self, source: Box<dyn Browsable + Send>) {
         self.source = Some(source);
     }
 

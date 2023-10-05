@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Addon, Browseable, Player};
+use crate::{Addon, Browsable, Player};
 use anyhow::Error;
 use async_trait::async_trait;
 use music_player_tracklist::Tracklist;
@@ -77,7 +77,7 @@ impl Dlna {
 
     pub fn connect_to_media_server(
         device: Device,
-    ) -> Result<Option<Box<dyn Browseable + Send>>, Error> {
+    ) -> Result<Option<Box<dyn Browsable + Send>>, Error> {
         let mut player: Self = device.clone().into();
         let location = player.location.clone().unwrap();
         let device_client = futures::executor::block_on(DeviceClient::new(&location)?.connect())?;
@@ -113,7 +113,7 @@ impl Addon for Dlna {
 }
 
 #[async_trait]
-impl Browseable for Dlna {
+impl Browsable for Dlna {
     async fn albums(
         &mut self,
         filter: Option<String>,

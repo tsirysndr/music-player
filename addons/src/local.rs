@@ -1,4 +1,4 @@
-use super::{Addon, Browseable, Player, StreamingAddon};
+use super::{Addon, Browsable, Player, StreamingAddon};
 use anyhow::{Error, Ok};
 use async_trait::async_trait;
 use music_player_client::{
@@ -77,7 +77,7 @@ impl StreamingAddon for Local {
 }
 
 #[async_trait]
-impl Browseable for Local {
+impl Browsable for Local {
     async fn albums(
         &mut self,
         filter: Option<String>,

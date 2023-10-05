@@ -3,7 +3,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track, XBMC_DEVICE};
 
-use super::{Addon, Browseable, Player, StreamingAddon};
+use super::{Addon, Browsable, Player, StreamingAddon};
 
 pub struct Client {
     pub host: String,
@@ -74,7 +74,7 @@ impl StreamingAddon for Kodi {
 }
 
 #[async_trait]
-impl Browseable for Kodi {
+impl Browsable for Kodi {
     async fn albums(
         &mut self,
         filter: Option<String>,

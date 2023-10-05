@@ -133,7 +133,7 @@ impl AudioFileFetch {
             let length = min(range.length, bytes);
             self.download_range(offset, length)?;
         } else if !missing_data.is_empty() {
-            // ok, the tail is downloaded, download something fom the beginning.
+            // ok, the tail is downloaded, download something from the beginning.
             let range = missing_data.get_range(0);
             let offset = range.start;
             let length = min(range.length, bytes);

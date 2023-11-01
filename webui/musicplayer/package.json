@@ -105,7 +105,6 @@
     "@types/react-lazy-load-image-component": "1.5.2",
     "babel-plugin-named-exports-order": "^0.0.2",
     "cross-env": "^7.0.3",
-    "fork-ts-checker-webpack-plugin": "6.5.0",
     "msw": "^0.47.4",
     "msw-storybook-addon": "^1.6.3",
     "prop-types": "^15.8.1",

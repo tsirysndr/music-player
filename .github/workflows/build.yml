@@ -8,11 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extensions:
-          - tar.gz
-          - tar.gz.sha256
-        target:
-          - x86_64-unknown-linux-gnu
+        include:
+          - target: x86_64-unknown-linux-gnu
+            extensions: tar.gz tar.gz.sha256
     steps:
       - uses: actions/checkout@v3
       - uses: denoland/setup-deno@v1

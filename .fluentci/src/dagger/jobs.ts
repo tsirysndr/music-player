@@ -98,7 +98,7 @@ export const test = async (src = ".") => {
         "sh",
         "-c",
         "cd server && cargo run & \
-         sleep 3 \
+         sleep 3 && \
          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info",
       ]);
 

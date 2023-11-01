@@ -65,6 +65,7 @@ export const test = async (src = ".") => {
         "protobuf-compiler",
         "wget",
         "pkg-config",
+        "psmisc",
       ])
       .withExec(["rustup", "component", "add", "llvm-tools"])
       .withExec([

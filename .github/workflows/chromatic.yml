@@ -32,3 +32,4 @@ jobs:
         working-directory: ./webui/musicplayer
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          CHROMATIC_VERSION: 6.24.1

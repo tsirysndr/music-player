@@ -26,7 +26,9 @@ jobs:
           dagger version
       - uses: actions/checkout@v1
       - name: Publish to Chromatic
-        run: fluentci run chromatic_pipeline publish
+        run: |
+          cp -r ../../.git .
+          fluentci run chromatic_pipeline publish
         working-directory: ./webui/musicplayer
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

@@ -68,7 +68,7 @@ export const test = async (src = ".") => {
       ])
       .withExec([
         "wget",
-        "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.36/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
+        "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.31/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
       ])
       .withExec([
         "tar",

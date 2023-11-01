@@ -1,4 +1,4 @@
 import pipeline from "./pipeline.ts";
-import { build, test } from "./jobs.ts";
+import { clippy, build, test } from "./jobs.ts";
 
-export { pipeline, build, test };
+export { pipeline, clippy, build, test };

@@ -1,11 +1,52 @@
 import Client, { connect } from "../../deps.ts";
 
 export enum Job {
+  clippy = "clippy",
   test = "test",
   build = "build",
 }
 
 export const exclude = ["target", ".git", ".devbox", ".fluentci"];
+
+export const clippy = async (src = ".") => {
+  await connect(async (client: Client) => {
+    const context = client.host().directory(src);
+    const ctr = client
+      .pipeline(Job.test)
+      .container()
+      .from("rust:1.73-bookworm")
+      .withExec(["apt-get", "update"])
+      .withExec([
+        "apt-get",
+        "install",
+        "-y",
+        "build-essential",
+        "libasound2-dev",
+        "protobuf-compiler",
+        "pkg-config",
+      ])
+      .withExec(["rustup", "component", "add", "clippy"])
+      .withExec(["cargo", "install", "clippy-sarif", "--version", "0.3.0"])
+      .withExec(["cargo", "install", "sarif-fmt", "--version", "0.3.0"])
+      .withDirectory("/app", context, { exclude })
+      .withWorkdir("/app")
+      .withMountedCache("/app/target", client.cacheVolume("target"))
+      .withMountedCache("/root/cargo/registry", client.cacheVolume("registry"))
+      .withExec([
+        "sh",
+        "-c",
+        "cargo clippy \
+        --all-features \
+        --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt",
+      ]);
+
+    await ctr
+      .file("/app/rust-clippy-results.sarif")
+      .export("./rust-clippy-results.sarif");
+    await ctr.stdout();
+  });
+  return "Done";
+};
 
 export const test = async (src = ".") => {
   await connect(async (client: Client) => {
@@ -23,6 +64,7 @@ export const test = async (src = ".") => {
         "libasound2-dev",
         "protobuf-compiler",
         "wget",
+        "pkg-config",
       ])
       .withExec([
         "wget",
@@ -89,6 +131,7 @@ export const build = async (src = ".") => {
         "-y",
         "build-essential",
         "libasound2-dev",
+        "pkg-config",
       ])
       .withDirectory("/app", context, { exclude })
       .withWorkdir("/app/webui/musicplayer")
@@ -130,11 +173,13 @@ export type JobExec = (src?: string) =>
     ) => Promise<string>);
 
 export const runnableJobs: Record<Job, JobExec> = {
+  [Job.clippy]: clippy,
   [Job.test]: test,
   [Job.build]: build,
 };
 
 export const jobDescriptions: Record<Job, string> = {
+  [Job.clippy]: "Run Rust clippy",
   [Job.test]: "Run tests",
   [Job.build]: "Build the project",
 };

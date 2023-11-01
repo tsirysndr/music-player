@@ -14,16 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     # Job steps
     steps:
-      - uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.37
-      - name: Setup Fluent CI CLI
-        run: deno install -A -r https://cli.fluentci.io -n fluentci
-      - name: Setup Dagger
-        run: |
-          curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.8.8 sh
-          sudo mv bin/dagger /usr/local/bin
-          dagger version
+      - name: Setup Fluent CI
+        uses: fluentci-io/setup-fluentci@v1
       - uses: actions/checkout@v1
       - name: Publish to Chromatic
         run: |

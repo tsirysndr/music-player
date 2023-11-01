@@ -14,6 +14,7 @@ export const test = async (src = ".") => {
       .pipeline(Job.test)
       .container()
       .from("rust:1.73-bookworm")
+      .withExec(["apt-get", "update"])
       .withExec([
         "apt-get",
         "install",

@@ -1,0 +1,34 @@
+{
+  "imports": {
+    "@fluentci.io/dagger": "https://sdk.fluentci.io/v0.1.9/mod.ts",
+    "@dagger.io/dagger": "https://esm.sh/v128/*@dagger.io/dagger@0.8.4",
+    "graphql-tag": "https://esm.sh/v128/graphql-tag@2.12.6",
+    "graphql-request": "https://esm.sh/v128/graphql-request@6.1.0",
+    "fluent_gitlab_ci": "https://deno.land/x/fluent_gitlab_ci@v0.4.2/mod.ts",
+    "fluent_github_actions": "https://deno.land/x/fluent_github_actions@v0.2.1/mod.ts",
+    "fluent_circleci": "https://deno.land/x/fluent_circleci@v0.2.5/mod.ts",
+    "fluent_azure_pipelines": "https://deno.land/x/fluent_azure_pipelines@v0.2.0/mod.ts",
+    "fluent_aws_codepipeline": "https://deno.land/x/fluent_aws_codepipeline@v0.2.3/mod.ts",
+    "crypto": "node:crypto",
+    "fs": "node:fs",
+    "os": "node:os",
+    "path": "node:path",
+    "process": "node:process",
+    "readline": "node:readline",
+    "url": "node:url"
+  },
+  "scopes": {
+    "https://esm.sh/v128/": {
+      "@lifeomic/axios-fetch": "https://esm.sh/v128/@lifeomic/axios-fetch@3.0.1",
+      "adm-zip": "https://esm.sh/v128/adm-zip@0.5.10",
+      "env-paths": "https://esm.sh/v128/env-paths@3.0.0",
+      "execa": "https://esm.sh/v128/execa@7.1.1",
+      "graphql-request": "https://esm.sh/v128/graphql-request@6.1.0",
+      "graphql-tag": "https://esm.sh/v128/graphql-tag@2.12.6",
+      "graphql": "https://esm.sh/v128/graphql@16.7.1",
+      "node-color-log": "https://esm.sh/v128/node-color-log@10.0.2",
+      "node-fetch": "https://esm.sh/v128/node-fetch@3.3.1",
+      "tar": "https://esm.sh/v128/tar@6.1.15"
+    }
+  }
+}

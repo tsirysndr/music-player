@@ -7,62 +7,27 @@ on:
     # The branches below must be a subset of the branches above
     branches: ["master"]
   workflow_dispatch:
-    branches: ["*"]
 
 jobs:
   unit-tests:
     name: Run unit tests
     runs-on: ubuntu-latest
     steps:
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.37
+      - name: Setup Fluent CI CLI
+        run: deno install -A -r https://cli.fluentci.io -n fluentci
+      - name: Setup Dagger
+        run: |
+          curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.8.8 sh
+          sudo mv bin/dagger /usr/local/bin
+          dagger version
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          components: llvm-tools-preview
-          override: true
-
-      - name: Install cargo-llvm-cov
-        run: |
-          if type cargo-llvm-cov >/dev/null 2>&1; then echo "cargo-llvm-cov is already installed"; else cargo install cargo-llvm-cov ; fi
-
-      - name: Installing needed dependencies
-        run: sudo apt-get install -y libasound2-dev protobuf-compiler
-
-      - name: Run cargo-llvm-cov
-        run: |
-          cp -r fixtures/audio /tmp
-          sudo cp fixtures/asound.conf /etc
-          cd migration && DATABASE_URL=sqlite:///tmp/music-player.sqlite3 cargo run && cd ..
-          export MUSIC_PLAYER_APPLICATION_DIRECTORY=/tmp
-          export MUSIC_PLAYER_MUSIC_DIRECTORY=/tmp/audio
-          export MUSIC_PLAYER_DATABASE_URL=sqlite:///tmp/music-player.sqlite3
-          export MUSIC_PLAYER_PORT=5040
-          cargo run -- scan
-          cd server && cargo run &
-          sleep 3
-          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run Dagger Pipelines
+        run: fluentci run . test
+      - name: Upload to Codecov
+        run: fluentci run codecov_pipeline
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

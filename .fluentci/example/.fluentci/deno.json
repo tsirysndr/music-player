@@ -1,0 +1,31 @@
+{
+  "importMap": "import_map.json",
+  "tasks": {
+    "esm:add": "deno run -A https://esm.sh/v128 add",
+    "esm:update": "deno run -A https://esm.sh/v128 update",
+    "esm:remove": "deno run -A https://esm.sh/v128 remove",
+    "schema": "deno run -A src/dagger/schema.ts",
+    "clean": "rm -rf gen schema.graphql"
+  },
+  "fmt": {
+    "exclude": [
+      "example/",
+      ".fluentci/",
+      "gen/"
+    ]
+  },
+  "lint": {
+    "exclude": [
+      "example/",
+      ".fluentci/",
+      "gen/"
+    ]
+  },
+  "test": {
+    "exclude": [
+      "example/",
+      ".fluentci/",
+      "gen/"
+    ]
+  }
+}

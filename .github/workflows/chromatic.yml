@@ -1,10 +1,10 @@
-name: 'Chromatic'
+name: "Chromatic"
 
 on:
   push:
     paths:
-      - 'webui/musicplayer/**'
-      - '.github/workflows/chromatic.yml'
+      - "webui/musicplayer/**"
+      - ".github/workflows/chromatic.yml"
   workflow_dispatch:
 
 # List of jobs
@@ -14,14 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     # Job steps
     steps:
-      - uses: actions/checkout@v1
-      - name: Install dependencies
-        run: cd ./webui/musicplayer && yarn
-        # 👇 Adds Chromatic as a step in the workflow
-      - name: Publish to Chromatic
-        uses: chromaui/action@v1
-        # Chromatic GitHub Action options
+      - uses: denoland/setup-deno@v1
         with:
-          workingDir: ./webui/musicplayer
-          # 👇 Chromatic projectToken, refer to the manage page to obtain it.
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          deno-version: v1.37
+      - name: Setup Fluent CI CLI
+        run: deno install -A -r https://cli.fluentci.io -n fluentci
+      - name: Setup Dagger
+        run: |
+          curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.8.8 sh
+          sudo mv bin/dagger /usr/local/bin
+          dagger version
+      - uses: actions/checkout@v1
+      - name: Publish to Chromatic
+        run: fluentci run chromatic_pipeline publish
+        working-directory: ./webui/musicplayer
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

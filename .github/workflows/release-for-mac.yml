@@ -11,15 +11,28 @@ jobs:
       matrix:
         include:
           - target: x86_64-apple-darwin
-            archive: tar.gz tar.xz
+            extensions: tar.gz tar.gz.sha256
           - target: aarch64-apple-darwin
-            archive: tar.gz tar.xz
+            extensions: tar.gz tar.gz.sha256
 
     steps:
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.37
+      - name: Setup Fluent CI CLI
+        run: deno install -A -r https://cli.fluentci.io -n fluentci
+      - name: Setup Dagger
+        run: |
+          curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.8.8 sh
+          sudo mv bin/dagger /usr/local/bin
+          dagger version
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
       - uses: actions/checkout@master
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
       - uses: actions/cache@v3
         with:
           path: |
@@ -39,8 +52,7 @@ jobs:
       - name: Build webui
         run: |
           cd webui/musicplayer
-          npm install -g yarn
-          yarn install --network-timeout 1000000000 && yarn build
+          bun install && bun run build
       - name: Running cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -55,11 +67,9 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar czvf music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
           shasum -a 256 music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
-      - name: Releasing assets
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz
-            target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
+      - name: Upload release assets
+        run: fluentci run github_pipeline release_upload
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ env.RELEASE_VERSION }}
+          FILE: target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.${{ matrix.extensions }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

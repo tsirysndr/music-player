@@ -1,0 +1,5 @@
+{
+  "root": "",
+  "name": "rust",
+  "sdkRuntime": "tsiry/dagger-sdk-deno"
+}

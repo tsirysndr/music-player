@@ -68,7 +68,7 @@ export const test = async (src = ".") => {
       ])
       .withExec([
         "wget",
-        "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.31/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
+        "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.36/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
       ])
       .withExec([
         "tar",
@@ -93,12 +93,15 @@ export const test = async (src = ".") => {
         "sqlite:///tmp/music-player.sqlite3"
       )
       .withEnvVariable("MUSIC_PLAYER_PORT", "5040")
-      .withExec(["cargo", "run", "--", "scan"])
+      .withExec(["cargo", "install", "--path", "."])
+      .withExec(["music-player", "scan"])
       .withExec([
         "sh",
         "-c",
-        "cd server && cargo run & \
+        "cd server && cargo install --path . && music-player-server & \
          sleep 3 && \
+         cd .. && \
+         rm -rf target/* && \
          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info",
       ]);
 

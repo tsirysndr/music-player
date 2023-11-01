@@ -95,14 +95,13 @@ export const test = async (src = ".") => {
       )
       .withEnvVariable("MUSIC_PLAYER_PORT", "5040")
       .withExec(["cargo", "install", "--path", "."])
+      .withExec(["sh", "-c", "rm -rf target/*"])
       .withExec(["music-player", "scan"])
       .withExec([
         "sh",
         "-c",
-        "cd server && cargo install --path . && music-player-server & \
+        "music-player & \
          sleep 3 && \
-         cd .. && \
-         rm -rf target/* && \
          cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info",
       ]);
 

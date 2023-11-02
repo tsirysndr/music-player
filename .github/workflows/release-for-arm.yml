@@ -142,7 +142,7 @@ jobs:
       - name: Upload release assets
         run: |
           for ext in tar.gz tar.gz.sha256; do
-            export FILE=/assets/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
+            export FILE="music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext"
             fluentci run github_pipeline release_upload
           done
         env:

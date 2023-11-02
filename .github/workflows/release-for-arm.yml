@@ -9,21 +9,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: aarch64-unknown-linux-gnu
-            extensions: tar.gz tar.gz.sha256
-          - target: armv7-unknown-linux-gnueabihf
-            extensions: tar.gz tar.gz.sha256
-          #- target: arm-unknown-linux-gnueabi
-          #  archive: tar.gz tar.xz
-          #- target: armv7-linux-androideabi
-          #  archive: tar.gz tar.xz
-          #- target: aarch64-linux-android
-          #  archive: tar.gz tar.xz
-          #- target: x86_64-linux-android
-          #  archive: tar.gz tar.xz
-          #- target: i686-linux-android
-          #  archive: tar.gz tar.xz
+        target:
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabihf
+          #- arm-unknown-linux-gnueabi
+          #- armv7-linux-androideabi
+          #- aarch64-linux-android
+          #- x86_64-linux-android
+          #- i686-linux-android
     steps:
       - uses: denoland/setup-deno@v1
         with:
@@ -147,8 +140,11 @@ jobs:
           tar czvf music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
           shasum -a 256 music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
       - name: Upload release assets
-        run: fluentci run github_pipeline release_upload
+        run: |
+          for ext in tar.gz tar.gz.sha256; do
+            export FILE=/assets/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
+            fluentci run github_pipeline release_upload
+          done
         env:
           TAG: ${{ env.RELEASE_VERSION }}
-          FILE: target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.${{ matrix.extensions }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

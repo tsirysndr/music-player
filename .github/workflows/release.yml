@@ -8,9 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            extensions: tar.gz tar.gz.sha256
+        target:
+          - x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v3
       - name: Setup Fluent CI
@@ -23,8 +22,11 @@ jobs:
           TAG: ${{ env.RELEASE_VERSION }}
           TARGET: ${{ matrix.target }}
       - name: Upload release assets
-        run: fluentci run github_pipeline release_upload
+        run: |
+          for ext in tar.gz tar.gz.sha256; do
+            export FILE=/assets/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
+            fluentci run github_pipeline release_upload
+          done
         env:
           TAG: ${{ env.RELEASE_VERSION }}
-          FILE: /assets/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.${{ matrix.extensions }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

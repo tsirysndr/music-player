@@ -58,12 +58,13 @@ jobs:
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release
-          tar czvf music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
-          shasum -a 256 music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
+          tar czvf ../../../music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
+          shasum -a 256 ../../../music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > ../../../music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
+          cd ../../../ && rm -rf target
       - name: Upload release assets
         run: |
           for ext in tar.gz tar.gz.sha256; do
-            export FILE=target/${{ matrix.target }}/release/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
+            export FILE=music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
             fluentci run github_pipeline release_upload
           done
         env:

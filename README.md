@@ -4,6 +4,9 @@
   <a href="https://flakehub.com/flake/tsirysndr/music-player" target="_blank">
     <img src="https://img.shields.io/endpoint?url=https://flakehub.com/f/tsirysndr/music-player/badge" />
   </a>
+  <a href="https://flakestry.dev/flake/github/tsirysndr/music-player" target="_blank">
+    <img src="https://flakestry.dev/api/badge/flake/github/tsirysndr/music-player" />
+  </a>
   <a href="LICENSE" target="_blank">
     <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" />
   </a>

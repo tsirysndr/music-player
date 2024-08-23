@@ -31,6 +31,16 @@ members = [
   "types",
   "webui",
   "webui/musicplayer/src-tauri",
+  "addons/chromecast",
+  "addons/dlna",
+  "addons/kodi",
+  "addons/local",
+  "addons/mopidy",
+  "addons/mpd",
+  "addons/mpris",
+  "addons/squeezebox",
+  "addons/tunein",
+  "pdk",
 ]
 
 [[bin]]

@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name = "music-player-pdk"
+version = "0.1.0"
+
+[dependencies]
+extism-pdk = "1.2.1"
+serde = {version = "1.0.208", features = ["serde_derive", "derive"]}

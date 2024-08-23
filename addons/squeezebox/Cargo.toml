@@ -1,0 +1,11 @@
+[package]
+edition = "2021"
+name = "squeezebox"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+extism-pdk = "1.2.1"
+music-player-pdk = {version = "0.1.0", path = "../../pdk"}

@@ -28,9 +28,7 @@ pub struct Settings {
 
 pub fn read_settings() -> Result<Config, ConfigError> {
     let path = match env::consts::OS {
-        "android" => {
-            "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned()
-        },
+        "android" => "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned(),
         _ => {
             let config_dir = dirs::config_dir().unwrap();
             format!("{}/music-player", config_dir.to_str().unwrap())
@@ -40,9 +38,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     let music_directory = match env::consts::OS {
         "android" => "/storage/emulated/0/Music".to_owned(),
         _ => {
-            let mut tmp = PathBuf::new();
-            tmp.push("/tmp");
-            let music_dir = dirs::audio_dir().unwrap_or(tmp);
+            let mut home = dirs::home_dir().unwrap();
+            home.push("Music");
+            let music_dir = dirs::audio_dir().unwrap_or(home);
             music_dir.to_str().unwrap().to_owned()
         }
     };

@@ -19,6 +19,10 @@ version = "0.1.8"
 path = "../types"
 version = "0.1.6"
 
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.1.5"
+
 [dependencies]
 extism = "1.5.0"
 music-player-common = {path = "../common", version = "0.1.0"}

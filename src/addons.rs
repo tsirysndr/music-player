@@ -166,6 +166,7 @@ pub fn setup_addon(module: &str, user_data: &UserData<State>) -> Result<(), Erro
             user_data.clone(),
             send_command_to_upnp_player,
         )
+        .with_function("get_settings", [], [PTR], user_data.clone(), get_settings)
         .build()?;
 
     let result = plugin.call::<&str, &str>("setup", "")?;

@@ -1,5 +1,6 @@
 use chromecast::*;
 use extism::{convert::Json, host_fn, Manifest, PluginBuilder, Wasm, PTR};
+use music_player_settings::{read_settings, Settings};
 use music_player_types::types::Module;
 use player::*;
 use state::State;
@@ -17,6 +18,12 @@ host_fn!(pub register_addon(app_data: State; name: String) {
 
 host_fn!(pub with_capabilities(app_data: State; capabilities: Json<Vec<String>>) {
   Ok(())
+});
+
+host_fn!(pub get_settings(app_data: State;) -> Json<Settings> {
+  let config = read_settings().unwrap();
+  let settings = config.try_deserialize::<Settings>().unwrap();
+  Ok(Json(settings))
 });
 
 host_fn!(pub call(app_data: State; opts: Json<Module>) -> String {
@@ -56,6 +63,7 @@ host_fn!(pub call(app_data: State; opts: Json<Module>) -> String {
     .with_function("connect_to_upnp_media_server", [], [], app_data.clone(), connect_to_upnp_media_server)
     .with_function("browse_upnp_media_server", [], [], app_data.clone(), browse_upnp_media_server)
     .with_function("send_command_to_upnp_player", [PTR], [], app_data.clone(), send_command_to_upnp_player)
+    .with_function("get_settings", [], [PTR], app_data.clone(), get_settings)
     .build()?;
 
   let func = opts.function.clone();

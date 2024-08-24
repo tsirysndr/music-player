@@ -1,0 +1,27 @@
+[package]
+edition = "2021"
+name = "music-player-common"
+version = "0.1.0"
+
+[dependencies.music-player-types]
+path = "../types"
+version = "0.1.5"
+
+[dependencies.music-player-tracklist]
+path = "../tracklist"
+version = "0.1.8"
+
+[dependencies]
+anyhow = "1.0.67"
+async-trait = "0.1.59"
+chromecast = {version = "0.18.2", features = ["thread_safe"]}
+futures = "0.3.26"
+futures-util = "0.3.26"
+hyper = {version = "0.14.23", features = ["runtime", "client", "stream", "tcp", "http1", "http2"]}
+jsonrpsee = {version = "0.16.2", features = ["jsonrpsee-ws-client", "jsonrpsee-http-client", "jsonrpsee-client-transport", "async-client", "client"]}
+local-ip-addr = "0.1.1"
+md5 = "0.7.0"
+surf = {version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
+tokio = {version = "1.25.0", features = ["time"]}
+upnp-client = "0.1.9"
+url = "2.3.1"

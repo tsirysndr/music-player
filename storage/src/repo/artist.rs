@@ -23,7 +23,7 @@ impl ArtistRepository {
         let mut artist = result.unwrap();
         let results: Vec<(track_entity::Model, Option<album_entity::Model>)> =
             track_entity::Entity::find()
-                .filter(track_entity::Column::ArtistId.eq(id.clone()))
+                .filter(track_entity::Column::ArtistId.eq(id))
                 .order_by_asc(track_entity::Column::Title)
                 .find_also_related(album_entity::Entity)
                 .all(&self.db)
@@ -40,7 +40,7 @@ impl ArtistRepository {
             .collect();
 
         artist.albums = album_entity::Entity::find()
-            .filter(album_entity::Column::ArtistId.eq(id.clone()))
+            .filter(album_entity::Column::ArtistId.eq(id))
             .order_by_asc(album_entity::Column::Title)
             .all(&self.db)
             .await?;

@@ -94,7 +94,15 @@ async fn execute_graphql(
 #[tokio::main]
 async fn main() {
     let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+
+    let backend = audio_backend::find(match env::var("MUSIC_PLAYER_AUDIO_BACKEND") {
+        Ok(backend) => Some(backend),
+        Err(_) => settings.audio_backend,
+    })
+    .unwrap();
+
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
@@ -106,7 +114,15 @@ async fn main() {
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || {
+            backend(
+                match env::var("MUSIC_PLAYER_DEVICE") {
+                    Ok(device) => Some(device),
+                    Err(_) => settings.device,
+                },
+                audio_format,
+            )
+        },
         move |event| match event {
             PlayerEvent::CurrentTrack {
                 track,

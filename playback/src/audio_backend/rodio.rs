@@ -1,6 +1,6 @@
 use std::process::exit;
-use std::{thread, env};
 use std::time::Duration;
+use std::{env, thread};
 
 use cpal::traits::{DeviceTrait, HostTrait};
 use log::*;

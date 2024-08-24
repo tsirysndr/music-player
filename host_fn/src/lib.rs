@@ -1,0 +1,65 @@
+use chromecast::*;
+use extism::{convert::Json, host_fn, Manifest, PluginBuilder, Wasm, PTR};
+use music_player_types::types::Module;
+use player::*;
+use state::State;
+use upnp::*;
+
+pub mod chromecast;
+pub mod http;
+pub mod player;
+pub mod state;
+pub mod upnp;
+
+host_fn!(pub register_addon(app_data: State; name: String) {
+  Ok(())
+});
+
+host_fn!(pub with_capabilities(app_data: State; capabilities: Json<Vec<String>>) {
+  Ok(())
+});
+
+host_fn!(pub call(app_data: State; opts: Json<Module>) -> String {
+  let opts = opts.into_inner();
+  let module = opts.url.clone();
+  let module = match module.starts_with("http") {
+      true => Wasm::url(module),
+      false => Wasm::file(module),
+  };
+
+  let manifest = Manifest::new([module]);
+  let mut plugin = PluginBuilder::new(manifest.clone())
+    .with_wasi(true)
+    .with_function("register_addon", [PTR], [], app_data.clone(), register_addon)
+    .with_function("with_capabilities", [PTR], [], app_data.clone(), with_capabilities)
+    .with_function("connect_to_chromecast", [PTR], [], app_data.clone(), connect_to_chromecast)
+    .with_function("reconnect_to_chromecast", [], [], app_data.clone(), reconnect_to_chromecast)
+    .with_function("send_command_to_chromecast", [PTR], [], app_data.clone(), send_command_to_chromecast)
+    .with_function("chromecast_queue_load", [PTR], [], app_data.clone(), chromecast_queue_load)
+    .with_function("load_track_to_chromecast", [PTR], [], app_data.clone(), load_track_to_chromecast)
+    .with_function("get_chromecast_current_playback", [], [PTR], app_data.clone(), get_chromecast_current_playback)
+    .with_function("disconnect_from_chromecast", [], [], app_data.clone(), disconnect_from_chromecast)
+    .with_function("load", [PTR], [], app_data.clone(), load)
+    .with_function("load_tracklist", [PTR], [], app_data.clone(), load_tracklist)
+    .with_function("preload", [PTR], [], app_data.clone(), preload)
+    .with_function("play", [], [], app_data.clone(), play)
+    .with_function("pause", [], [], app_data.clone(), pause)
+    .with_function("stop", [], [], app_data.clone(), stop)
+    .with_function("seek", [PTR], [], app_data.clone(), seek)
+    .with_function("play_track_at", [PTR], [], app_data.clone(), play_track_at)
+    .with_function("clear", [], [], app_data.clone(), clear)
+    .with_function("get_tracks", [], [PTR], app_data.clone(), get_tracks)
+    .with_function("get_current_track", [], [PTR], app_data.clone(), get_current_track)
+    .with_function("play_next", [], [], app_data.clone(), play_next)
+    .with_function("remove_track", [PTR], [], app_data.clone(), remove_track)
+    .with_function("connect_to_upnp_media_renderer", [], [], app_data.clone(), connect_to_upnp_media_renderer)
+    .with_function("connect_to_upnp_media_server", [], [], app_data.clone(), connect_to_upnp_media_server)
+    .with_function("browse_upnp_media_server", [], [], app_data.clone(), browse_upnp_media_server)
+    .with_function("send_command_to_upnp_player", [PTR], [], app_data.clone(), send_command_to_upnp_player)
+    .build()?;
+
+  let func = opts.function.clone();
+  let args = opts.args.clone();
+  let result = plugin.call::<&str, &str>(func, &args)?;
+  Ok(result.to_string())
+});

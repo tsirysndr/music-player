@@ -27,20 +27,36 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
     if let Some(matches) = matches.subcommand_matches("open") {
         let audio_format = AudioFormat::default();
-        let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+        let config = read_settings().unwrap();
+        let settings = config.try_deserialize::<Settings>().unwrap();
+
+        let backend = audio_backend::find(match env::var("MUSIC_PLAYER_AUDIO_BACKEND") {
+            Ok(backend) => Some(backend),
+            Err(_) => settings.audio_backend,
+        })
+        .unwrap();
+
         let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
         let cmd_tx = Arc::new(Mutex::new(cmd_tx));
         let cmd_rx = Arc::new(Mutex::new(cmd_rx));
         let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
         let (mut player, _) = Player::new(
-            move || backend(None, audio_format),
+            move || {
+                backend(
+                    match env::var("MUSIC_PLAYER_DEVICE") {
+                        Ok(device) => Some(device),
+                        Err(_) => settings.device,
+                    },
+                    audio_format,
+                )
+            },
             |_| {},
             cmd_tx,
             cmd_rx,
             tracklist,
         );
 
-        let song = matches.value_of("song").unwrap();
+        let song = matches.get_one::<String>("song").unwrap();
 
         player.load(song, true, 0);
 
@@ -60,8 +76,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(matches) = matches.subcommand_matches("albums") {
         let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
 
-        if matches.is_present("id") {
-            let id = matches.value_of("id").unwrap();
+        if let Some(id) = matches.get_one::<String>("id") {
             let album = client.album(id).await?;
             if album.is_none() {
                 return Err("Album not found".into());
@@ -123,7 +138,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         let mut client = PlaylistClient::new(settings.host.clone(), settings.port).await?;
 
         if let Some(matches) = matches.subcommand_matches("add") {
-            let id = matches.value_of("id").unwrap();
+            let id = matches.get_one::<String>("id").unwrap();
 
             return Ok(());
         }
@@ -133,19 +148,19 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         }
 
         if let Some(matches) = matches.subcommand_matches("clear") {
-            let id = matches.value_of("id");
+            let id = matches.get_one::<String>("id");
 
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("play") {
-            let id = matches.value_of("id");
+            let id = matches.get_one::<String>("id");
 
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("remove") {
-            let id = matches.value_of("id").unwrap();
+            let id = matches.get_one::<String>("id").unwrap();
 
             return Ok(());
         }
@@ -184,20 +199,18 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         }
 
         if let Some(matches) = matches.subcommand_matches("add") {
-            let id = matches.value_of("track_id").unwrap();
+            let id = matches.get_one::<String>("track_id").unwrap();
             client.add(id).await?;
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("remove") {
-            let song = matches.value_of("song").unwrap();
+            let song = matches.get_one::<String>("song").unwrap();
 
             return Ok(());
         }
 
         if let Some(matches) = matches.subcommand_matches("clear") {
-            let all = matches.is_present("all");
-
             return Ok(());
         }
     }
@@ -220,7 +233,7 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(matches) = matches.subcommand_matches("search") {
         let client = LibraryClient::new(settings.host.clone(), settings.port).await?;
 
-        let query = matches.value_of("query").unwrap();
+        let query = matches.get_one::<String>("query").unwrap();
         todo!("search for {}", query);
     }
 
@@ -284,8 +297,8 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("connect") {
-        let host = matches.value_of("host").unwrap();
-        let port = matches.value_of("port").unwrap();
+        let host = matches.get_one::<String>("host").unwrap();
+        let port = matches.get_one::<String>("port").unwrap();
         env::set_var("MUSIC_PLAYER_HOST", host);
         env::set_var("MUSIC_PLAYER_PORT", port);
         env::set_var("MUSIC_PLAYER_MODE", "client");

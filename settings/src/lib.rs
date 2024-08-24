@@ -24,6 +24,8 @@ pub struct Settings {
     pub device_id: String,
     pub http_port: u16,
     pub tauri_enable_graphql_server: bool,
+    pub audio_backend: Option<String>, // default to "rodio", can be "pipe", "subprocess"
+    pub device: Option<String>,
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
@@ -59,14 +61,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         port: 5051,
         ws_port: 5052,
         addons: Some(vec![
-            "deezer".to_string(),
-            "datpiff".to_string(),
-            "genius".to_string(),
+            "chromecast".to_string(),
+            "dlna".to_string(),
             "local".to_string(),
-            "myvazo".to_string(),
-            "tononkira".to_string(),
-            "musicbrainz".to_string(),
-            "lastfm".to_string(),
         ]),
         music_directory,
         host: "0.0.0.0".to_string(),
@@ -74,6 +71,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         device_id,
         http_port: 5053,
         tauri_enable_graphql_server: false,
+        audio_backend: Some("rodio".to_string()),
+        device: None,
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -122,12 +121,14 @@ pub fn get_application_directory() -> String {
     let tracks = format!("{}/tracks", path);
     let covers = format!("{}/covers", path);
     let cache = format!("{}/cache", path);
+    let addons = format!("{}/addons", path);
     fs::create_dir_all(&albums).unwrap();
     fs::create_dir_all(&artists).unwrap();
     fs::create_dir_all(&playlists).unwrap();
     fs::create_dir_all(&tracks).unwrap();
     fs::create_dir_all(&covers).unwrap();
     fs::create_dir_all(&cache).unwrap();
+    fs::create_dir_all(&addons).unwrap();
 
     path
 }

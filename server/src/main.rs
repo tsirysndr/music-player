@@ -11,6 +11,7 @@ use music_player_playback::{
     player::Player,
 };
 use music_player_server::server::MusicPlayerServer;
+use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use tokio::sync::Mutex;
@@ -22,7 +23,15 @@ type PeerMap = Arc<sync::Mutex<HashMap<SocketAddr, Tx>>>;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+
+    let backend = audio_backend::find(match env::var("MUSIC_PLAYER_DEVICE") {
+        Ok(device) => Some(device),
+        Err(_) => settings.device,
+    })
+    .unwrap();
+
     let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
 
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
@@ -32,7 +41,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Database::new().await;
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || {
+            backend(
+                match env::var("MUSIC_PLAYER_AUDIO_BACKEND") {
+                    Ok(backend) => Some(backend),
+                    Err(_) => settings.audio_backend,
+                },
+                audio_format,
+            )
+        },
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

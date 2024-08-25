@@ -5226,27 +5226,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "music-player-common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chromecast 0.18.2",
- "futures",
- "futures-util",
- "hyper 0.14.24",
- "jsonrpsee",
- "local-ip-addr",
- "md5",
- "music-player-tracklist",
- "music-player-types",
- "surf",
- "tokio",
- "upnp-client",
- "url",
-]
-
-[[package]]
 name = "music-player-discovery"
 version = "0.1.3"
 dependencies = [
@@ -5318,7 +5297,6 @@ name = "music-player-host-fn"
 version = "0.1.0"
 dependencies = [
  "extism",
- "music-player-common",
  "music-player-entity",
  "music-player-pdk",
  "music-player-playback",

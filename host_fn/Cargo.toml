@@ -29,7 +29,6 @@ version = "0.1.5"
 
 [dependencies]
 extism = "1.5.0"
-music-player-common = {path = "../common", version = "0.1.0"}
 music-player-pdk = {path = "../pdk", version = "0.1.0"}
 tokio = {version = "1.21.2", features = ["full"]}
 ureq = "2.10.1"

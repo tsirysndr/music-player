@@ -31,7 +31,6 @@ members = [
   "types",
   "webui",
   "webui/musicplayer/src-tauri",
-  "common/",
   "addons/chromecast",
   "addons/dlna",
   "addons/kodi",
@@ -42,7 +41,6 @@ members = [
   "addons/squeezebox",
   "addons/tunein",
   "pdk",
-  "common",
   "host_fn",
 ]
 

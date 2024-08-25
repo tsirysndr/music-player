@@ -31,9 +31,7 @@ members = [
   "types",
   "webui",
   "webui/musicplayer/src-tauri",
-  "common/",
   "pdk",
-  "common",
   "host_fn",
 ]
 

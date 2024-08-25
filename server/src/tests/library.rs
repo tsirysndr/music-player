@@ -19,18 +19,10 @@ use super::setup_new_params;
 
 #[tokio::test]
 async fn scan() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(7070).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
@@ -52,18 +44,10 @@ async fn scan() {
 
 #[tokio::test]
 async fn search() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(7071).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
@@ -82,18 +66,10 @@ async fn search() {
 
 #[tokio::test]
 async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(6072).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
@@ -126,18 +102,10 @@ async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 async fn get_albums() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(5073).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
@@ -166,18 +134,10 @@ async fn get_albums() {
 
 #[tokio::test]
 async fn get_tracks() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(7074).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
@@ -224,18 +184,10 @@ async fn get_tracks() {
 
 #[tokio::test]
 async fn get_track_details() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(7075).await;
     let (tx, rx) = oneshot::channel::<()>();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
@@ -269,18 +221,10 @@ async fn get_track_details() {
 
 #[tokio::test]
 async fn get_album_details() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(7076).await;
     let (tx, rx) = oneshot::channel::<()>();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(

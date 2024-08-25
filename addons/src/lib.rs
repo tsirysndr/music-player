@@ -349,13 +349,6 @@ pub fn load_plugin(module: &str, user_data: &UserData<State>) -> Result<Plugin, 
         .with_function("get_settings", [], [PTR], user_data.clone(), get_settings)
         .with_function("get_addons", [], [PTR], user_data.clone(), get_addons)
         .with_function("call", [PTR], [], user_data.clone(), call)
-        .with_function(
-            "load_tracklist",
-            [PTR],
-            [],
-            user_data.clone(),
-            load_tracklist,
-        )
         .build()?;
     Ok(plugin)
 }

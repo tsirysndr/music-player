@@ -21,6 +21,7 @@ jobs:
         env:
           TAG: ${{ env.RELEASE_VERSION }}
           TARGET: ${{ matrix.target }}
+          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
       - name: Upload release assets
         run: |
           for ext in tar.gz tar.gz.sha256; do

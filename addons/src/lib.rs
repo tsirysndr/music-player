@@ -10,8 +10,8 @@ use anyhow::Error;
 use async_trait::async_trait;
 use extism::{Manifest, Plugin, PluginBuilder, UserData, Wasm, PTR};
 use music_player_host_fn::{
-    chromecast::*, get_addons, get_settings, player::*, register_addon, state::State, tracklist::*,
-    upnp::*, with_capabilities,
+    call, chromecast::*, get_addons, get_settings, player::*, register_addon, state::State,
+    tracklist::*, upnp::*, with_capabilities,
 };
 use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
 pub trait Addon {
@@ -348,6 +348,14 @@ pub fn load_plugin(module: &str, user_data: &UserData<State>) -> Result<Plugin, 
         )
         .with_function("get_settings", [], [PTR], user_data.clone(), get_settings)
         .with_function("get_addons", [], [PTR], user_data.clone(), get_addons)
+        .with_function("call", [PTR], [], user_data.clone(), call)
+        .with_function(
+            "load_tracklist",
+            [PTR],
+            [],
+            user_data.clone(),
+            load_tracklist,
+        )
         .build()?;
     Ok(plugin)
 }

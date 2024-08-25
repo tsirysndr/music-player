@@ -14,7 +14,7 @@ extern "ExtismHost" {
     fn stop();
     fn seek(time: u32);
     fn position_ms() -> u32;
-    fn load_tracks(tracks: Json<Vec<Track>>);
+    fn load_tracklist(tracks: Json<Vec<Track>>);
     fn play_next();
     fn load(track: Json<Track>);
     fn get_current_playback();
@@ -73,7 +73,7 @@ impl Player {
     }
 
     pub fn load_tracks(&self, tracks: Json<Vec<Track>>) -> Result<(), Error> {
-        unsafe { load_tracks(tracks) }
+        unsafe { load_tracklist(tracks) }
     }
 
     pub fn play_next(&self) -> Result<(), Error> {

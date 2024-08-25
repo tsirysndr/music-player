@@ -176,7 +176,7 @@ impl TracklistService for Tracklist {
         let request = request.into_inner();
         let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
         plugin
-            .call::<u32, ()>("remove_track", request.position)
+            .call::<u32, ()>("remove_track_at", request.position)
             .map_err(into_tonic_status)?;
         let response = RemoveTrackAtResponse {};
         Ok(tonic::Response::new(response))

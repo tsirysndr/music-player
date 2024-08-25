@@ -9,15 +9,14 @@ use tokio::time::sleep;
 #[tokio::test]
 async fn new_database() {
     env::set_var("MUSIC_PLAYER_DATABASE_URL", "sqlite::memory:");
-
     let db = Database::new().await;
 
     let conn = db.get_connection();
     assert_eq!(conn.get_database_backend(), DbBackend::Sqlite);
 }
 
-#[test]
-fn insert_album() {
+#[tokio::test]
+async fn insert_album() {
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     let searcher = Searcher::new();
     let album = Album {
@@ -29,6 +28,9 @@ fn insert_album() {
     };
 
     searcher.insert_album(album).unwrap();
+
+    sleep(Duration::from_secs(1)).await;
+
     assert!(searcher.search_album("Eternal").is_ok());
 }
 

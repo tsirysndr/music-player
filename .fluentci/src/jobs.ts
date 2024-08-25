@@ -130,7 +130,7 @@ export const test = async (src = ".") => {
       "-c",
       "music-player & \
          sleep 3 && \
-         cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info && \
+         cargo llvm-cov --ignore-filename-regex addons --all-features --lib --workspace --lcov --output-path lcov.info && \
          killall -s TERM music-player",
     ]);
 

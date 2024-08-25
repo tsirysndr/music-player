@@ -126,11 +126,25 @@ export const test = async (src = ".") => {
     .withExec(["sh", "-c", "rm -rf target/*"])
     .withExec(["music-player", "scan"])
     .withExec([
+      "rm",
+      "-rf",
+      "addons/chromecast",
+      "addons/dlna",
+      "addons/kodi",
+      "addons/local",
+      "addons/mopidy",
+      "addons/mpd",
+      "addons/mpris",
+      "addons/squeezebox",
+      "addons/tunein",
+    ])
+    .withExec(["cp", "Cargo.llvm-cov.toml", "Cargo.toml"])
+    .withExec([
       "sh",
       "-c",
       "music-player & \
          sleep 3 && \
-         cargo llvm-cov --ignore-filename-regex addons --all-features --lib --workspace --lcov --output-path lcov.info && \
+         cargo llvm-cov --all-features --lib --workspace --lcov --output-path lcov.info && \
          killall -s TERM music-player",
     ]);
 

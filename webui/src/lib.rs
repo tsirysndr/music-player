@@ -12,6 +12,7 @@ use actix_web::{
 };
 use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
+use extism::UserData;
 use fs::NamedFile;
 use mime_guess::from_path;
 use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
@@ -21,6 +22,7 @@ use music_player_graphql::{
     schema::{Mutation, Query, Subscription},
     MusicPlayerSchema,
 };
+use music_player_host_fn::state::State;
 use music_player_playback::player::PlayerCommand;
 use music_player_settings::{get_application_directory, read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
@@ -128,6 +130,7 @@ async fn dist(path: web::Path<String>) -> impl Responder {
 pub async fn start_webui(
     cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     tracklist: Arc<std::sync::Mutex<Tracklist>>,
+    user_data: UserData<State>,
 ) -> std::io::Result<()> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
@@ -152,6 +155,7 @@ pub async fn start_webui(
     .data(source_device)
     .data(receiver_device)
     .data(searcher)
+    .data(user_data)
     .finish();
     println!("Starting webui at {}", addr.bright_green());
 

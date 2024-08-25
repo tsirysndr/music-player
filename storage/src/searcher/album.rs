@@ -76,7 +76,7 @@ impl AlbumSearcher {
             cover => album.cover.unwrap_or_default().clone()
         );
 
-        let mut writer = self.index.writer_with_num_threads(64, 192_000_000).unwrap();
+        let mut writer = self.index.writer_with_num_threads(64, 192_000_000)?;
         writer.add_document(doc)?;
         writer.commit()?;
         Ok(())

@@ -63,13 +63,16 @@ actix-web = "4.9.0"
 async-graphql = "4.0.15"
 async-graphql-actix-web = "4.0.15"
 dirs = "4.0.0"
+extism = "1.5.0"
 futures = "0.3.28"
 futures-util = "0.3.25"
 mime = "0.3.16"
 mime_guess = "2.0.4"
+music-player-host-fn = {path = "../host_fn", version = "0.1.0"}
 owo-colors = "3.5.0"
 rust-embed = {version = "6.4.1", features = ["debug-embed", "actix"]}
 sea-orm = {version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 serde = {version = "1.0.145", features = ["serde_derive"]}
 serde_derive = "1.0.145"
 tokio = {version = "1.21.2", features = ["full"]}
+ureq = "2.10.1"

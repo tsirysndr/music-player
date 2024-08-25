@@ -24,13 +24,13 @@ pub struct Settings {
     pub device_id: String,
     pub http_port: u16,
     pub tauri_enable_graphql_server: bool,
+    pub audio_backend: Option<String>, // default to "rodio", can be "pipe", "subprocess"
+    pub device: Option<String>,
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
     let path = match env::consts::OS {
-        "android" => {
-            "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned()
-        },
+        "android" => "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned(),
         _ => {
             let config_dir = dirs::config_dir().unwrap();
             format!("{}/music-player", config_dir.to_str().unwrap())
@@ -40,9 +40,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
     let music_directory = match env::consts::OS {
         "android" => "/storage/emulated/0/Music".to_owned(),
         _ => {
-            let mut tmp = PathBuf::new();
-            tmp.push("/tmp");
-            let music_dir = dirs::audio_dir().unwrap_or(tmp);
+            let mut home = dirs::home_dir().unwrap();
+            home.push("Music");
+            let music_dir = dirs::audio_dir().unwrap_or(home);
             music_dir.to_str().unwrap().to_owned()
         }
     };
@@ -61,14 +61,9 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         port: 5051,
         ws_port: 5052,
         addons: Some(vec![
-            "deezer".to_string(),
-            "datpiff".to_string(),
-            "genius".to_string(),
+            "chromecast".to_string(),
+            "dlna".to_string(),
             "local".to_string(),
-            "myvazo".to_string(),
-            "tononkira".to_string(),
-            "musicbrainz".to_string(),
-            "lastfm".to_string(),
         ]),
         music_directory,
         host: "0.0.0.0".to_string(),
@@ -76,6 +71,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         device_id,
         http_port: 5053,
         tauri_enable_graphql_server: false,
+        audio_backend: Some("rodio".to_string()),
+        device: None,
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -124,12 +121,14 @@ pub fn get_application_directory() -> String {
     let tracks = format!("{}/tracks", path);
     let covers = format!("{}/covers", path);
     let cache = format!("{}/cache", path);
+    let addons = format!("{}/addons", path);
     fs::create_dir_all(&albums).unwrap();
     fs::create_dir_all(&artists).unwrap();
     fs::create_dir_all(&playlists).unwrap();
     fs::create_dir_all(&tracks).unwrap();
     fs::create_dir_all(&covers).unwrap();
     fs::create_dir_all(&cache).unwrap();
+    fs::create_dir_all(&addons).unwrap();
 
     path
 }

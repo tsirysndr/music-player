@@ -1,4 +1,4 @@
-use music_player_types::types::{Artist as ArtistType, RemoteTrackUrl, Song, RemoteCoverUrl};
+use music_player_types::types::{Artist as ArtistType, RemoteCoverUrl, RemoteTrackUrl, Song};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 
@@ -88,6 +88,26 @@ impl RemoteTrackUrl for Model {
                 .map(|track| track.with_remote_track_url(base_url))
                 .collect(),
             ..self.clone()
+        }
+    }
+}
+
+impl From<music_player_pdk::types::Artist> for Model {
+    fn from(artist: music_player_pdk::types::Artist) -> Self {
+        Self {
+            id: artist.id,
+            name: artist.name,
+            ..Default::default()
+        }
+    }
+}
+
+impl Into<music_player_pdk::types::Artist> for Model {
+    fn into(self) -> music_player_pdk::types::Artist {
+        music_player_pdk::types::Artist {
+            id: self.id,
+            name: self.name,
+            ..Default::default()
         }
     }
 }

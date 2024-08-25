@@ -19,6 +19,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Run Dagger Pipelines
         run: fluentci run . test
+        env:
+          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
       - name: Upload to Codecov
         run: fluentci run codecov_pipeline
         env:

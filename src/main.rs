@@ -8,9 +8,10 @@ use std::{
     time::{Duration, Instant},
 };
 
+use addons::register_addons;
 use app::{ActiveBlock, App, CurrentlyPlaybackContext, RouteId};
 use args::parse_args;
-use clap::{arg, Command};
+use clap::{arg, ArgAction, Command};
 use crossterm::{
     cursor::MoveTo,
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -21,6 +22,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use event::Key;
+use extism::UserData;
 use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
 use music_player_client::{library::LibraryClient, ws_client::WebsocketClient};
@@ -32,6 +34,7 @@ use music_player_graphql::{
     },
     simple_broker::SimpleBroker,
 };
+use music_player_host_fn::state::State;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -54,6 +57,7 @@ use tui::{
 };
 use tungstenite::Message;
 
+mod addons;
 mod app;
 mod args;
 mod event;
@@ -66,11 +70,11 @@ mod user_config;
 type Tx = UnboundedSender<Message>;
 type PeerMap = Arc<sync::Mutex<HashMap<SocketAddr, Tx>>>;
 
-fn cli() -> Command<'static> {
+fn cli() -> Command {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     Command::new("music-player")
         .version(VERSION)
-        .author("Tsiry Sandratraina <tsiry.sndr@aol.com>")
+        .author("Tsiry Sandratraina <tsiry.sndr@fluentci.io>")
         .about(
             r#"
      __  ___           _      ____  __                     
@@ -80,12 +84,12 @@ fn cli() -> Command<'static> {
  /_/  /_/\__,_/____/_/\___/_/   /_/\__,_/\__, /\___/_/     
                                         /____/             
  
-A simple music player written in Rust"#,
+A simple music player written in Rust, with WebAssembly addons"#,
         )
         .subcommand(
             Command::new("open")
                 .about("open audio file")
-                .arg_from_usage("<song> 'The path to the song'"),
+                .arg(arg!(<song> "The path to the song"))
         )
         .subcommand(Command::new("scan").about("Scan music library: $HOME/Music"))
         .subcommand(Command::new("albums").arg(
@@ -97,28 +101,28 @@ A simple music player written in Rust"#,
                 .subcommand(
                     Command::new("add")
                         .about("Add a song to the playlist")
-                        .arg_from_usage("<id> 'The track id'"),
+                        .arg(arg!(<id> "The track id")),
                 )
                 .subcommand(Command::new("ls").about("List all playlists"))
-                .subcommand(Command::new("clear").about("Clear the playlist").arg_from_usage(
-                    "[id] 'The playlist id, if not specified, the current playlist will be cleared'",
+                .subcommand(Command::new("clear").about("Clear the playlist").arg(
+                    arg!([id] "The playlist id, if not specified, the current playlist will be cleared"),
                 ))
                 .subcommand(
                     Command::new("open")
                         .about("Play the playlist")
-                        .arg_from_usage("[id] 'The playlist id'"),
+                        .arg(arg!([id] "The playlist id")),
                 )
                 .subcommand(
                     Command::new("remove")
                         .about("Remove a song from the playlist")
-                        .arg_from_usage("<id> 'The track id'"),
+                        .arg(arg!(<id> "The track id")),
                 )
                 .subcommand(Command::new("shuffle").about("Shuffle the playlist"))
                 .subcommand(Command::new("all").about("List all songs in the playlist"))
                 .subcommand(
                     Command::new("show")
                         .about("Show the playlist details")
-                        .arg_from_usage("<id> 'The track id'")
+                        .arg(arg!(<id> "The track id"))
                 )
                 .about("Manage playlists")
                 .arg_required_else_help(true),
@@ -128,22 +132,22 @@ A simple music player written in Rust"#,
                 .subcommand(
                     Command::new("list")
                         .about("List all songs in the queue")
-                        .arg_from_usage("-a, --all 'List all songs in the queue'"),
+                        .arg(arg!(-a --all "List all songs in the queue")),
                 )
                 .subcommand(
                     Command::new("add")
                         .about("Add a song to the queue")
-                        .arg_from_usage("<track_id> 'The track id'"),
+                        .arg(arg!(<track_id> "The track id")),
                 )
                 .subcommand(
                     Command::new("remove")
                         .about("Remove a song from the queue")
-                        .arg_from_usage("<song> 'The path to the song'"),
+                        .arg(arg!(<song> "The path to the song")),
                 )
                 .subcommand(
                     Command::new("clear")
                         .about("Clear the queue")
-                        .arg_from_usage("-a, --all 'Clear the queue'"),
+                        .arg(arg!(-a --all "Clear the queue")),
                 )
                 .about("Manage the queue")
                 .arg_required_else_help(true),
@@ -152,7 +156,7 @@ A simple music player written in Rust"#,
         .subcommand(
             Command::new("search")
                 .about("Search for a song, album, artist or playlist")
-                .arg_from_usage("<query> 'The query to search for'"),
+                .arg(arg!(<query> "The query to search for")),
         )
         .subcommand(Command::new("pause").about("Pause the current song"))
         .subcommand(Command::new("play").about("Resume the current song"))
@@ -180,7 +184,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+    let backend = audio_backend::find(settings.audio_backend.clone()).expect(&format!(
+        "Audio backend not found: {}",
+        settings.audio_backend.unwrap_or_default()
+    ));
     let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
     let cloned_peer_map = Arc::clone(&peer_map);
 
@@ -214,7 +223,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cmd_tx_ws = Arc::clone(&cloned_cmd_tx);
     let cmd_tx_webui = Arc::clone(&cloned_cmd_tx);
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || {
+            backend(
+                match env::var("MUSIC_PLAYER_DEVICE") {
+                    Ok(device) => Some(device),
+                    Err(_) => settings.device,
+                },
+                audio_format,
+            )
+        },
         move |event| {
             let peers = cloned_peer_map.lock().unwrap();
 
@@ -273,8 +290,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let err = parsed.err().unwrap().to_string();
-    if !err.eq("No subcommand found") {
-        if err.eq("transport error") {
+    if (!err.eq("No subcommand found")) {
+        if (err.eq("transport error")) {
             println!(
                 "The server is not running, please run {}",
                 "`music-player`".bright_green()
@@ -299,8 +316,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let peer_map_ws = Arc::clone(&peer_map);
 
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cmd_tx),
+        tracklist: Arc::clone(&tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     if mode == "server" {
         register_services();
+        register_addons(user_data.clone()).unwrap();
+
+        let cloned_user_data = user_data.clone();
 
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -313,6 +341,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Arc::clone(&cmd_tx),
                     Arc::clone(&peer_map),
                     db,
+                    cloned_user_data,
                 )
                 .start(),
             ) {
@@ -322,6 +351,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
+
+        let cloned_user_data = user_data.clone();
         // Spawn a thread to handle the player events
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -330,7 +361,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
             let db = runtime.block_on(Database::new());
             match runtime.block_on(
-                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db).start_ws(),
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db, cloned_user_data)
+                    .start_ws(),
             ) {
                 Ok(_) => {}
                 Err(e) => {
@@ -338,7 +370,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
-        start_webui(cmd_tx_webui, tracklist_webui).await?;
+
+        start_webui(cmd_tx_webui, tracklist_webui, user_data).await?;
         return Ok(());
     }
 

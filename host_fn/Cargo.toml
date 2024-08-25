@@ -1,0 +1,34 @@
+[package]
+edition = "2021"
+name = "music-player-host-fn"
+version = "0.1.0"
+
+[dependencies.music-player-playback]
+path = "../playback"
+version = "0.1.9"
+
+[dependencies.music-player-storage]
+path = "../storage"
+version = "0.1.8"
+
+[dependencies.music-player-tracklist]
+path = "../tracklist"
+version = "0.1.8"
+
+[dependencies.music-player-entity]
+path = "../entity"
+version = "0.1.7"
+
+[dependencies.music-player-types]
+path = "../types"
+version = "0.1.6"
+
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.1.5"
+
+[dependencies]
+extism = "1.5.0"
+music-player-pdk = {path = "../pdk", version = "0.1.0"}
+tokio = {version = "1.21.2", features = ["full"]}
+ureq = "2.10.1"

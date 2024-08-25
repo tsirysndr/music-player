@@ -1,31 +1,39 @@
 use std::sync::Arc;
 
+use extism::{convert::Json, UserData};
+use music_player_addons::load_plugin;
 use music_player_entity::{album, artist, track};
+use music_player_host_fn::state::State;
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::{repo::track::TrackRepository, Database};
 use music_player_tracklist::Tracklist as TracklistState;
 use sea_orm::EntityTrait;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
-use crate::api::{
-    metadata::v1alpha1::Track,
-    music::v1alpha1::{
-        tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
-        AddTracksRequest, AddTracksResponse, ClearTracklistRequest, ClearTracklistResponse,
-        FilterTracklistRequest, FilterTracklistResponse, GetNextTrackRequest, GetNextTrackResponse,
-        GetPreviousTrackRequest, GetPreviousTrackResponse, GetRandomRequest, GetRandomResponse,
-        GetRepeatRequest, GetRepeatResponse, GetSingleRequest, GetSingleResponse,
-        GetTracklistTracksRequest, GetTracklistTracksResponse, LoadTracksRequest,
-        LoadTracksResponse, PlayNextRequest, PlayNextResponse, PlayTrackAtRequest,
-        PlayTrackAtResponse, RemoveTrackAtRequest, RemoveTrackAtResponse, SetRepeatRequest,
-        SetRepeatResponse, ShuffleRequest, ShuffleResponse,
+use crate::{
+    api::{
+        metadata::v1alpha1::Track,
+        music::v1alpha1::{
+            tracklist_service_server::TracklistService, AddTrackRequest, AddTrackResponse,
+            AddTracksRequest, AddTracksResponse, ClearTracklistRequest, ClearTracklistResponse,
+            FilterTracklistRequest, FilterTracklistResponse, GetNextTrackRequest,
+            GetNextTrackResponse, GetPreviousTrackRequest, GetPreviousTrackResponse,
+            GetRandomRequest, GetRandomResponse, GetRepeatRequest, GetRepeatResponse,
+            GetSingleRequest, GetSingleResponse, GetTracklistTracksRequest,
+            GetTracklistTracksResponse, LoadTracksRequest, LoadTracksResponse, PlayNextRequest,
+            PlayNextResponse, PlayTrackAtRequest, PlayTrackAtResponse, RemoveTrackAtRequest,
+            RemoveTrackAtResponse, SetRepeatRequest, SetRepeatResponse, ShuffleRequest,
+            ShuffleResponse,
+        },
     },
+    into_tonic_status,
 };
 
 pub struct Tracklist {
     state: Arc<std::sync::Mutex<TracklistState>>,
     cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     db: Database,
+    user_data: UserData<State>,
 }
 
 impl Tracklist {
@@ -33,8 +41,14 @@ impl Tracklist {
         state: Arc<std::sync::Mutex<TracklistState>>,
         cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
         db: Database,
+        user_data: UserData<State>,
     ) -> Self {
-        Self { state, cmd_tx, db }
+        Self {
+            state,
+            cmd_tx,
+            db,
+            user_data,
+        }
     }
 }
 
@@ -68,13 +82,14 @@ impl TracklistService for Tracklist {
         let (_, album) = result.into_iter().next().unwrap();
         track.album = album.unwrap();
 
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::LoadTracklist {
-                tracks: vec![track],
-            })
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
+                "load_tracks",
+                Json(vec![track.into()]),
+            )
+            .map_err(into_tonic_status)?;
+
         let response = AddTrackResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -90,7 +105,10 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
     ) -> Result<tonic::Response<ClearTracklistResponse>, tonic::Status> {
-        self.cmd_tx.lock().unwrap().send(PlayerCommand::Clear);
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("clear", "")
+            .map_err(into_tonic_status)?;
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -156,11 +174,10 @@ impl TracklistService for Tracklist {
         request: tonic::Request<RemoveTrackAtRequest>,
     ) -> Result<tonic::Response<RemoveTrackAtResponse>, tonic::Status> {
         let request = request.into_inner();
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::RemoveTrack(request.position as usize))
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<u32, ()>("remove_track_at", request.position)
+            .map_err(into_tonic_status)?;
         let response = RemoveTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -209,13 +226,12 @@ impl TracklistService for Tracklist {
             return Err(tonic::Status::invalid_argument("Track URI is required"));
         }
 
-        let track = track.into();
+        let track: music_player_entity::track::Model = track.into();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<Json<music_player_pdk::types::Track>, ()>("play_next", Json(track.into()))
+            .map_err(into_tonic_status)?;
 
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::PlayNext(track))
-            .unwrap();
         let response = PlayNextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -225,11 +241,12 @@ impl TracklistService for Tracklist {
         request: tonic::Request<PlayTrackAtRequest>,
     ) -> Result<tonic::Response<PlayTrackAtResponse>, tonic::Status> {
         let request = request.into_inner();
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::PlayTrackAt(request.index as usize))
-            .unwrap();
+
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<u32, ()>("play_track_at", request.index)
+            .map_err(into_tonic_status)?;
+
         let response = PlayTrackAtResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -246,26 +263,23 @@ impl TracklistService for Tracklist {
             .collect::<Vec<track::Model>>();
         let start_index = request.start_index as usize;
 
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Stop)
-            .unwrap();
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Clear)
-            .unwrap();
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::LoadTracklist { tracks })
-            .unwrap();
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::PlayTrackAt(start_index))
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("stop", "")
+            .map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("clear", "")
+            .map_err(into_tonic_status)?;
+        plugin
+            .call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
+                "load_tracks",
+                Json(tracks.into_iter().map(Into::into).collect()),
+            )
+            .map_err(into_tonic_status)?;
+        plugin
+            .call::<u32, ()>("play_track_at", start_index as u32)
+            .map_err(into_tonic_status)?;
+
         let response = LoadTracksResponse {};
         Ok(tonic::Response::new(response))
     }

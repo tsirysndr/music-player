@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::simple_broker::SimpleBroker;
 use async_graphql::*;
+use extism::UserData;
 use futures_util::Stream;
-use music_player_addons::CurrentReceiverDevice;
-use music_player_playback::player::PlayerCommand;
-use music_player_tracklist::{PlaybackState, Tracklist};
-use tokio::sync::mpsc::UnboundedSender;
+use music_player_addons::{load_plugin, CurrentReceiverDevice};
+use music_player_host_fn::state::State;
+use music_player_tracklist::Tracklist;
 use tokio::sync::Mutex as TokioMutex;
 
 use super::objects::{
@@ -33,11 +33,14 @@ impl PlaybackQuery {
             return Ok(playback.into());
         }
 
-        let tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
-        let (track, index) = tracklist.lock().unwrap().current_track();
-        let playback_state = tracklist.lock().unwrap().playback_state();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        let current_song = plugin.call::<&str, extism::convert::Json<
+            music_player_pdk::types::CurrentlyPlayingSong,
+        >>("get_current_playback", "")?;
+        let current_song = current_song.into_inner();
 
-        if track.is_none() {
+        if current_song.track.is_none() {
             let response = CurrentlyPlayingSong {
                 track: None,
                 index: 0,
@@ -47,13 +50,12 @@ impl PlaybackQuery {
             return Ok(response);
         }
 
-        let track = track.unwrap();
-
         Ok(CurrentlyPlayingSong {
-            track: Some(track.into()),
-            index: index as u32,
-            position_ms: playback_state.position_ms,
-            is_playing: playback_state.is_playing,
+            track: current_song.track.map(Into::into),
+            index: current_song.index as u32,
+            position_ms: current_song.position_ms,
+            is_playing: current_song.is_playing,
+            ..Default::default()
         })
     }
 
@@ -80,14 +82,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Next)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("next", "")?;
         Ok(true)
     }
 
@@ -103,14 +100,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Play)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("play", "")?;
         Ok(true)
     }
 
@@ -126,14 +118,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Pause)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("pause", "")?;
         Ok(true)
     }
 
@@ -149,14 +136,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Previous)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("previous", "")?;
         Ok(true)
     }
 
@@ -172,14 +154,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Seek(position))
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<u32, ()>("seek", position)?;
         Ok(true)
     }
 
@@ -195,14 +172,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Stop)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("stop", "")?;
         Ok(true)
     }
 }

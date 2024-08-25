@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use async_graphql::{Request, Response, Schema};
+use extism::UserData;
 use futures::{
     future::Either::{Left, Right},
     stream::StreamExt,
@@ -21,6 +22,7 @@ use music_player_graphql::{
     simple_broker::SimpleBroker,
     MusicPlayerSchema,
 };
+use music_player_host_fn::state::State;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -94,7 +96,15 @@ async fn execute_graphql(
 #[tokio::main]
 async fn main() {
     let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+
+    let backend = audio_backend::find(match env::var("MUSIC_PLAYER_AUDIO_BACKEND") {
+        Ok(backend) => Some(backend),
+        Err(_) => settings.audio_backend,
+    })
+    .unwrap();
+
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
@@ -106,7 +116,15 @@ async fn main() {
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || {
+            backend(
+                match env::var("MUSIC_PLAYER_DEVICE") {
+                    Ok(device) => Some(device),
+                    Err(_) => settings.device,
+                },
+                audio_format,
+            )
+        },
         move |event| match event {
             PlayerEvent::CurrentTrack {
                 track,
@@ -133,6 +151,15 @@ async fn main() {
         tracklist.clone(),
     );
     let db = Database::new().await;
+
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cmd_tx),
+        tracklist: Arc::clone(&tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     let schema: MusicPlayerSchema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -146,6 +173,7 @@ async fn main() {
     .data(source_device)
     .data(receiver_device)
     .data(searcher)
+    .data(user_data)
     .finish();
 
     let config = read_settings().unwrap();

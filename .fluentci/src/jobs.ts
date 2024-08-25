@@ -65,6 +65,7 @@ export const test = async (src = ".") => {
       "psmisc",
     ])
     .withExec(["rustup", "component", "add", "llvm-tools"])
+    .withExec(["rustup", "target", "add", "wasm32-unknown-unknown"])
     .withExec([
       "wget",
       "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.36/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
@@ -73,6 +74,39 @@ export const test = async (src = ".") => {
     .withExec(["mv", "cargo-llvm-cov", "/usr/local/bin"])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
+    .withExec([
+      "cargo",
+      "build",
+      "-p",
+      "chromecast",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--release",
+    ])
+    .withExec([
+      "cargo",
+      "build",
+      "-p",
+      "dlna",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--release",
+    ])
+    .withExec([
+      "cargo",
+      "build",
+      "-p",
+      "local",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--release",
+    ])
+    .withExec(["mkdir", "-p", "/tmp/addons"])
+    .withExec([
+      "sh",
+      "-c",
+      "cp target/wasm32-unknown-unknown/release/*.wasm /tmp/addons",
+    ])
     .withMountedCache("/app/target", dag.cacheVolume("target"))
     .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
     .withExec(["cp", "-r", "fixtures/audio", "/tmp"])
@@ -91,6 +125,20 @@ export const test = async (src = ".") => {
     .withExec(["cargo", "install", "--path", "."])
     .withExec(["sh", "-c", "rm -rf target/*"])
     .withExec(["music-player", "scan"])
+    .withExec([
+      "rm",
+      "-rf",
+      "addons/chromecast",
+      "addons/dlna",
+      "addons/kodi",
+      "addons/local",
+      "addons/mopidy",
+      "addons/mpd",
+      "addons/mpris",
+      "addons/squeezebox",
+      "addons/tunein",
+    ])
+    .withExec(["cp", "Cargo.llvm-cov.toml", "Cargo.toml"])
     .withExec([
       "sh",
       "-c",

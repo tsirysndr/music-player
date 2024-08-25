@@ -18,7 +18,11 @@ fn read_settings() {
     assert_eq!(settings.get_int("http_port").unwrap(), 5053);
     assert_eq!(settings.get_string("device_name").unwrap(), "Music Player");
     assert_eq!(settings.get_string("device_id").unwrap().len(), 32);
-    assert_eq!(settings.get_array("addons").unwrap().len(), 8);
+    assert_eq!(settings.get_array("addons").unwrap().len(), 3);
+    assert_eq!(
+        settings.get_string("audio_backend").unwrap(),
+        "rodio".to_string()
+    );
     assert_eq!(
         settings.get_string("music_directory").unwrap(),
         dirs::audio_dir()

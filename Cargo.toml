@@ -31,6 +31,17 @@ members = [
   "types",
   "webui",
   "webui/musicplayer/src-tauri",
+  "addons/chromecast",
+  "addons/dlna",
+  "addons/kodi",
+  "addons/local",
+  "addons/mopidy",
+  "addons/mpd",
+  "addons/mpris",
+  "addons/squeezebox",
+  "addons/tunein",
+  "pdk",
+  "host_fn",
 ]
 
 [[bin]]
@@ -111,14 +122,17 @@ version = "^0.9.0"
 
 [dependencies]
 anyhow = "1.0.67"
-clap = "3.2.20"
+clap = "4.5.16"
 crossterm = {version = "0.25.0", features = ["serde"]}
 dirs = "4.0.0"
+extism = "1.5.0"
 futures = "0.3.24"
 futures-channel = "0.3.24"
 lofty = "0.9.0"
 md5 = "0.7.0"
+music-player-host-fn = {path = "host_fn", version = "0.1.0"}
 owo-colors = "3.5.0"
+reqwest = {version = "0.12.7", features = ["rustls-tls", "blocking"], default-features = false}
 sea-orm = {version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 serde_json = "1.0.85"
 spinners = "4.1.0"
@@ -127,3 +141,4 @@ time = "0.3.36"
 tokio = {version = "1.21.0", features = ["full"]}
 tui = {version = "0.19.0", features = ["crossterm", "serde"]}
 tungstenite = "0.17.3"
+ureq = "2.10.1"

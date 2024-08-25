@@ -1,15 +1,16 @@
 use std::{env, sync::Arc};
 
 use async_graphql::Schema;
+use extism::UserData;
 use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_host_fn::state::State;
 use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink, Sink},
+    audio_backend::{self, pipe::StdoutSink, rodio::RodioSink, Sink},
     config::AudioFormat,
     player::PlayerCommand,
 };
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
-use music_player_types::types::Device;
 use tokio::sync::{
     mpsc::{UnboundedReceiver, UnboundedSender},
     Mutex,
@@ -36,7 +37,7 @@ pub async fn setup_schema() -> (
     AudioFormat,
 ) {
     let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let backend = audio_backend::find(Some(StdoutSink::NAME.to_string())).unwrap();
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
@@ -55,6 +56,15 @@ pub async fn setup_schema() -> (
     );
 
     let db = Database::new().await;
+
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cmd_tx),
+        tracklist: Arc::clone(&tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     (
         Schema::build(
             Query::default(),
@@ -69,6 +79,7 @@ pub async fn setup_schema() -> (
         .data(Arc::clone(&source_device))
         .data(Arc::clone(&receiver_device))
         .data(Arc::clone(&searcher))
+        .data(user_data)
         .finish(),
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

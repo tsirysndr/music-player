@@ -6,9 +6,7 @@ use music_player_tracklist::{PlaybackState, Tracklist};
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
-    fs::File,
     mem,
-    path::Path,
     pin::Pin,
     process::exit,
     sync::Arc,
@@ -16,7 +14,7 @@ use std::{
     thread,
     time::Duration,
 };
-use symphonia::core::{errors::Error, io::MediaSourceStream, probe::Hint};
+use symphonia::core::{errors::Error, probe::Hint};
 use tokio::{
     runtime::{Handle, Runtime},
     sync::mpsc::{self, UnboundedReceiver},
@@ -30,7 +28,7 @@ use crate::{
     formatter,
 };
 
-const PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
+const _PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
 
 pub type PlayerResult = Result<(), Error>;
 

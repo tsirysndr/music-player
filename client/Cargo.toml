@@ -1,16 +1,19 @@
 [package]
-name = "music-player-client"
-version = "0.1.5"
-edition = "2021"
-repository = "https://github.com/tsirysndr/music-player"
-license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
-keywords = ["tokio", "music", "cli", "daemon", "streaming"]
 description = "The client library for the music player"
+edition = "2021"
+keywords = ["tokio", "music", "cli", "daemon", "streaming"]
+license = "MIT"
+name = "music-player-client"
+repository = "https://github.com/tsirysndr/music-player"
+version = "0.1.5"
 
 [dev-dependencies]
-tonic-web = "0.4.0"
 envtestkit = "1.1.2"
+extism = "1.5.0"
+music-player-host-fn = {path = "../host_fn", version = "0.1.0"}
+tonic-web = "0.4.0"
+ureq = "2.10.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -39,10 +42,9 @@ path = "../tracklist"
 version = "0.1.7"
 
 [dependencies]
+anyhow = "1.0.67"
 futures-util = "0.3.24"
+tokio = {version = "1.21.2", features = ["full"]}
 tokio-tungstenite = "0.17.2"
 tonic = "0.8.1"
 url = "2.3.1"
-tokio = { version = "1.21.2", features = ["full"] }
-anyhow = "1.0.67"
-

@@ -5,6 +5,7 @@ use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use mdns_sd::ServiceInfo;
 use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
 use music_player_settings::{read_settings, Settings};
+use serde::{Deserialize, Serialize};
 use tantivy::{
     schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
     Document,
@@ -683,4 +684,11 @@ impl RemoteCoverUrl for Playlist {
             ..self.clone()
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Module {
+    pub url: String,
+    pub function: String,
+    pub args: String,
 }

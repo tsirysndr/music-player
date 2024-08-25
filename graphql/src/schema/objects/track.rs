@@ -220,3 +220,24 @@ impl From<select_result::PlaylistTrack> for Track {
         }
     }
 }
+
+impl From<music_player_pdk::types::Track> for Track {
+    fn from(track: music_player_pdk::types::Track) -> Self {
+        Self {
+            id: ID(track.id),
+            title: track.title,
+            artist: track.artist.clone(),
+            duration: track.duration,
+            track_number: track.track,
+            album: Album {
+                id: ID(track.album.id),
+                title: track.album.title,
+                artist: track.artist,
+                year: track.year,
+                cover: track.album.cover,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+}

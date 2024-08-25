@@ -67,6 +67,14 @@ export const test = async (src = ".") => {
     .withExec(["rustup", "component", "add", "llvm-tools"])
     .withExec(["rustup", "target", "add", "wasm32-unknown-unknown"])
     .withExec([
+      "wget",
+      "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.36/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
+    ])
+    .withExec(["tar", "xvf", "cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz"])
+    .withExec(["mv", "cargo-llvm-cov", "/usr/local/bin"])
+    .withDirectory("/app", context, { exclude })
+    .withWorkdir("/app")
+    .withExec([
       "cargo",
       "build",
       "-p",
@@ -99,14 +107,6 @@ export const test = async (src = ".") => {
       "target/wasm32-unknown-unknown/release/*.wasm",
       "/tmp/addons",
     ])
-    .withExec([
-      "wget",
-      "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.36/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",
-    ])
-    .withExec(["tar", "xvf", "cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz"])
-    .withExec(["mv", "cargo-llvm-cov", "/usr/local/bin"])
-    .withDirectory("/app", context, { exclude })
-    .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
     .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
     .withExec(["cp", "-r", "fixtures/audio", "/tmp"])

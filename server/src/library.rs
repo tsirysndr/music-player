@@ -1,5 +1,7 @@
+use extism::UserData;
 use futures::future::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
+use music_player_host_fn::state::State;
 use music_player_scanner::scan_directory;
 use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::track::TrackRepository;
@@ -16,11 +18,12 @@ use crate::api::music::v1alpha1::{
 
 pub struct Library {
     db: Database,
+    user_data: UserData<State>,
 }
 
 impl Library {
-    pub fn new(db: Database) -> Self {
-        Self { db }
+    pub fn new(db: Database, user_data: UserData<State>) -> Self {
+        Self { db, user_data }
     }
 }
 

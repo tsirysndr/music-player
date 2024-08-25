@@ -14,7 +14,7 @@ use crate::simple_broker::SimpleBroker;
 use music_player_types::types::{self, Connected};
 
 use super::{
-    connect_to, connect_to_cast_device,
+    connect_to_cast_device,
     objects::device::{App, ConnectedDevice, Device, DisconnectedDevice},
     PlayerType,
 };
@@ -118,6 +118,7 @@ impl DevicesMutation {
                     .with_base_url(base_url);
                 io_device.set_source_device(current_device.clone());
 
+                /*
                 let source = connect_to(
                     types::Device::from(device.clone()).is_connected(Some(&device.clone())),
                 )
@@ -127,6 +128,7 @@ impl DevicesMutation {
                     Some(source) => io_device.set_client(source),
                     None => return Err(Error::new("No source found")),
                 }
+                */
 
                 SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
 
@@ -171,7 +173,9 @@ impl DevicesMutation {
                     "chromecast" => PlayerType::Chromecast,
                     "airplay" => PlayerType::Airplay,
                     "dlna" => PlayerType::Dlna,
-                    _ => PlayerType::MusicPlayer,
+                    // TODO: Add support for Default player
+                    _ => PlayerType::Chromecast,
+                    // _ => PlayerType::MusicPlayer,
                 };
 
                 let receiver = connect_to_cast_device(

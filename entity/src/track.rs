@@ -227,6 +227,48 @@ impl Into<Metadata> for Model {
     }
 }
 
+impl Into<music_player_pdk::types::Track> for Model {
+    fn into(self) -> music_player_pdk::types::Track {
+        music_player_pdk::types::Track {
+            id: self.id,
+            title: self.title,
+            artist: self.artist,
+            uri: self.uri,
+            genre: self.genre,
+            year: self.year,
+            track: self.track,
+            bitrate: self.bitrate,
+            sample_rate: self.sample_rate,
+            bit_depth: self.bit_depth,
+            channels: self.channels,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<music_player_pdk::types::Track> for Model {
+    fn from(track: music_player_pdk::types::Track) -> Self {
+        Self {
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            genre: track.genre,
+            year: track.year,
+            track: track.track,
+            bitrate: track.bitrate,
+            sample_rate: track.sample_rate,
+            bit_depth: track.bit_depth,
+            channels: track.channels,
+            uri: track.uri,
+            album_id: None,
+            artist_id: None,
+            artists: vec![],
+            album: Default::default(),
+            duration: None,
+        }
+    }
+}
+
 impl RemoteTrackUrl for Model {
     fn with_remote_track_url(&self, base_url: &str) -> Self {
         Self {

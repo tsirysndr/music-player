@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use async_graphql::{Request, Response, Schema};
+use extism::UserData;
 use futures::{
     future::Either::{Left, Right},
     stream::StreamExt,
@@ -21,6 +22,7 @@ use music_player_graphql::{
     simple_broker::SimpleBroker,
     MusicPlayerSchema,
 };
+use music_player_host_fn::state::State;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -149,6 +151,15 @@ async fn main() {
         tracklist.clone(),
     );
     let db = Database::new().await;
+
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cmd_tx),
+        tracklist: Arc::clone(&tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     let schema: MusicPlayerSchema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -162,6 +173,7 @@ async fn main() {
     .data(source_device)
     .data(receiver_device)
     .data(searcher)
+    .data(user_data)
     .finish();
 
     let config = read_settings().unwrap();

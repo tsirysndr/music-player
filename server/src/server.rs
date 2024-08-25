@@ -1,5 +1,7 @@
+use extism::UserData;
 use futures_channel::mpsc::{unbounded, UnboundedSender};
 use futures_util::{future, pin_mut, stream::TryStreamExt, StreamExt};
+use music_player_host_fn::state::State;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -47,6 +49,7 @@ pub struct MusicPlayerServer {
     tracklist: Arc<std::sync::Mutex<TracklistState>>,
     cmd_tx: Arc<std::sync::Mutex<TokioUnboundedSender<PlayerCommand>>>,
     peer_map: PeerMap,
+    user_data: UserData<State>,
 }
 
 impl MusicPlayerServer {
@@ -55,12 +58,14 @@ impl MusicPlayerServer {
         cmd_tx: Arc<std::sync::Mutex<TokioUnboundedSender<PlayerCommand>>>,
         peer_map: PeerMap,
         db: Database,
+        user_data: UserData<State>,
     ) -> Self {
         Self {
             db,
             tracklist,
             cmd_tx,
             peer_map,
+            user_data: user_data,
         }
     }
 
@@ -77,26 +82,34 @@ impl MusicPlayerServer {
             .accept_http1(true)
             .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
                 self.db.clone(),
+                self.user_data.clone(),
             ))))
             .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
             .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
                 self.db.clone(),
+                self.user_data.clone(),
             ))))
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
                 self.db.clone(),
+                self.user_data.clone(),
             ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&self.tracklist), Arc::clone(&self.cmd_tx)),
+                Playback::new(
+                    Arc::clone(&self.tracklist),
+                    Arc::clone(&self.cmd_tx),
+                    self.user_data.clone(),
+                ),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(self.db.clone()),
+                Playlist::new(self.db.clone(), self.user_data.clone()),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
                 Tracklist::new(
                     Arc::clone(&self.tracklist),
                     Arc::clone(&self.cmd_tx),
                     self.db.clone(),
+                    self.user_data.clone(),
                 ),
             )))
             .serve(addr)
@@ -122,26 +135,34 @@ impl MusicPlayerServer {
             .accept_http1(true)
             .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
                 self.db.clone(),
+                self.user_data.clone(),
             ))))
             .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
             .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
                 self.db.clone(),
+                self.user_data.clone(),
             ))))
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
                 self.db.clone(),
+                self.user_data.clone(),
             ))))
             .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&self.tracklist), Arc::clone(&self.cmd_tx)),
+                Playback::new(
+                    Arc::clone(&self.tracklist),
+                    Arc::clone(&self.cmd_tx),
+                    self.user_data.clone(),
+                ),
             )))
             .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(self.db.clone()),
+                Playlist::new(self.db.clone(), self.user_data.clone()),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
                 Tracklist::new(
                     Arc::clone(&self.tracklist),
                     Arc::clone(&self.cmd_tx),
                     self.db.clone(),
+                    self.user_data.clone(),
                 ),
             )))
             .serve_with_incoming(UnixListenerStream::new(listener))

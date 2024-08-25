@@ -518,9 +518,11 @@ dependencies = [
  "actix-web",
  "async-graphql",
  "async-graphql-actix-web",
+ "extism",
  "futures",
  "music-player-addons",
  "music-player-graphql",
+ "music-player-host-fn",
  "music-player-playback",
  "music-player-settings",
  "music-player-storage",
@@ -531,6 +533,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tokio",
+ "ureq",
  "uuid 1.3.0",
 ]
 
@@ -5158,18 +5161,20 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chromecast 0.18.2",
+ "extism",
  "futures",
  "futures-util",
  "hyper 0.14.24",
  "jsonrpsee",
  "local-ip-addr",
  "md5",
- "music-player-client",
+ "music-player-host-fn",
  "music-player-tracklist",
  "music-player-types",
  "surf",
  "tokio",
  "upnp-client",
+ "ureq",
  "url",
 ]
 
@@ -5258,6 +5263,7 @@ version = "0.1.7"
 dependencies = [
  "chrono",
  "md5",
+ "music-player-pdk",
  "music-player-types",
  "sea-orm",
  "serde",
@@ -5274,6 +5280,7 @@ dependencies = [
  "chrono",
  "ctor",
  "cuid",
+ "extism",
  "futures-channel",
  "futures-util",
  "md5",
@@ -5281,7 +5288,9 @@ dependencies = [
  "music-player-addons",
  "music-player-discovery",
  "music-player-entity",
+ "music-player-host-fn",
  "music-player-migration",
+ "music-player-pdk",
  "music-player-playback",
  "music-player-scanner",
  "music-player-settings",
@@ -5296,6 +5305,7 @@ dependencies = [
  "tide",
  "tokio",
  "upnp-client",
+ "ureq",
  "url",
 ]
 
@@ -5305,6 +5315,8 @@ version = "0.1.0"
 dependencies = [
  "extism",
  "music-player-common",
+ "music-player-entity",
+ "music-player-pdk",
  "music-player-playback",
  "music-player-settings",
  "music-player-storage",
@@ -5384,14 +5396,19 @@ dependencies = [
 name = "music-player-server"
 version = "0.2.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "cuid",
+ "extism",
  "futures",
  "futures-channel",
  "futures-util",
  "log",
  "md5",
+ "music-player-addons",
  "music-player-entity",
+ "music-player-host-fn",
+ "music-player-pdk",
  "music-player-playback",
  "music-player-scanner",
  "music-player-settings",
@@ -5409,6 +5426,7 @@ dependencies = [
  "tonic-build",
  "tonic-web",
  "tungstenite 0.17.3",
+ "ureq",
  "uuid 1.3.0",
 ]
 
@@ -5476,6 +5494,7 @@ dependencies = [
  "async-graphql",
  "async-graphql-actix-web",
  "dirs",
+ "extism",
  "futures",
  "futures-util",
  "mime",
@@ -5484,6 +5503,7 @@ dependencies = [
  "music-player-discovery",
  "music-player-entity",
  "music-player-graphql",
+ "music-player-host-fn",
  "music-player-playback",
  "music-player-scanner",
  "music-player-settings",
@@ -5498,6 +5518,7 @@ dependencies = [
  "serde_json",
  "surf",
  "tokio",
+ "ureq",
 ]
 
 [[package]]

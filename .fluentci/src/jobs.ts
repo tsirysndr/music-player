@@ -65,6 +65,40 @@ export const test = async (src = ".") => {
       "psmisc",
     ])
     .withExec(["rustup", "component", "add", "llvm-tools"])
+    .withExec(["rustup", "target", "add", "wasm32-unknown-unknown"])
+    .withExec([
+      "cargo",
+      "build",
+      "-p",
+      "chromecast",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--release",
+    ])
+    .withExec([
+      "cargo",
+      "build",
+      "-p",
+      "dlna",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--release",
+    ])
+    .withExec([
+      "cargo",
+      "build",
+      "-p",
+      "local",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--release",
+    ])
+    .withExec(["mkdir", "-p", "/tmp/addons"])
+    .withExec([
+      "cp",
+      "target/wasm32-unknown-unknown/release/*.wasm",
+      "/tmp/addons",
+    ])
     .withExec([
       "wget",
       "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.5.36/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz",

@@ -1,30 +1,42 @@
+use extism::UserData;
+use music_player_addons::load_plugin;
+use music_player_host_fn::state::State;
 use music_player_playback::player::PlayerCommand;
 use music_player_tracklist::Tracklist as TracklistState;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::api::{
-    metadata::v1alpha1::{Album, Artist, Track},
-    music::v1alpha1::{
-        playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
-        GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
-        GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
-        PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
-        SeekResponse, StopRequest, StopResponse,
+use crate::{
+    api::{
+        metadata::v1alpha1::{Album, Artist, Track},
+        music::v1alpha1::{
+            playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
+            GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
+            GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse,
+            PauseRequest, PauseResponse, PlayRequest, PlayResponse, PreviousRequest,
+            PreviousResponse, SeekRequest, SeekResponse, StopRequest, StopResponse,
+        },
     },
+    into_tonic_status,
 };
 
 pub struct Playback {
     tracklist: Arc<std::sync::Mutex<TracklistState>>,
     cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
+    user_data: UserData<State>,
 }
 
 impl Playback {
     pub fn new(
         tracklist: Arc<std::sync::Mutex<TracklistState>>,
         cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
+        user_data: UserData<State>,
     ) -> Self {
-        Self { tracklist, cmd_tx }
+        Self {
+            tracklist,
+            cmd_tx,
+            user_data,
+        }
     }
 }
 
@@ -84,11 +96,10 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<NextRequest>,
     ) -> Result<tonic::Response<NextResponse>, tonic::Status> {
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Next)
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("next", "")
+            .map_err(into_tonic_status)?;
         let response = NextResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -96,11 +107,10 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PreviousRequest>,
     ) -> Result<tonic::Response<PreviousResponse>, tonic::Status> {
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Previous)
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("previous", "")
+            .map_err(into_tonic_status)?;
         let response = PreviousResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -108,11 +118,10 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PlayRequest>,
     ) -> Result<tonic::Response<PlayResponse>, tonic::Status> {
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Play)
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("play", "")
+            .map_err(into_tonic_status)?;
         let response = PlayResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -120,11 +129,10 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<PauseRequest>,
     ) -> Result<tonic::Response<PauseResponse>, tonic::Status> {
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Pause)
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("pause", "")
+            .map_err(into_tonic_status)?;
         let response = PauseResponse {};
         Ok(tonic::Response::new(response))
     }
@@ -132,23 +140,21 @@ impl PlaybackService for Playback {
         &self,
         _request: tonic::Request<StopRequest>,
     ) -> Result<tonic::Response<StopResponse>, tonic::Status> {
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Stop)
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<&str, ()>("stop", "")
+            .map_err(into_tonic_status)?;
         let response = StopResponse {};
         Ok(tonic::Response::new(response))
     }
     async fn seek(
         &self,
-        _request: tonic::Request<SeekRequest>,
+        request: tonic::Request<SeekRequest>,
     ) -> Result<tonic::Response<SeekResponse>, tonic::Status> {
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Seek(12))
-            .unwrap();
+        let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
+        plugin
+            .call::<u32, ()>("seek", 0)
+            .map_err(into_tonic_status)?;
         let response = SeekResponse {};
         Ok(tonic::Response::new(response))
     }

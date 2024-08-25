@@ -1,7 +1,9 @@
 use std::{env, sync::Arc};
 
+use extism::UserData;
+use music_player_host_fn::state::State;
 use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink},
+    audio_backend::{self},
     config::AudioFormat,
     player::Player,
 };
@@ -9,7 +11,6 @@ use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
-use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -31,6 +32,15 @@ async fn main() -> std::io::Result<()> {
     let cloned_cmd_tx = Arc::clone(&cmd_tx);
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
     let db = Database::new().await;
+
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cloned_cmd_tx),
+        tracklist: Arc::clone(&cloned_tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     let (_, _) = Player::new(
         move || {
             backend(
@@ -47,5 +57,5 @@ async fn main() -> std::io::Result<()> {
         cloned_tracklist,
     );
     env::set_var("MUSIC_PLAYER_HTTP_PORT", "3001");
-    start_webui(cmd_tx, tracklist).await
+    start_webui(cmd_tx, tracklist, user_data).await
 }

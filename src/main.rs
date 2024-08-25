@@ -22,6 +22,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use event::Key;
+use extism::UserData;
 use futures::StreamExt;
 use futures_channel::mpsc::UnboundedSender;
 use music_player_client::{library::LibraryClient, ws_client::WebsocketClient};
@@ -33,6 +34,7 @@ use music_player_graphql::{
     },
     simple_broker::SimpleBroker,
 };
+use music_player_host_fn::state::State;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -314,9 +316,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let peer_map_ws = Arc::clone(&peer_map);
 
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cmd_tx),
+        tracklist: Arc::clone(&tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     if mode == "server" {
         register_services();
-        register_addons(Arc::clone(&cmd_tx), Arc::clone(&tracklist), db.clone()).unwrap();
+        register_addons(user_data.clone()).unwrap();
+
+        let cloned_user_data = user_data.clone();
 
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -329,6 +341,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Arc::clone(&cmd_tx),
                     Arc::clone(&peer_map),
                     db,
+                    cloned_user_data,
                 )
                 .start(),
             ) {
@@ -338,6 +351,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
+
+        let cloned_user_data = user_data.clone();
         // Spawn a thread to handle the player events
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -346,7 +361,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
             let db = runtime.block_on(Database::new());
             match runtime.block_on(
-                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db).start_ws(),
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db, cloned_user_data)
+                    .start_ws(),
             ) {
                 Ok(_) => {}
                 Err(e) => {
@@ -354,7 +370,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
-        start_webui(cmd_tx_webui, tracklist_webui).await?;
+
+        start_webui(cmd_tx_webui, tracklist_webui, user_data).await?;
         return Ok(());
     }
 

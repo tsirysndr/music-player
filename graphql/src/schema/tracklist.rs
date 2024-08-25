@@ -1,7 +1,10 @@
 use async_graphql::*;
+use extism::convert::Json;
+use extism::UserData;
 use futures_util::Stream;
-use music_player_addons::{CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_addons::{load_plugin, CurrentReceiverDevice, CurrentSourceDevice};
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
+use music_player_host_fn::state::State;
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::repo::album::AlbumRepository;
 use music_player_storage::repo::artist::ArtistRepository;
@@ -11,11 +14,7 @@ use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
 use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
 use music_player_types::types::{CHROMECAST_DEVICE, MUSIC_PLAYER_DEVICE};
-use rand::seq::SliceRandom;
-use sea_orm::{
-    ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
-    RelationTrait,
-};
+use sea_orm::EntityTrait;
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
@@ -125,13 +124,12 @@ impl TracklistMutation {
             if let Some(receiver) = receiver {
                 receiver.load(track.clone().into()).await?;
             } else {
-                player_cmd
-                    .lock()
-                    .unwrap()
-                    .send(PlayerCommand::LoadTracklist {
-                        tracks: vec![track.clone()],
-                    })
-                    .unwrap();
+                let user_data = ctx.data::<UserData<State>>().unwrap();
+                let mut plugin = load_plugin("local", user_data)?;
+                plugin.call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
+                    "load_tracklist",
+                    Json(vec![track.clone().into()]),
+                )?;
             }
 
             return Ok(vec![track.clone().into()]);
@@ -158,13 +156,12 @@ impl TracklistMutation {
         let (_, album) = result.into_iter().next().unwrap();
         track.album = album.unwrap();
 
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::LoadTracklist {
-                tracks: vec![track.clone()],
-            })
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
+            "load_tracklist",
+            Json(vec![track.clone().into()]),
+        )?;
 
         let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
 
@@ -191,18 +188,13 @@ impl TracklistMutation {
         let mut device = current_device.lock().await;
 
         if device.client.is_some() {
-            let receiver = device.client.as_mut().unwrap();
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Clear)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("clear", "")?;
+
         SimpleBroker::publish(TracklistChanged {
             tracklist: Tracklist {
                 next_tracks: vec![],
@@ -225,14 +217,9 @@ impl TracklistMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::RemoveTrack(position as usize))
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<u32, ()>("remove_track", position)?;
 
         let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
         SimpleBroker::publish(TracklistChanged {
@@ -256,14 +243,10 @@ impl TracklistMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::PlayTrackAt(position as usize))
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<u32, ()>("play_track_at", position)?;
+
         Ok(true)
     }
 
@@ -342,14 +325,10 @@ impl TracklistMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::PlayNext(track_entity::Model { ..track }))
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<Json<music_player_pdk::types::Track>, ()>("play_next", Json(track.into()))?;
+
         Ok(true)
     }
 

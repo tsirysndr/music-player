@@ -1,5 +1,7 @@
+use extism::UserData;
 use futures_util::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
+use music_player_host_fn::state::State;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink},
     config::AudioFormat,
@@ -39,17 +41,25 @@ async fn start_webui() {
     let (_, _) = Player::new(
         move || backend(None, audio_format),
         move |_| {},
-        cloned_cmd_tx,
-        cloned_cmd_rx,
-        cloned_tracklist,
+        cloned_cmd_tx.clone(),
+        cloned_cmd_rx.clone(),
+        cloned_tracklist.clone(),
     );
 
     thread::spawn(move || {
+        let user_data = UserData::new(State {
+            player_cmd_tx: Arc::clone(&cloned_cmd_tx),
+            tracklist: Arc::clone(&cloned_tracklist),
+            db: db_conn.clone(),
+            addons: vec![],
+            addon_capabilities: vec![],
+        });
+
         let rt = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap();
-        rt.block_on(async { super::start_webui(cmd_tx, tracklist).await })
+        rt.block_on(async { super::start_webui(cmd_tx, tracklist, user_data).await })
             .unwrap();
     });
 

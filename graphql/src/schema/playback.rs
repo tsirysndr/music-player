@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::simple_broker::SimpleBroker;
 use async_graphql::*;
+use extism::UserData;
 use futures_util::Stream;
-use music_player_addons::CurrentReceiverDevice;
-use music_player_playback::player::PlayerCommand;
-use music_player_tracklist::{PlaybackState, Tracklist};
-use tokio::sync::mpsc::UnboundedSender;
+use music_player_addons::{load_plugin, CurrentReceiverDevice};
+use music_player_host_fn::state::State;
+use music_player_tracklist::Tracklist;
 use tokio::sync::Mutex as TokioMutex;
 
 use super::objects::{
@@ -80,6 +80,10 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("next", "")?;
+        /*
         let player_cmd = ctx
             .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -88,6 +92,7 @@ impl PlaybackMutation {
             .unwrap()
             .send(PlayerCommand::Next)
             .unwrap();
+        */
         Ok(true)
     }
 
@@ -103,14 +108,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Play)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("play", "")?;
         Ok(true)
     }
 
@@ -126,14 +126,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Pause)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("pause", "")?;
         Ok(true)
     }
 
@@ -149,14 +144,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Previous)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("previous", "")?;
         Ok(true)
     }
 
@@ -172,14 +162,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Seek(position))
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<u32, ()>("seek", position)?;
         Ok(true)
     }
 
@@ -195,14 +180,9 @@ impl PlaybackMutation {
             return Ok(true);
         }
 
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Stop)
-            .unwrap();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        plugin.call::<&str, ()>("stop", "")?;
         Ok(true)
     }
 }

@@ -1,4 +1,6 @@
+use extism::UserData;
 use music_player_entity::{playlist, playlist_tracks, track};
+use music_player_host_fn::state::State;
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
@@ -23,11 +25,12 @@ use crate::api::{
 
 pub struct Playlist {
     db: Database,
+    user_data: UserData<State>,
 }
 
 impl Playlist {
-    pub fn new(db: Database) -> Self {
-        Self { db }
+    pub fn new(db: Database, user_data: UserData<State>) -> Self {
+        Self { db, user_data }
     }
 }
 

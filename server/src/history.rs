@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use extism::UserData;
+use music_player_host_fn::state::State;
 use music_player_storage::Database;
 use tokio::sync::Mutex;
 
@@ -9,11 +11,12 @@ use crate::api::music::v1alpha1::{
 
 pub struct History {
     db: Database,
+    user_data: UserData<State>,
 }
 
 impl History {
-    pub fn new(db: Database) -> Self {
-        Self { db }
+    pub fn new(db: Database, user_data: UserData<State>) -> Self {
+        Self { db, user_data }
     }
 }
 

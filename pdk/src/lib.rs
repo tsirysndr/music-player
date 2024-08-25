@@ -1,6 +1,9 @@
 use extism_pdk::*;
 use serde::{Deserialize, Serialize};
 
+pub mod player;
+pub mod types;
+
 #[host_fn]
 extern "ExtismHost" {
     fn open_media(url: String);
@@ -32,6 +35,23 @@ pub enum Capability {
     Player,
     Browse,
     Share,
+}
+
+impl From<&str> for Capability {
+    fn from(s: &str) -> Self {
+        match s {
+            "player" => Capability::Player,
+            "browse" => Capability::Browse,
+            "share" => Capability::Share,
+            _ => Capability::Player,
+        }
+    }
+}
+
+impl From<String> for Capability {
+    fn from(s: String) -> Self {
+        s.as_str().into()
+    }
 }
 
 impl Capability {

@@ -380,3 +380,7 @@ pub mod api {
         }
     }
 }
+
+fn into_tonic_status(error: anyhow::Error) -> tonic::Status {
+    tonic::Status::internal(error.to_string())
+}

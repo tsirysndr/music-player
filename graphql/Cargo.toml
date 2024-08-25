@@ -1,15 +1,14 @@
 [package]
-name = "music-player-graphql"
-version = "0.1.10"
-edition = "2021"
-repository = "https://github.com/tsirysndr/music-player"
-license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
 categories = ["command-line-utilities"]
-keywords = ["tokio", "music", "cli", "daemon", "streaming"]
 description = "The GraphQL server API for the music player"
+edition = "2021"
+keywords = ["tokio", "music", "cli", "daemon", "streaming"]
+license = "MIT"
+name = "music-player-graphql"
+repository = "https://github.com/tsirysndr/music-player"
+version = "0.1.10"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 
 [dependencies.music-player-playback]
 path = "../playback"
@@ -47,6 +46,10 @@ version = "0.1.2"
 path = "../addons"
 version = "0.1.5"
 
+[dependencies.music-player-host-fn]
+path = "../host_fn"
+version = "0.1.0"
+
 [dev-dependencies.music-player-migration]
 path = "../migration"
 version = "0.1.6"
@@ -55,21 +58,24 @@ version = "0.1.6"
 ctor = "0.1.26"
 
 [dependencies]
-async-graphql = "4.0.15"
-tide = "0.16.0"
-async-graphql-tide = "4.0.15"
-tokio = { version = "1.21.0", features = ["full"] }
-md5 = "0.7.0"
-sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
-rand = "0.8.5"
-cuid = "1.2.0"
-chrono = "0.4.23"
-futures-util = "0.3.25"
-futures-channel = "0.3.25"
-once_cell = "1.16.0"
-slab = "0.4.7"
-serde = { version = "1.0.148", features = ["serde_derive"] }
-mdns-sd = "0.5.9"
 anyhow = "1.0.67"
-url = "2.3.1"
+async-graphql = "4.0.15"
+async-graphql-tide = "4.0.15"
+chrono = "0.4.23"
+cuid = "1.2.0"
+extism = "1.5.0"
+futures-channel = "0.3.25"
+futures-util = "0.3.25"
+md5 = "0.7.0"
+mdns-sd = "0.5.9"
+music-player-pdk = {version = "0.1.0", path = "../pdk"}
+once_cell = "1.16.0"
+rand = "0.8.5"
+sea-orm = {version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
+serde = {version = "1.0.148", features = ["serde_derive"]}
+slab = "0.4.7"
+tide = "0.16.0"
+tokio = {version = "1.21.0", features = ["full"]}
 upnp-client = "0.1.9"
+ureq = "2.10.1"
+url = "2.3.1"

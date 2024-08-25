@@ -34,8 +34,8 @@ async fn insert_album() {
     assert!(searcher.search_album("Eternal").is_ok());
 }
 
-#[test]
-fn insert_artist() {
+#[tokio::test]
+async fn insert_artist() {
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     let searcher = Searcher::new();
     let artist = Artist {
@@ -47,8 +47,8 @@ fn insert_artist() {
     assert!(searcher.insert_artist(artist).is_ok());
 }
 
-#[test]
-fn insert_track() {
+#[tokio::test]
+async fn insert_track() {
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     let searcher = Searcher::new();
     let song = Song {

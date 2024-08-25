@@ -58,6 +58,22 @@ host_fn!(pub stop(app_data: State;) {
   Ok(())
 });
 
+host_fn!(pub next(app_data: State;) {
+  let state = app_data.get()?;
+  let state = state.lock().unwrap();
+  let cmd_tx = state.player_cmd_tx.lock().unwrap();
+  cmd_tx.send(PlayerCommand::Next)?;
+  Ok(())
+});
+
+host_fn!(pub previous(app_data: State;) {
+  let state = app_data.get()?;
+  let state = state.lock().unwrap();
+  let cmd_tx = state.player_cmd_tx.lock().unwrap();
+  cmd_tx.send(PlayerCommand::Previous)?;
+  Ok(())
+});
+
 host_fn!(pub seek(app_data: State; position: u32) {
   let state = app_data.get()?;
   let state = state.lock().unwrap();
@@ -83,13 +99,21 @@ host_fn!(pub clear(app_data: State;) {
 });
 
 host_fn!(pub get_current_track(app_data: State;) {
-  Ok(())
+  todo!("get current track")
 });
 
-host_fn!(pub play_next(app_data: State;) {
+host_fn!(pub play_next(app_data: State; track: Json<Track>) {
+  let state = app_data.get()?;
+  let state = state.lock().unwrap();
+  let cmd_tx = state.player_cmd_tx.lock().unwrap();
+  cmd_tx.send(PlayerCommand::PlayNext(track.into_inner().into()))?;
   Ok(())
 });
 
 host_fn!(pub remove_track(app_data: State; index: u32) {
+  let state = app_data.get()?;
+  let state = state.lock().unwrap();
+  let cmd_tx = state.player_cmd_tx.lock().unwrap();
+  cmd_tx.send(PlayerCommand::RemoveTrack(index as usize))?;
   Ok(())
 });

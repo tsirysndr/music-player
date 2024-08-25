@@ -297,6 +297,8 @@ pub fn load_plugin(module: &str, user_data: &UserData<State>) -> Result<Plugin, 
         .with_function("play", [], [], user_data.clone(), play)
         .with_function("pause", [], [], user_data.clone(), pause)
         .with_function("stop", [], [], user_data.clone(), stop)
+        .with_function("next", [], [], user_data.clone(), next)
+        .with_function("previous", [], [], user_data.clone(), previous)
         .with_function("seek", [PTR], [], user_data.clone(), seek)
         .with_function("play_track_at", [PTR], [], user_data.clone(), play_track_at)
         .with_function("clear", [], [], user_data.clone(), clear)

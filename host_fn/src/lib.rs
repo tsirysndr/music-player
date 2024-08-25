@@ -78,6 +78,8 @@ host_fn!(pub call(app_data: State; opts: Json<Module>) -> String {
     .with_function("play", [], [], app_data.clone(), play)
     .with_function("pause", [], [], app_data.clone(), pause)
     .with_function("stop", [], [], app_data.clone(), stop)
+    .with_function("next", [], [], app_data.clone(), next)
+    .with_function("previous", [], [], app_data.clone(), previous)
     .with_function("seek", [PTR], [], app_data.clone(), seek)
     .with_function("play_track_at", [PTR], [], app_data.clone(), play_track_at)
     .with_function("clear", [], [], app_data.clone(), clear)

@@ -103,9 +103,9 @@ export const test = async (src = ".") => {
     ])
     .withExec(["mkdir", "-p", "/tmp/addons"])
     .withExec([
-      "cp",
-      "target/wasm32-unknown-unknown/release/*.wasm",
-      "/tmp/addons",
+      "sh",
+      "-c",
+      "cp target/wasm32-unknown-unknown/release/*.wasm /tmp/addons",
     ])
     .withMountedCache("/app/target", dag.cacheVolume("target"))
     .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))

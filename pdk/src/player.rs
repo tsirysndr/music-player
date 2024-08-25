@@ -20,7 +20,7 @@ extern "ExtismHost" {
     fn get_current_track();
     fn get_current_tracklist() -> Json<Tracklist>;
     fn play_track_at(index: u32);
-    fn remove_track_at(index: u32);
+    fn remove_track(index: u32);
 }
 
 pub fn player() -> Player {
@@ -97,6 +97,6 @@ impl Player {
     }
 
     pub fn remove_track_at(&self, index: u32) -> Result<(), Error> {
-        unsafe { remove_track_at(index) }
+        unsafe { remove_track(index) }
     }
 }

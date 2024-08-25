@@ -13,7 +13,7 @@ use music_player_tracklist::Tracklist;
 use sea_orm::ActiveModelTrait;
 use std::{env, sync::Arc, thread, time::Duration};
 use surf::{Client, Config, Url};
-use tokio::{runtime, sync::Mutex};
+use tokio::runtime;
 
 #[tokio::test]
 async fn start_webui() {

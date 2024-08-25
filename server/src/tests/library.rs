@@ -313,18 +313,10 @@ async fn get_album_details() {
 
 #[tokio::test]
 async fn get_artist_details() {
-    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url) =
+    let (_backend, _audio_format, cmd_tx, _cmd_rx, tracklist, db, addr, url, user_data) =
         setup_new_params(7067).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
-        let user_data = UserData::new(State {
-            player_cmd_tx: Arc::clone(&cmd_tx),
-            tracklist: Arc::clone(&tracklist),
-            db: db.clone(),
-            addons: vec![],
-            addon_capabilities: vec![],
-        });
-
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(

@@ -83,16 +83,6 @@ impl PlaybackMutation {
         let user_data = ctx.data::<UserData<State>>().unwrap();
         let mut plugin = load_plugin("local", user_data)?;
         plugin.call::<&str, ()>("next", "")?;
-        /*
-        let player_cmd = ctx
-            .data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        player_cmd
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::Next)
-            .unwrap();
-        */
         Ok(true)
     }
 

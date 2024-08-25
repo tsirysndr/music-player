@@ -32,6 +32,7 @@ pub async fn setup_new_params(
     Database,
     SocketAddr,
     String,
+    UserData<State>,
 ) {
     let audio_format = AudioFormat::default();
     let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();

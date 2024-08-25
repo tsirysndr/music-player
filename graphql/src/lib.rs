@@ -3,10 +3,15 @@ mod tests;
 use crate::simple_broker::SimpleBroker;
 use anyhow::Error;
 use async_graphql::Schema;
+use extism::convert::Json;
+use extism::UserData;
 use futures_util::StreamExt;
+use music_player_addons::load_plugin;
 use music_player_addons::Player;
 use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
 use music_player_entity::track as track_entity;
+use music_player_host_fn::state::State;
+use music_player_pdk::types::Track;
 use music_player_playback::player::PlayerCommand;
 use music_player_types::types::RemoteCoverUrl;
 use music_player_types::types::RemoteTrackUrl;
@@ -128,7 +133,7 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
 }
 
 pub async fn load_tracks(
-    player_cmd: &Arc<Mutex<UnboundedSender<PlayerCommand>>>,
+    user_data: &UserData<State>,
     player: Option<&mut Box<dyn Player + Send>>,
     source_ip: Option<String>,
     mut tracks: Vec<track_entity::Model>,
@@ -168,15 +173,15 @@ pub async fn load_tracks(
             .await?;
         return Ok(());
     }
-    let player_cmd_tx = player_cmd.lock().unwrap();
-    player_cmd_tx.send(PlayerCommand::Stop).unwrap();
-    player_cmd_tx.send(PlayerCommand::Clear).unwrap();
-    player_cmd_tx
-        .send(PlayerCommand::LoadTracklist { tracks })
-        .unwrap();
-    player_cmd_tx
-        .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
-        .unwrap();
+
+    let mut plugin = load_plugin("local", user_data)?;
+    plugin.call::<&str, ()>("stop", "")?;
+    plugin.call::<&str, ()>("clear", "")?;
+    plugin.call::<Json<Vec<Track>>, ()>(
+        "load_tracks",
+        Json(tracks.clone().into_iter().map(Into::into).collect()),
+    )?;
+    plugin.call::<u32, ()>("play_track_at", position.unwrap_or(0))?;
     Ok(())
 }
 

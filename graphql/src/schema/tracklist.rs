@@ -88,9 +88,6 @@ pub struct TracklistMutation;
 impl TracklistMutation {
     async fn add_track(&self, ctx: &Context<'_>, track: TrackInput) -> Result<Vec<Track>, Error> {
         let state = ctx.data::<Arc<StdMutex<TracklistState>>>().unwrap();
-        let player_cmd = ctx
-            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
         let db = ctx.data::<Database>().unwrap();
         let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
         let mut device = current_device.lock().await;
@@ -339,9 +336,6 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
@@ -372,9 +366,10 @@ impl TracklistMutation {
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;
             let receiver = device.client.as_mut();
+            let user_data = ctx.data::<UserData<State>>().unwrap();
 
             load_tracks(
-                player_cmd,
+                &user_data,
                 receiver,
                 Some(source_ip),
                 tracks,
@@ -406,8 +401,9 @@ impl TracklistMutation {
                 .collect();
         }
 
+        let user_data = ctx.data::<UserData<State>>().unwrap();
         load_tracks(
-            player_cmd,
+            &user_data,
             device.client.as_mut(),
             None,
             result.tracks,
@@ -425,9 +421,6 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
-        let player_cmd = ctx
-            .data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
@@ -455,8 +448,9 @@ impl TracklistMutation {
             let mut device = current_device.lock().await;
             let receiver = device.client.as_mut();
 
+            let user_data = ctx.data::<UserData<State>>().unwrap();
             load_tracks(
-                player_cmd,
+                &user_data,
                 receiver,
                 Some(source_ip),
                 artist.tracks,
@@ -488,8 +482,9 @@ impl TracklistMutation {
                 .collect();
         }
 
+        let user_data = ctx.data::<UserData<State>>().unwrap();
         load_tracks(
-            player_cmd,
+            &user_data,
             device.client.as_mut(),
             None,
             artist.tracks,
@@ -507,9 +502,6 @@ impl TracklistMutation {
         position: Option<u32>,
         shuffle: bool,
     ) -> Result<bool, Error> {
-        let player_cmd = ctx
-            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
@@ -538,8 +530,9 @@ impl TracklistMutation {
             let mut device = current_device.lock().await;
             let receiver = device.client.as_mut();
 
+            let user_data = ctx.data::<UserData<State>>().unwrap();
             load_tracks(
-                player_cmd,
+                &user_data,
                 receiver,
                 Some(source_ip),
                 tracks,
@@ -576,8 +569,9 @@ impl TracklistMutation {
         let tracks: Vec<track_entity::Model> =
             playlist.tracks.into_iter().map(Into::into).collect();
 
+        let user_data = ctx.data::<UserData<State>>().unwrap();
         load_tracks(
-            player_cmd,
+            &user_data,
             device.client.as_mut(),
             None,
             tracks,

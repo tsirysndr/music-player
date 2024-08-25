@@ -85,7 +85,7 @@ impl TracklistService for Tracklist {
         let mut plugin = load_plugin("local", &self.user_data).map_err(into_tonic_status)?;
         plugin
             .call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
-                "load_tracklist",
+                "load_tracks",
                 Json(vec![track.into()]),
             )
             .map_err(into_tonic_status)?;
@@ -272,7 +272,7 @@ impl TracklistService for Tracklist {
             .map_err(into_tonic_status)?;
         plugin
             .call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
-                "load_tracklist",
+                "load_tracks",
                 Json(tracks.into_iter().map(Into::into).collect()),
             )
             .map_err(into_tonic_status)?;

@@ -98,8 +98,10 @@ host_fn!(pub clear(app_data: State;) {
   Ok(())
 });
 
-host_fn!(pub get_current_track(app_data: State;) {
-  todo!("get current track")
+host_fn!(pub get_current_track(app_data: State;) -> Json<Track> {
+  Ok(Json(Track {
+    ..Default::default()
+  }))
 });
 
 host_fn!(pub play_next(app_data: State; track: Json<Track>) {

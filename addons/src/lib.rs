@@ -6,6 +6,8 @@ pub mod dlna;
 pub mod genius;
 pub mod kodi;
 
+use std::fs;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use extism::{Manifest, Plugin, PluginBuilder, UserData, Wasm, PTR};
@@ -13,7 +15,9 @@ use music_player_host_fn::{
     call, chromecast::*, get_addons, get_settings, player::*, register_addon, state::State,
     tracklist::*, upnp::*, with_capabilities,
 };
+use music_player_settings::get_application_directory;
 use music_player_types::types::{Album, Artist, Device, Playback, Playlist, Track};
+
 pub trait Addon {
     fn name(&self) -> &str;
     fn version(&self) -> &str;
@@ -214,6 +218,12 @@ impl CurrentDevice {
 }
 
 pub fn load_plugin(module: &str, user_data: &UserData<State>) -> Result<Plugin, Error> {
+    let app_dir = get_application_directory();
+    let module = match fs::metadata(module.clone()).is_ok() || module.starts_with("http") {
+        true => module,
+        false => &format!("{}/addons/{}.wasm", app_dir, module),
+    };
+
     let module = match module.starts_with("http") {
         true => Wasm::url(module),
         false => Wasm::file(module),

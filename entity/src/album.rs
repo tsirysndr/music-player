@@ -123,3 +123,30 @@ impl RemoteTrackUrl for Model {
         }
     }
 }
+
+impl From<music_player_pdk::types::Album> for Model {
+    fn from(album: music_player_pdk::types::Album) -> Self {
+        Self {
+            id: album.id,
+            title: album.title,
+            artist: album.artist,
+            artist_id: album.artist_id,
+            year: album.year,
+            cover: album.cover,
+            ..Default::default()
+        }
+    }
+}
+
+impl Into<music_player_pdk::types::Album> for Model {
+    fn into(self) -> music_player_pdk::types::Album {
+        music_player_pdk::types::Album {
+            id: self.id,
+            title: self.title,
+            artist: self.artist,
+            artist_id: self.artist_id,
+            year: self.year,
+            cover: self.cover,
+        }
+    }
+}

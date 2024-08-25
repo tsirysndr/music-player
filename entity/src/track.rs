@@ -241,6 +241,9 @@ impl Into<music_player_pdk::types::Track> for Model {
             sample_rate: self.sample_rate,
             bit_depth: self.bit_depth,
             channels: self.channels,
+            album: self.album.into(),
+            artists: self.artists.into_iter().map(Into::into).collect(),
+            duration: self.duration,
             ..Default::default()
         }
     }
@@ -260,11 +263,15 @@ impl From<music_player_pdk::types::Track> for Model {
             bit_depth: track.bit_depth,
             channels: track.channels,
             uri: track.uri,
-            album_id: None,
+            album_id: Some(track.album.id.clone()),
             artist_id: None,
-            artists: vec![],
-            album: Default::default(),
-            duration: None,
+            artists: track
+                .artists
+                .into_iter()
+                .map(|artist| artist.into())
+                .collect(),
+            album: track.album.into(),
+            duration: track.duration,
         }
     }
 }

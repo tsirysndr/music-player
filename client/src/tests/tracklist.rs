@@ -19,7 +19,7 @@ use crate::{tests::setup_new_params, tracklist::TracklistClient};
 async fn add() -> Result<(), Box<dyn std::error::Error>> {
     let host = "0.0.0.0".to_owned();
     let port = 4086;
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url) =
+    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url, user_data) =
         setup_new_params(port).await;
 
     let (_, _) = Player::new(
@@ -36,10 +36,14 @@ async fn add() -> Result<(), Box<dyn std::error::Error>> {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+                Playback::new(
+                    Arc::clone(&tracklist),
+                    Arc::clone(&cmd_tx),
+                    user_data.clone(),
+                ),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db, user_data),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -67,7 +71,7 @@ async fn add() -> Result<(), Box<dyn std::error::Error>> {
 async fn list() -> Result<(), Box<dyn std::error::Error>> {
     let host = "0.0.0.0".to_owned();
     let port = 4087;
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url) =
+    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url, user_data) =
         setup_new_params(port).await;
     let (_, _) = Player::new(
         move || backend(None, audio_format),
@@ -83,10 +87,14 @@ async fn list() -> Result<(), Box<dyn std::error::Error>> {
         Server::builder()
             .accept_http1(true)
             .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+                Playback::new(
+                    Arc::clone(&tracklist),
+                    Arc::clone(&cmd_tx),
+                    user_data.clone(),
+                ),
             )))
             .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db, user_data),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

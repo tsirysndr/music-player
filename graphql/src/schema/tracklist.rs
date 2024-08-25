@@ -127,7 +127,7 @@ impl TracklistMutation {
                 let user_data = ctx.data::<UserData<State>>().unwrap();
                 let mut plugin = load_plugin("local", user_data)?;
                 plugin.call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
-                    "load_tracklist",
+                    "load_tracks",
                     Json(vec![track.clone().into()]),
                 )?;
             }
@@ -159,7 +159,7 @@ impl TracklistMutation {
         let user_data = ctx.data::<UserData<State>>().unwrap();
         let mut plugin = load_plugin("local", user_data)?;
         plugin.call::<Json<Vec<music_player_pdk::types::Track>>, ()>(
-            "load_tracklist",
+            "load_tracks",
             Json(vec![track.clone().into()]),
         )?;
 

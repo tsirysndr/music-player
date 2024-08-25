@@ -4,6 +4,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use extism::UserData;
+use music_player_host_fn::state::State;
 use music_player_playback::{
     audio_backend::{self, rodio::RodioSink, Sink},
     config::AudioFormat,
@@ -52,6 +54,14 @@ pub async fn setup_new_params(
 
     let db = Database::new().await;
 
+    let user_data = UserData::new(State {
+        player_cmd_tx: Arc::clone(&cmd_tx),
+        tracklist: Arc::clone(&tracklist),
+        db: db.clone(),
+        addons: vec![],
+        addon_capabilities: vec![],
+    });
+
     return (
         backend,
         audio_format,
@@ -61,5 +71,6 @@ pub async fn setup_new_params(
         db,
         addr,
         url,
+        user_data,
     );
 }

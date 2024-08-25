@@ -30,6 +30,10 @@ pub struct Artist {
 pub struct Album {
     pub id: String,
     pub title: String,
+    pub artist: String,
+    pub artist_id: Option<String>,
+    pub year: Option<u32>,
+    pub cover: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

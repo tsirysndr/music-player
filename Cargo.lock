@@ -5169,6 +5169,7 @@ dependencies = [
  "local-ip-addr",
  "md5",
  "music-player-host-fn",
+ "music-player-settings",
  "music-player-tracklist",
  "music-player-types",
  "surf",
@@ -5207,7 +5208,9 @@ version = "0.1.5"
 dependencies = [
  "anyhow",
  "envtestkit",
+ "extism",
  "futures-util",
+ "music-player-host-fn",
  "music-player-playback",
  "music-player-server",
  "music-player-settings",
@@ -5218,6 +5221,7 @@ dependencies = [
  "tokio-tungstenite",
  "tonic",
  "tonic-web",
+ "ureq",
  "url",
 ]
 

@@ -27,9 +27,9 @@ async fn insert_album() {
         ..Default::default()
     };
 
-    searcher.insert_album(album).unwrap();
-
-    sleep(Duration::from_secs(1)).await;
+    while searcher.insert_album(album.clone()).is_err() {
+        sleep(Duration::from_secs(1)).await;
+    }
 
     assert!(searcher.search_album("Eternal").is_ok());
 }
@@ -74,9 +74,10 @@ async fn search_album() {
         artist_id: Some("0afe1226a5a75408acb57e97bd5feca1".to_owned()),
         ..Default::default()
     };
-    searcher.insert_album(album).unwrap();
 
-    sleep(Duration::from_secs(1)).await;
+    while searcher.insert_album(album.clone()).is_err() {
+        sleep(Duration::from_secs(1)).await;
+    }
 
     let albums = searcher.search_album("eternal").unwrap();
     assert_eq!(albums.len(), 1);
@@ -91,9 +92,9 @@ async fn search_artist() {
         name: "Lil Uzi Vert".to_owned(),
         ..Default::default()
     };
-    searcher.insert_artist(artist).unwrap();
-
-    sleep(Duration::from_secs(1)).await;
+    while searcher.insert_artist(artist.clone()).is_err() {
+        sleep(Duration::from_secs(1)).await;
+    }
 
     let artists = searcher.search_artist("uzi").unwrap();
     assert_eq!(artists.len(), 1);
@@ -110,11 +111,12 @@ async fn search_track() {
         ..Default::default()
     };
 
-    searcher
-        .insert_song(song, "27234641d4f5f9e0832affa79b9f62d8")
-        .unwrap();
-
-    sleep(Duration::from_secs(1)).await;
+    while searcher
+        .insert_song(song.clone(), "27234641d4f5f9e0832affa79b9f62d8")
+        .is_err()
+    {
+        sleep(Duration::from_secs(1)).await;
+    }
 
     let tracks = searcher.search_song("futsal").unwrap();
     assert_eq!(tracks.len(), 1);

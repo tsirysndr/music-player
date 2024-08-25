@@ -1,6 +1,7 @@
 use extism_pdk::*;
 use serde::{Deserialize, Serialize};
 
+pub mod library;
 pub mod player;
 pub mod types;
 

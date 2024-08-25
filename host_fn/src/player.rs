@@ -1,5 +1,5 @@
 use extism::{convert::Json, *};
-use music_player_pdk::types::Track;
+use music_player_pdk::types::{CurrentlyPlayingSong, Track};
 use music_player_playback::player::PlayerCommand;
 
 use crate::state::State;
@@ -98,10 +98,22 @@ host_fn!(pub clear(app_data: State;) {
   Ok(())
 });
 
-host_fn!(pub get_current_track(app_data: State;) -> Json<Track> {
-  Ok(Json(Track {
-    ..Default::default()
-  }))
+host_fn!(pub get_current_track(app_data: State;) -> Json<CurrentlyPlayingSong> {
+  let state = app_data.get()?;
+  let state = state.lock().unwrap();
+  let tracklist = state.tracklist.lock().unwrap();
+  let (track, index) = tracklist.current_track();
+  let playback_state = tracklist.playback_state();
+
+
+  Ok(Json(
+    CurrentlyPlayingSong {
+      track: track.map(Into::into),
+      index: index as u32,
+      position_ms: playback_state.position_ms,
+      is_playing: playback_state.is_playing,
+    }
+  ))
 });
 
 host_fn!(pub play_next(app_data: State; track: Json<Track>) {

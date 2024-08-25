@@ -1,6 +1,6 @@
 use extism_pdk::*;
 
-use crate::types::{Track, Tracklist};
+use crate::types::{CurrentlyPlayingSong, Track, Tracklist};
 
 #[host_fn]
 extern "ExtismHost" {
@@ -12,12 +12,13 @@ extern "ExtismHost" {
     fn pause();
     fn play();
     fn stop();
+    fn clear();
     fn seek(time: u32);
     fn position_ms() -> u32;
     fn load_tracklist(tracks: Json<Vec<Track>>);
     fn play_next();
     fn load(track: Json<Track>);
-    fn get_current_track() -> Json<Track>;
+    fn get_current_track() -> Json<CurrentlyPlayingSong>;
     fn get_current_tracklist() -> Json<Tracklist>;
     fn play_track_at(index: u32);
     fn remove_track(index: u32);
@@ -42,6 +43,11 @@ impl Player {
 
     pub fn stop(&self) -> Result<(), Error> {
         unsafe { stop()? };
+        Ok(())
+    }
+
+    pub fn clear(&self) -> Result<(), Error> {
+        unsafe { clear()? };
         Ok(())
     }
 
@@ -84,7 +90,7 @@ impl Player {
         unsafe { load(track) }
     }
 
-    pub fn get_current_playback(&self) -> Result<Json<Track>, Error> {
+    pub fn get_current_playback(&self) -> Result<Json<CurrentlyPlayingSong>, Error> {
         unsafe { get_current_track() }
     }
 

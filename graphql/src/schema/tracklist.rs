@@ -216,7 +216,7 @@ impl TracklistMutation {
 
         let user_data = ctx.data::<UserData<State>>().unwrap();
         let mut plugin = load_plugin("local", user_data)?;
-        plugin.call::<u32, ()>("remove_track", position)?;
+        plugin.call::<u32, ()>("remove_track_at", position)?;
 
         let (previous_tracks, next_tracks) = state.lock().unwrap().tracks();
         SimpleBroker::publish(TracklistChanged {

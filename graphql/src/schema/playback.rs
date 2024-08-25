@@ -33,11 +33,14 @@ impl PlaybackQuery {
             return Ok(playback.into());
         }
 
-        let tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
-        let (track, index) = tracklist.lock().unwrap().current_track();
-        let playback_state = tracklist.lock().unwrap().playback_state();
+        let user_data = ctx.data::<UserData<State>>().unwrap();
+        let mut plugin = load_plugin("local", user_data)?;
+        let current_song = plugin.call::<&str, extism::convert::Json<
+            music_player_pdk::types::CurrentlyPlayingSong,
+        >>("get_current_playback", "")?;
+        let current_song = current_song.into_inner();
 
-        if track.is_none() {
+        if current_song.track.is_none() {
             let response = CurrentlyPlayingSong {
                 track: None,
                 index: 0,
@@ -47,13 +50,12 @@ impl PlaybackQuery {
             return Ok(response);
         }
 
-        let track = track.unwrap();
-
         Ok(CurrentlyPlayingSong {
-            track: Some(track.into()),
-            index: index as u32,
-            position_ms: playback_state.position_ms,
-            is_playing: playback_state.is_playing,
+            track: current_song.track.map(Into::into),
+            index: current_song.index as u32,
+            position_ms: current_song.position_ms,
+            is_playing: current_song.is_playing,
+            ..Default::default()
         })
     }
 

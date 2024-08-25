@@ -41,3 +41,11 @@ pub struct Tracklist {
     pub next_tracks: Vec<Track>,
     pub previous_tracks: Vec<Track>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct CurrentlyPlayingSong {
+    pub track: Option<Track>,
+    pub index: u32,
+    pub position_ms: u32,
+    pub is_playing: bool,
+}

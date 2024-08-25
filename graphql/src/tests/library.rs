@@ -13,7 +13,7 @@ use super::setup_schema;
 async fn tracks() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -59,7 +59,7 @@ async fn tracks() {
 async fn artists() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -95,7 +95,7 @@ async fn artists() {
 async fn albums() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -135,7 +135,7 @@ async fn albums() {
 async fn track() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -186,7 +186,7 @@ async fn track() {
 async fn artist() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -234,7 +234,7 @@ async fn artist() {
 async fn album() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -287,7 +287,7 @@ async fn album() {
 async fn search() {
     let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
+        move || backend(Some("/tmp/music-player-output".into()), audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

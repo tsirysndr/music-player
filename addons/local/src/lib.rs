@@ -1,5 +1,10 @@
 use extism_pdk::*;
-use music_player_pdk::{addon, player::*, types::Track, Capability};
+use music_player_pdk::{
+    addon,
+    player::*,
+    types::{CurrentlyPlayingSong, Track, Tracklist},
+    Capability,
+};
 
 const ADDON_NAME: &str = "local";
 
@@ -26,6 +31,12 @@ pub fn pause() -> FnResult<()> {
 #[plugin_fn]
 pub fn stop() -> FnResult<()> {
     player().stop()?;
+    Ok(())
+}
+
+#[plugin_fn]
+pub fn clear() -> FnResult<()> {
+    player().clear()?;
     Ok(())
 }
 
@@ -66,15 +77,15 @@ pub fn load(track: Json<Track>) -> FnResult<()> {
 }
 
 #[plugin_fn]
-pub fn get_current_playback() -> FnResult<()> {
-    player().get_current_playback()?;
-    Ok(())
+pub fn get_current_playback() -> FnResult<Json<CurrentlyPlayingSong>> {
+    let current = player().get_current_playback()?;
+    Ok(current)
 }
 
 #[plugin_fn]
-pub fn get_current_tracklist() -> FnResult<()> {
-    player().get_current_tracklist()?;
-    Ok(())
+pub fn get_current_tracklist() -> FnResult<Json<Tracklist>> {
+    let tracklist = player().get_current_tracklist()?;
+    Ok(tracklist)
 }
 
 #[plugin_fn]

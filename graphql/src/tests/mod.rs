@@ -5,7 +5,7 @@ use extism::UserData;
 use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
 use music_player_host_fn::state::State;
 use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink, Sink},
+    audio_backend::{self, pipe::StdoutSink, rodio::RodioSink, Sink},
     config::AudioFormat,
     player::PlayerCommand,
 };
@@ -37,7 +37,7 @@ pub async fn setup_schema() -> (
     AudioFormat,
 ) {
     let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    let backend = audio_backend::find(Some(StdoutSink::NAME.to_string())).unwrap();
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));

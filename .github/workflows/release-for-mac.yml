@@ -1,6 +1,16 @@
+name: release-for-mac
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The existing release tag to build and upload assets for (e.g. v0.2.0)"
+        type: string
+        required: true
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -14,59 +24,55 @@ jobs:
           - aarch64-apple-darwin
 
     steps:
-      - uses: denoland/setup-deno@v1
+      - uses: actions/checkout@v4
         with:
-          deno-version: v1.37
-      - name: Setup Fluent CI
-        uses: fluentci-io/setup-fluentci@v5
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-      - uses: actions/checkout@master
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - uses: actions/cache@v3
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Set release version
+        run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV
+        env:
+          TAG_INPUT: ${{ inputs.tag }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust 1.98.0
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup default 1.98.0
+          rustup target add ${{ matrix.target }}
+
+      - uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - uses: actions-rs/cargo@v1
-      - name: Installing needed dependencies
+      - name: Install dependencies
         run: brew install protobuf
-      - name: Install aarch64-apple-darwin toolchain
-        if: matrix.target == 'aarch64-apple-darwin'
-        run: rustup target add aarch64-apple-darwin
+
       - name: Build webui
         run: |
           cd webui/musicplayer
-          bun install && bun run build
-      - name: Running cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          toolchain: 1.98.0
-          args: --release --target ${{ matrix.target }}
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Packaging final binary
-        shell: bash
+          bun install
+          bun run build
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package binary
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czvf ../../../music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz music-player
-          shasum -a 256 ../../../music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > ../../../music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
-          cd ../../../ && rm -rf target
+          ASSET=music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
+          tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player
+          shasum -a 256 $ASSET.tar.gz > $ASSET.tar.gz.sha256
+
       - name: Upload release assets
         run: |
-          for ext in tar.gz tar.gz.sha256; do
-            export FILE=music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
-            fluentci run github_pipeline release_upload
-          done
+          gh release upload ${{ env.RELEASE_VERSION }} \
+            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
+            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 \
+            --clobber
         env:
-          TAG: ${{ env.RELEASE_VERSION }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,13 +13,54 @@ jobs:
     name: Run unit tests
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Fluent CI
-        uses: fluentci-io/setup-fluentci@v5
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Run Dagger Pipelines
-        run: fluentci run . test
-      - name: Upload to Codecov
-        run: fluentci run codecov_pipeline
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust 1.98.0
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal --component llvm-tools
+          rustup default 1.98.0
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-ci-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Build webui
+        run: |
+          cd webui/musicplayer
+          bun install
+          bun run build
+
+      - name: Set up test fixtures
+        run: cp -r fixtures/audio /tmp
+
+      - name: Run tests with coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          # CI runners have no sound device; the engine writes PCM to stdout.
+          MUSIC_PLAYER_AUDIO_OUTPUT: stdout
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}

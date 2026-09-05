@@ -9,6 +9,9 @@ on:
         type: string
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,23 +23,58 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
-      - name: Setup Fluent CI
-        uses: fluentci-io/setup-fluentci@v5
-      - name: Set env
+
+      - name: Set release version
         run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV
         env:
           TAG_INPUT: ${{ inputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust 1.98.0
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup default 1.98.0
+          rustup target add ${{ matrix.target }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler
+
+      - name: Build webui
+        run: |
+          cd webui/musicplayer
+          bun install
+          bun run build
+
       - name: Build
-        run: fluentci run . build
-        env:
-          TAG: ${{ env.RELEASE_VERSION }}
-          TARGET: ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package binary
+        run: |
+          ASSET=music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
+          tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player
+          sha256sum $ASSET.tar.gz > $ASSET.tar.gz.sha256
+
       - name: Upload release assets
         run: |
-          for ext in tar.gz tar.gz.sha256; do
-            export FILE=/assets/music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
-            fluentci run github_pipeline release_upload
-          done
+          gh release upload ${{ env.RELEASE_VERSION }} \
+            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
+            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 \
+            --clobber
         env:
-          TAG: ${{ env.RELEASE_VERSION }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

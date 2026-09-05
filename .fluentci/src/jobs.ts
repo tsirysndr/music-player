@@ -30,7 +30,7 @@ export const clippy = async (src = ".") => {
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withExec([
       "sh",
       "-c",
@@ -74,7 +74,7 @@ export const test = async (src = ".") => {
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withExec(["cp", "-r", "fixtures/audio", "/tmp"])
     .withExec(["cp", "fixtures/asound.conf", "/etc"])
     .withWorkdir("/app/migration")
@@ -110,8 +110,7 @@ export const build = async (src = ".") => {
   const ctr = dag
     .pipeline(Job.build)
     .container()
-    .from("ghcr.io/fluentci-io/pkgx:latest")
-    .withExec(["pkgx", "install", "rustc@1.98.0", "cargo@1.98.0", "node@18", "bun", "protoc"])
+    .from("rust:1.98.0-bookworm")
     .withExec(["apt-get", "update"])
     .withExec([
       "apt-get",
@@ -120,14 +119,20 @@ export const build = async (src = ".") => {
       "build-essential",
       "libasound2-dev",
       "pkg-config",
+      "protobuf-compiler",
+      "curl",
+      "unzip",
     ])
+    // bun (bundles the webui; no system node needed)
+    .withExec(["bash", "-c", "curl -fsSL https://bun.sh/install | bash"])
+    .withEnvVariable("PATH", "/root/.bun/bin:$PATH", { expand: true })
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app/webui/musicplayer")
     .withExec(["bun", "install"])
     .withExec(["bun", "run", "build"])
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withMountedCache("/assets", dag.cacheVolume("gh-release-assets"))
     .withEnvVariable("TAG", Deno.env.get("TAG") || "latest")
     .withEnvVariable(
@@ -143,7 +148,7 @@ export const build = async (src = ".") => {
     .withExec([
       "bash",
       "-c",
-      "shasum -a 256 /assets/music-player_${TAG}_${TARGET}.tar.gz > /assets/music-player_${TAG}_${TARGET}.tar.gz.sha256",
+      "sha256sum /assets/music-player_${TAG}_${TARGET}.tar.gz > /assets/music-player_${TAG}_${TARGET}.tar.gz.sha256",
     ]);
 
   await ctr.stdout();

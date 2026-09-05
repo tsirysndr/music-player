@@ -2,8 +2,7 @@ use async_graphql::*;
 use futures_util::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_playback::player::Player;
-use music_player_scanner::scan_directory;
-use music_player_storage::{searcher::Searcher, Database};
+use music_player_storage::Database;
 use sea_orm::ActiveModelTrait;
 use std::{sync::Arc, thread, time::Duration};
 
@@ -11,9 +10,8 @@ use super::setup_schema;
 
 #[tokio::test]
 async fn tracks() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -57,9 +55,8 @@ async fn tracks() {
 
 #[tokio::test]
 async fn artists() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -93,9 +90,8 @@ async fn artists() {
 
 #[tokio::test]
 async fn albums() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -133,9 +129,8 @@ async fn albums() {
 
 #[tokio::test]
 async fn track() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -184,9 +179,8 @@ async fn track() {
 
 #[tokio::test]
 async fn artist() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -232,9 +226,8 @@ async fn artist() {
 
 #[tokio::test]
 async fn album() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -285,9 +278,8 @@ async fn album() {
 
 #[tokio::test]
 async fn search() {
-    let (schema, cmd_tx, cmd_rx, tracklist, backend, audio_format) = setup_schema().await;
+    let (schema, cmd_tx, cmd_rx, tracklist) = setup_schema().await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -295,44 +287,9 @@ async fn search() {
     );
 
     let db = Database::new().await;
-    let searcher = Searcher::new();
-    scan_directory(
-        move |song, db| {
-            async move {
-                let item: artist::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: album::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: track::ActiveModel = song.try_into().unwrap();
-
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-            }
-            .boxed()
-        },
-        &db,
-        &searcher,
-    )
-    .await
-    .unwrap_or_default();
-
-    thread::sleep(Duration::from_secs(10));
+    music_player_scanner::scan_music_library(false, db)
+        .await
+        .unwrap_or_default();
 
     let resp = schema
         .execute(
@@ -369,7 +326,7 @@ async fn search() {
                     "id": "dd77dd0ea2de5208e4987001a59ba8e4",
                     "title": "Fire Squad",
                     "artist": "J. Cole",
-                    "duration": 288.0
+                    "duration": 288.2380065917969
                   }
                 ],
                 "albums": []

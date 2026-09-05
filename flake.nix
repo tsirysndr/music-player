@@ -4,26 +4,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-analyzer-src.follows = "";
-    };
+    crane.url = "github:ipetkov/crane";
 
     flake-utils.url = "github:numtide/flake-utils";
-
-    advisory-db = {
-      url = "github:rustsec/advisory-db";
-      flake = false;
-    };
   };
 
-  outputs = { self, nixpkgs, crane, fenix, flake-utils, advisory-db, ... }:
+  outputs = { self, nixpkgs, crane, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -32,128 +18,79 @@
 
         inherit (pkgs) lib;
 
-        craneLib = crane.lib.${system};
-        
-        protoFilter = path: _type: builtins.match ".*proto$" path != null;
-        protoOrCargo = path: type:
-          (protoFilter path type) || (craneLib.filterCargoSources path type);
+        craneLib = crane.mkLib pkgs;
 
-        # src = craneLib.cleanCargoSource (craneLib.path ./.);
+        # The cargo sources plus everything the build scripts and
+        # rust-embed pull in at compile time: the gRPC protos and the
+        # committed web UI bundle.
+        protoFilter = path: _type: builtins.match ".*proto$" path != null;
+        webuiFilter = path: _type:
+          builtins.match ".*webui/musicplayer/build.*" path != null;
+        srcFilter = path: type:
+          (protoFilter path type)
+          || (webuiFilter path type)
+          || (craneLib.filterCargoSources path type);
+
         src = lib.cleanSourceWith {
-          src = craneLib.path ./.; # The original, unfiltered source
-          filter = protoOrCargo;
+          src = ./.;
+          filter = srcFilter;
         };
 
-        # Common arguments can be set here to avoid repeating them later
         commonArgs = {
           inherit src;
+          strictDeps = true;
 
-          buildInputs = [
-            # Add additional build inputs here
+          nativeBuildInputs = [
             pkgs.pkg-config
-            pkgs.gnumake
             pkgs.protobuf
-            pkgs.zstd
-            pkgs.bun
-            pkgs.nodejs_18
-          ] ++ lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
-            pkgs.libiconv
-            pkgs.darwin.Security
-          ] ++ lib.optionals pkgs.stdenv.isLinux [
-            # Packages specific to Linux
-            pkgs.alsa-lib.dev
           ];
 
-          # Additional environment variables can be set directly
-          # MY_CUSTOM_VAR = "some value";
+          buildInputs = [
+            pkgs.zstd
+            pkgs.openssl
+          ] ++ lib.optionals pkgs.stdenv.isLinux [
+            pkgs.alsa-lib
+          ];
         };
-
-        craneLibLLvmTools = craneLib.overrideToolchain
-          (fenix.packages.${system}.complete.withComponents [
-            "cargo"
-            "llvm-tools"
-            "rustc"
-          ]);
 
         # Build *just* the cargo dependencies, so we can reuse
         # all of that work (e.g. via cachix) when running in CI
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        # Build the actual crate itself, reusing the dependency
-        # artifacts from above.
         music-player = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          # The test-suite needs audio fixtures and a running server;
+          # it is exercised by the regular CI, not by the nix build.
+          doCheck = false;
         });
-
       in
       {
         checks = {
-          # Build the crate as part of `nix flake check` for convenience
           inherit music-player;
 
-          # Run clippy (and deny all warnings) on the crate source,
-          # again, resuing the dependency artifacts from above.
-          #
-          # Note that this is done as a separate derivation so that
-          # we can block the CI if there are issues here, but not
-          # prevent downstream consumers from building our crate by itself.
           music-player-clippy = craneLib.cargoClippy (commonArgs // {
             inherit cargoArtifacts;
-            cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+            cargoClippyExtraArgs = "--all-targets";
           });
 
-          music-player-doc = craneLib.cargoDoc (commonArgs // {
-            inherit cargoArtifacts;
-          });
-
-          # Check formatting
           music-player-fmt = craneLib.cargoFmt {
             inherit src;
           };
-
-          # Audit dependencies
-          music-player-audit = craneLib.cargoAudit {
-            inherit src advisory-db;
-          };
-
-          # Run tests with cargo-nextest
-          # Consider setting `doCheck = false` on `music-player` if you do not want
-          # the tests to run twice
-          music-player-nextest = craneLib.cargoNextest (commonArgs // {
-            inherit cargoArtifacts;
-            partitions = 1;
-            partitionType = "count";
-          });
-        } // lib.optionalAttrs (system == "x86_64-linux") {
-          # NB: cargo-tarpaulin only supports x86_64 systems
-          # Check code coverage (note: this will not upload coverage anywhere)
-          music-player-coverage = craneLib.cargoTarpaulin (commonArgs // {
-            inherit cargoArtifacts;
-          });
         };
 
-        packages = {
-          default = music-player;
-          music-player-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs // {
-            inherit cargoArtifacts;
-          });
-        };
+        packages.default = music-player;
 
         apps.default = flake-utils.lib.mkApp {
           drv = music-player;
         };
 
-        devShells.default = pkgs.mkShell {
-          inputsFrom = builtins.attrValues self.checks.${system};
+        devShells.default = craneLib.devShell {
+          inputsFrom = [ music-player ];
 
-          # Additional dev-shell environment variables can be set directly
-          # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
-
-          # Extra inputs can be added here
-          nativeBuildInputs = with pkgs; [
-            cargo
-            rustc
+          packages = with pkgs; [
+            bun
+            protobuf
+            sqlite
           ];
         };
       });

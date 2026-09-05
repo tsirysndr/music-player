@@ -1,12 +1,12 @@
 use async_graphql::*;
-use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
 use music_player_types::types;
 use serde::Serialize;
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
 pub enum App {
     MusicPlayer,
-    XBMC,
+    Subsonic,
+    Jellyfin,
 }
 
 #[derive(Default, Clone, Serialize)]

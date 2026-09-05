@@ -37,7 +37,9 @@ message PreviousRequest {}
 
 message PreviousResponse {}
 
-message SeekRequest {}
+message SeekRequest {
+  uint32 position_ms = 1;
+}
 
 message SeekResponse {}
 

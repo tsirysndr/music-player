@@ -5,7 +5,7 @@ use async_graphql::*;
 use futures_util::Stream;
 use music_player_addons::CurrentReceiverDevice;
 use music_player_playback::player::PlayerCommand;
-use music_player_tracklist::{PlaybackState, Tracklist};
+use music_player_tracklist::Tracklist;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::Mutex as TokioMutex;
 

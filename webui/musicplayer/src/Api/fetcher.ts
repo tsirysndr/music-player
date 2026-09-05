@@ -1,0 +1,58 @@
+export const isTauri = (): boolean =>
+  process.env.REACT_APP_NATIVE_WRAPPER === "tauri";
+
+export const getApiUrl = (): string =>
+  process.env.NODE_ENV === "development"
+    ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
+    : // eslint-disable-next-line no-restricted-globals
+      `${origin}/graphql`;
+
+export const getWsUrl = (): string => getApiUrl().replace("http", "ws");
+
+type GraphQLResponse<TData> = {
+  data?: TData;
+  errors?: { message: string }[];
+};
+
+/**
+ * GraphQL fetcher used by the hooks generated with
+ * @graphql-codegen/typescript-react-query.
+ *
+ * - In tauri mode, operations are routed through the
+ *   `execute_graphql` tauri command (`window.__TAURI__.core.invoke`).
+ * - In web mode, operations are POSTed to the GraphQL endpoint.
+ */
+export const fetcher = <TData, TVariables>(
+  query: string,
+  variables?: TVariables,
+  options?: RequestInit["headers"]
+) => {
+  return async (): Promise<TData> => {
+    let response: GraphQLResponse<TData>;
+    if (isTauri()) {
+      const { invoke } = window.__TAURI__.core;
+      response = await invoke("execute_graphql", {
+        request: {
+          query,
+          variables,
+        },
+      });
+    } else {
+      const res = await fetch(getApiUrl(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...options,
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+      response = await res.json();
+    }
+
+    if (response.errors && response.errors.length > 0) {
+      throw new Error(response.errors[0].message);
+    }
+
+    return response.data as TData;
+  };
+};

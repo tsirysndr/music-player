@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use futures_util::FutureExt;
 use tokio::sync::oneshot;
 use tonic::transport::Server;
@@ -17,15 +15,13 @@ use super::setup_new_params;
 
 #[tokio::test]
 async fn scan() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(7070).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(7070).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -42,15 +38,13 @@ async fn scan() {
 
 #[tokio::test]
 async fn search() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(7071).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(7071).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -64,15 +58,13 @@ async fn search() {
 
 #[tokio::test]
 async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(6072).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(6072).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -100,15 +92,13 @@ async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 async fn get_albums() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(5073).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(5073).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -132,15 +122,13 @@ async fn get_albums() {
 
 #[tokio::test]
 async fn get_tracks() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(7074).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(7074).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -182,15 +170,13 @@ async fn get_tracks() {
 
 #[tokio::test]
 async fn get_track_details() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(7075).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(7075).await;
     let (tx, rx) = oneshot::channel::<()>();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -219,15 +205,13 @@ async fn get_track_details() {
 
 #[tokio::test]
 async fn get_album_details() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(7076).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, _url) = setup_new_params(7076).await;
     let (tx, rx) = oneshot::channel::<()>();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -255,15 +239,13 @@ async fn get_album_details() {
 
 #[tokio::test]
 async fn get_artist_details() {
-    let (_backend, _audio_format, _cmd_tx, _cmd_rx, _tracklist, db, addr, url) =
-        setup_new_params(7067).await;
+    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, url) = setup_new_params(7067).await;
     let (tx, rx) = oneshot::channel();
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                db,
-            ))))
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(LibraryServiceServer::new(Library::new(db)))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();

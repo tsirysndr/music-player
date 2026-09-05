@@ -1,38 +1,18 @@
 use async_trait::async_trait;
-use futures_util::{future::FusedFuture, Future};
-use music_player_audio::fetch::{AudioFile, Subfile};
 use music_player_entity::track::Model as Track;
+use music_player_settings::read_settings;
 use music_player_tracklist::{PlaybackState, Tracklist};
-use parking_lot::Mutex;
-use std::{
-    collections::HashMap,
-    fs::File,
-    mem,
-    path::Path,
-    pin::Pin,
-    process::exit,
-    sync::Arc,
-    task::{Context, Poll},
-    thread,
-    time::Duration,
+use rockbox_playback::{
+    OutputConfig, PlaybackState as EngineState, Player as Engine, PlayerConfig,
 };
-use symphonia::core::{errors::Error, io::MediaSourceStream, probe::Hint};
-use tokio::{
-    runtime::{Handle, Runtime},
-    sync::mpsc::{self, UnboundedReceiver},
-};
+use std::{sync::Arc, thread, time::Duration};
+use tokio::sync::mpsc::{self, UnboundedReceiver};
+use tracing::error;
 
-use crate::{
-    audio_backend::Sink,
-    convert::Converter,
-    decoder::{symphonia_decoder::SymphoniaDecoder, AudioDecoder},
-    dither::{mk_ditherer, TriangularDitherer},
-    formatter,
-};
+pub type PlayerResult = Result<(), anyhow::Error>;
 
-const PRELOAD_NEXT_TRACK_BEFORE_END: u64 = 30000;
-
-pub type PlayerResult = Result<(), Error>;
+/// Minimum change in position before a `TrackTimePosition` event is broadcast.
+const POSITION_BROADCAST_STEP_MS: u32 = 250;
 
 pub enum RepeatState {
     Off,
@@ -44,7 +24,6 @@ pub enum RepeatState {
 pub trait PlayerEngine: Send + Sync {
     fn load(&mut self, track_id: &str, _start_playing: bool, _position_ms: u32);
     fn load_tracklist(&mut self, tracks: Vec<Track>);
-    fn preload(&self, _track_id: &str);
     fn play(&self);
     fn pause(&self);
     fn stop(&self);
@@ -69,34 +48,63 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new<F, G>(
-        sink_builder: F,
+    pub fn new<G>(
         event_broadcaster: G,
         cmd_tx: Arc<std::sync::Mutex<mpsc::UnboundedSender<PlayerCommand>>>,
         cmd_rx: Arc<std::sync::Mutex<mpsc::UnboundedReceiver<PlayerCommand>>>,
         tracklist: Arc<std::sync::Mutex<Tracklist>>,
     ) -> (Player, PlayerEventChannel)
     where
-        F: FnOnce() -> Box<dyn Sink> + Send + 'static,
         G: Fn(PlayerEvent) + Send + 'static,
     {
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
 
-        thread::spawn(move || {
-            let internal = PlayerInternal {
+        let start = move || {
+            // `audio_output` in settings.toml selects the output backend:
+            // "cpal" (default), "stdout", "fifo:PATH", "unix:PATH" or "tcp:ADDR".
+            let output = read_settings()
+                .ok()
+                .and_then(|config| config.get_string("audio_output").ok())
+                .map(|spec| {
+                    spec.parse::<OutputConfig>().unwrap_or_else(|e| {
+                        error!("Invalid audio_output setting {:?}: {}", spec, e);
+                        OutputConfig::Cpal
+                    })
+                })
+                .unwrap_or(OutputConfig::Cpal);
+            let engine = match PlayerConfig::builder().output(output).open() {
+                Ok(engine) => engine,
+                Err(e) => {
+                    error!("Failed to open audio engine: {}", e);
+                    return None;
+                }
+            };
+            Some(PlayerInternal {
                 commands: cmd_rx,
-                load_handles: Arc::new(Mutex::new(HashMap::new())),
-                sink: sink_builder(),
-                state: PlayerState::Stopped,
-                sink_status: SinkStatus::Closed,
-                sink_event_callback: None,
+                engine,
                 event_senders: [event_sender].to_vec(),
                 tracklist,
                 event_broadcaster: Box::new(event_broadcaster),
                 position_ms: 0,
-            };
-            let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-            runtime.block_on(internal);
+                last_broadcast_position_ms: 0,
+                track_loaded: false,
+                engine_started: false,
+                last_duration_ms: 0,
+                stopped_ticks: 0,
+            })
+        };
+
+        // The engine handle is not Send (it wraps native state), so the async
+        // player task runs on a small dedicated current-thread runtime instead
+        // of the caller's work-stealing runtime.
+        thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime");
+            if let Some(internal) = start() {
+                runtime.block_on(internal.run());
+            }
         });
         (
             Player {
@@ -142,6 +150,10 @@ impl Player {
             }
         }
     }
+
+    pub fn set_volume(&self, volume: u16) {
+        self.command(PlayerCommand::SetVolume(volume));
+    }
 }
 
 #[async_trait]
@@ -154,10 +166,6 @@ impl PlayerEngine for Player {
 
     fn load_tracklist(&mut self, tracks: Vec<Track>) {
         self.command(PlayerCommand::LoadTracklist { tracks });
-    }
-
-    fn preload(&self, _track_id: &str) {
-        self.command(PlayerCommand::Preload);
     }
 
     fn play(&self) {
@@ -194,24 +202,14 @@ impl PlayerEngine for Player {
 
     async fn get_tracks(&self) -> (Vec<Track>, Vec<Track>) {
         let channel = self.get_player_event_channel();
-        let handle = thread::spawn(move || {
-            Runtime::new()
-                .unwrap()
-                .block_on(Self::wait_for_tracklist(channel))
-        });
         self.command(PlayerCommand::GetTracks);
-        handle.join().unwrap()
+        Self::wait_for_tracklist(channel).await
     }
 
     async fn get_current_track(&self) -> Option<(Option<Track>, usize, u32, bool)> {
         let channel = self.get_player_event_channel();
-        let handle = thread::spawn(move || {
-            Runtime::new()
-                .unwrap()
-                .block_on(Self::wait_for_current_track(channel))
-        });
         self.command(PlayerCommand::GetCurrentTrack);
-        handle.join().unwrap()
+        Self::wait_for_current_track(channel).await
     }
 
     async fn wait_for_tracklist(
@@ -237,156 +235,109 @@ impl PlayerEngine for Player {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum SinkStatus {
-    Running,
-    Closed,
-    TemporarilyClosed,
-}
-
-pub type SinkEventCallback = Box<dyn Fn(SinkStatus) + Send>;
-
 struct PlayerInternal {
     commands: Arc<std::sync::Mutex<mpsc::UnboundedReceiver<PlayerCommand>>>,
-    load_handles: Arc<Mutex<HashMap<thread::ThreadId, thread::JoinHandle<()>>>>,
-
-    state: PlayerState,
-    sink: Box<dyn Sink>,
-    sink_status: SinkStatus,
-    sink_event_callback: Option<SinkEventCallback>,
+    engine: Engine,
     event_senders: Vec<mpsc::UnboundedSender<PlayerEvent>>,
     tracklist: Arc<std::sync::Mutex<Tracklist>>,
     position_ms: u32,
+    last_broadcast_position_ms: u32,
+    /// A track has been handed to the engine and has not finished yet.
+    track_loaded: bool,
+    /// The engine has reported `Playing` since the last load; used to tell a
+    /// finished track apart from one that is still buffering/probing.
+    engine_started: bool,
+    /// Duration of the current track as last reported while playing.
+    last_duration_ms: u32,
+    /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
+    /// decode failure still ends the track instead of wedging the queue.
+    stopped_ticks: u32,
     event_broadcaster: Box<dyn Fn(PlayerEvent) + Send + 'static>,
 }
 
-impl Future for PlayerInternal {
-    type Output = ();
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
-        loop {
-            // process commands that were sent to us
-            let cmd = match self.commands.lock().unwrap().poll_recv(cx) {
-                Poll::Ready(None) => return Poll::Ready(()), // client has disconnected - shut down.
-                Poll::Ready(Some(cmd)) => Some(cmd),
-                _ => None,
-            };
-
-            if let Some(cmd) = cmd {
-                if let Err(e) = self.handle_command(cmd) {
-                    // error!("Error handling command: {}", e);
-                }
-            }
-
-            if let PlayerState::Playing { ref mut decoder } = self.state {
-                match decoder.next_packet() {
-                    Ok(result) => {
-                        if let Some((ref packet_position, packet, channels, sample_rate)) = result {
-                            match packet.samples() {
-                                Ok(_) => {
-                                    let mut converter =
-                                        Converter::new(Some(mk_ditherer::<TriangularDitherer>));
-                                    if let Err(e) = self.sink.write(
-                                        packet,
-                                        channels,
-                                        sample_rate,
-                                        &mut converter,
-                                    ) {
-                                        error!("Error writing to sink: {}", e);
-                                        exit(1)
-                                    }
-                                }
-                                Err(e) => {
-                                    error!("Failed to decode packet: {}", e);
-                                }
-                            }
-                            self.position_ms = packet_position.position_ms;
-                            let playback_state = self.tracklist.lock().unwrap().playback_state();
-                            self.tracklist
-                                .lock()
-                                .unwrap()
-                                .set_playback_state(PlaybackState {
-                                    position_ms: self.position_ms,
-                                    ..playback_state
-                                });
-                            (self.event_broadcaster)(PlayerEvent::TrackTimePosition {
-                                position_ms: packet_position.position_ms,
-                            });
-                        } else {
-                            // end of track
-                            self.state = PlayerState::Stopped;
-                            let tracklist = self.tracklist.clone();
-                            let playback_state = self.tracklist.lock().unwrap().playback_state();
-                            self.tracklist
-                                .lock()
-                                .unwrap()
-                                .set_playback_state(PlaybackState {
-                                    is_playing: false,
-                                    ..playback_state
-                                });
-                            self.send_event(PlayerEvent::EndOfTrack {
-                                is_last_track: tracklist.lock().unwrap().is_empty(),
-                            });
-                            self.handle_next();
-                        }
-                    }
-                    Err(e) => {
-                        error!("Failed to decode packet: {}", e);
-                    }
-                };
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
-    }
-}
-
 impl PlayerInternal {
-    fn ensure_sink_running(&mut self) {
-        if self.sink_status != SinkStatus::Running {
-            trace!("== Starting sink ==");
-            if let Some(callback) = &mut self.sink_event_callback {
-                callback(SinkStatus::Running);
-            }
-            match self.sink.start() {
-                Ok(()) => self.sink_status = SinkStatus::Running,
-                Err(e) => {
-                    error!("{}", e);
-                    exit(1);
+    /// The player task: reacts to commands as they arrive and reconciles the
+    /// engine's status on a fixed tick. Ends when every command sender is gone.
+    async fn run(mut self) {
+        let mut tick = tokio::time::interval(Duration::from_millis(100));
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            let commands = Arc::clone(&self.commands);
+            tokio::select! {
+                cmd = futures_util::future::poll_fn(move |cx| commands.lock().unwrap().poll_recv(cx)) => {
+                    match cmd {
+                        // client has disconnected - shut down.
+                        None => return,
+                        Some(cmd) => {
+                            if let Err(e) = self.handle_command(cmd) {
+                                error!("Error handling command: {}", e);
+                            }
+                        }
+                    }
+                }
+                _ = tick.tick() => {
+                    if self.track_loaded {
+                        self.poll_engine();
+                    }
                 }
             }
         }
     }
 
-    fn ensure_sink_stopped(&mut self, temporarily: bool) {
-        match self.sink_status {
-            SinkStatus::Running => {
-                trace!("== Stopping sink ==");
-                match self.sink.stop() {
-                    Ok(()) => {
-                        self.sink_status = if temporarily {
-                            SinkStatus::TemporarilyClosed
-                        } else {
-                            SinkStatus::Closed
-                        };
-                        if let Some(callback) = &mut self.sink_event_callback {
-                            callback(self.sink_status);
-                        }
-                    }
-                    Err(e) => {
-                        error!("{}", e);
-                        exit(1);
-                    }
+    /// Reconcile the engine's status with the tracklist state and emit events.
+    fn poll_engine(&mut self) {
+        let status = self.engine.status();
+        match status.state {
+            EngineState::Playing | EngineState::Paused => {
+                self.engine_started = true;
+                self.stopped_ticks = 0;
+                self.last_duration_ms = status.duration.as_millis() as u32;
+                let position_ms = status.position.as_millis() as u32;
+                self.position_ms = position_ms;
+                let playback_state = self.tracklist.lock().unwrap().playback_state();
+                self.tracklist
+                    .lock()
+                    .unwrap()
+                    .set_playback_state(PlaybackState {
+                        position_ms,
+                        ..playback_state
+                    });
+                if position_ms.abs_diff(self.last_broadcast_position_ms)
+                    >= POSITION_BROADCAST_STEP_MS
+                {
+                    self.last_broadcast_position_ms = position_ms;
+                    (self.event_broadcaster)(PlayerEvent::TrackTimePosition { position_ms });
                 }
             }
-            SinkStatus::TemporarilyClosed => {
-                if !temporarily {
-                    self.sink_status = SinkStatus::Closed;
-                    if let Some(callback) = &mut self.sink_event_callback {
-                        callback(SinkStatus::Closed);
+            EngineState::Stopped => {
+                if self.engine_started {
+                    // A reload (stop + set_queue + play) passes through a brief
+                    // Stopped probe gap that a status tick can land in; a track
+                    // that really ran to completion stops with its position at
+                    // the end. Anything else is that gap — re-latch on the next
+                    // Playing tick instead of advancing the queue.
+                    self.stopped_ticks += 1;
+                    let near_end = self.last_duration_ms == 0
+                        || self.position_ms + 3000 >= self.last_duration_ms;
+                    if !near_end && self.stopped_ticks < 30 {
+                        return;
                     }
+                    // the loaded track ran to completion
+                    self.track_loaded = false;
+                    self.engine_started = false;
+                    let playback_state = self.tracklist.lock().unwrap().playback_state();
+                    self.tracklist
+                        .lock()
+                        .unwrap()
+                        .set_playback_state(PlaybackState {
+                            is_playing: false,
+                            ..playback_state
+                        });
+                    let is_last_track = self.tracklist.lock().unwrap().is_empty();
+                    self.send_event(PlayerEvent::EndOfTrack { is_last_track });
+                    self.handle_next();
                 }
             }
-            SinkStatus::Closed => (),
         }
     }
 
@@ -394,11 +345,10 @@ impl PlayerInternal {
         match cmd {
             PlayerCommand::Load { track_id } => self.handle_command_load(&track_id),
             PlayerCommand::LoadTracklist { tracks } => self.handle_command_load_tracklist(tracks),
-            PlayerCommand::Preload => self.handle_command_preload(),
             PlayerCommand::Play => self.handle_play(),
             PlayerCommand::Pause => self.handle_pause(),
             PlayerCommand::Stop => self.handle_player_stop(),
-            PlayerCommand::Seek(position_ms) => self.handle_command_seek(),
+            PlayerCommand::Seek(position_ms) => self.handle_command_seek(position_ms),
             PlayerCommand::AddEventSender(sender) => self.event_senders.push(sender),
             PlayerCommand::Next => self.handle_next(),
             PlayerCommand::Previous => self.handle_previous(),
@@ -408,44 +358,9 @@ impl PlayerInternal {
             PlayerCommand::GetCurrentTrack => self.handle_get_current_track(),
             PlayerCommand::PlayNext(track) => self.handle_play_next(track),
             PlayerCommand::RemoveTrack(index) => self.handle_remove_track(index),
+            PlayerCommand::SetVolume(volume) => self.handle_set_volume(volume),
         }
         Ok(())
-    }
-
-    fn load_track(&self, song: &str) -> Option<PlayerLoadedTrackData> {
-        let handle = Handle::current();
-        let song = song.to_string();
-        match thread::spawn(move || handle.block_on(PlayerTrackLoader::load(&song))).join() {
-            Ok(track) => track,
-            Err(_) => {
-                println!("Failed to load track");
-                None
-            }
-        }
-    }
-
-    fn start_playback(&mut self, _track_id: &str, loaded_track: PlayerLoadedTrackData) {
-        self.ensure_sink_running();
-        self.send_event(PlayerEvent::Playing {});
-
-        self.state = PlayerState::Playing {
-            decoder: loaded_track.decoder,
-        };
-        let (track, position) = self.tracklist.lock().unwrap().current_track();
-        let playback_state = self.tracklist.lock().unwrap().playback_state();
-        self.tracklist
-            .lock()
-            .unwrap()
-            .set_playback_state(PlaybackState {
-                is_playing: true,
-                ..playback_state
-            });
-        (self.event_broadcaster)(PlayerEvent::CurrentTrack {
-            track,
-            position,
-            position_ms: 0,
-            is_playing: true,
-        });
     }
 
     fn send_event(&mut self, event: PlayerEvent) {
@@ -453,20 +368,32 @@ impl PlayerInternal {
             .retain(|sender| sender.send(event.clone()).is_ok());
     }
 
-    fn handle_command_load(&mut self, track_id: &str) {
-        formatter::print_format(track_id);
-        let loaded_track = self.load_track(track_id);
-        match loaded_track {
-            Some(loaded_track) => {
-                self.start_playback(track_id, loaded_track);
-            }
-            None => {
-                self.send_event(PlayerEvent::Error {
-                    track_id: track_id.to_string(),
-                    error: "Failed to load track".to_string(),
-                });
-            }
-        }
+    fn handle_command_load(&mut self, uri: &str) {
+        self.engine.stop();
+        self.engine.set_queue(vec![uri.to_string()]);
+        self.engine.play();
+        self.track_loaded = true;
+        self.engine_started = false;
+        self.stopped_ticks = 0;
+        self.last_duration_ms = 0;
+        self.position_ms = 0;
+        self.last_broadcast_position_ms = 0;
+
+        self.send_event(PlayerEvent::Playing {});
+        let (track, position) = self.tracklist.lock().unwrap().current_track();
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_playback_state(PlaybackState {
+                is_playing: true,
+                position_ms: 0,
+            });
+        (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+            track,
+            position,
+            position_ms: 0,
+            is_playing: true,
+        });
     }
 
     fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
@@ -477,67 +404,73 @@ impl PlayerInternal {
         }
     }
 
-    fn handle_command_preload(&self) {
-        todo!()
-    }
-
     fn handle_play(&mut self) {
-        if let PlayerState::Paused { .. } = self.state {
-            let playback_state = self.tracklist.lock().unwrap().playback_state();
-            self.tracklist
-                .lock()
-                .unwrap()
-                .set_playback_state(PlaybackState {
-                    is_playing: true,
-                    ..playback_state
-                });
-            self.state.paused_to_playing();
-            self.send_event(PlayerEvent::Playing);
-            self.ensure_sink_running();
-            let (track, position) = self.tracklist.lock().unwrap().current_track();
-            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
-                track,
-                position,
-                position_ms: self.position_ms,
+        self.engine.play();
+        let playback_state = self.tracklist.lock().unwrap().playback_state();
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_playback_state(PlaybackState {
                 is_playing: true,
+                ..playback_state
             });
-        } else {
-            error!("Player::play called from invalid state");
-        }
-    }
-
-    fn handle_player_stop(&mut self) {
-        self.ensure_sink_stopped(false);
-        self.state = PlayerState::Stopped;
-        self.tracklist.lock().unwrap().stop();
+        self.send_event(PlayerEvent::Playing);
+        let (track, position) = self.tracklist.lock().unwrap().current_track();
+        (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+            track,
+            position,
+            position_ms: self.position_ms,
+            is_playing: true,
+        });
     }
 
     fn handle_pause(&mut self) {
-        if let PlayerState::Playing { .. } = self.state {
-            let playback_state = self.tracklist.lock().unwrap().playback_state();
-            self.tracklist
-                .lock()
-                .unwrap()
-                .set_playback_state(PlaybackState {
-                    is_playing: false,
-                    ..playback_state
-                });
-            self.state.playing_to_paused();
-            self.send_event(PlayerEvent::Paused);
-            let (track, position) = self.tracklist.lock().unwrap().current_track();
-            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
-                track,
-                position,
-                position_ms: self.position_ms,
+        self.engine.pause();
+        let playback_state = self.tracklist.lock().unwrap().playback_state();
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_playback_state(PlaybackState {
                 is_playing: false,
+                ..playback_state
             });
-        } else {
-            error!("Player::pause called from invalid state");
-        }
+        self.send_event(PlayerEvent::Paused);
+        let (track, position) = self.tracklist.lock().unwrap().current_track();
+        (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+            track,
+            position,
+            position_ms: self.position_ms,
+            is_playing: false,
+        });
     }
 
-    fn handle_command_seek(&self) {
-        todo!()
+    fn handle_player_stop(&mut self) {
+        self.engine.stop();
+        self.engine.clear_queue();
+        self.track_loaded = false;
+        self.engine_started = false;
+        self.tracklist.lock().unwrap().stop();
+    }
+
+    fn handle_command_seek(&mut self, position_ms: u32) {
+        self.engine.seek(Duration::from_millis(position_ms as u64));
+        self.position_ms = position_ms;
+        self.last_broadcast_position_ms = position_ms;
+        let playback_state = self.tracklist.lock().unwrap().playback_state();
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_playback_state(PlaybackState {
+                position_ms,
+                ..playback_state
+            });
+        (self.event_broadcaster)(PlayerEvent::TrackTimePosition { position_ms });
+    }
+
+    fn handle_set_volume(&mut self, volume: u16) {
+        let volume = volume.min(100);
+        self.engine.set_volume(volume as f32 / 100.0);
+        self.send_event(PlayerEvent::VolumeSet { volume });
     }
 
     fn handle_next(&mut self) {
@@ -580,7 +513,7 @@ impl PlayerInternal {
 
     fn handle_get_current_track(&mut self) {
         let (track, position) = self.tracklist.lock().unwrap().current_track();
-        let is_playing = self.state.is_playing();
+        let is_playing = self.track_loaded && self.engine.status().state == EngineState::Playing;
         self.send_event(PlayerEvent::CurrentTrack {
             track,
             position,
@@ -590,175 +523,10 @@ impl PlayerInternal {
     }
 }
 
-struct PlayerLoadedTrackData {
-    decoder: Decoder,
-}
-
-type Decoder = Box<dyn AudioDecoder + Send>;
-
-enum PlayerState {
-    Stopped,
-    Loading {
-        loader: Pin<Box<dyn FusedFuture<Output = Result<PlayerLoadedTrackData, ()>> + Send>>,
-    },
-    Paused {
-        decoder: Decoder,
-    },
-    Playing {
-        decoder: Decoder,
-    },
-    EndOfTrack {
-        loaded_track: PlayerLoadedTrackData,
-    },
-    Invalid,
-}
-
-impl PlayerState {
-    fn is_playing(&self) -> bool {
-        use self::PlayerState::*;
-        match *self {
-            Stopped | EndOfTrack { .. } | Paused { .. } | Loading { .. } => false,
-            Playing { .. } => true,
-            Invalid => {
-                // "PlayerState::is_playing in invalid state"
-                exit(1);
-            }
-        }
-    }
-
-    #[allow(dead_code)]
-    fn is_stopped(&self) -> bool {
-        use self::PlayerState::*;
-        matches!(self, Stopped)
-    }
-
-    #[allow(dead_code)]
-    fn is_loading(&self) -> bool {
-        use self::PlayerState::*;
-        matches!(self, Loading { .. })
-    }
-
-    fn decoder(&mut self) -> Option<&mut Decoder> {
-        use self::PlayerState::*;
-        match *self {
-            Stopped | EndOfTrack { .. } | Loading { .. } => None,
-            Paused {
-                ref mut decoder, ..
-            }
-            | Playing {
-                ref mut decoder, ..
-            } => Some(decoder),
-            Invalid => {
-                // error!("PlayerState::decoder in invalid state");
-                exit(1);
-            }
-        }
-    }
-
-    fn playing_to_paused(&mut self) {
-        use self::PlayerState::*;
-        let new_state = mem::replace(self, Invalid);
-        match new_state {
-            Playing { decoder } => {
-                *self = Paused { decoder };
-            }
-            _ => {
-                error!("PlayerState::playing_to_paused in invalid state");
-                exit(1);
-            }
-        }
-    }
-
-    fn paused_to_playing(&mut self) {
-        use self::PlayerState::*;
-        let new_state = mem::replace(self, Invalid);
-        match new_state {
-            Paused { decoder } => {
-                *self = Playing { decoder };
-            }
-            _ => {
-                error!("PlayerState::paused_to_playing in invalid state");
-                exit(1);
-            }
-        }
-    }
-}
-
-pub struct PlayerTrackLoader;
-
-impl PlayerTrackLoader {
-    async fn load(song: &str) -> Option<PlayerLoadedTrackData> {
-        let bytes_per_second = 40 * 1024; // 320kbps
-        debug!("Loading track: {}", song);
-        let audio_file = match AudioFile::open(&song, bytes_per_second).await {
-            Ok(audio_file) => audio_file,
-            Err(e) => {
-                println!("Error: {}", e);
-                error!("Error: {}", e);
-                return None;
-            }
-        };
-
-        match audio_file.get_stream_loader_controller() {
-            Ok(stream_loader_controller) => {
-                stream_loader_controller.set_stream_mode();
-                let audio_file =
-                    match Subfile::new(audio_file, 0, stream_loader_controller.len() as u64) {
-                        Ok(audio_file) => audio_file,
-                        Err(e) => {
-                            println!("Error: {}", e);
-                            error!("Error: {}", e);
-                            return None;
-                        }
-                    };
-
-                let symphonia_decoder = |audio_file, format| {
-                    SymphoniaDecoder::new(audio_file, format)
-                        .map(|decoder| Box::new(decoder) as Decoder)
-                };
-
-                println!(">> loading ...");
-                debug!(">> loading ...");
-
-                let mut format = Hint::new();
-
-                match stream_loader_controller.mime_type() {
-                    Some(mime_type) => {
-                        format.mime_type(&mime_type);
-                    }
-                    None => {
-                        println!("No mime type");
-                    }
-                }
-
-                let decoder_type = symphonia_decoder(audio_file, format);
-
-                let decoder = match decoder_type {
-                    Ok(decoder) => decoder,
-                    Err(e) => {
-                        panic!("Failed to create decoder: {}", e);
-                    }
-                };
-
-                println!(">> loaded ...");
-                debug!(">> loaded ...");
-
-                return Some(PlayerLoadedTrackData { decoder });
-            }
-            Err(e) => {
-                println!("Error: {}", e);
-                error!("Error: {}", e);
-                return None;
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum PlayerCommand {
     Load { track_id: String },
     LoadTracklist { tracks: Vec<Track> },
-    Preload,
     Play,
     Pause,
     Stop,
@@ -772,6 +540,7 @@ pub enum PlayerCommand {
     GetCurrentTrack,
     RemoveTrack(usize),
     PlayNext(Track),
+    SetVolume(u16),
 }
 
 #[derive(Debug, Clone)]
@@ -779,10 +548,8 @@ pub enum PlayerEvent {
     Stopped,
     Started,
     Loading,
-    Preloading,
     Playing,
     Paused,
-    TimeToPreloadNextTrack,
     EndOfTrack {
         is_last_track: bool,
     },
@@ -832,12 +599,7 @@ impl PlayerEvent {
                 position,
                 position_ms,
                 is_playing,
-            } => Some((
-                track.clone(),
-                position.clone(),
-                position_ms.clone(),
-                is_playing.clone(),
-            )),
+            } => Some((track.clone(), *position, *position_ms, *is_playing)),
             _ => None,
         }
     }

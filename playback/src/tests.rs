@@ -5,22 +5,16 @@ use std::vec;
 
 use music_player_entity::album::Model as Album;
 use music_player_entity::track::Model as Track;
-use music_player_tracklist::{PlaybackState, Tracklist};
+use music_player_tracklist::Tracklist;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use super::audio_backend::Sink;
-
-use super::audio_backend::rodio::RodioSink;
-use super::config::AudioFormat;
 use super::player::{Player, PlayerCommand};
-use super::*;
 
 #[tokio::test]
 async fn load_tracklist() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -76,10 +70,9 @@ async fn load_tracklist() {
 
 #[test]
 fn play() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -148,10 +141,9 @@ fn play() {
 
 #[test]
 fn pause() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -212,10 +204,9 @@ fn pause() {
 
 #[test]
 fn stop() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -276,10 +267,9 @@ fn stop() {
 
 #[test]
 fn next() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -340,10 +330,9 @@ fn next() {
 
 #[test]
 fn previous() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -416,10 +405,9 @@ fn previous() {
 
 #[test]
 fn clear() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -482,10 +470,9 @@ fn clear() {
 
 #[test]
 fn play_track_at() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -550,10 +537,9 @@ fn play_track_at() {
 
 #[test]
 fn play_next() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -635,10 +621,9 @@ fn play_next() {
 
 #[test]
 fn current_track() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -691,10 +676,9 @@ fn current_track() {
 
 #[test]
 fn playback_state() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist) = setup_new_params();
+    let (cmd_tx, cmd_rx, tracklist) = setup_new_params();
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -706,17 +690,13 @@ fn playback_state() {
 }
 
 fn setup_new_params() -> (
-    fn(Option<String>, AudioFormat) -> Box<dyn Sink>,
-    AudioFormat,
     Arc<Mutex<UnboundedSender<PlayerCommand>>>,
     Arc<Mutex<UnboundedReceiver<PlayerCommand>>>,
     Arc<Mutex<Tracklist>>,
 ) {
-    let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(Mutex::new(cmd_rx));
     let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
-    return (backend, audio_format, cmd_tx, cmd_rx, tracklist);
+    return (cmd_tx, cmd_rx, tracklist);
 }

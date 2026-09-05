@@ -1,0 +1,27 @@
+name: nix build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: nix build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Build
+        run: nix build -L
+
+      - name: Show binary info
+        run: |
+          ls -la result/bin/
+          file result/bin/music-player

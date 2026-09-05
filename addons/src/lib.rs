@@ -1,13 +1,8 @@
-pub mod airplay;
 pub mod chromecast;
-pub mod datpiff;
-pub mod deezer;
 pub mod dlna;
-pub mod genius;
-pub mod kodi;
+pub mod jellyfin;
 pub mod local;
-pub mod myvazo;
-pub mod tononkira;
+pub mod subsonic;
 
 use anyhow::Error;
 use async_trait::async_trait;

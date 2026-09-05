@@ -1,5 +1,6 @@
-import { createContext, useState, FC } from "react";
+import { createContext, FC } from "react";
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react";
+import { useAtom } from "jotai";
 import {
   BaseUIDarkTheme,
   BaseUILightTheme,
@@ -7,6 +8,7 @@ import {
   LightTheme,
 } from "../Theme";
 import { BaseProvider } from "baseui";
+import { themeAtom } from "../State";
 
 export type Theme = "light" | "dark";
 
@@ -25,7 +27,9 @@ export type ThemeProviderProps = {
 };
 
 const ThemeProvider: FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>("light");
+  // the theme now lives in a jotai atom, the ThemeContext is kept so
+  // existing consumers keep working unchanged
+  const [theme, setTheme] = useAtom(themeAtom);
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       <EmotionThemeProvider theme={theme === "dark" ? DarkTheme : LightTheme}>

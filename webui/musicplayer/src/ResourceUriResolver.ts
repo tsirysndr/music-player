@@ -9,7 +9,8 @@ export const resourceUriResolver = {
     const { path } = window.__TAURI__;
     const appDataDir = await path.appDataDir();
     coversDir = await path.join(appDataDir, "covers");
-    pathSep = path.sep;
+    // In Tauri v2, `path.sep` is a function returning the separator
+    pathSep = path.sep();
   },
   resolve(path: string | undefined): string | undefined {
     if (!path) return path;
@@ -24,9 +25,9 @@ export const resourceUriResolver = {
     }
     // Image file in covers/ data directory
     if (/^\/covers\/[^<>:;,?"*|/]+\.(?:jpg|png)$/.test(path)) {
-      const { tauri } = window.__TAURI__;
+      const { core } = window.__TAURI__;
       const devicePath = [coversDir, path.substring(8)].join(pathSep);
-      return tauri.convertFileSrc(devicePath);
+      return core.convertFileSrc(devicePath);
     }
     return path;
   },

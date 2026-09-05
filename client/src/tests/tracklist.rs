@@ -19,11 +19,9 @@ use crate::{tests::setup_new_params, tracklist::TracklistClient};
 async fn add() -> Result<(), Box<dyn std::error::Error>> {
     let host = "0.0.0.0".to_owned();
     let port = 4086;
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url) =
-        setup_new_params(port).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, _url) = setup_new_params(port).await;
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -35,11 +33,15 @@ async fn add() -> Result<(), Box<dyn std::error::Error>> {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -67,10 +69,8 @@ async fn add() -> Result<(), Box<dyn std::error::Error>> {
 async fn list() -> Result<(), Box<dyn std::error::Error>> {
     let host = "0.0.0.0".to_owned();
     let port = 4087;
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, _url) =
-        setup_new_params(port).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, _url) = setup_new_params(port).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -82,11 +82,15 @@ async fn list() -> Result<(), Box<dyn std::error::Error>> {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

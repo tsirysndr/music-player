@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
+import InfiniteScroll from "react-infinite-scroll-component";
 import { Device } from "../../Types/Device";
 import ControlBar from "../ControlBar";
 import Artist from "../Icons/Artist";
@@ -65,10 +66,21 @@ export type ArtistsProps = {
   onClickArtist: (artist: any) => void;
   currentCastDevice?: Device;
   onFilter: (filter: string) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 };
 
+const SCROLLABLE_ID = "artists-page-scrollable";
+
 const Artists: FC<ArtistsProps> = (props) => {
-  const { onClickArtist, artists, currentCastDevice, onFilter } = props;
+  const {
+    onClickArtist,
+    artists,
+    currentCastDevice,
+    onFilter,
+    onLoadMore,
+    hasMore,
+  } = props;
   return (
     <>
       {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
@@ -76,31 +88,40 @@ const Artists: FC<ArtistsProps> = (props) => {
         <Sidebar active="artists" />
         <Content>
           <ControlBar />
-          <Scrollable>
+          <Scrollable id={SCROLLABLE_ID}>
             <MainContent
               title="Artists"
               placeholder="Filter Artists"
               onFilter={onFilter}
             >
               <Wrapper>
-                <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
-                  {artists.map((item) => (
-                    <Cell key={item.id}>
-                      {item.cover && (
-                        <ArtistCover
-                          src={item.cover}
-                          onClick={() => onClickArtist(item)}
-                        />
-                      )}
-                      {!item.cover && (
-                        <NoArtistCover onClick={() => onClickArtist(item)}>
-                          <Artist width={75} height={75} color="#a4a3a3" />
-                        </NoArtistCover>
-                      )}
-                      <ArtistName>{item.name}</ArtistName>
-                    </Cell>
-                  ))}
-                </Grid>
+                <InfiniteScroll
+                  dataLength={artists.length}
+                  next={() => onLoadMore && onLoadMore()}
+                  hasMore={!!hasMore}
+                  loader={null}
+                  scrollableTarget={SCROLLABLE_ID}
+                  style={{ overflow: "visible" }}
+                >
+                  <Grid gridColumns={[2, 3, 4]} gridMargins={[8, 16, 18]}>
+                    {artists.map((item) => (
+                      <Cell key={item.id}>
+                        {item.cover && (
+                          <ArtistCover
+                            src={item.cover}
+                            onClick={() => onClickArtist(item)}
+                          />
+                        )}
+                        {!item.cover && (
+                          <NoArtistCover onClick={() => onClickArtist(item)}>
+                            <Artist width={75} height={75} color="#a4a3a3" />
+                          </NoArtistCover>
+                        )}
+                        <ArtistName>{item.name}</ArtistName>
+                      </Cell>
+                    ))}
+                  </Grid>
+                </InfiniteScroll>
               </Wrapper>
             </MainContent>
           </Scrollable>

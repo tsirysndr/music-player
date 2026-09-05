@@ -13,16 +13,12 @@ rust_library(
       "src/repo/track.rs",
       "src/repo/playlist.rs",
       "src/repo/folder.rs",
-      "src/searcher/album.rs",
-      "src/searcher/artist.rs",
       "src/searcher/mod.rs",
-      "src/searcher/track.rs",
     ],
     deps = [
       "//settings:music_player_settings",
       "//types:music_player_types",
       "//entity:music_player_entity",
-      "@crate_index//:tantivy",
       "@crate_index//:itertools",
     ] + all_crate_deps(),
 )

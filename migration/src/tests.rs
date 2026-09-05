@@ -31,5 +31,28 @@ async fn test_cli() {
         .await
         .unwrap();
 
-    assert_eq!(result.len(), 9);
+    let tables: Vec<String> = result
+        .iter()
+        .map(|row| row.try_get("", "name").unwrap())
+        .collect();
+
+    for table in [
+        "artist",
+        "album",
+        "track",
+        "playlist",
+        "folder",
+        "playlist_track",
+        "artist_track",
+        "addon",
+        "track_search",
+        "album_search",
+        "artist_search",
+    ] {
+        assert!(
+            tables.contains(&table.to_string()),
+            "missing table {}",
+            table
+        );
+    }
 }

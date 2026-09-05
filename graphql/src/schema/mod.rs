@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 use music_player_addons::{
-    airplay::Airplay, chromecast::Chromecast, dlna::Dlna, kodi::Kodi, local::Local, Browsable,
-    Player,
+    chromecast::Chromecast, dlna::Dlna, jellyfin::Jellyfin, local::Local, subsonic::Subsonic,
+    Browsable, Player,
 };
 use music_player_types::types::Device;
 
@@ -67,16 +65,28 @@ pub enum MutationType {
 }
 
 pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browsable + Send>>, Error> {
-    let mut local: Local = device.clone().into();
-    local.connect().await?;
-    Ok(Some(Box::new(local)))
+    match device.app.as_str() {
+        "subsonic" => {
+            let mut subsonic: Subsonic = device.clone().into();
+            subsonic.connect().await?;
+            Ok(Some(Box::new(subsonic)))
+        }
+        "jellyfin" => {
+            let mut jellyfin: Jellyfin = device.clone().into();
+            jellyfin.connect().await?;
+            Ok(Some(Box::new(jellyfin)))
+        }
+        _ => {
+            let mut local: Local = device.clone().into();
+            local.connect().await?;
+            Ok(Some(Box::new(local)))
+        }
+    }
 }
 
 pub enum PlayerType {
     MusicPlayer,
     Chromecast,
-    Airplay,
-    Kodi,
     Dlna,
 }
 
@@ -87,8 +97,6 @@ pub async fn connect_to_cast_device(
     match player_type {
         PlayerType::MusicPlayer => Local::new().connect_to_player(device).await,
         PlayerType::Chromecast => Chromecast::connect(device),
-        PlayerType::Airplay => Airplay::new().connect(device),
-        PlayerType::Kodi => Kodi::new().connect_to_player(device),
         PlayerType::Dlna => Dlna::connect_to_media_renderer(device),
     }
 }

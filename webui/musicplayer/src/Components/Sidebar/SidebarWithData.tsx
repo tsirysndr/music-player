@@ -34,18 +34,18 @@ const SidebarWithData: FC<SidebarProps> = (props) => {
       onSearch={(query) => navigate(`/search?q=${query}`)}
       folders={folders}
       playlists={mainPlaylists}
-      onCreateFolder={(name) => createFolder({ variables: { name } })}
-      onCreatePlaylist={(name) => createPlaylist({ variables: { name } })}
-      onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
-      onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
-      onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
-      onEditPlaylist={(id, name) => renamePlaylist({ variables: { id, name } })}
+      onCreateFolder={(name) => createFolder({ name })}
+      onCreatePlaylist={(name) => createPlaylist({ name })}
+      onDeleteFolder={(id) => deleteFolder({ id })}
+      onDeletePlaylist={(id) => deletePlaylist({ id })}
+      onEditFolder={(id, name) => renameFolder({ id, name })}
+      onEditPlaylist={(id, name) => renamePlaylist({ id, name })}
       onPlayPlaylist={(playlistId, shuffle, position) =>
-        playPlaylist({ variables: { playlistId, position, shuffle } })
+        playPlaylist({ playlistId, position, shuffle })
       }
       devices={devices}
       currentDevice={currentDevice}
-      connectToDevice={(id) => connectToDevice({ variables: { id } })}
+      connectToDevice={(id) => connectToDevice({ id })}
       disconnectFromDevice={() => disconnectFromDevice()}
     />
   );

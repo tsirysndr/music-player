@@ -254,7 +254,6 @@ enum Track {
     Id,
     Title,
     Artist,
-    Album,
     Genre,
     Year,
     Track,

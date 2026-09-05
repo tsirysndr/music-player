@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import gql from "graphql-tag";
 import { FOLDER_FRAGMENT, PLAYLIST_FRAGMENT } from "../Fragments";
 
 export const GET_PLAYLISTS = gql`

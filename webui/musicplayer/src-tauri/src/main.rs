@@ -21,15 +21,11 @@ use music_player_graphql::{
     simple_broker::SimpleBroker,
     MusicPlayerSchema,
 };
-use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink},
-    config::AudioFormat,
-    player::{Player, PlayerEvent},
-};
+use music_player_playback::player::{Player, PlayerEvent};
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
-use tauri::Manager;
+use tauri::{Emitter, Listener, Manager};
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
@@ -65,7 +61,7 @@ fn execute_graphql_subscription(
                 }
                 Some(Left(data)) => {
                     cloned_handle
-                        .emit_all(
+                        .emit(
                             &format!("subscriptions/{}", token),
                             // Needs to be serialized first since Response doesn't implement Clone
                             serde_json::to_value(&data).unwrap(),
@@ -75,7 +71,7 @@ fn execute_graphql_subscription(
             }
         }
     });
-    app_handle.once_global(format!("unsubscribe/{}", token), move |_| {
+    app_handle.once_any(format!("unsubscribe/{}", token), move |_| {
         client_subscription_tx
             .unbounded_send(ClientSubscriptionEvent::Unsubscribed)
             .ok();
@@ -93,20 +89,18 @@ async fn execute_graphql(
 
 #[tokio::main]
 async fn main() {
-    let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
-    let searcher = Arc::new(Mutex::new(Searcher::new()));
+    let searcher_db = Database::new().await;
+    let searcher = Arc::new(Searcher::new(searcher_db.get_connection().clone()));
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
 
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         move |event| match event {
             PlayerEvent::CurrentTrack {
                 track,

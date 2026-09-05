@@ -138,13 +138,14 @@ pub async fn start_webui(
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
-    let searcher = Arc::new(Mutex::new(Searcher::new()));
+    let db = Database::new().await;
+    let searcher = Arc::new(Searcher::new(db.get_connection().clone()));
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
         Subscription::default(),
     )
-    .data(Database::new().await)
+    .data(db)
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)

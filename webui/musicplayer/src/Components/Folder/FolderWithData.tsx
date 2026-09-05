@@ -1,4 +1,4 @@
-import { FC, useEffect } from "react";
+import { FC } from "react";
 import { useParams } from "react-router-dom";
 import Folder from "./Folder";
 import { useGetFolderQuery } from "../../Hooks/GraphQL";
@@ -8,16 +8,10 @@ import { usePlaylist } from "../../Hooks/usePlaylist";
 
 const FolderWithData: FC = () => {
   const params = useParams();
-  const { data, refetch } = useGetFolderQuery({
-    variables: {
-      id: params.id!,
-    },
-    fetchPolicy: "network-only",
+  const { data } = useGetFolderQuery({
+    id: params.id!,
   });
 
-  useEffect(() => {
-    params.id && refetch();
-  }, [params.id, refetch]);
   const { playNext } = usePlayback();
   const { currentCastDevice } = useDevices();
   const { playlists, mainPlaylists, createPlaylist, movePlaylistsToFolder } =
@@ -27,14 +21,14 @@ const FolderWithData: FC = () => {
 
   return (
     <Folder
-      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
+      onPlayNext={(trackId) => playNext({ trackId })}
       playlists={playlists}
       mainPlaylists={mainPlaylists}
       onCreatePlaylist={(name, description) =>
-        createPlaylist({ variables: { name, description } })
+        createPlaylist({ name, description })
       }
       onMovePlaylists={(playlistIds, folderId) =>
-        movePlaylistsToFolder({ variables: { playlistIds, folderId } })
+        movePlaylistsToFolder({ playlistIds, folderId })
       }
       folder={data?.folder}
       currentCastDevice={currentCastDevice}

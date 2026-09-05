@@ -1,55 +1,22 @@
-use futures::future::FutureExt;
-use music_player_entity::{album, artist, artist_tracks, track};
-use music_player_storage::{searcher::Searcher, Database};
-use sea_orm::{ActiveModelTrait, EntityTrait, PaginatorTrait};
+use music_player_entity::{album, artist, track};
+use music_player_storage::Database;
+use sea_orm::{EntityTrait, PaginatorTrait};
 use std::env;
 
 #[tokio::test]
-async fn scan_directory() {
+async fn scan_music_library() {
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
     env::set_var(
         "MUSIC_PLAYER_DATABASE_URL",
         "sqlite:///tmp/music-player.sqlite3",
     );
-    env::set_var("DATABASE_URL", "sqlite:///tmp/music-player.sqlite3");
-    migration::run().await;
+    migration::apply().await;
     let db = Database::new().await;
-    super::scan_directory(
-        move |song, db| {
-            async move {
-                let item: artist::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: album::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: track::ActiveModel = song.try_into().unwrap();
-
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-            }
-            .boxed()
-        },
-        &db,
-        &Searcher::new(),
-    )
-    .await
-    .unwrap_or_default();
+    let songs = super::scan_music_library(false, db.clone())
+        .await
+        .unwrap_or_default();
+    assert_eq!(songs.len(), 2);
 
     let conn = db.get_connection();
     assert_eq!(artist::Entity::find().count(conn).await.unwrap(), 1);

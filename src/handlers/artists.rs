@@ -1,5 +1,5 @@
 use crate::{
-    app::{ActiveBlock, App, RouteId},
+    app::{ActiveBlock, App, PagedCollection, RouteId},
     event::Key,
     network::IoEvent,
 };
@@ -28,14 +28,21 @@ pub fn handler(key: Key, app: &mut App) {
             app.artist_table.selected_index = next_index;
         }
         Key::Enter => {
-            app.dispatch(IoEvent::GetArtist(
-                app.artist_table.artists[app.artist_table.selected_index]
-                    .id
-                    .clone(),
-            ));
-            app.push_navigation_stack(RouteId::Artist, ActiveBlock::ArtistBlock);
+            if let Some(artist) = app
+                .artist_table
+                .artists
+                .get(app.artist_table.selected_index)
+            {
+                let id = artist.id.clone();
+                app.selected_artist_name = Some(artist.name.clone());
+                app.dispatch(IoEvent::GetArtist(id));
+                app.push_navigation_stack(RouteId::Artist, ActiveBlock::ArtistBlock);
+            }
         }
 
         _ => (),
     }
+    // Fetch the next page when the selection gets close to the end of the
+    // loaded artists.
+    app.maybe_load_more(PagedCollection::Artists);
 }

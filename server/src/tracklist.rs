@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use music_player_entity::{album, artist, track};
 use music_player_playback::player::PlayerCommand;
-use music_player_storage::{repo::track::TrackRepository, Database};
+use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
 use sea_orm::EntityTrait;
-use tokio::sync::{mpsc::UnboundedSender, Mutex};
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::api::{
     metadata::v1alpha1::Track,
@@ -90,7 +90,7 @@ impl TracklistService for Tracklist {
         &self,
         _request: tonic::Request<ClearTracklistRequest>,
     ) -> Result<tonic::Response<ClearTracklistResponse>, tonic::Status> {
-        self.cmd_tx.lock().unwrap().send(PlayerCommand::Clear);
+        self.cmd_tx.lock().unwrap().send(PlayerCommand::Clear).ok();
         let response = ClearTracklistResponse {};
         Ok(tonic::Response::new(response))
     }

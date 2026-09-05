@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import gql from "graphql-tag";
 import { TRACK_FRAGMENT } from "../Fragments";
 
 export const PLAYER_STATE = gql`

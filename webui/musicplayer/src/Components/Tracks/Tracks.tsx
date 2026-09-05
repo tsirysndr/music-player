@@ -29,6 +29,8 @@ export type TracksProps = {
   recentPlaylists: any[];
   currentCastDevice?: Device;
   onFilter: (filter: string) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 };
 
 const Tracks: FC<TracksProps> = (props) => {
@@ -42,6 +44,8 @@ const Tracks: FC<TracksProps> = (props) => {
     recentPlaylists,
     currentCastDevice,
     onFilter,
+    onLoadMore,
+    hasMore,
   } = props;
   return (
     <>
@@ -60,6 +64,8 @@ const Tracks: FC<TracksProps> = (props) => {
               onCreatePlaylist={onCreatePlaylist}
               recentPlaylists={recentPlaylists}
               onAddTrackToPlaylist={onAddTrackToPlaylist}
+              onLoadMore={onLoadMore}
+              hasMore={hasMore}
             />
           </MainContent>
         </Content>

@@ -3,15 +3,12 @@ use music_player_tracklist::Tracklist as TracklistState;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::api::{
-    metadata::v1alpha1::{Album, Artist, Track},
-    music::v1alpha1::{
-        playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
-        GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
-        GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
-        PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
-        SeekResponse, StopRequest, StopResponse,
-    },
+use crate::api::music::v1alpha1::{
+    playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
+    GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
+    GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
+    PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
+    SeekResponse, StopRequest, StopResponse,
 };
 
 pub struct Playback {
@@ -142,12 +139,12 @@ impl PlaybackService for Playback {
     }
     async fn seek(
         &self,
-        _request: tonic::Request<SeekRequest>,
+        request: tonic::Request<SeekRequest>,
     ) -> Result<tonic::Response<SeekResponse>, tonic::Status> {
         self.cmd_tx
             .lock()
             .unwrap()
-            .send(PlayerCommand::Seek(12))
+            .send(PlayerCommand::Seek(request.into_inner().position_ms))
             .unwrap();
         let response = SeekResponse {};
         Ok(tonic::Response::new(response))

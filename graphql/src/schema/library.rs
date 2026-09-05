@@ -2,15 +2,13 @@ use std::sync::Arc;
 
 use async_graphql::{futures_util::FutureExt, *};
 use music_player_addons::CurrentSourceDevice;
-use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
-use music_player_scanner::scan_directory;
 use music_player_storage::{
     repo::{album::AlbumRepository, artist::ArtistRepository, track::TrackRepository},
     searcher::Searcher,
     Database,
 };
 use music_player_types::types::{RemoteCoverUrl, RemoteTrackUrl};
-use sea_orm::{ActiveModelTrait, ActiveValue};
+use sea_orm::ActiveModelTrait;
 use tokio::sync::Mutex;
 
 use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
@@ -247,11 +245,10 @@ impl LibraryQuery {
     }
 
     async fn search(&self, ctx: &Context<'_>, keyword: String) -> Result<SearchResult, Error> {
-        let searcher = ctx.data::<Arc<Mutex<Searcher>>>().unwrap();
-        let indexer = searcher.lock().await;
-        let artists = indexer.artist.search(&keyword)?;
-        let albums = indexer.album.search(&keyword)?;
-        let tracks = indexer.track.search(&keyword)?;
+        let searcher = ctx.data::<Arc<Searcher>>().unwrap();
+        let artists = searcher.search_artist(&keyword).await?;
+        let albums = searcher.search_album(&keyword).await?;
+        let tracks = searcher.search_song(&keyword).await?;
         Ok(SearchResult {
             artists: artists.into_iter().map(|x| Into::into(x)).collect(),
             tracks: tracks.into_iter().map(|x| Into::into(x)).collect(),
@@ -266,73 +263,9 @@ pub struct LibraryMutation;
 #[Object]
 impl LibraryMutation {
     async fn scan(&self, _ctx: &Context<'_>) -> Result<bool, Error> {
-        scan_directory(
-            move |song, db| {
-                async move {
-                    let id = format!("{:x}", md5::compute(song.artist.to_string()));
-                    let item = artist_entity::ActiveModel {
-                        id: ActiveValue::set(id),
-                        name: ActiveValue::Set(song.artist.clone()),
-                    };
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-
-                    let id = format!(
-                        "{:x}",
-                        md5::compute(format!("{}{}", song.album, song.artist))
-                    );
-                    let item = album_entity::ActiveModel {
-                        id: ActiveValue::set(id),
-                        artist: ActiveValue::set(song.artist.clone()),
-                        title: ActiveValue::Set(song.album.clone()),
-                        artist_id: ActiveValue::Set(Some(format!(
-                            "{:x}",
-                            md5::compute(song.artist.to_string())
-                        ))),
-                        year: ActiveValue::Set(song.year),
-                        cover: ActiveValue::Set(song.cover.clone()),
-                    };
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-                    let id = format!("{:x}", md5::compute(song.uri.as_ref().unwrap()));
-                    let item = track_entity::ActiveModel {
-                        id: ActiveValue::set(id),
-                        title: ActiveValue::Set(song.title.clone()),
-                        artist: ActiveValue::set(song.artist.clone()),
-                        genre: ActiveValue::Set(song.genre.clone()),
-                        year: ActiveValue::Set(song.year),
-                        track: ActiveValue::Set(song.track),
-                        bitrate: ActiveValue::Set(song.bitrate),
-                        sample_rate: ActiveValue::Set(song.sample_rate),
-                        bit_depth: ActiveValue::Set(song.bit_depth),
-                        channels: ActiveValue::Set(song.channels),
-                        duration: ActiveValue::Set(Some(song.duration.as_secs_f32())),
-                        uri: ActiveValue::Set(song.uri.clone().unwrap_or_default()),
-                        album_id: ActiveValue::Set(Some(format!(
-                            "{:x}",
-                            md5::compute(format!("{}{}", song.album, song.artist))
-                        ))),
-                        artist_id: ActiveValue::Set(Some(format!(
-                            "{:x}",
-                            md5::compute(song.artist.to_string())
-                        ))),
-                    };
-
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-                }
-                .boxed()
-            },
-            &Database::new().await,
-            &Searcher::new(),
-        )
-        .await?;
+        music_player_scanner::refresh_music_library(false, Database::new().await)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
 
         Ok(false)
     }

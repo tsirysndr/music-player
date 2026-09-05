@@ -12,7 +12,6 @@ use music_player_tracklist::Tracklist as TracklistState;
 use owo_colors::OwoColorize;
 use tokio::net::{TcpListener, TcpStream, UnixListener};
 use tokio::sync::mpsc::UnboundedSender as TokioUnboundedSender;
-use tokio::sync::Mutex;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 use tungstenite::Message;
@@ -75,29 +74,23 @@ impl MusicPlayerServer {
 
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
-                self.db.clone(),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(AddonsServiceServer::new(Addons::new(self.db.clone())))
+            .add_service(CoreServiceServer::new(Core::default()))
+            .add_service(HistoryServiceServer::new(History::new(self.db.clone())))
+            .add_service(LibraryServiceServer::new(Library::new(self.db.clone())))
+            .add_service(MixerServiceServer::new(Mixer::new(Arc::clone(
+                &self.cmd_tx,
             ))))
-            .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
-            .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
-                self.db.clone(),
-            ))))
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                self.db.clone(),
-            ))))
-            .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&self.tracklist), Arc::clone(&self.cmd_tx)),
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&self.tracklist),
+                Arc::clone(&self.cmd_tx),
             )))
-            .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(self.db.clone()),
-            )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(
-                    Arc::clone(&self.tracklist),
-                    Arc::clone(&self.cmd_tx),
-                    self.db.clone(),
-                ),
+            .add_service(PlaylistServiceServer::new(Playlist::new(self.db.clone())))
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&self.tracklist),
+                Arc::clone(&self.cmd_tx),
+                self.db.clone(),
             )))
             .serve(addr)
             .await?;
@@ -120,29 +113,23 @@ impl MusicPlayerServer {
 
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(AddonsServiceServer::new(Addons::new(
-                self.db.clone(),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(AddonsServiceServer::new(Addons::new(self.db.clone())))
+            .add_service(CoreServiceServer::new(Core::default()))
+            .add_service(HistoryServiceServer::new(History::new(self.db.clone())))
+            .add_service(LibraryServiceServer::new(Library::new(self.db.clone())))
+            .add_service(MixerServiceServer::new(Mixer::new(Arc::clone(
+                &self.cmd_tx,
             ))))
-            .add_service(tonic_web::enable(CoreServiceServer::new(Core::default())))
-            .add_service(tonic_web::enable(HistoryServiceServer::new(History::new(
-                self.db.clone(),
-            ))))
-            .add_service(tonic_web::enable(LibraryServiceServer::new(Library::new(
-                self.db.clone(),
-            ))))
-            .add_service(tonic_web::enable(MixerServiceServer::new(Mixer::default())))
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&self.tracklist), Arc::clone(&self.cmd_tx)),
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&self.tracklist),
+                Arc::clone(&self.cmd_tx),
             )))
-            .add_service(tonic_web::enable(PlaylistServiceServer::new(
-                Playlist::new(self.db.clone()),
-            )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(
-                    Arc::clone(&self.tracklist),
-                    Arc::clone(&self.cmd_tx),
-                    self.db.clone(),
-                ),
+            .add_service(PlaylistServiceServer::new(Playlist::new(self.db.clone())))
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&self.tracklist),
+                Arc::clone(&self.cmd_tx),
+                self.db.clone(),
             )))
             .serve_with_incoming(UnixListenerStream::new(listener))
             .await?;

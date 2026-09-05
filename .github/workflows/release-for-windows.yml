@@ -12,7 +12,7 @@ jobs:
       - name: Install dependencies
         run: |
           choco install protoc
-          choco install rust
+          choco install rust --version=1.98.0
           choco install checksum
           choco install archiver
           choco install nodejs-lts

@@ -50,9 +50,13 @@ impl DevicesQuery {
                 .into_iter()
                 .filter(|device| device.app == "music-player")
                 .collect(),
-            Some(App::XBMC) => devices
+            Some(App::Subsonic) => devices
                 .into_iter()
-                .filter(|device| device.app == "xbmc")
+                .filter(|device| device.app == "subsonic")
+                .collect(),
+            Some(App::Jellyfin) => devices
+                .into_iter()
+                .filter(|device| device.app == "jellyfin")
                 .collect(),
             None => devices,
         };
@@ -103,14 +107,23 @@ impl DevicesMutation {
         let mut io_device = io_device.lock().await;
 
         let base_url = match devices.clone().into_iter().find(|device| {
-            device.id == id.to_string() && (device.service == "http" || device.app == "xbmc")
+            device.id == id.to_string() && (device.app == "subsonic" || device.app == "jellyfin")
         }) {
-            Some(device) => Some(format!("http://{}:{}", device.host, device.port)),
-            None => None,
+            Some(device) => device.base_url.clone(),
+            None => match devices.clone().into_iter().find(|device| {
+                device.id == id.to_string() && (device.service == "http" || device.app == "xbmc")
+            }) {
+                Some(device) => Some(format!("http://{}:{}", device.host, device.port)),
+                None => None,
+            },
         };
 
         match devices.into_iter().find(|device| {
-            device.id == id.to_string() && (device.service == "grpc" || device.app == "xbmc")
+            device.id == id.to_string()
+                && (device.service == "grpc"
+                    || device.app == "xbmc"
+                    || device.app == "subsonic"
+                    || device.app == "jellyfin")
         }) {
             Some(device) => {
                 let current_device = types::Device::from(device.clone())
@@ -169,7 +182,6 @@ impl DevicesMutation {
 
                 let player_type = match device.app.as_str() {
                     "chromecast" => PlayerType::Chromecast,
-                    "airplay" => PlayerType::Airplay,
                     "dlna" => PlayerType::Dlna,
                     _ => PlayerType::MusicPlayer,
                 };
@@ -247,11 +259,11 @@ impl DevicesSubscription {
         SimpleBroker::<Device>::subscribe()
     }
 
-    async fn on_connected(&self, ctx: &Context<'_>) -> impl Stream<Item = ConnectedDevice> {
+    async fn on_connected(&self, _ctx: &Context<'_>) -> impl Stream<Item = ConnectedDevice> {
         SimpleBroker::<ConnectedDevice>::subscribe()
     }
 
-    async fn on_disconnected(&self, ctx: &Context<'_>) -> impl Stream<Item = DisconnectedDevice> {
+    async fn on_disconnected(&self, _ctx: &Context<'_>) -> impl Stream<Item = DisconnectedDevice> {
         SimpleBroker::<DisconnectedDevice>::subscribe()
     }
 }

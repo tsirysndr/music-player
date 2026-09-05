@@ -24,13 +24,27 @@ pub struct Settings {
     pub device_id: String,
     pub http_port: u16,
     pub tauri_enable_graphql_server: bool,
+    /// Where decoded audio is sent: "cpal" (system audio device, default),
+    /// "stdout", "fifo:/path/to/pipe", "unix:/path/to/socket" or "tcp:host:port".
+    pub audio_output: String,
+    /// How often (in minutes) the music directory is rescanned in the
+    /// background. 0 disables periodic refresh.
+    pub library_refresh_interval: u64,
+    /// Base URL of a Subsonic-compatible server (Navidrome, Airsonic, gonic, ...).
+    /// Empty or absent means the Subsonic integration is disabled.
+    pub subsonic_url: Option<String>,
+    pub subsonic_username: Option<String>,
+    pub subsonic_password: Option<String>,
+    /// Base URL of a Jellyfin server. Empty or absent means the Jellyfin
+    /// integration is disabled.
+    pub jellyfin_url: Option<String>,
+    pub jellyfin_username: Option<String>,
+    pub jellyfin_password: Option<String>,
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
     let path = match env::consts::OS {
-        "android" => {
-            "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned()
-        },
+        "android" => "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned(),
         _ => {
             let config_dir = dirs::config_dir().unwrap();
             format!("{}/music-player", config_dir.to_str().unwrap())
@@ -61,14 +75,11 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         port: 5051,
         ws_port: 5052,
         addons: Some(vec![
-            "deezer".to_string(),
-            "datpiff".to_string(),
-            "genius".to_string(),
             "local".to_string(),
-            "myvazo".to_string(),
-            "tononkira".to_string(),
-            "musicbrainz".to_string(),
-            "lastfm".to_string(),
+            "chromecast".to_string(),
+            "dlna".to_string(),
+            "subsonic".to_string(),
+            "jellyfin".to_string(),
         ]),
         music_directory,
         host: "0.0.0.0".to_string(),
@@ -76,6 +87,14 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         device_id,
         http_port: 5053,
         tauri_enable_graphql_server: false,
+        audio_output: "cpal".to_string(),
+        library_refresh_interval: 30,
+        subsonic_url: Some("".to_string()),
+        subsonic_username: Some("".to_string()),
+        subsonic_password: Some("".to_string()),
+        jellyfin_url: Some("".to_string()),
+        jellyfin_username: Some("".to_string()),
+        jellyfin_password: Some("".to_string()),
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -106,6 +125,17 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             "tauri_enable_graphql_server",
             default_settings.tauri_enable_graphql_server,
         )?
+        .set_default("audio_output", default_settings.audio_output)?
+        .set_default(
+            "library_refresh_interval",
+            default_settings.library_refresh_interval,
+        )?
+        .set_default("subsonic_url", "")?
+        .set_default("subsonic_username", "")?
+        .set_default("subsonic_password", "")?
+        .set_default("jellyfin_url", "")?
+        .set_default("jellyfin_username", "")?
+        .set_default("jellyfin_password", "")?
         .build()
 }
 

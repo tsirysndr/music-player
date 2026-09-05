@@ -8,17 +8,15 @@ use std::{
     time::{Duration, Instant},
 };
 
-use app::{ActiveBlock, App, CurrentlyPlaybackContext, RouteId};
+use app::{App, CurrentlyPlaybackContext};
 use args::parse_args;
 use clap::{arg, Command};
 use crossterm::{
-    cursor::MoveTo,
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
     },
-    ExecutableCommand,
 };
 use event::Key;
 use futures::StreamExt;
@@ -32,26 +30,19 @@ use music_player_graphql::{
     },
     simple_broker::SimpleBroker,
 };
-use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink},
-    config::AudioFormat,
-    player::{Player, PlayerEvent},
-};
+use music_player_playback::player::{Player, PlayerEvent};
 use music_player_server::event::{Event, TrackEvent};
 use music_player_server::server::MusicPlayerServer;
 use music_player_settings::{read_settings, Settings};
-use music_player_storage::{searcher::Searcher, Database};
+use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use music_player_webui::start_webui;
 use network::{IoEvent, Network};
 use owo_colors::OwoColorize;
+use ratatui::{backend::CrosstermBackend, layout::Rect, Terminal};
 use scan::auto_scan_music_library;
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use tokio::sync::Mutex;
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    Terminal,
-};
 use tungstenite::Message;
 
 mod app;
@@ -70,7 +61,7 @@ fn cli() -> Command<'static> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     Command::new("music-player")
         .version(VERSION)
-        .author("Tsiry Sandratraina <tsiry.sndr@aol.com>")
+        .author("Tsiry Sandratraina <tsiry.sndr@rocksky.app>")
         .about(
             r#"
      __  ___           _      ____  __                     
@@ -88,37 +79,24 @@ A simple music player written in Rust"#,
                 .arg_from_usage("<song> 'The path to the song'"),
         )
         .subcommand(Command::new("scan").about("Scan music library: $HOME/Music"))
-        .subcommand(Command::new("albums").arg(
-            arg!(-i --id <id> "Show the album with the given id").required(false)
-        ).about("List all albums"))
+        .subcommand(
+            Command::new("albums")
+                .arg(arg!(-i --id <id> "Show the album with the given id").required(false))
+                .about("List all albums"),
+        )
         .subcommand(Command::new("artists").about("List all artists"))
         .subcommand(
             Command::new("playlist")
-                .subcommand(
-                    Command::new("add")
-                        .about("Add a song to the playlist")
-                        .arg_from_usage("<id> 'The track id'"),
-                )
                 .subcommand(Command::new("ls").about("List all playlists"))
-                .subcommand(Command::new("clear").about("Clear the playlist").arg_from_usage(
-                    "[id] 'The playlist id, if not specified, the current playlist will be cleared'",
-                ))
                 .subcommand(
                     Command::new("open")
                         .about("Play the playlist")
-                        .arg_from_usage("[id] 'The playlist id'"),
+                        .arg_from_usage("<id> 'The playlist id'"),
                 )
-                .subcommand(
-                    Command::new("remove")
-                        .about("Remove a song from the playlist")
-                        .arg_from_usage("<id> 'The track id'"),
-                )
-                .subcommand(Command::new("shuffle").about("Shuffle the playlist"))
-                .subcommand(Command::new("all").about("List all songs in the playlist"))
                 .subcommand(
                     Command::new("show")
                         .about("Show the playlist details")
-                        .arg_from_usage("<id> 'The track id'")
+                        .arg_from_usage("<id> 'The playlist id'"),
                 )
                 .about("Manage playlists")
                 .arg_required_else_help(true),
@@ -135,16 +113,6 @@ A simple music player written in Rust"#,
                         .about("Add a song to the queue")
                         .arg_from_usage("<track_id> 'The track id'"),
                 )
-                .subcommand(
-                    Command::new("remove")
-                        .about("Remove a song from the queue")
-                        .arg_from_usage("<song> 'The path to the song'"),
-                )
-                .subcommand(
-                    Command::new("clear")
-                        .about("Clear the queue")
-                        .arg_from_usage("-a, --all 'Clear the queue'"),
-                )
                 .about("Manage the queue")
                 .arg_required_else_help(true),
         )
@@ -160,17 +128,32 @@ A simple music player written in Rust"#,
         .subcommand(Command::new("prev").about("Play the previous song"))
         .subcommand(Command::new("stop").about("Stop the current song"))
         .subcommand(Command::new("current").about("Show the current song"))
-        .subcommand(Command::new("connect").arg(
-            arg!(-s --host <host> "The host to connect to").required(true)
-        ).arg(
-            arg!(-p --port <port> "The port to connect to").default_value("50051").required(false)
-        ).about("Connect to the server"))
+        .subcommand(
+            Command::new("connect")
+                .arg(arg!(-s --host <host> "The host to connect to").required(true))
+                .arg(
+                    arg!(-p --port <port> "The port to connect to")
+                        .default_value("50051")
+                        .required(false),
+                )
+                .about("Connect to the server"),
+        )
         .subcommand(Command::new("devices").about("List all `music-player` devices on the network"))
-        .subcommand(Command::new("reset").about("Reset the database and clear the config directory"))
+        .subcommand(
+            Command::new("reset").about("Reset the database and clear the config directory"),
+        )
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // A dependency may have installed a global dispatcher already; ours is
+    // best-effort. sqlx logs every statement at INFO, hence the directive.
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,sqlx=warn".into()),
+        )
+        .try_init();
     let matches = cli().get_matches();
 
     let parsed = parse_args(matches.clone()).await;
@@ -178,9 +161,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if parsed.is_ok() {
         return Ok(());
     }
-
-    let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let peer_map: PeerMap = Arc::new(sync::Mutex::new(HashMap::new()));
     let cloned_peer_map = Arc::clone(&peer_map);
 
@@ -191,7 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     mode = env::var("MUSIC_PLAYER_MODE").unwrap_or(mode);
     if mode == "server" {
-        migration::run().await;
+        migration::apply().await;
         let db = Database::new().await;
         let conn = db.get_connection();
         conn.execute(Statement::from_string(
@@ -202,7 +182,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db.create_indexes().await;
     }
 
-    let searcher = Searcher::new();
     let db = Database::new().await;
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -214,7 +193,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cmd_tx_ws = Arc::clone(&cloned_cmd_tx);
     let cmd_tx_webui = Arc::clone(&cloned_cmd_tx);
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         move |event| {
             let peers = cloned_peer_map.lock().unwrap();
 
@@ -290,7 +268,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build()
                 .unwrap();
             let db = runtime.block_on(Database::new());
-            runtime.block_on(auto_scan_music_library(db, searcher));
+            runtime.block_on(auto_scan_music_library(db));
+            runtime.block_on(scan::periodic_scan_music_library());
         });
     }
 
@@ -301,6 +280,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if mode == "server" {
         register_services();
+        music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
 
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -344,7 +324,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if mode == "client" {
         let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IoEvent>();
-        let app = Arc::new(Mutex::new(App::new(sync_io_tx)));
+        let mut app_state = App::new(sync_io_tx);
+        if let Ok(config) = read_settings() {
+            if let Ok(settings) = config.try_deserialize::<Settings>() {
+                app_state.server_addr = format!("{}:{}", settings.host, settings.port);
+            }
+        }
+        let app = Arc::new(Mutex::new(app_state));
         let cloned_app = Arc::clone(&app);
         std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -364,20 +350,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IoEvent>, network: &mut Network) {
     while let Ok(io_event) = io_rx.recv() {
-        network.handle_network_event(io_event).await.unwrap();
+        // Network errors (e.g. the server going away mid-session) must not
+        // crash the UI thread's worker; they are simply dropped.
+        let _ = network.handle_network_event(io_event).await;
     }
 }
 
 async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error>> {
     // Terminal initialization
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        SetTitle("mpt - Music Player TUI")
+    )?;
     enable_raw_mode()?;
 
-    let mut backend = CrosstermBackend::new(stdout);
-
-    backend.execute(SetTitle("mpt - Music Player TUI"))?;
-
+    let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
@@ -390,47 +380,19 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
     loop {
         let mut app = app.lock().await;
 
-        if let Ok(size) = terminal.backend().size() {
-            app.size = size;
+        if let Ok(size) = terminal.size() {
+            app.size = Rect::new(0, 0, size.width, size.height);
         }
 
-        let current_route = app.get_current_route();
-        terminal.draw(|mut f| ui::draw_main_layout(&mut f, &app))?;
-
-        if current_route.active_block == ActiveBlock::Input {
-            terminal.show_cursor()?;
-        } else {
-            terminal.hide_cursor()?;
-        }
-
-        let cursor_offset = if app.size.height > ui::util::SMALL_TERMINAL_HEIGHT {
-            2
-        } else {
-            1
-        };
-
-        // Put the cursor back inside the input box
-        terminal.backend_mut().execute(MoveTo(
-            cursor_offset + app.input_cursor_position,
-            cursor_offset,
-        ))?;
+        terminal.draw(|f| ui::draw_main_layout(f, &app))?;
 
         match events.next()? {
             event::Event::Input(key) => {
                 if key == Key::Ctrl('c') {
                     break;
                 }
-                if key == app.user_config.keys.back {
-                    let pop_result = match app.pop_navigation_stack() {
-                        Some(ref x) if x.id == RouteId::Search => app.pop_navigation_stack(),
-                        Some(x) => Some(x),
-                        None => None,
-                    };
-                    if pop_result.is_none() {
-                        break; // Exit application
-                    }
-                } else {
-                    handlers::handle_app(key, &mut app);
+                if handlers::handle_app(key, &mut app) {
+                    break; // Exit application
                 }
             }
             event::Event::Tick => {
@@ -441,6 +403,8 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<(), Box<dyn std::error::Error
         if is_first_render {
             app.dispatch(IoEvent::GetTracks);
             app.dispatch(IoEvent::GetCurrentPlayback);
+            app.dispatch(IoEvent::GetVolume);
+            app.dispatch(IoEvent::GetPlaylists);
             is_first_render = false;
         }
     }

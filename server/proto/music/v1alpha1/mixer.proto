@@ -4,17 +4,25 @@ package music.v1alpha1;
 
 message GetMuteRequest {}
 
-message GetMuteResponse {}
+message GetMuteResponse {
+  bool mute = 1;
+}
 
-message SetMuteRequest {}
+message SetMuteRequest {
+  bool mute = 1;
+}
 
 message SetMuteResponse {}
 
 message GetVolumeRequest {}
 
-message GetVolumeResponse {}
+message GetVolumeResponse {
+  uint32 volume = 1;
+}
 
-message SetVolumeRequest {}
+message SetVolumeRequest {
+  uint32 volume = 1;
+}
 
 message SetVolumeResponse {}
 

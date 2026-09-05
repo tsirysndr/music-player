@@ -1,16 +1,25 @@
-import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  AddTrackToPlaylistMutationVariables,
+  CreateFolderMutationVariables,
+  CreatePlaylistMutationVariables,
+  DeleteFolderMutationVariables,
+  DeletePlaylistMutationVariables,
+  GetFolderQueryVariables,
+  GetPlaylistQueryVariables,
+  MovePlaylistsToFolderMutationVariables,
+  MovePlaylistToFolderMutationVariables,
+  RenameFolderMutationVariables,
+  RenamePlaylistMutationVariables,
   useAddTrackToPlaylistMutation,
   useCreateFolderMutation,
   useCreatePlaylistMutation,
   useDeleteFolderMutation,
   useDeletePlaylistMutation,
-  useGetFolderLazyQuery,
-  useGetFoldersLazyQuery,
+  useGetFolderQuery,
   useGetFoldersQuery,
   useGetMainPlaylistsQuery,
-  useGetPlaylistLazyQuery,
-  useGetPlaylistsLazyQuery,
+  useGetPlaylistQuery,
   useGetPlaylistsQuery,
   useGetRecentPlaylistsQuery,
   useMovePlaylistsToFolderMutation,
@@ -20,92 +29,101 @@ import {
 } from "./GraphQL";
 
 export const usePlaylist = () => {
-  const [getPlaylist] = useGetPlaylistLazyQuery();
-  const [getPlaylists] = useGetPlaylistsLazyQuery();
-  const {
-    data: playlistsData,
-    startPolling: startPollingPlaylists,
-    stopPolling: stopPollingPlaylists,
-  } = useGetPlaylistsQuery({
-    pollInterval: 1000,
+  const queryClient = useQueryClient();
+
+  const { data: playlistsData } = useGetPlaylistsQuery(undefined, {
+    refetchInterval: 5000,
   });
-  const {
-    data: recentPlaylistsData,
-    startPolling: startPollingRecentPlaylists,
-    stopPolling: stopPollingRecentPlaylists,
-  } = useGetRecentPlaylistsQuery({
-    pollInterval: 1000,
+  const { data: recentPlaylistsData } = useGetRecentPlaylistsQuery(undefined, {
+    refetchInterval: 5000,
   });
-  const {
-    data: mainPlaylistsData,
-    startPolling: startPollingMainPlaylists,
-    stopPolling: stopPollingMainPlaylists,
-  } = useGetMainPlaylistsQuery({
-    pollInterval: 1000,
+  const { data: mainPlaylistsData } = useGetMainPlaylistsQuery(undefined, {
+    refetchInterval: 5000,
   });
-  const {
-    data: foldersData,
-    startPolling: startPollingFolders,
-    stopPolling: stopPollingFolders,
-  } = useGetFoldersQuery({
-    pollInterval: 1000,
+  const { data: foldersData } = useGetFoldersQuery(undefined, {
+    refetchInterval: 5000,
   });
-  const [getFolder] = useGetFolderLazyQuery();
-  const [getFolders] = useGetFoldersLazyQuery();
-  const [createFolder] = useCreateFolderMutation();
-  const [createPlaylist] = useCreatePlaylistMutation();
-  const [addTrackToPlaylist] = useAddTrackToPlaylistMutation();
-  const [movePlaylistToFolder] = useMovePlaylistToFolderMutation();
-  const [movePlaylistsToFolder] = useMovePlaylistsToFolderMutation();
-  const [deleteFolder] = useDeleteFolderMutation();
-  const [deletePlaylist] = useDeletePlaylistMutation();
-  const [renamePlaylist] = useRenamePlaylistMutation();
-  const [renameFolder] = useRenameFolderMutation();
+
+  const invalidatePlaylists = () => {
+    queryClient.invalidateQueries({ queryKey: useGetPlaylistsQuery.getKey() });
+    queryClient.invalidateQueries({
+      queryKey: useGetRecentPlaylistsQuery.getKey(),
+    });
+    queryClient.invalidateQueries({
+      queryKey: useGetMainPlaylistsQuery.getKey(),
+    });
+    queryClient.invalidateQueries({ queryKey: useGetFoldersQuery.getKey() });
+    // invalidate every GetPlaylist / GetFolder query, whatever their variables
+    queryClient.invalidateQueries({ queryKey: ["GetPlaylist"] });
+    queryClient.invalidateQueries({ queryKey: ["GetFolder"] });
+  };
+
+  const createFolderMutation = useCreateFolderMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const createPlaylistMutation = useCreatePlaylistMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const addTrackToPlaylistMutation = useAddTrackToPlaylistMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const movePlaylistToFolderMutation = useMovePlaylistToFolderMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const movePlaylistsToFolderMutation = useMovePlaylistsToFolderMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const deleteFolderMutation = useDeleteFolderMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const deletePlaylistMutation = useDeletePlaylistMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const renamePlaylistMutation = useRenamePlaylistMutation({
+    onSuccess: invalidatePlaylists,
+  });
+  const renameFolderMutation = useRenameFolderMutation({
+    onSuccess: invalidatePlaylists,
+  });
 
   const playlists = playlistsData?.playlists || [];
   const folders = foldersData?.folders || [];
   const recentPlaylists = recentPlaylistsData?.recentPlaylists || [];
   const mainPlaylists = mainPlaylistsData?.mainPlaylists || [];
 
-  useEffect(() => {
-    startPollingPlaylists!(1000);
-    startPollingFolders(1000);
-    startPollingMainPlaylists(1000);
-    startPollingRecentPlaylists(1000);
-    return () => {
-      stopPollingPlaylists();
-      stopPollingFolders();
-      stopPollingRecentPlaylists();
-      stopPollingRecentPlaylists();
-    };
-  }, [
-    startPollingFolders,
-    startPollingPlaylists,
-    startPollingRecentPlaylists,
-    startPollingMainPlaylists,
-    stopPollingFolders,
-    stopPollingPlaylists,
-    stopPollingRecentPlaylists,
-    stopPollingMainPlaylists,
-  ]);
-
   return {
     playlists,
     folders,
     recentPlaylists,
     mainPlaylists,
-    getPlaylist,
-    getPlaylists,
-    getFolder,
-    getFolders,
-    createFolder,
-    createPlaylist,
-    addTrackToPlaylist,
-    movePlaylistToFolder,
-    movePlaylistsToFolder,
-    deleteFolder,
-    deletePlaylist,
-    renamePlaylist,
-    renameFolder,
+    getPlaylist: (variables: GetPlaylistQueryVariables) =>
+      queryClient.fetchQuery({
+        queryKey: useGetPlaylistQuery.getKey(variables),
+        queryFn: useGetPlaylistQuery.fetcher(variables),
+      }),
+    getFolder: (variables: GetFolderQueryVariables) =>
+      queryClient.fetchQuery({
+        queryKey: useGetFolderQuery.getKey(variables),
+        queryFn: useGetFolderQuery.fetcher(variables),
+      }),
+    createFolder: (variables: CreateFolderMutationVariables) =>
+      createFolderMutation.mutateAsync(variables),
+    createPlaylist: (variables: CreatePlaylistMutationVariables) =>
+      createPlaylistMutation.mutateAsync(variables),
+    addTrackToPlaylist: (variables: AddTrackToPlaylistMutationVariables) =>
+      addTrackToPlaylistMutation.mutateAsync(variables),
+    movePlaylistToFolder: (variables: MovePlaylistToFolderMutationVariables) =>
+      movePlaylistToFolderMutation.mutateAsync(variables),
+    movePlaylistsToFolder: (
+      variables: MovePlaylistsToFolderMutationVariables
+    ) => movePlaylistsToFolderMutation.mutateAsync(variables),
+    deleteFolder: (variables: DeleteFolderMutationVariables) =>
+      deleteFolderMutation.mutateAsync(variables),
+    deletePlaylist: (variables: DeletePlaylistMutationVariables) =>
+      deletePlaylistMutation.mutateAsync(variables),
+    renamePlaylist: (variables: RenamePlaylistMutationVariables) =>
+      renamePlaylistMutation.mutateAsync(variables),
+    renameFolder: (variables: RenameFolderMutationVariables) =>
+      renameFolderMutation.mutateAsync(variables),
   };
 };

@@ -1,10 +1,8 @@
-use crate::searcher::Searcher;
-
 use super::*;
-use music_player_types::types::{Album, Artist, Song};
-use sea_orm::{ConnectionTrait, DbBackend};
-use std::{env, time::Duration};
-use tokio::time::sleep;
+use crate::searcher::Searcher;
+use migration::{Migrator, MigratorTrait};
+use sea_orm::{ConnectionTrait, DbBackend, Statement};
+use std::env;
 
 #[tokio::test]
 async fn new_database() {
@@ -16,104 +14,109 @@ async fn new_database() {
     assert_eq!(conn.get_database_backend(), DbBackend::Sqlite);
 }
 
-#[test]
-fn insert_album() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
-    let searcher = Searcher::new();
-    let album = Album {
-        id: "27234641d4f5f9e0832affa79b9f62d8".to_owned(),
-        title: "Eternal Atake".to_owned(),
-        artist: "Lil Uzi Vert".to_owned(),
-        artist_id: Some("0afe1226a5a75408acb57e97bd5feca1".to_owned()),
-        ..Default::default()
-    };
+async fn setup_searcher() -> (tempfile::TempDir, Searcher) {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("music-player.sqlite3");
+    let url = format!("sqlite://{}?mode=rwc", db_path.display());
+    let conn = sea_orm::Database::connect(&url).await.unwrap();
+    Migrator::up(&conn, None).await.unwrap();
 
-    searcher.insert_album(album).unwrap();
-    assert!(searcher.search_album("Eternal").is_ok());
-}
+    let statements = [
+        "INSERT INTO artist (id, name) VALUES ('0afe1226a5a75408acb57e97bd5feca1', 'Lil Uzi Vert')",
+        r#"INSERT INTO album (id, title, artist, artist_id, year, cover)
+            VALUES ('27234641d4f5f9e0832affa79b9f62d8', 'Eternal Atake', 'Lil Uzi Vert', '0afe1226a5a75408acb57e97bd5feca1', 2020, 'cover.jpg')"#,
+        r#"INSERT INTO track (id, title, artist, genre, duration, uri, album_id, artist_id)
+            VALUES ('3ac1f226a5a75408acb57e97bd5feca2', 'Futsal Shuffle 2020', 'Lil Uzi Vert', 'Hip Hop', 192.5, '/tmp/audio/futsal.mp3', '27234641d4f5f9e0832affa79b9f62d8', '0afe1226a5a75408acb57e97bd5feca1')"#,
+    ];
+    for sql in statements {
+        conn.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
+            .await
+            .unwrap();
+    }
 
-#[test]
-fn insert_artist() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
-    let searcher = Searcher::new();
-    let artist = Artist {
-        id: "0afe1226a5a75408acb57e97bd5feca1".to_owned(),
-        name: "Lil Uzi Vert".to_owned(),
-        ..Default::default()
-    };
-
-    assert!(searcher.insert_artist(artist).is_ok());
-}
-
-#[test]
-fn insert_track() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
-    let searcher = Searcher::new();
-    let song = Song {
-        title: "Futsal Shuffle 2020".to_owned(),
-        album: "Eternal Atake".to_owned(),
-        artist: "Lil Uzi Vert".to_owned(),
-        ..Default::default()
-    };
-
-    assert!(searcher
-        .insert_song(song, "27234641d4f5f9e0832affa79b9f62d8")
-        .is_ok())
+    (dir, Searcher::new(conn))
 }
 
 #[tokio::test]
-async fn search_album() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp/search_album");
-    let searcher = Searcher::new();
-    let album = Album {
-        id: "27234641d4f5f9e0832affa79b9f62d8".to_owned(),
-        title: "Eternal Atake".to_owned(),
-        artist: "Lil Uzi Vert".to_owned(),
-        artist_id: Some("0afe1226a5a75408acb57e97bd5feca1".to_owned()),
-        ..Default::default()
-    };
-    searcher.insert_album(album).unwrap();
+async fn search_song_with_fts5() {
+    let (_dir, searcher) = setup_searcher().await;
 
-    sleep(Duration::from_secs(1)).await;
+    let tracks = searcher.search_song("futsal").await.unwrap();
+    assert_eq!(tracks.len(), 1);
+    assert_eq!(tracks[0].id, "3ac1f226a5a75408acb57e97bd5feca2");
+    assert_eq!(tracks[0].title, "Futsal Shuffle 2020");
+    assert_eq!(tracks[0].artist, "Lil Uzi Vert");
+    assert_eq!(tracks[0].album, "Eternal Atake");
+    assert_eq!(tracks[0].album_id, "27234641d4f5f9e0832affa79b9f62d8");
+    assert_eq!(tracks[0].artist_id, "0afe1226a5a75408acb57e97bd5feca1");
+    assert_eq!(tracks[0].cover, Some("cover.jpg".to_string()));
+    assert_eq!(tracks[0].duration.as_secs(), 192);
 
-    let albums = searcher.search_album("eternal").unwrap();
+    // prefix match
+    let tracks = searcher.search_song("fut").await.unwrap();
+    assert_eq!(tracks.len(), 1);
+
+    // match on album title via the FTS index
+    let tracks = searcher.search_song("eternal").await.unwrap();
+    assert_eq!(tracks.len(), 1);
+}
+
+#[tokio::test]
+async fn search_album_with_fts5() {
+    let (_dir, searcher) = setup_searcher().await;
+
+    let albums = searcher.search_album("eternal").await.unwrap();
     assert_eq!(albums.len(), 1);
+    assert_eq!(albums[0].id, "27234641d4f5f9e0832affa79b9f62d8");
+    assert_eq!(albums[0].title, "Eternal Atake");
+    assert_eq!(albums[0].artist, "Lil Uzi Vert");
+    assert_eq!(albums[0].year, Some(2020));
+    assert_eq!(albums[0].cover, Some("cover.jpg".to_string()));
 }
 
 #[tokio::test]
-async fn search_artist() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp/search_artist");
-    let searcher = Searcher::new();
-    let artist = Artist {
-        id: "0afe1226a5a75408acb57e97bd5feca1".to_owned(),
-        name: "Lil Uzi Vert".to_owned(),
-        ..Default::default()
-    };
-    searcher.insert_artist(artist).unwrap();
+async fn search_artist_with_fts5() {
+    let (_dir, searcher) = setup_searcher().await;
 
-    sleep(Duration::from_secs(1)).await;
-
-    let artists = searcher.search_artist("uzi").unwrap();
+    let artists = searcher.search_artist("uzi").await.unwrap();
     assert_eq!(artists.len(), 1);
+    assert_eq!(artists[0].id, "0afe1226a5a75408acb57e97bd5feca1");
+    assert_eq!(artists[0].name, "Lil Uzi Vert");
 }
 
 #[tokio::test]
-async fn search_track() {
-    env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp/search_track");
-    let searcher = Searcher::new();
-    let song = Song {
-        title: "Futsal Shuffle 2020".to_owned(),
-        album: "Eternal Atake".to_owned(),
-        artist: "Lil Uzi Vert".to_owned(),
-        ..Default::default()
-    };
+async fn search_handles_empty_and_hostile_input() {
+    let (_dir, searcher) = setup_searcher().await;
+
+    assert!(searcher.search_song("").await.unwrap().is_empty());
+    assert!(searcher.search_song("   ").await.unwrap().is_empty());
+    assert!(searcher
+        .search_song("zzzznomatch")
+        .await
+        .unwrap()
+        .is_empty());
+
+    // FTS5 query syntax must never be interpreted
+    assert!(searcher
+        .search_song("\" OR 1; DROP TABLE track --")
+        .await
+        .is_ok());
+    assert!(searcher.search_album("NEAR(a b)").await.is_ok());
+    assert!(searcher.search_artist("col:value*").await.is_ok());
+}
+
+#[tokio::test]
+async fn delete_removes_row_from_index() {
+    let (_dir, searcher) = setup_searcher().await;
 
     searcher
-        .insert_song(song, "27234641d4f5f9e0832affa79b9f62d8")
+        .get_connection()
+        .execute(Statement::from_string(
+            DbBackend::Sqlite,
+            "DELETE FROM track WHERE id = '3ac1f226a5a75408acb57e97bd5feca2'".to_string(),
+        ))
+        .await
         .unwrap();
 
-    sleep(Duration::from_secs(1)).await;
-
-    let tracks = searcher.search_song("futsal").unwrap();
-    assert_eq!(tracks.len(), 1);
+    assert!(searcher.search_song("futsal").await.unwrap().is_empty());
 }

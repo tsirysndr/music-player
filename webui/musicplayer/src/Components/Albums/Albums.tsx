@@ -79,6 +79,8 @@ export type AlbumsProps = {
   onClickAlbum: (album: any) => void;
   currentCastDevice?: Device;
   onFilter: (filter: string) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 };
 
 export type AlbumProps = {
@@ -114,7 +116,8 @@ const Album: FC<AlbumProps> = ({ onClick, album }) => {
 };
 
 const Albums: FC<AlbumsProps> = (props) => {
-  const { albums, onClickAlbum, currentCastDevice, onFilter } = props;
+  const { albums, onClickAlbum, currentCastDevice, onFilter, onLoadMore, hasMore } =
+    props;
 
   const vh = (percent: number) => {
     const h = Math.max(
@@ -181,6 +184,15 @@ const Albums: FC<AlbumsProps> = (props) => {
                     vh(100) - 100
                   )}
                   width={vw(100) - 300}
+                  onItemsRendered={({ visibleRowStopIndex }) => {
+                    if (
+                      hasMore &&
+                      onLoadMore &&
+                      visibleRowStopIndex >= data.length - 2
+                    ) {
+                      onLoadMore();
+                    }
+                  }}
                 >
                   {Cell}
                 </Grid>

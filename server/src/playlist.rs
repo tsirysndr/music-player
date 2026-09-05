@@ -3,8 +3,6 @@ use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
 };
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::api::{

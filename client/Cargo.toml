@@ -1,6 +1,6 @@
 [package]
 name = "music-player-client"
-version = "0.1.5"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -9,7 +9,7 @@ keywords = ["tokio", "music", "cli", "daemon", "streaming"]
 description = "The client library for the music player"
 
 [dev-dependencies]
-tonic-web = "0.4.0"
+tonic-web = "0.14"
 envtestkit = "1.1.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -20,29 +20,37 @@ version = "0.2.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.3"
+version = "0.2.0"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.1.3"
+version = "0.2.0"
 
 [dev-dependencies.music-player-playback]
 path = "../playback"
-version = "0.1.10"
+version = "0.2.0"
 
 [dev-dependencies.music-player-storage]
 path = "../storage"
-version = "0.1.4"
+version = "0.2.0"
 
 [dev-dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.1.7"
+version = "0.2.0"
 
 [dependencies]
 futures-util = "0.3.24"
 tokio-tungstenite = "0.17.2"
-tonic = "0.8.1"
+tonic = "0.14"
 url = "2.3.1"
 tokio = { version = "1.21.2", features = ["full"] }
 anyhow = "1.0.67"
 
+
+[dev-dependencies.music-player-migration]
+path = "../migration"
+version = "0.2.0"
+
+[dev-dependencies.music-player-scanner]
+path = "../scanner"
+version = "0.2.0"

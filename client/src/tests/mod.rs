@@ -4,11 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink, Sink},
-    config::AudioFormat,
-    player::PlayerCommand,
-};
+use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
@@ -22,8 +18,6 @@ pub mod tracklist;
 pub async fn setup_new_params(
     port: u16,
 ) -> (
-    fn(Option<String>, AudioFormat) -> Box<dyn Sink>,
-    AudioFormat,
     Arc<Mutex<UnboundedSender<PlayerCommand>>>,
     Arc<Mutex<UnboundedReceiver<PlayerCommand>>>,
     Arc<Mutex<Tracklist>>,
@@ -31,8 +25,6 @@ pub async fn setup_new_params(
     SocketAddr,
     String,
 ) {
-    let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(Mutex::new(cmd_rx));
@@ -45,6 +37,8 @@ pub async fn setup_new_params(
         "sqlite:///tmp/music-player.sqlite3",
     );
 
+    ensure_test_library().await;
+
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
     let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
@@ -52,14 +46,20 @@ pub async fn setup_new_params(
 
     let db = Database::new().await;
 
-    return (
-        backend,
-        audio_format,
-        cmd_tx,
-        cmd_rx,
-        tracklist,
-        db,
-        addr,
-        url,
-    );
+    return (cmd_tx, cmd_rx, tracklist, db, addr, url);
+}
+
+static TEST_LIBRARY: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+
+/// Create + migrate the test database and index the fixture library
+/// (/tmp/audio) once per test process.
+async fn ensure_test_library() {
+    TEST_LIBRARY
+        .get_or_init(|| async {
+            migration::apply().await;
+            music_player_scanner::scan_music_library(false, Database::new().await)
+                .await
+                .ok();
+        })
+        .await;
 }

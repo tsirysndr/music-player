@@ -1,6 +1,5 @@
 import styled from "@emotion/styled";
-import { FC } from "react";
-import { ProgressBar } from "baseui/progress-bar";
+import { FC, useRef, useState } from "react";
 import Track from "../../Icons/Track";
 import { useCover } from "../../../Hooks/useCover";
 import { useTimeFormat } from "../../../Hooks/useFormat";
@@ -100,6 +99,82 @@ const ProgressbarContainer = styled.div`
   width: 88%;
 `;
 
+const SeekBarWrapper = styled.div`
+  position: relative;
+  width: 100%;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+`;
+
+const SeekBarTrack = styled.div`
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background-color: rgba(177, 178, 181, 0.218);
+  overflow: hidden;
+`;
+
+const SeekBarProgress = styled.div`
+  height: 100%;
+  border-radius: 2px;
+  background-color: #ab28fc;
+`;
+
+export type SeekBarProps = {
+  progress: number;
+  duration: number;
+  onSeek?: (positionMs: number) => void;
+};
+
+const SeekBar: FC<SeekBarProps> = ({ progress, duration, onSeek }) => {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [dragRatio, setDragRatio] = useState<number | null>(null);
+
+  const ratioFromEvent = (e: React.PointerEvent): number => {
+    const rect = barRef.current!.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    return Math.min(Math.max(ratio, 0), 1);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!onSeek || duration <= 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragRatio(ratioFromEvent(e));
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (dragRatio === null) return;
+    setDragRatio(ratioFromEvent(e));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (dragRatio === null || !onSeek || duration <= 0) return;
+    setDragRatio(null);
+    onSeek(Math.round(ratioFromEvent(e) * duration));
+  };
+
+  const ratio =
+    dragRatio !== null ? dragRatio : duration > 0 ? progress / duration : 0;
+
+  return (
+    <SeekBarWrapper
+      ref={barRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
+      <SeekBarTrack>
+        <SeekBarProgress
+          style={{ width: `${Math.min(ratio * 100, 100)}%` }}
+        />
+      </SeekBarTrack>
+    </SeekBarWrapper>
+  );
+};
+
 const Placeholder = styled.div`
   color: #767676;
 `;
@@ -120,9 +195,10 @@ export type CurrentTrackProps = {
     isPlaying?: boolean;
     albumId?: string;
   };
+  onSeek?: (positionMs: number) => void;
 };
 
-const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
+const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek }) => {
   const { cover } = useCover(nowPlaying?.cover);
   const { formatTime } = useTimeFormat();
   return (
@@ -161,30 +237,10 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying }) => {
             <Row>
               <Time>{formatTime(nowPlaying?.progress)}</Time>
               <ProgressbarContainer>
-                <ProgressBar
-                  value={
-                    nowPlaying!.duration > 0
-                      ? (nowPlaying!.progress / nowPlaying!.duration) * 100
-                      : 0
-                  }
-                  overrides={{
-                    BarContainer: {
-                      style: {
-                        marginLeft: 0,
-                        marginRight: 0,
-                      },
-                    },
-                    BarProgress: {
-                      style: () => ({
-                        backgroundColor: "#ab28fc",
-                      }),
-                    },
-                    Bar: {
-                      style: () => ({
-                        backgroundColor: "rgba(177, 178, 181, 0.218)",
-                      }),
-                    },
-                  }}
+                <SeekBar
+                  progress={nowPlaying!.progress}
+                  duration={nowPlaying!.duration}
+                  onSeek={onSeek}
                 />
               </ProgressbarContainer>
               <Time>{formatTime(nowPlaying?.duration)}</Time>

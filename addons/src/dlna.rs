@@ -116,15 +116,15 @@ impl Addon for Dlna {
 impl Browsable for Dlna {
     async fn albums(
         &mut self,
-        filter: Option<String>,
-        offset: i32,
-        limit: i32,
+        _filter: Option<String>,
+        _offset: i32,
+        _limit: i32,
     ) -> Result<Vec<Album>, Error> {
         if let Some(client) = &self.media_server_client {
             client
                 .browse("musicdb://albums", "BrowseDirectChildren")
                 .await?;
-            let mut result = vec![];
+            let result = vec![];
             return Ok(result);
         }
         Err(Error::msg("No device connected"))
@@ -132,9 +132,9 @@ impl Browsable for Dlna {
 
     async fn artists(
         &mut self,
-        filter: Option<String>,
-        offset: i32,
-        limit: i32,
+        _filter: Option<String>,
+        _offset: i32,
+        _limit: i32,
     ) -> Result<Vec<Artist>, Error> {
         if let Some(client) = &self.media_server_client {
             client
@@ -148,9 +148,9 @@ impl Browsable for Dlna {
 
     async fn tracks(
         &mut self,
-        filter: Option<String>,
-        offset: i32,
-        limit: i32,
+        _filter: Option<String>,
+        _offset: i32,
+        _limit: i32,
     ) -> Result<Vec<Track>, Error> {
         if let Some(client) = &self.media_server_client {
             client
@@ -162,23 +162,23 @@ impl Browsable for Dlna {
         Err(Error::msg("No device connected"))
     }
 
-    async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error> {
+    async fn playlists(&mut self, _offset: i32, _limit: i32) -> Result<Vec<Playlist>, Error> {
         todo!()
     }
 
-    async fn album(&mut self, id: &str) -> Result<Album, Error> {
+    async fn album(&mut self, _id: &str) -> Result<Album, Error> {
         todo!()
     }
 
-    async fn artist(&mut self, id: &str) -> Result<Artist, Error> {
+    async fn artist(&mut self, _id: &str) -> Result<Artist, Error> {
         todo!()
     }
 
-    async fn track(&mut self, id: &str) -> Result<Track, Error> {
+    async fn track(&mut self, _id: &str) -> Result<Track, Error> {
         todo!()
     }
 
-    async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
+    async fn playlist(&mut self, _id: &str) -> Result<Playlist, Error> {
         todo!()
     }
 

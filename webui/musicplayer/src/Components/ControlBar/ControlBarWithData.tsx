@@ -16,6 +16,7 @@ const ControlBarWithData: FC = () => {
     pause,
     next,
     previous,
+    seek,
     nowPlaying,
     nextTracks,
     previousTracks,
@@ -30,15 +31,16 @@ const ControlBarWithData: FC = () => {
       onPrevious={() => previous()}
       onShuffle={() => {}}
       onRepeat={() => {}}
+      onSeek={(positionMs) => seek(positionMs)}
       nowPlaying={nowPlaying}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
       castDevices={castDevices}
       currentCastDevice={currentCastDevice}
-      connectToCastDevice={(id) => connectToCastDevice({ variables: { id } })}
+      connectToCastDevice={(id) => connectToCastDevice({ id })}
       disconnectFromCastDevice={() => disconnectFromCastDevice()}
-      onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
-      onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
+      onPlayTrackAt={(position) => playTrackAt({ position })}
+      onRemoveTrackAt={(position) => removeTrackAt({ position })}
     />
   );
 };

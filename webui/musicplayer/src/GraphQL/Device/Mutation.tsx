@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import gql from "graphql-tag";
 
 export const CONNECT_TO_DEVICE = gql`
   mutation ConnectToDevice($id: ID!) {

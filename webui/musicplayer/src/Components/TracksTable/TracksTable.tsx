@@ -4,6 +4,7 @@ import { Play } from "@styled-icons/ionicons-sharp";
 import { TableBuilder, TableBuilderColumn } from "baseui/table-semantic";
 import _ from "lodash";
 import { FC } from "react";
+import InfiniteScroll from "react-infinite-scroll-component";
 import { Link } from "react-router-dom";
 import ContextMenu from "../ContextMenu";
 import Speaker from "../Icons/Speaker";
@@ -171,7 +172,11 @@ export type TracksTableProps = {
   onCreatePlaylist: (name: string, description?: string) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
   recentPlaylists: any[];
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 };
+
+const SCROLLABLE_ROOT_ID = "tracks-table-scrollable-root";
 
 const TracksTable: FC<TracksTableProps> = ({
   tracks,
@@ -186,15 +191,16 @@ const TracksTable: FC<TracksTableProps> = ({
   onCreatePlaylist,
   onAddTrackToPlaylist,
   recentPlaylists,
+  onLoadMore,
+  hasMore,
 }) => {
   const theme = useTheme();
-  return (
-    <TableWrapper>
-      {title}
+  const table = (
       <TableBuilder
         data={tracks}
         overrides={{
           Root: {
+            props: onLoadMore ? { id: SCROLLABLE_ROOT_ID } : {},
             style: {
               maxHeight,
               paddingLeft: "10px",
@@ -286,6 +292,24 @@ const TracksTable: FC<TracksTableProps> = ({
           )}
         </TableBuilderColumn>
       </TableBuilder>
+  );
+  return (
+    <TableWrapper>
+      {title}
+      {onLoadMore ? (
+        <InfiniteScroll
+          dataLength={tracks.length}
+          next={onLoadMore}
+          hasMore={!!hasMore}
+          loader={null}
+          scrollableTarget={SCROLLABLE_ROOT_ID}
+          style={{ overflow: "visible" }}
+        >
+          {table}
+        </InfiniteScroll>
+      ) : (
+        table
+      )}
     </TableWrapper>
   );
 };

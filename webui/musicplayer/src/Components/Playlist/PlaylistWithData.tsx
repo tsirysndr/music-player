@@ -9,10 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 const PlaylistWithData: FC = () => {
   const params = useParams();
   const { data } = useGetPlaylistQuery({
-    variables: {
-      id: params.id!,
-    },
-    fetchPolicy: "network-only",
+    id: params.id!,
   });
   const navigate = useNavigate();
   const { currentCastDevice } = useDevices();
@@ -23,15 +20,15 @@ const PlaylistWithData: FC = () => {
     <Playlist
       onBack={() => navigate(-1)}
       nowPlaying={nowPlaying}
-      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
+      onPlayNext={(trackId) => playNext({ trackId })}
       onCreatePlaylist={(name, description) =>
-        createPlaylist({ variables: { name, description } })
+        createPlaylist({ name, description })
       }
       onAddTrackToPlaylist={(playlistId, trackId) =>
-        addTrackToPlaylist({ variables: { trackId, playlistId } })
+        addTrackToPlaylist({ trackId, playlistId })
       }
       onPlayPlaylist={(playlistId, shuffle, position) =>
-        playPlaylist({ variables: { playlistId, position, shuffle } })
+        playPlaylist({ playlistId, position, shuffle })
       }
       playlist={data?.playlist}
       recentPlaylists={recentPlaylists}

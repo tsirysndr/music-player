@@ -21,10 +21,8 @@ use super::setup_new_params;
 
 #[tokio::test]
 async fn get_tracklist_tracks() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(7083).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, url) = setup_new_params(7083).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -34,8 +32,11 @@ async fn get_tracklist_tracks() {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

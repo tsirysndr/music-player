@@ -29,7 +29,7 @@ async fn index_graphql(
 #[actix_web::get("/graphiql")]
 async fn index_graphiql(req: HttpRequest) -> Result<HttpResponse> {
     let connection_info = req.connection_info();
-    let host =  connection_info.host();
+    let host = connection_info.host();
     let graphql_endpoint = format!("http://{}/graphql", host);
     let ws_endpoint = format!("ws://{}/graphql", host);
     Ok(HttpResponse::Ok()
@@ -66,8 +66,9 @@ pub async fn run_graphql_server(schema: MusicPlayerSchema) -> Result<(), Error> 
                     .guard(guard::Header("upgrade", "websocket"))
                     .to(index_ws),
             )
-        })
-        .bind(addr).unwrap()
-        .run();
+    })
+    .bind(addr)
+    .unwrap()
+    .run();
     server.await
 }

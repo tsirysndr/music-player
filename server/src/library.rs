@@ -1,12 +1,13 @@
 use futures::future::FutureExt;
-use music_player_entity::{album, artist, artist_tracks, track};
-use music_player_scanner::scan_directory;
+use music_player_storage::repo::album::AlbumRepository;
 use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::track::TrackRepository;
+use music_player_storage::searcher::Searcher;
 use music_player_storage::Database;
-use music_player_storage::{repo::album::AlbumRepository, searcher::Searcher};
-use sea_orm::ActiveModelTrait;
 
+use crate::api::metadata::v1alpha1::{
+    Album as AlbumMetadata, Artist as ArtistMetadata, Track as TrackMetadata,
+};
 use crate::api::music::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
@@ -30,51 +31,70 @@ impl LibraryService for Library {
         &self,
         _request: tonic::Request<ScanRequest>,
     ) -> Result<tonic::Response<ScanResponse>, tonic::Status> {
-        scan_directory(
-            move |song, db| {
-                async move {
-                    let item: artist::ActiveModel = song.try_into().unwrap();
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-
-                    let item: album::ActiveModel = song.try_into().unwrap();
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-
-                    let item: track::ActiveModel = song.try_into().unwrap();
-
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-
-                    let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-                    match item.insert(db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
-                }
-                .boxed()
-            },
-            &Database::new().await,
-            &Searcher::new(),
-        )
-        .await
-        .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
+        music_player_scanner::refresh_music_library(false, self.db.clone())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let response = ScanResponse {};
         Ok(tonic::Response::new(response))
     }
 
     async fn search(
         &self,
-        _request: tonic::Request<SearchRequest>,
+        request: tonic::Request<SearchRequest>,
     ) -> Result<tonic::Response<SearchResponse>, tonic::Status> {
-        let response = SearchResponse {};
+        let query = request.into_inner().query;
+        let searcher = Searcher::new(self.db.get_connection().clone());
+
+        let tracks = searcher
+            .search_song(&query)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let albums = searcher
+            .search_album(&query)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let artists = searcher
+            .search_artist(&query)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let response = SearchResponse {
+            tracks: tracks
+                .into_iter()
+                .map(|song| TrackMetadata {
+                    id: song.id,
+                    title: song.title,
+                    artist: song.artist,
+                    duration: song.duration.as_secs_f32(),
+                    album: Some(AlbumMetadata {
+                        id: song.album_id,
+                        title: song.album,
+                        cover: song.cover.unwrap_or_default(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .collect(),
+            albums: albums
+                .into_iter()
+                .map(|album| AlbumMetadata {
+                    id: album.id,
+                    title: album.title,
+                    artist: album.artist,
+                    year: album.year.map(|year| year as i32).unwrap_or_default(),
+                    cover: album.cover.unwrap_or_default(),
+                    ..Default::default()
+                })
+                .collect(),
+            artists: artists
+                .into_iter()
+                .map(|artist| ArtistMetadata {
+                    id: artist.id,
+                    name: artist.name,
+                    ..Default::default()
+                })
+                .collect(),
+        };
         Ok(tonic::Response::new(response))
     }
 

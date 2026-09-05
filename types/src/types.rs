@@ -1,25 +1,20 @@
 use std::time::Duration;
 
 use local_ip_addr::get_local_ip_address;
-use lofty::{Accessor, FileProperties, ItemKey, Tag};
 use mdns_sd::ServiceInfo;
-use music_player_discovery::{SERVICE_NAME, XBMC_SERVICE_NAME};
+use music_player_discovery::SERVICE_NAME;
 use music_player_settings::{read_settings, Settings};
-use tantivy::{
-    schema::{Schema, SchemaBuilder, STORED, STRING, TEXT},
-    Document,
-};
+use rockbox_metadata::Metadata as AudioMetadata;
 use upnp_client::types::Metadata;
 use url::Url;
 
 pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
-pub const AIRPLAY_SERVICE_NAME: &str = "_raop._tcp.local.";
 
-pub const AIRPLAY_DEVICE: &str = "AirPlay";
 pub const CHROMECAST_DEVICE: &str = "Chromecast";
-pub const XBMC_DEVICE: &str = "XBMC";
 pub const MUSIC_PLAYER_DEVICE: &str = "MusicPlayer";
 pub const UPNP_DLNA_DEVICE: &str = "UPnP/DLNA";
+pub const SUBSONIC_DEVICE: &str = "Subsonic";
+pub const JELLYFIN_DEVICE: &str = "Jellyfin";
 
 #[derive(Debug, Clone, Default)]
 pub struct Playback {
@@ -92,76 +87,48 @@ pub struct Artist {
     pub songs: Vec<Track>,
 }
 
-impl From<Document> for Album {
-    fn from(doc: Document) -> Self {
-        let mut schema_builder: SchemaBuilder = Schema::builder();
+fn tag_or_none(value: &str) -> String {
+    if value.is_empty() {
+        "None".to_string()
+    } else {
+        value.to_string()
+    }
+}
 
-        let id_field = schema_builder.add_text_field("id", STRING | STORED);
-        let title_field = schema_builder.add_text_field("title", TEXT | STORED);
-        let artist_field = schema_builder.add_text_field("artist", TEXT | STORED);
-        let year_field = schema_builder.add_i64_field("year", STORED);
-        let cover_field = schema_builder.add_text_field("cover", STRING | STORED);
+fn album_artist_of(meta: &AudioMetadata) -> String {
+    if !meta.albumartist.is_empty() {
+        meta.albumartist.clone()
+    } else if !meta.artist.is_empty() {
+        meta.artist.clone()
+    } else {
+        "None".to_string()
+    }
+}
 
-        let id = doc
-            .get_first(id_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-        let title = doc
-            .get_first(title_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-        let artist = doc
-            .get_first(artist_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-        let year = Some(doc.get_first(year_field).unwrap().as_i64().unwrap() as u32);
-        let cover = match doc.get_first(cover_field) {
-            Some(cover) => cover.as_text(),
-            None => None,
-        };
-        let cover = match cover {
-            Some("") => None,
-            Some(cover) => Some(cover.to_string()),
-            None => None,
-        };
-
+impl From<&AudioMetadata> for Song {
+    fn from(meta: &AudioMetadata) -> Self {
         Self {
-            id,
-            title,
-            artist,
-            year,
-            cover,
+            title: tag_or_none(&meta.title),
+            artist: tag_or_none(&meta.artist),
+            album: tag_or_none(&meta.album),
+            genre: tag_or_none(&meta.genre),
+            year: meta.year,
+            track: meta.track_number,
+            bitrate: (meta.bitrate > 0).then(|| meta.bitrate),
+            sample_rate: (meta.sample_rate > 0).then(|| meta.sample_rate),
+            bit_depth: None,
+            channels: None,
+            duration: meta.duration,
+            album_artist: album_artist_of(meta),
             ..Default::default()
         }
     }
 }
 
-impl From<Document> for Artist {
-    fn from(doc: Document) -> Self {
-        let mut schema_builder: SchemaBuilder = Schema::builder();
-
-        let id_field = schema_builder.add_text_field("id", TEXT | STORED);
-        let name_field = schema_builder.add_text_field("name", TEXT | STORED);
-
-        let id = doc
-            .get_first(id_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-        let name = doc
-            .get_first(name_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-
+impl From<&AudioMetadata> for Artist {
+    fn from(meta: &AudioMetadata) -> Self {
+        let name = album_artist_of(meta);
+        let id = format!("{:x}", md5::compute(&name));
         Self {
             id,
             name,
@@ -170,158 +137,20 @@ impl From<Document> for Artist {
     }
 }
 
-impl From<Document> for SimplifiedSong {
-    fn from(doc: Document) -> Self {
-        let mut schema_builder: SchemaBuilder = Schema::builder();
-
-        let id_field = schema_builder.add_text_field("id", STRING | STORED);
-        let title_field = schema_builder.add_text_field("title", TEXT | STORED);
-        let artist_field = schema_builder.add_text_field("artist", TEXT | STORED);
-        let album_field = schema_builder.add_text_field("album", TEXT | STORED);
-        let genre_field = schema_builder.add_text_field("genre", TEXT);
-        let cover_field = schema_builder.add_text_field("cover", STRING | STORED);
-        let duration_field = schema_builder.add_i64_field("duration", STORED);
-        let artist_id_field = schema_builder.add_text_field("artist_id", STRING | STORED);
-        let album_id_field = schema_builder.add_text_field("album_id", STRING | STORED);
-
-        let id = doc
-            .get_first(id_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-
-        let title = match doc.get_first(title_field) {
-            Some(title) => title.as_text().unwrap().to_string(),
-            None => String::from(""),
-        };
-        let artist = match doc.get_first(artist_field) {
-            Some(artist) => artist.as_text().unwrap().to_string(),
-            None => String::from(""),
-        };
-        let album = match doc.get_first(album_field) {
-            Some(album) => album.as_text().unwrap().to_string(),
-            None => String::from(""),
-        };
-        let genre = match doc.get_first(genre_field) {
-            Some(genre) => genre.as_text().unwrap().to_string(),
-            None => String::from(""),
-        };
-        let duration = match doc.get_first(duration_field) {
-            Some(duration) => Duration::from_secs(duration.as_i64().unwrap_or_default() as u64),
-            None => Duration::from_secs(0),
-        };
-        let cover = match doc.get_first(cover_field) {
-            Some(cover) => cover.as_text(),
-            None => None,
-        };
-        let cover = match cover {
-            Some("") => None,
-            Some(cover) => Some(cover.to_string()),
-            None => None,
-        };
-        let artist_id = doc
-            .get_first(artist_id_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
-        let album_id = doc
-            .get_first(album_id_field)
-            .unwrap()
-            .as_text()
-            .unwrap()
-            .to_string();
+impl From<&AudioMetadata> for Album {
+    fn from(meta: &AudioMetadata) -> Self {
+        let title = tag_or_none(&meta.album);
+        let artist = album_artist_of(meta);
+        let id = format!("{:x}", md5::compute(&title));
+        let artist_id = Some(format!("{:x}", md5::compute(&artist)));
         Self {
             id,
             title,
             artist,
-            album,
-            genre,
-            duration,
-            cover,
-            artist_id,
-            album_id,
-            ..Default::default()
-        }
-    }
-}
-
-impl From<&Tag> for Song {
-    fn from(tag: &Tag) -> Self {
-        Self {
-            title: tag.title().unwrap_or("None").to_string(),
-            artist: tag.artist().unwrap_or("None").to_string(),
-            album: tag.album().unwrap_or("None").to_string(),
-            genre: tag.genre().unwrap_or("None").to_string(),
-            year: tag.year(),
-            track: tag.track(),
-            album_artist: tag
-                .get_string(&ItemKey::AlbumArtist)
-                .unwrap_or(tag.artist().unwrap_or("None"))
-                .to_string(),
-            ..Default::default()
-        }
-    }
-}
-
-impl From<&Tag> for Artist {
-    fn from(tag: &Tag) -> Self {
-        let id = format!(
-            "{:x}",
-            md5::compute(
-                tag.get_string(&ItemKey::AlbumArtist)
-                    .unwrap_or(tag.artist().unwrap_or("None"))
-                    .to_string()
-            )
-        );
-        Self {
-            id,
-            name: tag
-                .get_string(&ItemKey::AlbumArtist)
-                .unwrap_or(tag.artist().unwrap_or("None"))
-                .to_string(),
-            ..Default::default()
-        }
-    }
-}
-
-impl From<&Tag> for Album {
-    fn from(tag: &Tag) -> Self {
-        let id = format!(
-            "{:x}",
-            md5::compute(tag.album().unwrap_or("None").to_string())
-        );
-        let artist_id = Some(format!(
-            "{:x}",
-            md5::compute(
-                tag.get_string(&ItemKey::AlbumArtist)
-                    .unwrap_or(tag.artist().unwrap_or("None"))
-                    .to_string()
-            )
-        ));
-        Self {
-            id,
-            title: tag.album().unwrap_or("None").to_string(),
-            artist: tag
-                .get_string(&ItemKey::AlbumArtist)
-                .unwrap_or(tag.artist().unwrap_or("None"))
-                .to_string(),
-            year: tag.year(),
+            year: meta.year,
             artist_id,
             ..Default::default()
         }
-    }
-}
-
-impl Song {
-    pub fn with_properties(&mut self, properties: &FileProperties) -> Self {
-        self.bitrate = properties.audio_bitrate();
-        self.sample_rate = properties.sample_rate();
-        self.bit_depth = properties.bit_depth();
-        self.channels = properties.channels();
-        self.duration = properties.duration();
-        self.clone()
     }
 }
 
@@ -346,35 +175,40 @@ impl Device {
         self.base_url = base_url;
         self.clone()
     }
+
+    /// Builds a statically-configured source device pointing at a music
+    /// streaming server (Subsonic/Navidrome, Jellyfin, ...).
+    ///
+    /// `app` is the addon identifier ("subsonic" or "jellyfin") and
+    /// `base_url` the root url of the server (e.g. "https://music.example.com").
+    /// Returns `None` when the url is empty or cannot be parsed.
+    pub fn from_streaming_server(app: &str, base_url: &str) -> Option<Self> {
+        let base_url = base_url.trim().trim_end_matches('/').to_string();
+        if base_url.is_empty() {
+            return None;
+        }
+        let url = Url::parse(&base_url).ok()?;
+        let host = url.host_str()?.to_string();
+        let port = url.port_or_known_default().unwrap_or(80);
+        Some(Self {
+            id: format!("{:x}", md5::compute(&base_url)),
+            name: host.clone(),
+            host: host.clone(),
+            ip: host,
+            port,
+            service: app.to_owned(),
+            app: app.to_owned(),
+            is_connected: false,
+            base_url: Some(base_url),
+            is_cast_device: false,
+            is_source_device: true,
+            is_current_device: false,
+        })
+    }
 }
 
 impl From<ServiceInfo> for Device {
     fn from(srv: ServiceInfo) -> Self {
-        if srv.get_fullname().contains("xbmc") {
-            return Self {
-                id: srv.get_fullname().to_owned(),
-                name: srv
-                    .get_fullname()
-                    .replace(XBMC_SERVICE_NAME, "")
-                    .replace(".", "")
-                    .to_owned(),
-                host: srv
-                    .get_hostname()
-                    .split_at(srv.get_hostname().len() - 1)
-                    .0
-                    .to_owned(),
-                ip: srv.get_addresses().iter().next().unwrap().to_string(),
-                port: srv.get_port(),
-                service: srv.get_fullname().to_owned(),
-                app: "xbmc".to_owned(),
-                is_connected: false,
-                base_url: None,
-                is_cast_device: true,
-                is_source_device: true,
-                is_current_device: false,
-            };
-        }
-
         if srv.get_fullname().contains(SERVICE_NAME) {
             let device_id = srv
                 .get_fullname()
@@ -434,31 +268,6 @@ impl From<ServiceInfo> for Device {
                 port: srv.get_port(),
                 service: srv.get_fullname().to_owned(),
                 app: "chromecast".to_owned(),
-                is_connected: false,
-                base_url: None,
-                is_cast_device: true,
-                is_source_device: false,
-                is_current_device: false,
-            };
-        }
-
-        if srv.get_fullname().contains(AIRPLAY_SERVICE_NAME) {
-            let name = srv.get_fullname().split("@").collect::<Vec<&str>>()[1]
-                .replace(AIRPLAY_SERVICE_NAME, "")
-                .to_owned();
-            let name = name.split_at(name.len() - 1).0.to_owned();
-            return Self {
-                id: srv.get_fullname().to_owned(),
-                name,
-                host: srv
-                    .get_hostname()
-                    .split_at(srv.get_hostname().len() - 1)
-                    .0
-                    .to_owned(),
-                ip: srv.get_addresses().iter().next().unwrap().to_string(),
-                port: srv.get_port(),
-                service: srv.get_fullname().to_owned(),
-                app: "airplay".to_owned(),
                 is_connected: false,
                 base_url: None,
                 is_cast_device: true,
@@ -575,6 +384,11 @@ pub trait RemoteCoverUrl {
 
 impl RemoteTrackUrl for Track {
     fn with_remote_track_url(&self, base_url: &str) -> Self {
+        // Tracks coming from streaming servers (Subsonic, Jellyfin, ...)
+        // already carry an authenticated absolute stream url; keep it as is.
+        if self.uri.starts_with("http://") || self.uri.starts_with("https://") {
+            return self.clone();
+        }
         Self {
             uri: format!("{}/tracks/{}", base_url, self.id),
             ..self.clone()

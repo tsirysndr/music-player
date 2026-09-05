@@ -20,12 +20,25 @@ pub fn handler(key: Key, app: &mut App) {
             app.track_table.selected_index = next_index;
         }
         k if common_key_events::high_event(k) => {
-            let next_index = common_key_events::on_high_press_handler();
-            app.track_table.selected_index = next_index;
+            app.track_table.selected_index = common_key_events::on_high_press_handler();
+        }
+        k if common_key_events::middle_event(k) => {
+            if !app.track_table.tracks.is_empty() {
+                app.track_table.selected_index =
+                    common_key_events::on_middle_press_handler(&app.track_table.tracks);
+            }
+        }
+        k if common_key_events::low_event(k) => {
+            if !app.track_table.tracks.is_empty() {
+                app.track_table.selected_index =
+                    common_key_events::on_low_press_handler(&app.track_table.tracks);
+            }
         }
         Key::Enter => {
-            app.dispatch(IoEvent::PlayTrackAt(app.track_table.selected_index));
-            app.dispatch(IoEvent::GetCurrentPlayback);
+            if !app.track_table.tracks.is_empty() {
+                app.dispatch(IoEvent::PlayTrackAt(app.track_table.selected_index));
+                app.dispatch(IoEvent::GetCurrentPlayback);
+            }
         }
         _ => (),
     }

@@ -6,12 +6,12 @@ use futures_util::Stream;
 use music_player_addons::CurrentSourceDevice;
 use music_player_entity::{
     folder as folder_entity, playlist as playlist_entity,
-    playlist_tracks as playlist_tracks_entity, select_result, track as track_entity,
+    playlist_tracks as playlist_tracks_entity, track as track_entity,
 };
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
-    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter,
-    QueryOrder, QuerySelect, RelationTrait,
+    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
+    QuerySelect,
 };
 use tokio::sync::Mutex;
 

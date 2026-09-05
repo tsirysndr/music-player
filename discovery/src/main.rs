@@ -1,6 +1,6 @@
 use futures_util::StreamExt;
 use mdns::Error;
-use music_player_discovery::{discover, register_services, MdnsResponder, SERVICE_NAME};
+use music_player_discovery::{discover, MdnsResponder, SERVICE_NAME};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

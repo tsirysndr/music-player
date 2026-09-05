@@ -9,7 +9,6 @@ use std::thread;
 use music_player_settings::{read_settings, Settings};
 
 pub const SERVICE_NAME: &'static str = "_music-player._tcp.local.";
-pub const XBMC_SERVICE_NAME: &'static str = "_xbmc-jsonrpc-h._tcp.local.";
 
 pub struct MdnsResponder {
     responder: libmdns::Responder,

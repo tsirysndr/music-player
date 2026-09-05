@@ -3,12 +3,30 @@ mod tests;
 
 use music_player_settings::{read_settings, Settings};
 pub use sea_orm_migration::prelude::*;
-use sea_orm_migration::{cli::run_migrate, sea_orm::Database};
+use sea_orm_migration::sea_orm::Database;
 use std::{env, fs::File, path::Path};
 
 mod m20220101_000001_create_table;
 mod m20221115_220318_add_folder_table;
 mod m20221117_211308_add_created_at_column;
+mod m20260905_000001_create_search_index;
+
+/// Create the database file if needed and bring the schema up to date,
+/// without going through the sea-orm migration CLI (which parses argv).
+pub async fn apply() {
+    let config = read_settings().unwrap();
+    let settings = config.try_deserialize::<Settings>().unwrap();
+    env::set_var("DATABASE_URL", &settings.database_url);
+    let db_path = settings
+        .database_url
+        .replace("sqlite://", "")
+        .replace("sqlite:", "");
+    if !Path::new(&db_path).exists() {
+        File::create(&db_path).unwrap();
+    }
+    let db = Database::connect(&settings.database_url).await.unwrap();
+    Migrator::up(&db, None).await.unwrap();
+}
 
 pub struct Migrator;
 
@@ -19,6 +37,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20220101_000001_create_table::Migration),
             Box::new(m20221115_220318_add_folder_table::Migration),
             Box::new(m20221117_211308_add_created_at_column::Migration),
+            Box::new(m20260905_000001_create_search_index::Migration),
         ]
     }
 }

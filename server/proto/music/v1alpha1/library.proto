@@ -12,7 +12,11 @@ message ScanResponse {}
 
 message SearchRequest { string query = 1; }
 
-message SearchResponse {}
+message SearchResponse {
+    repeated metadata.v1alpha1.Track tracks = 1;
+    repeated metadata.v1alpha1.Album albums = 2;
+    repeated metadata.v1alpha1.Artist artists = 3;
+}
 
 message GetAlbumsRequest {
     int32 limit = 1;

@@ -5,76 +5,39 @@ import reportWebVitals from "./reportWebVitals";
 import { Provider as StyletronProvider } from "styletron-react";
 import { Client as Styletron } from "styletron-engine-atomic";
 import { PLACEMENT, SnackbarProvider } from "baseui/snackbar";
-import {
-  ApolloClient,
-  createHttpLink,
-  InMemoryCache,
-  split,
-  ApolloProvider,
-  ApolloLink,
-} from "@apollo/client";
-import { WebSocketLink } from "@apollo/client/link/ws";
-import { render } from "react-dom";
-import { getMainDefinition } from "@apollo/client/utilities";
-import { SubscriptionClient } from "subscriptions-transport-ws";
-import { createTauriLink } from "./TauriLink";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Provider as JotaiProvider } from "jotai";
+import { createRoot } from "react-dom/client";
 import Providers from "./Providers";
 
-let link: ApolloLink;
-
-if (process.env.REACT_APP_NATIVE_WRAPPER === "tauri") {
-  link = createTauriLink();
-} else {
-  const uri =
-    process.env.NODE_ENV === "development"
-      ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
-      : // eslint-disable-next-line no-restricted-globals
-        `${origin}/graphql`;
-
-  const httpLink = createHttpLink({
-    uri,
-  });
-
-  const wsLink = new WebSocketLink(
-    new SubscriptionClient(uri.replace("http", "ws"))
-  );
-
-  const splitLink = split(
-    ({ query }) => {
-      const definition = getMainDefinition(query);
-      return (
-        definition.kind === "OperationDefinition" &&
-        definition.operation === "subscription"
-      );
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
     },
-    wsLink,
-    httpLink
-  );
-  link = splitLink;
-}
-
-const client = new ApolloClient({
-  link,
-  cache: new InMemoryCache(),
+  },
 });
 
 const engine = new Styletron();
 
-const root = document.getElementById("root") as HTMLElement;
+const container = document.getElementById("root") as HTMLElement;
+const root = createRoot(container);
 
-render(
+root.render(
   <React.StrictMode>
-    <ApolloProvider client={client}>
-      <StyletronProvider value={engine}>
-        <Providers>
-          <SnackbarProvider placement={PLACEMENT.bottom}>
-            <App />
-          </SnackbarProvider>
-        </Providers>
-      </StyletronProvider>
-    </ApolloProvider>
-  </React.StrictMode>,
-  root
+    <QueryClientProvider client={queryClient}>
+      <JotaiProvider>
+        <StyletronProvider value={engine}>
+          <Providers>
+            <SnackbarProvider placement={PLACEMENT.bottom}>
+              <App />
+            </SnackbarProvider>
+          </Providers>
+        </StyletronProvider>
+      </JotaiProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
 );
 
 // If you want to start measuring performance in your app, pass a function

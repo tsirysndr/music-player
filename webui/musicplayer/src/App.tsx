@@ -9,6 +9,7 @@ import PlaylistPage from "./Containers/Playlist";
 import FolderPage from "./Containers/Folder";
 import { useEffect, useState } from "react";
 import { resourceUriResolver } from "./ResourceUriResolver";
+import AppStateSync from "./Components/AppStateSync";
 
 const hasNativeWrapper = !!process.env.REACT_APP_NATIVE_WRAPPER;
 
@@ -26,6 +27,7 @@ function App() {
   if (!ready) return null;
   return (
     <BrowserRouter>
+      <AppStateSync />
       <Routes>
         <Route path="/" element={<TracksPage />} />
         <Route path="/tracks" element={<TracksPage />} />

@@ -42,7 +42,7 @@ jobs:
       - name: Installing Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.98.0
           target: ${{ matrix.target }}
           override: true
       - name: Install Android NDK
@@ -129,7 +129,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          toolchain: stable
+          toolchain: 1.98.0
           args: --release --target ${{ matrix.target }}"
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV

@@ -6,10 +6,8 @@ use super::setup_new_params;
 
 #[tokio::test]
 async fn new() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(6062).await;
+    let (cmd_tx, cmd_rx, tracklist, _db, _addr, _url) = setup_new_params(6062).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -19,10 +17,8 @@ async fn new() {
 
 #[tokio::test]
 async fn start() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(6060).await;
+    let (cmd_tx, cmd_rx, tracklist, _db, _addr, _url) = setup_new_params(6060).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -32,10 +28,8 @@ async fn start() {
 
 #[tokio::test]
 async fn start_ws() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(6061).await;
+    let (cmd_tx, cmd_rx, tracklist, _db, _addr, _url) = setup_new_params(6061).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),

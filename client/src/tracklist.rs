@@ -15,7 +15,7 @@ pub struct TracklistClient {
 
 impl TracklistClient {
     pub async fn new(host: String, port: u16) -> Result<Self, Error> {
-        let url = format!("tcp://{}:{}", host, port);
+        let url = format!("http://{}:{}", host, port);
         let client = TracklistServiceClient::connect(url).await?;
         Ok(Self { client })
     }

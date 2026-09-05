@@ -13,7 +13,7 @@ export const clippy = async (src = ".") => {
   const ctr = dag
     .pipeline(Job.test)
     .container()
-    .from("rust:1.80-bookworm")
+    .from("rust:1.98.0-bookworm")
     .withExec(["apt-get", "update"])
     .withExec([
       "apt-get",
@@ -51,7 +51,7 @@ export const test = async (src = ".") => {
   const ctr = dag
     .pipeline(Job.test)
     .container()
-    .from("rust:1.80-bookworm")
+    .from("rust:1.98.0-bookworm")
     .withExec(["apt-get", "update"])
     .withExec([
       "apt-get",
@@ -111,7 +111,7 @@ export const build = async (src = ".") => {
     .pipeline(Job.build)
     .container()
     .from("ghcr.io/fluentci-io/pkgx:latest")
-    .withExec(["pkgx", "install", "rustc", "cargo", "node@18", "bun", "protoc"])
+    .withExec(["pkgx", "install", "rustc@1.98.0", "cargo@1.98.0", "node@18", "bun", "protoc"])
     .withExec(["apt-get", "update"])
     .withExec([
       "apt-get",

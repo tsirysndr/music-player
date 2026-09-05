@@ -52,7 +52,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.98.0
           override: true
       - name: Install aarch64-apple-darwin toolchain
         if: matrix.platform == 'macos-latest'

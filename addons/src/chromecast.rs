@@ -4,7 +4,9 @@ use crate::{Addon, Player};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures_util::Future;
-use music_player_types::types::{Album, Artist, Device, Playback, Track, CHROMECAST_DEVICE, CurrentPlayback};
+use music_player_types::types::{
+    Album, Artist, CurrentPlayback, Device, Playback, Track, CHROMECAST_DEVICE,
+};
 use rust_cast::{
     channels::{
         media::{Image, Media, Metadata, MusicTrackMediaMetadata, StatusEntry, StreamType},
@@ -105,7 +107,7 @@ impl<'a> Chromecast<'a> {
         Ok(Some(Box::new(player)))
     }
 
-    fn reconnect(&mut self) -> Result<(CastDevice, String), Error> {
+    fn reconnect(&mut self) -> Result<(CastDevice<'_>, String), Error> {
         let cast_device = match CastDevice::connect_without_host_verification(
             self.host.clone().unwrap(),
             self.port.unwrap(),
@@ -130,7 +132,7 @@ impl<'a> Chromecast<'a> {
         Ok((cast_device, app.transport_id))
     }
 
-    fn current_app_session(&mut self) -> Result<(CastDevice, String, i32, String), Error> {
+    fn current_app_session(&mut self) -> Result<(CastDevice<'_>, String, i32, String), Error> {
         let app_to_manage = CastDeviceApp::from_str(DEFAULT_APP_ID).unwrap();
 
         let (cast_device, _) = self.reconnect()?;
@@ -347,11 +349,11 @@ impl<'a> Player for Chromecast<'a> {
         todo!()
     }
 
-    async fn play_track_at(&mut self, position: u32) -> Result<(), Error> {
+    async fn play_track_at(&mut self, _position: u32) -> Result<(), Error> {
         todo!()
     }
 
-    async fn remove_track_at(&mut self, position: u32) -> Result<(), Error> {
+    async fn remove_track_at(&mut self, _position: u32) -> Result<(), Error> {
         todo!()
     }
 

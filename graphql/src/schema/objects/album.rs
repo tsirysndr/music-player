@@ -58,7 +58,10 @@ impl RemoteCoverUrl for Album {
             cover: self
                 .cover
                 .clone()
-                .map(|cover| format!("{}/covers/{}", base_url, cover)),
+                .map(|cover| match cover.starts_with("http") {
+                    true => cover,
+                    false => format!("{}/covers/{}", base_url, cover),
+                }),
             ..self.clone()
         }
     }

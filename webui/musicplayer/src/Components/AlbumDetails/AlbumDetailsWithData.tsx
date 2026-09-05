@@ -1,4 +1,4 @@
-import { FC, useEffect } from "react";
+import { FC } from "react";
 import AlbumDetails from "./AlbumDetails";
 import { useGetAlbumQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
@@ -8,16 +8,9 @@ import { useNavigate, useParams } from "react-router-dom";
 
 const AlbumDetailsWithData: FC = () => {
   const params = useParams();
-  const { data, loading, refetch } = useGetAlbumQuery({
-    variables: {
-      id: params.id!,
-    },
-    fetchPolicy: "network-only",
+  const { data, isLoading: loading } = useGetAlbumQuery({
+    id: params.id!,
   });
-
-  useEffect(() => {
-    params.id && refetch();
-  }, [params.id, refetch]);
 
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
@@ -45,12 +38,12 @@ const AlbumDetailsWithData: FC = () => {
       album={album}
       nowPlaying={nowPlaying}
       onPlayAlbum={(albumId, shuffle, position) =>
-        playAlbum({ variables: { albumId, position, shuffle } })
+        playAlbum({ albumId, position, shuffle })
       }
-      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
-      onCreatePlaylist={(name) => createPlaylist({ variables: { name } })}
+      onPlayNext={(trackId) => playNext({ trackId })}
+      onCreatePlaylist={(name) => createPlaylist({ name })}
       onAddTrackToPlaylist={(playlistId, trackId) =>
-        addTrackToPlaylist({ variables: { playlistId, trackId } })
+        addTrackToPlaylist({ playlistId, trackId })
       }
       recentPlaylists={recentPlaylists}
     />

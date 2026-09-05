@@ -2,14 +2,9 @@ use std::{env, sync::Arc};
 
 use async_graphql::Schema;
 use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
-use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink, Sink},
-    config::AudioFormat,
-    player::PlayerCommand,
-};
+use music_player_playback::player::PlayerCommand;
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
-use music_player_types::types::Device;
 use tokio::sync::{
     mpsc::{UnboundedReceiver, UnboundedSender},
     Mutex,
@@ -32,11 +27,7 @@ pub async fn setup_schema() -> (
     Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     Arc<std::sync::Mutex<UnboundedReceiver<PlayerCommand>>>,
     Arc<std::sync::Mutex<Tracklist>>,
-    fn(Option<String>, AudioFormat) -> Box<dyn Sink>,
-    AudioFormat,
 ) {
-    let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
@@ -45,7 +36,6 @@ pub async fn setup_schema() -> (
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
-    let searcher = Arc::new(Mutex::new(Searcher::new()));
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
@@ -54,7 +44,10 @@ pub async fn setup_schema() -> (
         "sqlite:///tmp/music-player.sqlite3",
     );
 
+    ensure_test_library().await;
+
     let db = Database::new().await;
+    let searcher = Arc::new(Searcher::new(db.get_connection().clone()));
     (
         Schema::build(
             Query::default(),
@@ -73,8 +66,6 @@ pub async fn setup_schema() -> (
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
         Arc::clone(&tracklist),
-        backend,
-        audio_format,
     )
 }
 
@@ -115,5 +106,20 @@ pub async fn play_album(schema: MusicPlayerSchema) {
               }
             "#,
         )
+        .await;
+}
+
+static TEST_LIBRARY: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+
+/// Create + migrate the test database and index the fixture library
+/// (/tmp/audio) once per test process.
+async fn ensure_test_library() {
+    TEST_LIBRARY
+        .get_or_init(|| async {
+            migration::apply().await;
+            music_player_scanner::scan_music_library(false, Database::new().await)
+                .await
+                .ok();
+        })
         .await;
 }

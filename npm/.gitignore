@@ -1,0 +1,3 @@
+bin/music-player-bin*
+bin/.release-tag
+node_modules/

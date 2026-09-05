@@ -7,13 +7,9 @@ use music_player_client::{
     tracklist::TracklistClient,
 };
 use music_player_discovery::{discover, SERVICE_NAME};
-use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink},
-    config::AudioFormat,
-    player::{Player, PlayerEngine},
-};
+use music_player_playback::player::{Player, PlayerEngine};
 use music_player_settings::{read_settings, Settings};
-use music_player_storage::{searcher::Searcher, Database};
+use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use owo_colors::OwoColorize;
 use std::sync::Arc;
@@ -26,19 +22,11 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     let settings = config.try_deserialize::<Settings>().unwrap();
 
     if let Some(matches) = matches.subcommand_matches("open") {
-        let audio_format = AudioFormat::default();
-        let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
         let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
         let cmd_tx = Arc::new(Mutex::new(cmd_tx));
         let cmd_rx = Arc::new(Mutex::new(cmd_rx));
         let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
-        let (mut player, _) = Player::new(
-            move || backend(None, audio_format),
-            |_| {},
-            cmd_tx,
-            cmd_rx,
-            tracklist,
-        );
+        let (mut player, _) = Player::new(|_| {}, cmd_tx, cmd_rx, tracklist);
 
         let song = matches.value_of("song").unwrap();
 
@@ -49,9 +37,9 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(_) = matches.subcommand_matches("scan") {
+        migration::apply().await;
         let db = Database::new().await;
-        let searcher = Searcher::new();
-        scan_music_library(true, db, searcher)
+        scan_music_library(true, db)
             .await
             .map_err(|e| e.to_string())?;
         return Ok(());
@@ -122,39 +110,49 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     if let Some(matches) = matches.subcommand_matches("playlist") {
         let mut client = PlaylistClient::new(settings.host.clone(), settings.port).await?;
 
-        if let Some(matches) = matches.subcommand_matches("add") {
-            let id = matches.value_of("id").unwrap();
-
-            return Ok(());
-        }
-
         if let Some(_matches) = matches.subcommand_matches("ls") {
+            let playlists = client.list_all().await?;
+            let mut builder = Builder::default();
+            builder.set_columns(["id", "name", "tracks"]);
+            playlists.iter().for_each(|playlist| {
+                builder.add_record([
+                    playlist.id.as_str(),
+                    playlist.name.magenta().to_string().as_str(),
+                    playlist.tracks.len().to_string().as_str(),
+                ]);
+            });
+            let table = builder.build().with(Style::psql());
+            println!("\n{}", table);
             return Ok(());
         }
 
-        if let Some(matches) = matches.subcommand_matches("clear") {
-            let id = matches.value_of("id");
-
-            return Ok(());
-        }
-
-        if let Some(matches) = matches.subcommand_matches("play") {
-            let id = matches.value_of("id");
-
-            return Ok(());
-        }
-
-        if let Some(matches) = matches.subcommand_matches("remove") {
+        if let Some(matches) = matches.subcommand_matches("show") {
             let id = matches.value_of("id").unwrap();
-
+            let playlist = client.find(id).await?;
+            println!("\n{}", playlist.name.magenta());
+            let mut builder = Builder::default();
+            builder.set_columns(["id", "title", "artist"]);
+            playlist.tracks.iter().for_each(|track| {
+                builder.add_record([
+                    track.id.as_str(),
+                    track.title.magenta().to_string().as_str(),
+                    track.artist.as_str(),
+                ]);
+            });
+            let table = builder.build().with(Style::psql());
+            println!("{}", table);
             return Ok(());
         }
 
-        if let Some(_matches) = matches.subcommand_matches("shuffle") {
-            return Ok(());
-        }
-
-        if let Some(_matches) = matches.subcommand_matches("all") {
+        if let Some(matches) = matches.subcommand_matches("open") {
+            let id = matches.value_of("id").unwrap();
+            let playlist = client.find(id).await?;
+            if playlist.tracks.is_empty() {
+                println!("The playlist is empty");
+                return Ok(());
+            }
+            let mut tracklist = TracklistClient::new(settings.host.clone(), settings.port).await?;
+            tracklist.load_tracks(playlist.tracks, 0).await?;
             return Ok(());
         }
     }
@@ -164,21 +162,33 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
 
         if let Some(_) = matches.subcommand_matches("list") {
             let (mut previous_tracks, next_tracks) = client.list().await?;
-            let last_track = previous_tracks.pop().unwrap();
-            for (i, track) in previous_tracks.iter().enumerate() {
-                println!("{} {}", format_number(i + 1), track.title);
+            if previous_tracks.is_empty() && next_tracks.is_empty() {
+                println!("The queue is empty");
+                return Ok(());
             }
-            println!(
-                "{} {}",
-                format_number(previous_tracks.len() + 1).magenta(),
-                last_track.title.magenta()
-            );
-            for (i, track) in next_tracks.iter().enumerate() {
-                println!(
-                    "{} {}",
-                    format_number(i + previous_tracks.len() + 2),
-                    track.title
-                );
+            match previous_tracks.pop() {
+                Some(last_track) => {
+                    for (i, track) in previous_tracks.iter().enumerate() {
+                        println!("{} {}", format_number(i + 1), track.title);
+                    }
+                    println!(
+                        "{} {}",
+                        format_number(previous_tracks.len() + 1).magenta(),
+                        last_track.title.magenta()
+                    );
+                    for (i, track) in next_tracks.iter().enumerate() {
+                        println!(
+                            "{} {}",
+                            format_number(i + previous_tracks.len() + 2),
+                            track.title
+                        );
+                    }
+                }
+                None => {
+                    for (i, track) in next_tracks.iter().enumerate() {
+                        println!("{} {}", format_number(i + 1), track.title);
+                    }
+                }
             }
             return Ok(());
         }
@@ -186,18 +196,6 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
         if let Some(matches) = matches.subcommand_matches("add") {
             let id = matches.value_of("track_id").unwrap();
             client.add(id).await?;
-            return Ok(());
-        }
-
-        if let Some(matches) = matches.subcommand_matches("remove") {
-            let song = matches.value_of("song").unwrap();
-
-            return Ok(());
-        }
-
-        if let Some(matches) = matches.subcommand_matches("clear") {
-            let all = matches.is_present("all");
-
             return Ok(());
         }
     }
@@ -218,10 +216,53 @@ pub async fn parse_args(matches: ArgMatches) -> Result<(), Box<dyn std::error::E
     }
 
     if let Some(matches) = matches.subcommand_matches("search") {
-        let client = LibraryClient::new(settings.host.clone(), settings.port).await?;
+        let mut client = LibraryClient::new(settings.host.clone(), settings.port).await?;
 
         let query = matches.value_of("query").unwrap();
-        todo!("search for {}", query);
+        let result = client.search(query).await?;
+
+        if !result.artists.is_empty() {
+            let mut builder = Builder::default();
+            builder.set_columns(["id", "name"]);
+            result.artists.iter().for_each(|artist| {
+                builder.add_record([
+                    artist.id.as_str(),
+                    artist.name.magenta().to_string().as_str(),
+                ]);
+            });
+            let table = builder.build().with(Style::psql());
+            println!("\nArtists:\n{}", table);
+        }
+
+        if !result.albums.is_empty() {
+            let mut builder = Builder::default();
+            builder.set_columns(["id", "title", "artist"]);
+            result.albums.iter().for_each(|album| {
+                builder.add_record([
+                    album.id.as_str(),
+                    album.title.magenta().to_string().as_str(),
+                    album.artist.as_str(),
+                ]);
+            });
+            let table = builder.build().with(Style::psql());
+            println!("\nAlbums:\n{}", table);
+        }
+
+        if !result.tracks.is_empty() {
+            let mut builder = Builder::default();
+            builder.set_columns(["id", "title", "artist"]);
+            result.tracks.iter().for_each(|track| {
+                builder.add_record([
+                    track.id.as_str(),
+                    track.title.magenta().to_string().as_str(),
+                    track.artist.as_str(),
+                ]);
+            });
+            let table = builder.build().with(Style::psql());
+            println!("\nTracks:\n{}", table);
+        }
+
+        return Ok(());
     }
 
     if let Some(_) = matches.subcommand_matches("pause") {

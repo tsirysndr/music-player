@@ -90,6 +90,11 @@ impl Track {
 
 impl RemoteTrackUrl for Track {
     fn with_remote_track_url(&self, base_url: &str) -> Self {
+        // Streaming sources (Subsonic, Jellyfin, ...) already provide an
+        // authenticated absolute stream url; keep it as is.
+        if self.uri.starts_with("http://") || self.uri.starts_with("https://") {
+            return self.clone();
+        }
         Self {
             uri: format!("{}/tracks/{}", base_url, self.id.to_string()),
             ..self.clone()
@@ -102,7 +107,10 @@ impl RemoteCoverUrl for Track {
         Self {
             album: Album {
                 cover: match self.album.cover {
-                    Some(ref cover) => Some(format!("{}/covers/{}", base_url, cover)),
+                    Some(ref cover) => match cover.starts_with("http") {
+                        true => Some(cover.to_owned()),
+                        false => Some(format!("{}/covers/{}", base_url, cover)),
+                    },
                     None => None,
                 },
                 ..self.album.clone()

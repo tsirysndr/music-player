@@ -25,10 +25,8 @@ use super::setup_new_params;
 
 #[tokio::test]
 async fn get_currently_playing_song() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, _db, addr, url) =
-        setup_new_params(7078).await;
+    let (cmd_tx, cmd_rx, tracklist, _db, addr, url) = setup_new_params(7078).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -40,8 +38,10 @@ async fn get_currently_playing_song() {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -61,10 +61,8 @@ async fn get_currently_playing_song() {
 
 #[tokio::test]
 async fn next() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(7079).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, url) = setup_new_params(7079).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -75,11 +73,15 @@ async fn next() {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -135,10 +137,8 @@ async fn next() {
 
 #[tokio::test]
 async fn previous() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(7080).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, url) = setup_new_params(7080).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -149,11 +149,15 @@ async fn previous() {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -215,10 +219,8 @@ async fn previous() {
 
 #[tokio::test]
 async fn play() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(7081).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, url) = setup_new_params(7081).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -229,11 +231,15 @@ async fn play() {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
@@ -297,10 +303,8 @@ async fn play() {
 
 #[tokio::test]
 async fn pause() {
-    let (backend, audio_format, cmd_tx, cmd_rx, tracklist, db, addr, url) =
-        setup_new_params(7082).await;
+    let (cmd_tx, cmd_rx, tracklist, db, addr, url) = setup_new_params(7082).await;
     let (_, _) = Player::new(
-        move || backend(None, audio_format),
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
@@ -312,11 +316,15 @@ async fn pause() {
     let jh = tokio::spawn(async move {
         Server::builder()
             .accept_http1(true)
-            .add_service(tonic_web::enable(PlaybackServiceServer::new(
-                Playback::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx)),
+            .layer(tonic_web::GrpcWebLayer::new())
+            .add_service(PlaybackServiceServer::new(Playback::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
             )))
-            .add_service(tonic_web::enable(TracklistServiceServer::new(
-                Tracklist::new(Arc::clone(&tracklist), Arc::clone(&cmd_tx), db),
+            .add_service(TracklistServiceServer::new(Tracklist::new(
+                Arc::clone(&tracklist),
+                Arc::clone(&cmd_tx),
+                db,
             )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await

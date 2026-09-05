@@ -12,10 +12,7 @@ use music_player_tracklist::Tracklist as TracklistState;
 use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
 use music_player_types::types::{CHROMECAST_DEVICE, MUSIC_PLAYER_DEVICE};
 use rand::seq::SliceRandom;
-use sea_orm::{
-    ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
-    RelationTrait,
-};
+use sea_orm::{EntityTrait, ModelTrait, QuerySelect};
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
@@ -27,7 +24,6 @@ use crate::update_cover_url;
 use crate::update_track_url;
 use crate::update_tracks_url;
 
-use super::objects::album::Album;
 use super::{
     objects::{
         track::{Track, TrackInput},
@@ -67,17 +63,17 @@ impl TracklistQuery {
 
         Ok(response)
     }
-    async fn get_repeat(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    async fn get_repeat(&self, _ctx: &Context<'_>) -> Result<bool, Error> {
         todo!()
     }
-    async fn get_random(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    async fn get_random(&self, _ctx: &Context<'_>) -> Result<bool, Error> {
         todo!()
     }
-    async fn get_next_track(&self, ctx: &Context<'_>) -> Result<Option<Track>, Error> {
+    async fn get_next_track(&self, _ctx: &Context<'_>) -> Result<Option<Track>, Error> {
         todo!()
     }
 
-    async fn get_previous_track(&self, ctx: &Context<'_>) -> Result<Option<Track>, Error> {
+    async fn get_previous_track(&self, _ctx: &Context<'_>) -> Result<Option<Track>, Error> {
         todo!()
     }
 }
@@ -179,7 +175,7 @@ impl TracklistMutation {
         Ok(vec![])
     }
 
-    async fn add_tracks(&self, ctx: &Context<'_>, tracks: Vec<TrackInput>) -> Result<bool, Error> {
+    async fn add_tracks(&self, ctx: &Context<'_>, _tracks: Vec<TrackInput>) -> Result<bool, Error> {
         let _player_cmd = ctx
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
@@ -191,7 +187,7 @@ impl TracklistMutation {
         let mut device = current_device.lock().await;
 
         if device.client.is_some() {
-            let receiver = device.client.as_mut().unwrap();
+            let _receiver = device.client.as_mut().unwrap();
             return Ok(true);
         }
 

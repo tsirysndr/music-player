@@ -1,16 +1,18 @@
 overwrite: true
-schema: "http://localhost:3001/graphql"
-documents: "src/**/*.tsx"
+schema: "./graphql.schema.json"
+documents: "src/GraphQL/**/*.tsx"
 ignoreNoDocuments: true
 generates:
   src/Hooks/GraphQL.tsx:
     plugins:
       - "typescript"
       - "typescript-operations"
-      - "typescript-react-apollo"
+      - "typescript-react-query"
     config:
-      withHooks: true
-      withHOC: false
-  ./graphql.schema.json:
-    plugins:
-      - "introspection"
+      reactQueryVersion: 5
+      addInfiniteQuery: true
+      exposeQueryKeys: true
+      exposeMutationKeys: true
+      exposeFetcher: true
+      addSuspenseQuery: false
+      fetcher: "../Api/fetcher#fetcher"

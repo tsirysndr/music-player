@@ -41,8 +41,30 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Replace the sample below with your own migration scripts
-        todo!();
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Playlist::Table)
+                    .drop_column(Playlist::CreatedAt)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Folder::Table)
+                    .drop_column(Folder::CreatedAt)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(PlaylistTrack::Table)
+                    .drop_column(PlaylistTrack::CreatedAt)
+                    .to_owned(),
+            )
+            .await
     }
 }
 

@@ -5,12 +5,13 @@ use anyhow::Error;
 use async_graphql::Schema;
 use futures_util::StreamExt;
 use music_player_addons::Player;
-use music_player_discovery::{discover, SERVICE_NAME, XBMC_SERVICE_NAME};
+use music_player_discovery::{discover, SERVICE_NAME};
 use music_player_entity::track as track_entity;
 use music_player_playback::player::PlayerCommand;
+use music_player_settings::{read_settings, Settings};
 use music_player_types::types::RemoteCoverUrl;
 use music_player_types::types::RemoteTrackUrl;
-use music_player_types::types::{Device, AIRPLAY_SERVICE_NAME, CHROMECAST_SERVICE_NAME};
+use music_player_types::types::{Device, CHROMECAST_SERVICE_NAME};
 use rand::seq::SliceRandom;
 use schema::{Mutation, Query, Subscription};
 use std::{
@@ -51,22 +52,6 @@ fn scan_mp_devices(mp_devices: Arc<Mutex<Vec<Device>>>) {
     });
 }
 
-fn scan_xbmc_devices(xbmc_devices: Arc<Mutex<Vec<Device>>>) {
-    thread::spawn(move || {
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let services = discover(XBMC_SERVICE_NAME);
-            tokio::pin!(services);
-            while let Some(info) = services.next().await {
-                xbmc_devices
-                    .lock()
-                    .unwrap()
-                    .push(Device::from(info.clone()));
-                SimpleBroker::<Device>::publish(Device::from(info.clone()));
-            }
-        });
-    });
-}
-
 fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
     thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
@@ -78,6 +63,33 @@ fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
             }
         });
     });
+}
+
+fn add_configured_streaming_devices(devices: Arc<Mutex<Vec<Device>>>) {
+    let settings = match read_settings() {
+        Ok(config) => match config.try_deserialize::<Settings>() {
+            Ok(settings) => settings,
+            Err(_) => return,
+        },
+        Err(_) => return,
+    };
+
+    let servers = [
+        ("subsonic", settings.subsonic_url),
+        ("jellyfin", settings.jellyfin_url),
+    ];
+
+    for (app, url) in servers {
+        if let Some(url) = url {
+            if let Some(device) = Device::from_streaming_server(app, &url) {
+                let mut devices = devices.lock().unwrap();
+                if devices.iter().find(|d| d.id == device.id).is_none() {
+                    devices.push(device.clone());
+                    SimpleBroker::<Device>::publish(device);
+                }
+            }
+        }
+    }
 }
 
 fn scan_upnp_dlna_devices(devices: Arc<Mutex<Vec<Device>>>) {
@@ -106,15 +118,10 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
 {
     let devices: Arc<std::sync::Mutex<Vec<Device>>> = Arc::new(std::sync::Mutex::new(Vec::new()));
     let mp_devices = Arc::clone(&devices);
-    let xbmc_devices = Arc::clone(&devices);
     let chromecast_devices = Arc::clone(&devices);
     let dlna_devices = Arc::clone(&devices);
 
     scan_mp_devices(mp_devices);
-
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-    scan_xbmc_devices(xbmc_devices);
 
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
@@ -123,6 +130,8 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
     scan_upnp_dlna_devices(dlna_devices);
+
+    add_configured_streaming_devices(Arc::clone(&devices));
 
     Ok(devices)
 }

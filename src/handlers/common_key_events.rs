@@ -108,12 +108,6 @@ pub fn handle_right_event(app: &mut App) {
             RouteId::Artists => {
                 app.set_current_route_state(Some(ActiveBlock::Artists), Some(ActiveBlock::Artists));
             }
-            RouteId::Search => {
-                app.set_current_route_state(
-                    Some(ActiveBlock::SearchResultBlock),
-                    Some(ActiveBlock::SearchResultBlock),
-                );
-            }
             RouteId::Artist => app.set_current_route_state(
                 Some(ActiveBlock::ArtistBlock),
                 Some(ActiveBlock::ArtistBlock),

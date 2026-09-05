@@ -1,5 +1,5 @@
 use crate::{
-    app::{ActiveBlock, App, RouteId},
+    app::{ActiveBlock, App, PagedCollection, RouteId},
     event::Key,
     network::IoEvent,
 };
@@ -28,13 +28,16 @@ pub fn handler(key: Key, app: &mut App) {
             app.album_table.selected_index = next_index;
         }
         Key::Enter => {
-            app.dispatch(IoEvent::GetAlbum(
-                app.album_table.albums[app.album_table.selected_index]
-                    .id
-                    .clone(),
-            ));
-            app.push_navigation_stack(RouteId::AlbumTracks, ActiveBlock::AlbumTracks);
+            if let Some(album) = app.album_table.albums.get(app.album_table.selected_index) {
+                let id = album.id.clone();
+                app.selected_album = Some(album.clone());
+                app.dispatch(IoEvent::GetAlbum(id));
+                app.push_navigation_stack(RouteId::AlbumTracks, ActiveBlock::AlbumTracks);
+            }
         }
         _ => (),
     }
+    // Fetch the next page when the selection gets close to the end of the
+    // loaded albums.
+    app.maybe_load_more(PagedCollection::Albums);
 }

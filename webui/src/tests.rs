@@ -1,17 +1,12 @@
 use futures_util::FutureExt;
 use music_player_entity::{album, artist, artist_tracks, track};
-use music_player_playback::{
-    audio_backend::{self, rodio::RodioSink},
-    config::AudioFormat,
-    player::Player,
-};
-use music_player_scanner::scan_directory;
-use music_player_storage::{searcher::Searcher, Database};
+use music_player_playback::player::Player;
+use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
 use sea_orm::ActiveModelTrait;
 use std::{env, sync::Arc, thread, time::Duration};
 use surf::{Client, Config, Url};
-use tokio::{runtime, sync::Mutex};
+use tokio::runtime;
 
 #[tokio::test]
 async fn start_webui() {
@@ -21,14 +16,12 @@ async fn start_webui() {
         "MUSIC_PLAYER_DATABASE_URL",
         "sqlite:///tmp/music-player.sqlite3",
     );
+
+    ensure_test_library().await;
     env::set_var("MUSIC_PLAYER_HTTP_PORT", "5054");
 
     let db_conn = Database::new().await;
-    let searcher = Searcher::new();
-    scan_music_directory(db_conn.clone(), searcher).await;
-
-    let audio_format = AudioFormat::default();
-    let backend = audio_backend::find(Some(RodioSink::NAME.to_string())).unwrap();
+    scan_music_directory(db_conn.clone()).await;
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
@@ -36,13 +29,7 @@ async fn start_webui() {
     let cloned_tracklist = tracklist.clone();
     let cloned_cmd_tx = Arc::clone(&cmd_tx);
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
-    let (_, _) = Player::new(
-        move || backend(None, audio_format),
-        move |_| {},
-        cloned_cmd_tx,
-        cloned_cmd_rx,
-        cloned_tracklist,
-    );
+    let (_, _) = Player::new(move |_| {}, cloned_cmd_tx, cloned_cmd_rx, cloned_tracklist);
 
     thread::spawn(move || {
         let rt = runtime::Builder::new_current_thread()
@@ -121,40 +108,23 @@ async fn start_webui() {
     // assert_eq!(res.status(), 200);
 }
 
-async fn scan_music_directory(db: Database, searcher: Searcher) {
-    scan_directory(
-        move |song, db| {
-            async move {
-                let item: artist::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
+async fn scan_music_directory(db: Database) {
+    music_player_scanner::scan_music_library(false, db)
+        .await
+        .unwrap_or_default();
+}
 
-                let item: album::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
+static TEST_LIBRARY: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 
-                let item: track::ActiveModel = song.try_into().unwrap();
-
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-
-                let item: artist_tracks::ActiveModel = song.try_into().unwrap();
-                match item.insert(db.get_connection()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
-            }
-            .boxed()
-        },
-        &db,
-        &searcher,
-    )
-    .await
-    .unwrap_or_default();
+/// Create + migrate the test database and index the fixture library
+/// (/tmp/audio) once per test process.
+async fn ensure_test_library() {
+    TEST_LIBRARY
+        .get_or_init(|| async {
+            migration::apply().await;
+            music_player_scanner::scan_music_library(false, Database::new().await)
+                .await
+                .ok();
+        })
+        .await;
 }

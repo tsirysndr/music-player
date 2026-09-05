@@ -1,0 +1,46 @@
+{
+  "name": "music-player",
+  "version": "0.2.0",
+  "description": "An extensible music player daemon written in Rust — Rockbox playback engine, FTS5 search, TUI, web UI and gRPC/GraphQL APIs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsirysndr/music-player.git",
+    "directory": "npm"
+  },
+  "homepage": "https://github.com/tsirysndr/music-player#readme",
+  "keywords": [
+    "music",
+    "player",
+    "daemon",
+    "rockbox",
+    "audio",
+    "mpd",
+    "rust"
+  ],
+  "bin": {
+    "music-player": "bin/music-player.js"
+  },
+  "files": [
+    "bin/music-player.js",
+    "lib/",
+    "install.js",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "arm64",
+    "x64",
+    "arm"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

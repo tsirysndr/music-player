@@ -1,6 +1,6 @@
 [package]
 name = "music-player-storage"
-version = "0.1.8"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -10,21 +10,26 @@ description = " The storage module of music player"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.1.4"
+version = "0.2.0"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.1.5"
+version = "0.2.0"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.1.7"
+version = "0.2.0"
 
 [dependencies]
 itertools = "0.10.5"
 sea-orm = { version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
-tempfile = "3.3.0"
 md5 = "0.7.0"
 tokio = { version = "1.22.0", features = ["test-util", "macros"] }
 anyhow = "1.0.68"
-tantivy = "0.19.2"
+
+[dev-dependencies.music-player-migration]
+path = "../migration"
+version = "0.2.0"
+
+[dev-dependencies]
+tempfile = "3.3.0"

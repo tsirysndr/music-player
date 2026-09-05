@@ -4,6 +4,7 @@ use music_player_server::api::{
     music::v1alpha1::{
         library_service_client::LibraryServiceClient, GetAlbumDetailsRequest, GetAlbumsRequest,
         GetArtistDetailsRequest, GetArtistsRequest, GetTrackDetailsRequest, GetTracksRequest,
+        SearchRequest, SearchResponse,
     },
 };
 use tonic::transport::Channel;
@@ -14,7 +15,7 @@ pub struct LibraryClient {
 
 impl LibraryClient {
     pub async fn new(host: String, port: u16) -> Result<Self, Error> {
-        let url = format!("tcp://{}:{}", host, port);
+        let url = format!("http://{}:{}", host, port);
         let client = LibraryServiceClient::connect(url).await?;
         Ok(Self { client })
     }
@@ -94,7 +95,11 @@ impl LibraryClient {
         Ok(response.into_inner().track)
     }
 
-    pub async fn search(&mut self, query: &str) -> Result<(), Error> {
-        todo!()
+    pub async fn search(&mut self, query: &str) -> Result<SearchResponse, Error> {
+        let request = tonic::Request::new(SearchRequest {
+            query: query.to_string(),
+        });
+        let response = self.client.search(request).await?;
+        Ok(response.into_inner())
     }
 }

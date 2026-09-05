@@ -154,7 +154,6 @@ crates_repository(
     manifests = [
         "//:Cargo.toml",
         "//addons:Cargo.toml",
-        "//audio:Cargo.toml",
         "//client:Cargo.toml",
         "//discovery:Cargo.toml",
         "//entity:Cargo.toml",

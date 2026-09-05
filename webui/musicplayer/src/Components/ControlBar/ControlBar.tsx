@@ -75,6 +75,7 @@ export type ControlBarProps = {
   onPrevious: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
+  onSeek?: (positionMs: number) => void;
   nextTracks?: Track[];
   previousTracks?: Track[];
   onPlayTrackAt: (position: number) => void;
@@ -145,7 +146,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
           <Repeat color={theme.colors.text} />
         </Button>
       </Controls>
-      <CurrentTrack nowPlaying={nowPlaying} />
+      <CurrentTrack nowPlaying={nowPlaying} onSeek={props.onSeek} />
 
       <ButtonGroup>
         <StatefulPopover

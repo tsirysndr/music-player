@@ -71,7 +71,7 @@ impl Addon for Local {
 }
 
 impl StreamingAddon for Local {
-    fn stream(&self, url: &str) -> Result<(), Error> {
+    fn stream(&self, _url: &str) -> Result<(), Error> {
         todo!("Implement Local::stream");
     }
 }
@@ -126,7 +126,7 @@ impl Browsable for Local {
         Ok(response.into_iter().map(Into::into).collect())
     }
 
-    async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error> {
+    async fn playlists(&mut self, _offset: i32, _limit: i32) -> Result<Vec<Playlist>, Error> {
         let response = self.client.as_mut().unwrap().playlist.list_all().await?;
         Ok(response)
     }
@@ -193,7 +193,13 @@ impl Player for Local {
     }
 
     async fn seek(&mut self, position: u32) -> Result<(), Error> {
-        todo!()
+        self.client
+            .as_mut()
+            .unwrap()
+            .playback
+            .seek(position)
+            .await?;
+        Ok(())
     }
 
     async fn load_tracks(

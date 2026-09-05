@@ -57,27 +57,27 @@ const SearchResultsWithData: FC = () => {
       onPlayTrack={(id, position) => {}}
       nextTracks={nextTracks}
       previousTracks={previousTracks}
-      onPlayNext={(trackId) => playNext({ variables: { trackId } })}
-      onPlayTrackAt={(position) => playTrackAt({ variables: { position } })}
-      onRemoveTrackAt={(position) => removeTrackAt({ variables: { position } })}
+      onPlayNext={(trackId) => playNext({ trackId })}
+      onPlayTrackAt={(position) => playTrackAt({ position })}
+      onRemoveTrackAt={(position) => removeTrackAt({ position })}
       onSearch={onSearch}
       folders={folders}
       playlists={mainPlaylists}
-      onCreateFolder={(name) => createFolder({ variables: { name } })}
+      onCreateFolder={(name) => createFolder({ name })}
       onCreatePlaylist={(name, description) =>
-        createPlaylist({ variables: { name, description } })
+        createPlaylist({ name, description })
       }
-      onDeleteFolder={(id) => deleteFolder({ variables: { id } })}
-      onDeletePlaylist={(id) => deletePlaylist({ variables: { id } })}
-      onEditFolder={(id, name) => renameFolder({ variables: { id, name } })}
+      onDeleteFolder={(id) => deleteFolder({ id })}
+      onDeletePlaylist={(id) => deletePlaylist({ id })}
+      onEditFolder={(id, name) => renameFolder({ id, name })}
       onEditPlaylist={(id, name, description) =>
-        renamePlaylist({ variables: { id, name } })
+        renamePlaylist({ id, name })
       }
       onAddTrackToPlaylist={(playlistId, trackId) =>
-        addTrackToPlaylist({ variables: { trackId, playlistId } })
+        addTrackToPlaylist({ trackId, playlistId })
       }
       onPlayPlaylist={(playlistId, shuffle, position) =>
-        playPlaylist({ variables: { playlistId, position, shuffle } })
+        playPlaylist({ playlistId, position, shuffle })
       }
       recentPlaylists={recentPlaylists}
       currentDevice={currentDevice}

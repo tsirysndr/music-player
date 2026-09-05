@@ -125,8 +125,8 @@ cargo install --path .
 Using [npm](https://www.npmjs.com/) (downloads the prebuilt binary from GitHub releases):
 
 ```bash
-npm install -g music-player   # or: npx music-player
-# pin a specific release: MUSIC_PLAYER_VERSION=v0.2.0 npx music-player
+npm install -g @tsiry/music-player   # or: npx @tsiry/music-player
+# pin a specific release: MUSIC_PLAYER_VERSION=v0.2.0 npx @tsiry/music-player
 ```
 
 ### macOS/Linux

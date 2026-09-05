@@ -1,4 +1,4 @@
-# music-player
+# @tsiry/music-player
 
 npm installer for [music-player](https://github.com/tsirysndr/music-player) —
 an extensible music player daemon written in Rust. Like
@@ -24,14 +24,14 @@ verifies its SHA-256 checksum.
 ## Install
 
 ```sh
-npm install -g music-player
+npm install -g @tsiry/music-player
 music-player
 ```
 
 or run it without installing:
 
 ```sh
-npx music-player
+npx @tsiry/music-player
 ```
 
 ## Quick start
@@ -60,8 +60,8 @@ is installed. Pin a specific release with the `MUSIC_PLAYER_VERSION`
 environment variable (the leading `v` is optional):
 
 ```sh
-MUSIC_PLAYER_VERSION=v0.2.0 npx music-player
-MUSIC_PLAYER_VERSION=0.2.0 npm install -g music-player
+MUSIC_PLAYER_VERSION=v0.2.0 npx @tsiry/music-player
+MUSIC_PLAYER_VERSION=0.2.0 npm install -g @tsiry/music-player
 ```
 
 The binary is cached inside the package after the first download. Changing

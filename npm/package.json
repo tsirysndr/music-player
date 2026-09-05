@@ -1,5 +1,5 @@
 {
-  "name": "music-player",
+  "name": "@tsiry/music-player",
   "version": "0.2.0",
   "description": "An extensible music player daemon written in Rust — Rockbox playback engine, FTS5 search, TUI, web UI and gRPC/GraphQL APIs",
   "license": "MIT",

@@ -12,6 +12,79 @@ use config::{Config, ConfigError};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Audio/DSP settings persisted in the `[audio]` table of settings.toml and
+/// applied to the playback engine at boot. Integer enums follow the Rockbox
+/// firmware conventions used by the desktop UI:
+/// - `replaygain_mode`: 0 track, 1 album, 2 track (shuffle), 3 off
+/// - `crossfade`: 0 off, 1 auto track change, 2 manual track change,
+///   3 shuffle, 4 shuffle or manual skip, 5 always
+/// - `fade_out_mixmode`: 0 crossfade, 2 mix
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct AudioSettings {
+    pub eq_enabled: bool,
+    /// EQ pre-gain (headroom) in dB, 0..=24.
+    pub eq_precut: f32,
+    /// Per-band gains in dB (-24..=24), one per EQ band
+    /// (32 Hz … 16 kHz, octave-spaced).
+    pub eq_band_gains: Vec<f32>,
+    /// Bass shelf gain in dB, -24..=24.
+    pub bass: i32,
+    /// Treble shelf gain in dB, -24..=24.
+    pub treble: i32,
+    /// Stereo balance, -100 (full left)..=100 (full right).
+    pub balance: i32,
+    pub replaygain_mode: i32,
+    /// ReplayGain pre-amp in dB, -12.0..=12.0.
+    pub replaygain_preamp: f32,
+    pub replaygain_noclip: bool,
+    pub crossfade: i32,
+    /// Crossfade fade-in delay in seconds, 0..=7.
+    pub fade_in_delay: u64,
+    /// Crossfade fade-in duration in seconds, 0..=15.
+    pub fade_in_duration: u64,
+    /// Crossfade fade-out delay in seconds, 0..=7.
+    pub fade_out_delay: u64,
+    /// Crossfade fade-out duration in seconds, 0..=15.
+    pub fade_out_duration: u64,
+    pub fade_out_mixmode: i32,
+    pub dithering: bool,
+}
+
+impl Default for AudioSettings {
+    fn default() -> Self {
+        Self {
+            eq_enabled: false,
+            eq_precut: 0.0,
+            eq_band_gains: vec![0.0; 10],
+            bass: 0,
+            treble: 0,
+            balance: 0,
+            replaygain_mode: 3, // off
+            replaygain_preamp: 0.0,
+            replaygain_noclip: false,
+            crossfade: 0, // off
+            fade_in_delay: 0,
+            fade_in_duration: 2,
+            fade_out_delay: 0,
+            fade_out_duration: 2,
+            fade_out_mixmode: 0,
+            dithering: false,
+        }
+    }
+}
+
+/// Optional Typesense search backend. When this `[typesense]` table is
+/// present in settings.toml (url + api key), library search runs against
+/// Typesense instead of the built-in SQLite FTS5 index; the collections are
+/// re-synced after every library scan.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct TypesenseSettings {
+    /// Base URL, e.g. "http://localhost:8108".
+    pub url: String,
+    /// The `x-typesense-api-key` credential.
+    pub api_key: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
     pub database_url: String,
@@ -40,6 +113,33 @@ pub struct Settings {
     pub jellyfin_url: Option<String>,
     pub jellyfin_username: Option<String>,
     pub jellyfin_password: Option<String>,
+    /// Rocksky auto-scrobbling (needs `rocksky login`).
+    #[serde(default = "default_true")]
+    pub scrobble: bool,
+    /// Register as a Rocksky remote-player device (needs `rocksky login`),
+    /// so the daemon shows up in the web/desktop miniplayer device picker.
+    #[serde(default = "default_true")]
+    pub remote_player: bool,
+    // Keep tables last: toml requires them after plain values when
+    // serializing.
+    /// Optional Typesense search backend; absent = SQLite FTS5.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub typesense: Option<TypesenseSettings>,
+    #[serde(default)]
+    pub audio: AudioSettings,
+}
+
+/// The `[typesense]` section of settings.toml, if configured with a
+/// non-empty url. Reads the file directly so callers don't need a full
+/// `Settings` deserialization round-trip.
+pub fn read_typesense_settings() -> Option<TypesenseSettings> {
+    let config = read_settings().ok()?;
+    let settings = config.try_deserialize::<Settings>().ok()?;
+    settings.typesense.filter(|t| !t.url.trim().is_empty())
+}
+
+fn default_true() -> bool {
+    true
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
@@ -95,6 +195,10 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         jellyfin_url: Some("".to_string()),
         jellyfin_username: Some("".to_string()),
         jellyfin_password: Some("".to_string()),
+        scrobble: true,
+        remote_player: true,
+        typesense: None,
+        audio: AudioSettings::default(),
     };
 
     let settings_path = format!("{}/settings.toml", path);
@@ -136,7 +240,37 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("jellyfin_url", "")?
         .set_default("jellyfin_username", "")?
         .set_default("jellyfin_password", "")?
+        .set_default("scrobble", true)?
+        .set_default("remote_player", true)?
         .build()
+}
+
+/// Persist the `[audio]` table of settings.toml, leaving every other key
+/// untouched (the file is edited in place, not regenerated, so manual
+/// edits and comments outside `[audio]` survive as much as toml allows).
+pub fn save_audio_settings(audio: &AudioSettings) -> std::io::Result<()> {
+    let path = match env::consts::OS {
+        "android" => "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned(),
+        _ => {
+            let config_dir = dirs::config_dir().unwrap();
+            format!("{}/music-player", config_dir.to_str().unwrap())
+        }
+    };
+    let settings_path = format!("{}/settings.toml", path);
+    let contents = fs::read_to_string(&settings_path).unwrap_or_default();
+    let mut doc: toml::Value =
+        toml::from_str(&contents).unwrap_or(toml::Value::Table(Default::default()));
+    let audio_value = toml::Value::try_from(audio)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    if let Some(table) = doc.as_table_mut() {
+        table.insert("audio".to_string(), audio_value);
+    }
+    let mut file = File::create(&settings_path)?;
+    file.write_all(
+        toml::to_string_pretty(&doc)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
+            .as_bytes(),
+    )
 }
 
 pub fn get_application_directory() -> String {

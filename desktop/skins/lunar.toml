@@ -1,0 +1,36 @@
+# Inspired by Cambridge Audio hardware: lunar-grey chassis, warm amber
+# lamp glow, understated hi-fi restraint.
+name = "Lunar"
+
+[colors]
+window_bg       = "#232527"
+panel_bg        = "#2b2d30"
+panel_raised    = "#35383c"
+sidebar_bg      = "#26282b"
+display_bg      = "#1a1712"
+display_glow    = "#ffb00040"
+display_text    = "#ffb000"
+display_dim     = "#7a5f2a"
+accent          = "#ffb000"
+accent_hover    = "#ffc233"
+on_accent       = "#1f1708"
+text            = "#e6e6e4"
+text_dim        = "#a8a8a4"
+text_muted      = "#6c6c68"
+border          = "#3c3f43"
+hover_bg        = "#ffffff0e"
+selected_bg     = "#ffb0001e"
+slider_track    = "#43464b"
+meter_low       = "#ffb000"
+meter_mid       = "#ffb000"
+meter_high      = "#ff6a3a"
+meter_off       = "#333538"
+art_placeholder = "#3a3d41"
+
+[metrics]
+radius         = 8.0
+control_radius = 6.0
+
+[fonts]
+ui   = "Space Grotesk"
+mono = "JetBrains Mono"

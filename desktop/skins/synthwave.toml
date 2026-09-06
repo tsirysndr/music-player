@@ -1,0 +1,36 @@
+# Neon skin inspired by modern VST synth UIs (Serum / Vital) and synthwave:
+# deep violet-black chassis, hot magenta accent, cyan phosphor display.
+name = "Synthwave"
+
+[colors]
+window_bg       = "#0d0b14"
+panel_bg        = "#151122"
+panel_raised    = "#1e182f"
+sidebar_bg      = "#100d1a"
+display_bg      = "#0a0f1e"
+display_glow    = "#00e5ff40"
+display_text    = "#00e5ff"
+display_dim     = "#1e5f6e"
+accent          = "#ff2d95"
+accent_hover    = "#ff5cab"
+on_accent       = "#1c0713"
+text            = "#ece7f5"
+text_dim        = "#a99fc2"
+text_muted      = "#5f5878"
+border          = "#251e3a"
+hover_bg        = "#ffffff0f"
+selected_bg     = "#ff2d951f"
+slider_track    = "#2a2344"
+meter_low       = "#00e5ff"
+meter_mid       = "#c355ff"
+meter_high      = "#ff2d95"
+meter_off       = "#1c172c"
+art_placeholder = "#201a33"
+
+[metrics]
+radius         = 12.0
+control_radius = 8.0
+
+[fonts]
+ui   = "Space Grotesk"
+mono = "JetBrains Mono"

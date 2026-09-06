@@ -158,4 +158,17 @@ impl Tracklist {
         self.clear();
         self.tracks = tracks;
     }
+
+    /// Rebuild the exact queue split from a persisted snapshot. The current
+    /// track is the last `played` entry — the same invariant `next_track`
+    /// maintains — and playback starts out paused at `position_ms`.
+    pub fn restore(&mut self, played: Vec<Track>, tracks: Vec<Track>, position_ms: u32) {
+        self.current_track = played.last().cloned();
+        self.played = played;
+        self.tracks = tracks;
+        self.playback_state = PlaybackState {
+            position_ms,
+            is_playing: false,
+        };
+    }
 }

@@ -1,31 +1,61 @@
+pub mod typesense;
+
 use std::time::Duration;
 
 use anyhow::Error;
+use music_player_settings::read_typesense_settings;
 use music_player_types::types::{Album, Artist, SimplifiedSong};
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 
+use self::typesense::Typesense;
+
 const RESULT_LIMIT: u32 = 20;
 
-/// Full-text search over the `track_search`, `album_search` and
-/// `artist_search` SQLite FTS5 tables. The tables are kept in sync with
-/// `track`, `album` and `artist` by triggers created in the
-/// `m20260905_000001_create_search_index` migration, so this type is a pure
-/// read-only query layer.
+/// Library full-text search.
+///
+/// Default backend: the `track_search`, `album_search` and `artist_search`
+/// SQLite FTS5 tables, kept in sync with `track`, `album` and `artist` by
+/// triggers created in the `m20260905_000001_create_search_index` migration.
+///
+/// When settings.toml has a `[typesense]` table (url + api_key), queries go
+/// to Typesense instead — with a silent fallback to FTS5 when the server is
+/// unreachable, so search never breaks outright. `reindex` re-syncs the
+/// Typesense collections and is called after every library scan.
 #[derive(Clone)]
 pub struct Searcher {
     connection: DatabaseConnection,
+    typesense: Option<Typesense>,
 }
 
 impl Searcher {
     pub fn new(connection: DatabaseConnection) -> Self {
-        Self { connection }
+        let typesense = read_typesense_settings().as_ref().map(Typesense::new);
+        Self {
+            connection,
+            typesense,
+        }
     }
 
     pub fn get_connection(&self) -> &DatabaseConnection {
         &self.connection
     }
 
+    /// Re-sync the Typesense collections from the database. No-op on the
+    /// FTS5 backend (its triggers keep the index current).
+    pub async fn reindex(&self) -> Result<(), Error> {
+        if let Some(ts) = &self.typesense {
+            ts.reindex(&self.connection).await?;
+        }
+        Ok(())
+    }
+
     pub async fn search_song(&self, term: &str) -> Result<Vec<SimplifiedSong>, Error> {
+        if let Some(ts) = &self.typesense {
+            match ts.search_song(term).await {
+                Ok(songs) => return Ok(songs),
+                Err(e) => tracing::warn!("typesense song search failed, using FTS5: {e}"),
+            }
+        }
         let match_query = match build_match_query(term) {
             Some(match_query) => match_query,
             None => return Ok(vec![]),
@@ -74,6 +104,12 @@ impl Searcher {
     }
 
     pub async fn search_album(&self, term: &str) -> Result<Vec<Album>, Error> {
+        if let Some(ts) = &self.typesense {
+            match ts.search_album(term).await {
+                Ok(albums) => return Ok(albums),
+                Err(e) => tracing::warn!("typesense album search failed, using FTS5: {e}"),
+            }
+        }
         let match_query = match build_match_query(term) {
             Some(match_query) => match_query,
             None => return Ok(vec![]),
@@ -112,6 +148,12 @@ impl Searcher {
     }
 
     pub async fn search_artist(&self, term: &str) -> Result<Vec<Artist>, Error> {
+        if let Some(ts) = &self.typesense {
+            match ts.search_artist(term).await {
+                Ok(artists) => return Ok(artists),
+                Err(e) => tracing::warn!("typesense artist search failed, using FTS5: {e}"),
+            }
+        }
         let match_query = match build_match_query(term) {
             Some(match_query) => match_query,
             None => return Ok(vec![]),

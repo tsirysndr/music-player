@@ -1,0 +1,36 @@
+# Inspired by FL Studio: cool graphite panels, signal-orange accent,
+# lime channel-rack glow in the display.
+name = "Neutron"
+
+[colors]
+window_bg       = "#191c21"
+panel_bg        = "#21252c"
+panel_raised    = "#2a2f38"
+sidebar_bg      = "#1d2026"
+display_bg      = "#141a12"
+display_glow    = "#a1ce4d40"
+display_text    = "#a1ce4d"
+display_dim     = "#50663a"
+accent          = "#ff8800"
+accent_hover    = "#ffa033"
+on_accent       = "#1a1206"
+text            = "#dfe3e8"
+text_dim        = "#9aa3ad"
+text_muted      = "#5d646d"
+border          = "#31363f"
+hover_bg        = "#ffffff10"
+selected_bg     = "#ff880022"
+slider_track    = "#343a44"
+meter_low       = "#a1ce4d"
+meter_mid       = "#ffb02b"
+meter_high      = "#ff5544"
+meter_off       = "#282d35"
+art_placeholder = "#2c313a"
+
+[metrics]
+radius         = 6.0
+control_radius = 4.0
+
+[fonts]
+ui   = "Space Grotesk"
+mono = "JetBrains Mono"

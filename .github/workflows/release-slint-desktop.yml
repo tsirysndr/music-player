@@ -1,0 +1,95 @@
+name: release-slint-desktop
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The existing release tag to build and upload assets for (e.g. v0.2.0)"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Set release version
+        run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV
+        env:
+          TAG_INPUT: ${{ inputs.tag }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust 1.98.0
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup default 1.98.0
+          rustup target add ${{ matrix.target }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-slint-desktop-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config protobuf-compiler \
+            libasound2-dev libdbus-1-dev libfontconfig1-dev \
+            libxkbcommon-dev libwayland-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+
+      # music-player-webui embeds webui/musicplayer/build at compile time.
+      - name: Build webui
+        run: |
+          cd webui/musicplayer
+          bun install
+          bun run build
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} -p music-player-desktop
+
+      - name: Package binary
+        run: |
+          ASSET=music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
+          tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player-desktop
+          if command -v sha256sum >/dev/null; then
+            sha256sum $ASSET.tar.gz > $ASSET.tar.gz.sha256
+          else
+            shasum -a 256 $ASSET.tar.gz > $ASSET.tar.gz.sha256
+          fi
+
+      - name: Upload release assets
+        run: |
+          gh release upload ${{ env.RELEASE_VERSION }} \
+            music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
+            music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

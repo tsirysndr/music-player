@@ -17,6 +17,7 @@ version = "0.2.0"
 members = [
   "addons",
   "client",
+  "desktop",
   "discovery",
   "entity",
   "graphql",

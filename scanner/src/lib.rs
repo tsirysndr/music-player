@@ -146,7 +146,15 @@ pub async fn scan_music_library(enable_log: bool, db: Database) -> Result<Vec<So
 /// the GraphQL/gRPC scan calls and the periodic background refresh.
 pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec<Song>, Error> {
     prune_missing_tracks(&db).await?;
-    scan_music_library(enable_log, db).await
+    let songs = scan_music_library(enable_log, db.clone()).await?;
+    // Re-sync the Typesense collections when that backend is configured
+    // (no-op on FTS5 — its triggers already track the writes above). A
+    // failed sync must not fail the scan; search just falls back to FTS5.
+    let searcher = music_player_storage::searcher::Searcher::new(db.get_connection().clone());
+    if let Err(e) = searcher.reindex().await {
+        tracing::warn!("typesense reindex failed: {e}");
+    }
+    Ok(songs)
 }
 
 /// Remove every track whose local file is gone, then any album or artist that

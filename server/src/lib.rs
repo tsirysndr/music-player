@@ -12,6 +12,7 @@ pub mod library;
 pub mod mixer;
 pub mod playback;
 pub mod playlist;
+pub mod remote;
 pub mod scrobbler;
 pub mod server;
 pub mod tracklist;

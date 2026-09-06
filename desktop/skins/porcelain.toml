@@ -1,0 +1,36 @@
+# Light skin inspired by jetAudio's silver decks: porcelain surfaces,
+# cool blue display, sky accent.
+name = "Porcelain"
+
+[colors]
+window_bg       = "#f2f3f5"
+panel_bg        = "#e7e9ec"
+panel_raised    = "#dde0e4"
+sidebar_bg      = "#eceef1"
+display_bg      = "#dfe8ee"
+display_glow    = "#1d5f8a40"
+display_text    = "#155e86"
+display_dim     = "#7fa4b8"
+accent          = "#0e7bd1"
+accent_hover    = "#2b91e0"
+on_accent       = "#f4f9fd"
+text            = "#23272d"
+text_dim        = "#5b6470"
+text_muted      = "#9aa2ac"
+border          = "#d0d4da"
+hover_bg        = "#00000009"
+selected_bg     = "#0e7bd11a"
+slider_track    = "#cfd4da"
+meter_low       = "#2f9e44"
+meter_mid       = "#f59f00"
+meter_high      = "#e03131"
+meter_off       = "#d6dade"
+art_placeholder = "#d9dde2"
+
+[metrics]
+radius         = 10.0
+control_radius = 7.0
+
+[fonts]
+ui   = "Space Grotesk"
+mono = "JetBrains Mono"

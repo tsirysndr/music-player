@@ -1,11 +1,19 @@
 use async_trait::async_trait;
 use music_player_entity::track::Model as Track;
-use music_player_settings::read_settings;
+use music_player_settings::{get_application_directory, read_settings, AudioSettings, Settings};
 use music_player_tracklist::{PlaybackState, Tracklist};
 use rockbox_playback::{
-    OutputConfig, PlaybackState as EngineState, Player as Engine, PlayerConfig,
+    CrossfadeMode, CrossfadeSettings, EqBand, Equalizer, MixMode, OutputConfig,
+    PlaybackState as EngineState, Player as Engine, PlayerConfig, ReplayGainMode, EQ_BANDS,
+    EQ_BAND_FREQUENCIES,
 };
-use std::{sync::Arc, thread, time::Duration};
+use serde::{Deserialize, Serialize};
+use std::{
+    path::PathBuf,
+    sync::Arc,
+    thread,
+    time::{Duration, Instant},
+};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tracing::error;
 
@@ -79,6 +87,14 @@ impl Player {
                     return None;
                 }
             };
+            // Restore the persisted [audio] settings (EQ, tone, replaygain,
+            // crossfade, dithering) from settings.toml.
+            if let Some(settings) = read_settings()
+                .ok()
+                .and_then(|config| config.try_deserialize::<Settings>().ok())
+            {
+                apply_audio_settings(&engine, &settings.audio);
+            }
             Some(PlayerInternal {
                 commands: cmd_rx,
                 engine,
@@ -90,6 +106,9 @@ impl Player {
                 track_loaded: false,
                 engine_started: false,
                 last_duration_ms: 0,
+                shuffle: false,
+                repeat_mode: 0,
+                last_queue_save: Instant::now(),
                 stopped_ticks: 0,
             })
         };
@@ -249,6 +268,12 @@ struct PlayerInternal {
     engine_started: bool,
     /// Duration of the current track as last reported while playing.
     last_duration_ms: u32,
+    /// Queue-level shuffle flag (the engine queue only holds one URI).
+    shuffle: bool,
+    /// Queue-level repeat mode: 0 off, 1 all, 2 one.
+    repeat_mode: i32,
+    /// Last time the queue snapshot was written while playing.
+    last_queue_save: Instant,
     /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
     /// decode failure still ends the track instead of wedging the queue.
     stopped_ticks: u32,
@@ -259,6 +284,7 @@ impl PlayerInternal {
     /// The player task: reacts to commands as they arrive and reconciles the
     /// engine's status on a fixed tick. Ends when every command sender is gone.
     async fn run(mut self) {
+        self.restore_queue();
         let mut tick = tokio::time::interval(Duration::from_millis(100));
         tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
@@ -282,6 +308,76 @@ impl PlayerInternal {
                 }
             }
         }
+    }
+
+    /// Write the queue snapshot (or remove it when the queue is empty).
+    fn save_queue(&mut self) {
+        let (played, tracks) = self.tracklist.lock().unwrap().tracks();
+        let path = queue_file();
+        if played.is_empty() && tracks.is_empty() {
+            let _ = std::fs::remove_file(&path);
+            return;
+        }
+        let saved = SavedQueue {
+            played,
+            tracks,
+            position_ms: self.position_ms,
+        };
+        match serde_json::to_string(&saved) {
+            Ok(json) => {
+                if let Err(e) = std::fs::write(&path, json) {
+                    error!("failed to persist queue: {}", e);
+                }
+            }
+            Err(e) => error!("failed to serialize queue: {}", e),
+        }
+        self.last_queue_save = Instant::now();
+    }
+
+    /// Restore the persisted queue on boot: rebuild the tracklist split and
+    /// cue the current track paused at the saved position — a daemon that
+    /// started blaring music on boot would be a surprise.
+    fn restore_queue(&mut self) {
+        let Ok(raw) = std::fs::read_to_string(queue_file()) else {
+            return;
+        };
+        let Ok(saved) = serde_json::from_str::<SavedQueue>(&raw) else {
+            return;
+        };
+        if saved.played.is_empty() && saved.tracks.is_empty() {
+            return;
+        }
+        let current_uri = saved.played.last().map(|t| t.uri.clone());
+        self.tracklist
+            .lock()
+            .unwrap()
+            .restore(saved.played, saved.tracks, saved.position_ms);
+        let Some(uri) = current_uri else { return };
+        self.engine.stop();
+        self.engine.set_queue(vec![uri]);
+        self.engine.play();
+        self.engine.pause();
+        if saved.position_ms > 0 {
+            self.engine
+                .seek(Duration::from_millis(saved.position_ms as u64));
+        }
+        self.track_loaded = true;
+        self.engine_started = false;
+        self.position_ms = saved.position_ms;
+        self.last_broadcast_position_ms = saved.position_ms;
+        let (track, position) = self.tracklist.lock().unwrap().current_track();
+        (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+            track: track.clone(),
+            position,
+            position_ms: saved.position_ms,
+            is_playing: false,
+        });
+        self.send_event(PlayerEvent::CurrentTrack {
+            track,
+            position,
+            position_ms: saved.position_ms,
+            is_playing: false,
+        });
     }
 
     /// Reconcile the engine's status with the tracklist state and emit events.
@@ -308,6 +404,9 @@ impl PlayerInternal {
                     self.last_broadcast_position_ms = position_ms;
                     (self.event_broadcaster)(PlayerEvent::TrackTimePosition { position_ms });
                 }
+                if self.last_queue_save.elapsed() >= QUEUE_SAVE_INTERVAL {
+                    self.save_queue();
+                }
             }
             EngineState::Stopped => {
                 if self.engine_started {
@@ -333,8 +432,26 @@ impl PlayerInternal {
                             is_playing: false,
                             ..playback_state
                         });
+                    // Repeat one: reload the finished track and stay put.
+                    if self.repeat_mode == 2 {
+                        self.send_event(PlayerEvent::EndOfTrack {
+                            is_last_track: false,
+                        });
+                        let (current_track, _) = self.tracklist.lock().unwrap().current_track();
+                        if let Some(track) = current_track {
+                            self.handle_command_load(&track.uri);
+                        }
+                        return;
+                    }
                     let is_last_track = self.tracklist.lock().unwrap().is_empty();
-                    self.send_event(PlayerEvent::EndOfTrack { is_last_track });
+                    self.send_event(PlayerEvent::EndOfTrack {
+                        is_last_track: is_last_track && self.repeat_mode == 0,
+                    });
+                    if is_last_track && self.repeat_mode == 1 {
+                        // Repeat all: wrap back to the start of the queue.
+                        self.handle_play_track_at(0);
+                        return;
+                    }
                     self.handle_next();
                 }
             }
@@ -359,6 +476,55 @@ impl PlayerInternal {
             PlayerCommand::PlayNext(track) => self.handle_play_next(track),
             PlayerCommand::RemoveTrack(index) => self.handle_remove_track(index),
             PlayerCommand::SetVolume(volume) => self.handle_set_volume(volume),
+            PlayerCommand::SetEqEnabled(enabled) => self.engine.set_eq_enabled(enabled),
+            PlayerCommand::SetEqBandGain { band, gain_db } => {
+                if band < EQ_BANDS {
+                    self.engine.set_eq_band(
+                        band,
+                        EqBand {
+                            cutoff_hz: EQ_BAND_FREQUENCIES[band],
+                            q: 1.0,
+                            gain_db,
+                        },
+                    );
+                }
+            }
+            PlayerCommand::SetEqPrecut(db) => self.engine.set_eq_precut(db),
+            PlayerCommand::SetBass(db) => self.engine.set_bass(db),
+            PlayerCommand::SetTreble(db) => self.engine.set_treble(db),
+            PlayerCommand::SetBalance(balance) => self.engine.set_balance(balance),
+            PlayerCommand::SetReplaygain {
+                mode,
+                preamp_db,
+                prevent_clipping,
+            } => self
+                .engine
+                .set_replaygain(replaygain_mode(mode), preamp_db, prevent_clipping),
+            PlayerCommand::SetCrossfade {
+                mode,
+                fade_in_delay,
+                fade_in_duration,
+                fade_out_delay,
+                fade_out_duration,
+                mix_mode,
+            } => self.engine.set_crossfade(crossfade_settings(
+                mode,
+                fade_in_delay,
+                fade_in_duration,
+                fade_out_delay,
+                fade_out_duration,
+                mix_mode,
+            )),
+            PlayerCommand::SetDither(enabled) => self.engine.set_dither(enabled),
+            // The engine queue only ever holds the current URI — the queue
+            // lives in the tracklist, so shuffle/repeat act on it here.
+            PlayerCommand::SetShuffle(enabled) => {
+                self.shuffle = enabled;
+                if enabled {
+                    self.tracklist.lock().unwrap().shuffle();
+                }
+            }
+            PlayerCommand::SetRepeat(mode) => self.repeat_mode = mode.clamp(0, 2),
         }
         Ok(())
     }
@@ -394,10 +560,14 @@ impl PlayerInternal {
             position_ms: 0,
             is_playing: true,
         });
+        self.save_queue();
     }
 
     fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
         self.tracklist.lock().unwrap().queue(tracks);
+        if self.shuffle {
+            self.tracklist.lock().unwrap().shuffle();
+        }
         let (current_track, _) = self.tracklist.lock().unwrap().current_track();
         if current_track.is_none() {
             self.handle_next();
@@ -496,6 +666,7 @@ impl PlayerInternal {
 
     fn handle_clear(&mut self) {
         self.tracklist.lock().unwrap().clear();
+        let _ = std::fs::remove_file(queue_file());
     }
 
     fn handle_get_tracks(&mut self) {
@@ -525,8 +696,12 @@ impl PlayerInternal {
 
 #[derive(Debug)]
 pub enum PlayerCommand {
-    Load { track_id: String },
-    LoadTracklist { tracks: Vec<Track> },
+    Load {
+        track_id: String,
+    },
+    LoadTracklist {
+        tracks: Vec<Track>,
+    },
     Play,
     Pause,
     Stop,
@@ -541,6 +716,125 @@ pub enum PlayerCommand {
     RemoveTrack(usize),
     PlayNext(Track),
     SetVolume(u16),
+    // Audio/DSP settings (integer enums follow the Rockbox firmware
+    // conventions documented on music_player_settings::AudioSettings).
+    SetEqEnabled(bool),
+    SetEqBandGain {
+        band: usize,
+        gain_db: f32,
+    },
+    SetEqPrecut(f32),
+    SetBass(i32),
+    SetTreble(i32),
+    SetBalance(i32),
+    SetReplaygain {
+        mode: i32,
+        preamp_db: f32,
+        prevent_clipping: bool,
+    },
+    SetCrossfade {
+        mode: i32,
+        fade_in_delay: u64,
+        fade_in_duration: u64,
+        fade_out_delay: u64,
+        fade_out_duration: u64,
+        mix_mode: i32,
+    },
+    SetDither(bool),
+    SetShuffle(bool),
+    SetRepeat(i32),
+}
+
+pub fn replaygain_mode(mode: i32) -> ReplayGainMode {
+    match mode {
+        0 | 2 => ReplayGainMode::Track, // 2 = "track (shuffle)" in the UI
+        1 => ReplayGainMode::Album,
+        _ => ReplayGainMode::Off,
+    }
+}
+
+pub fn crossfade_settings(
+    mode: i32,
+    fade_in_delay: u64,
+    fade_in_duration: u64,
+    fade_out_delay: u64,
+    fade_out_duration: u64,
+    mix_mode: i32,
+) -> CrossfadeSettings {
+    CrossfadeSettings {
+        mode: match mode {
+            1 => CrossfadeMode::AutoSkip,
+            2 => CrossfadeMode::ManualSkip,
+            3 => CrossfadeMode::Shuffle,
+            4 => CrossfadeMode::ShuffleOrManualSkip,
+            5 => CrossfadeMode::Always,
+            _ => CrossfadeMode::Off,
+        },
+        fade_in_delay: Duration::from_secs(fade_in_delay.min(7)),
+        fade_in_duration: Duration::from_secs(fade_in_duration.min(15)),
+        fade_out_delay: Duration::from_secs(fade_out_delay.min(7)),
+        fade_out_duration: Duration::from_secs(fade_out_duration.min(15)),
+        mix_mode: if mix_mode == 2 {
+            MixMode::Mix
+        } else {
+            MixMode::Crossfade
+        },
+    }
+}
+
+/// Persisted queue snapshot: the exact played/upcoming split plus the
+/// position within the current track, so a restart comes back cued paused
+/// where it left off.
+#[derive(Serialize, Deserialize, Default)]
+struct SavedQueue {
+    played: Vec<Track>,
+    tracks: Vec<Track>,
+    position_ms: u32,
+}
+
+fn queue_file() -> PathBuf {
+    PathBuf::from(get_application_directory())
+        .join("cache")
+        .join("queue.json")
+}
+
+/// How often the queue snapshot is refreshed while playing (track changes
+/// save immediately).
+const QUEUE_SAVE_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Push the persisted `[audio]` settings into a freshly opened engine.
+pub fn apply_audio_settings(engine: &Engine, audio: &AudioSettings) {
+    let bands = EQ_BAND_FREQUENCIES
+        .iter()
+        .enumerate()
+        .map(|(i, &cutoff_hz)| EqBand {
+            cutoff_hz,
+            q: 1.0,
+            gain_db: audio.eq_band_gains.get(i).copied().unwrap_or(0.0),
+        })
+        .collect();
+    engine.set_equalizer(Equalizer {
+        enabled: audio.eq_enabled,
+        precut_db: audio.eq_precut,
+        bands,
+    });
+    engine.set_bass(audio.bass);
+    engine.set_treble(audio.treble);
+    engine.set_balance(audio.balance);
+    engine.set_replaygain(
+        replaygain_mode(audio.replaygain_mode),
+        audio.replaygain_preamp,
+        audio.replaygain_noclip,
+    );
+    engine.set_crossfade(crossfade_settings(
+        audio.crossfade,
+        audio.fade_in_delay,
+        audio.fade_in_duration,
+        audio.fade_out_delay,
+        audio.fade_out_duration,
+        audio.fade_out_mixmode,
+    ));
+    engine.set_dither(audio.dithering);
 }
 
 #[derive(Debug, Clone)]

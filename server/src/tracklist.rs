@@ -167,16 +167,28 @@ impl TracklistService for Tracklist {
 
     async fn shuffle(
         &self,
-        _request: tonic::Request<ShuffleRequest>,
+        request: tonic::Request<ShuffleRequest>,
     ) -> Result<tonic::Response<ShuffleResponse>, tonic::Status> {
+        let enabled = request.into_inner().enabled;
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::SetShuffle(enabled))
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let response = ShuffleResponse {};
         Ok(tonic::Response::new(response))
     }
 
     async fn set_repeat(
         &self,
-        _request: tonic::Request<SetRepeatRequest>,
+        request: tonic::Request<SetRepeatRequest>,
     ) -> Result<tonic::Response<SetRepeatResponse>, tonic::Status> {
+        let mode = request.into_inner().mode;
+        self.cmd_tx
+            .lock()
+            .unwrap()
+            .send(PlayerCommand::SetRepeat(mode))
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
         let response = SetRepeatResponse {};
         Ok(tonic::Response::new(response))
     }

@@ -281,6 +281,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if mode == "server" {
         register_services();
         music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
+        music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
 
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()

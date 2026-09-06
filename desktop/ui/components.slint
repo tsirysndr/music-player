@@ -1,0 +1,1550 @@
+import { Theme } from "theme.slint";
+import { Icons } from "icons.slint";
+
+// ── Data shapes ─────────────────────────────────────────────────────────────
+
+export struct TrackItem {
+    id: string,
+    title: string,
+    artist: string,
+    album: string,
+    duration: string,
+    index: int,
+    track-no: int, // metadata track number (falls back to index + 1)
+    liked: bool,
+    album-id: string,
+}
+
+export struct AlbumItem {
+    id: string,
+    title: string,
+    artist: string,
+    year: string,
+    art: image,
+    has-art: bool,
+}
+
+export struct ArtistItem {
+    id: string,
+    name: string,
+}
+
+export struct EqBand {
+    cutoff: int, // Hz
+    q: int,      // Q x10
+    gain: int,   // dB x10
+}
+
+export struct DetailRow {
+    is-header: bool,
+    header: string,
+    track: TrackItem,
+}
+
+export struct BrowseItem {
+    name: string,
+    path: string,
+    is-dir: bool,
+}
+
+export struct PlaylistItem {
+    id: string,
+    name: string,
+    description: string,
+    count: int,
+}
+
+export struct ServerItem {
+    kind: string, // "subsonic" | "jellyfin"
+    name: string,
+    url: string,
+}
+
+export struct PaletteItem {
+    kind: string, // "track" | "album" | "artist"
+    id: string,
+    title: string,
+    subtitle: string,
+    index: int,
+    art: image,
+    has-art: bool,
+}
+
+// ── Small controls ──────────────────────────────────────────────────────────
+
+export component CtxMenuItem inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    callback clicked;
+
+    height: 30px;
+    border-radius: 6px;
+    background: touch.has-hover ? Theme.hover-bg : transparent;
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 10px;
+        Image {
+            source: root.icon;
+            colorize: Theme.text-dim;
+            width: 13px;
+            height: 13px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.label;
+            color: Theme.text;
+            font-size: 12px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+
+// Heart button — the gpui heart glyph sits up-left inside its 24px canvas,
+// so nudge it toward the optical center.
+export component LikeButton inherits Rectangle {
+    in property <bool> liked: false;
+    in property <length> icon-size: 18px;
+    callback clicked;
+
+    width: 30px;
+    height: 30px;
+    border-radius: self.height / 2;
+    background: touch.has-hover ? Theme.hover-bg : transparent;
+
+    Image {
+        source: root.liked ? Icons.heart : Icons.heart-outline;
+        colorize: root.liked ? Theme.accent
+            : touch.has-hover ? Theme.text : Theme.text-dim;
+        width: root.icon-size;
+        height: root.icon-size;
+        x: (parent.width - self.width) / 2 + root.icon-size * 2 / 24;
+        y: (parent.height - self.height) / 2 + root.icon-size * 1.8 / 24;
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <length> icon-size: 16px;
+    in property <bool> accented: false;
+    callback clicked;
+
+    width: 34px;
+    height: 34px;
+    border-radius: self.height / 2;
+    background: touch.has-hover ? Theme.hover-bg : transparent;
+
+    Image {
+        source: root.icon;
+        colorize: root.accented ? Theme.accent
+            : touch.has-hover ? Theme.text : Theme.text-dim;
+        width: root.icon-size;
+        height: root.icon-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component PlayPauseButton inherits Rectangle {
+    in property <bool> playing: false;
+    callback clicked;
+
+    width: 44px;
+    height: 44px;
+    border-radius: self.height / 2;
+    background: touch.has-hover ? Theme.accent-hover : Theme.accent;
+    drop-shadow-color: Theme.accent.with-alpha(0.35);
+    drop-shadow-blur: touch.has-hover ? 14px : 8px;
+    animate drop-shadow-blur { duration: 120ms; }
+
+    Image {
+        source: root.playing ? Icons.pause : Icons.play;
+        colorize: Theme.on-accent;
+        width: 18px;
+        height: 18px;
+        x: root.playing ? (root.width - self.width) / 2 : (root.width - self.width) / 2 + 1px;
+        y: (root.height - self.height) / 2;
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+// Click/drag-to-position horizontal bar, used for seek and volume.
+export component SlideBar inherits Rectangle {
+    in property <float> progress: 0; // 0..1
+    in property <length> bar-height: 5px;
+    callback changed(float);
+
+    height: 20px;
+    min-width: 60px;
+
+    track := Rectangle {
+        width: parent.width;
+        height: root.bar-height;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.height / 2;
+        background: Theme.slider-track;
+
+        fill := Rectangle {
+            x: 0;
+            width: parent.width * clamp(root.progress, 0, 1);
+            height: parent.height;
+            border-radius: parent.border-radius;
+            background: Theme.accent;
+        }
+    }
+    knob := Rectangle {
+        width: 11px;
+        height: 11px;
+        border-radius: self.width / 2;
+        background: Theme.text;
+        x: clamp(track.width * clamp(root.progress, 0, 1) - self.width / 2, 0, track.width - self.width);
+        y: (parent.height - self.height) / 2;
+        opacity: touch.has-hover || touch.pressed ? 1 : 0;
+        animate opacity { duration: 100ms; }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.changed(clamp(self.mouse-x / self.width, 0, 1)); }
+        moved => {
+            if (self.pressed) {
+                root.changed(clamp(self.mouse-x / self.width, 0, 1));
+            }
+        }
+    }
+}
+
+// ── Level meter (Mixxx-style segmented LED strip, one channel) ──────────────
+
+export component MeterStrip inherits Rectangle {
+    in property <float> level: 0; // 0..1
+    property <int> segments: 16;
+
+    height: 5px;
+    HorizontalLayout {
+        spacing: 2px;
+        for i in root.segments : Rectangle {
+            border-radius: 1px;
+            background: i < root.level * root.segments
+                ? (i >= 13 ? Theme.meter-high : (i >= 10 ? Theme.meter-mid : Theme.meter-low))
+                : Theme.meter-off;
+        }
+    }
+}
+
+// ── VFD display (jetAudio-style readout) ────────────────────────────────────
+
+export component VfdDisplay inherits Rectangle {
+    in property <string> time-text: "00:00";
+    in property <string> info-text: "-- kbps  --.- kHz";
+    in property <bool> playing: false;
+    in property <bool> stopped: true;
+    in property <float> vu-left: 0;
+    in property <float> vu-right: 0;
+
+    width: 220px;
+    height: 62px;
+    border-radius: 6px;
+    background: Theme.display-bg;
+    border-width: 1px;
+    border-color: Theme.display-glow;
+
+    HorizontalLayout {
+        padding: 10px;
+        spacing: 10px;
+
+        VerticalLayout {
+            spacing: 2px;
+            HorizontalLayout {
+                spacing: 8px;
+                Rectangle {
+                    width: 12px;
+                    // stop = square, playing = play icon, else pause icon
+                    if root.stopped : Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        background: Theme.display-text;
+                    }
+                    if !root.stopped : Image {
+                        source: root.playing ? Icons.play : Icons.pause;
+                        colorize: Theme.display-text;
+                        width: 11px;
+                        height: 11px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+                Text {
+                    text: root.time-text;
+                    color: Theme.display-text;
+                    font-family: Theme.font-mono;
+                    font-size: 22px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+            Text {
+                text: root.info-text;
+                color: Theme.display-dim;
+                font-family: Theme.font-mono;
+                font-size: 10px;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            MeterStrip { level: root.vu-left; width: 70px; }
+            MeterStrip { level: root.vu-right; width: 70px; }
+        }
+    }
+}
+
+// ── Sidebar ─────────────────────────────────────────────────────────────────
+
+export component SidebarItem inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active: false;
+    callback clicked;
+
+    height: 38px;
+    border-radius: Theme.control-radius;
+    background: root.active ? Theme.selected-bg
+        : touch.has-hover ? Theme.hover-bg : transparent;
+
+    Rectangle {
+        x: 0;
+        y: 8px;
+        width: 3px;
+        height: parent.height - 16px;
+        border-radius: 1.5px;
+        background: Theme.accent;
+        opacity: root.active ? 1 : 0;
+        animate opacity { duration: 120ms; }
+    }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 10px;
+        spacing: 12px;
+        Image {
+            source: root.icon;
+            colorize: root.active ? Theme.accent : Theme.text-dim;
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text : Theme.text-dim;
+            font-size: 13px;
+            font-family: Theme.font-ui;
+            font-weight: root.active ? 600 : 400;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+// ── Library pieces ──────────────────────────────────────────────────────────
+
+export component AlbumCard inherits Rectangle {
+    in property <AlbumItem> album;
+    callback play;
+    callback open;
+    callback shuffle-play;
+    callback play-next;
+    callback add-queue;
+    callback like;
+
+    border-radius: Theme.radius;
+    background: touch.has-hover || play-touch.has-hover ? Theme.panel-raised : Theme.panel-bg;
+    animate background { duration: 120ms; }
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+
+        art := Rectangle {
+            height: self.width;
+            background: Theme.art-placeholder;
+            clip: true;
+
+            if root.album.has-art : Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.album.art;
+                image-fit: cover;
+            }
+            if !root.album.has-art : Image {
+                source: Icons.disc;
+                colorize: Theme.text-muted;
+                width: 36px;
+                height: 36px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        Text {
+            text: root.album.title;
+            color: Theme.text;
+            font-size: 13px;
+            font-family: Theme.font-ui;
+            font-weight: 600;
+            overflow: elide;
+        }
+        Text {
+            text: root.album.year == "" ? root.album.artist
+                : root.album.artist + " · " + root.album.year;
+            color: Theme.text-dim;
+            font-size: 11px;
+            font-family: Theme.font-ui;
+            overflow: elide;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.open(); }
+        mouse-cursor: pointer;
+    }
+    // Declared after the card TouchArea so it wins the hit test.
+    play-btn := Rectangle {
+        width: 38px;
+        height: 38px;
+        x: root.width - 20px - self.width;
+        y: root.width - 20px - self.height; // art is square: bottom = 12px + (w - 24px)
+        border-radius: self.width / 2;
+        background: play-touch.has-hover ? Theme.accent-hover : Theme.accent;
+        opacity: touch.has-hover || play-touch.has-hover ? 1 : 0;
+        animate opacity { duration: 140ms; }
+        drop-shadow-color: #00000080;
+        drop-shadow-blur: 8px;
+        Image {
+            source: Icons.play;
+            colorize: Theme.on-accent;
+            width: 16px;
+            height: 16px;
+            x: (parent.width - self.width) / 2 + 1px;
+            y: (parent.height - self.height) / 2;
+        }
+        play-touch := TouchArea {
+            clicked => { root.play(); }
+            mouse-cursor: pointer;
+        }
+    }
+    // Context menu trigger (bottom-left of the art, mirrors the play button)
+    menu-btn := Rectangle {
+        width: 30px;
+        height: 30px;
+        x: 20px;
+        y: root.width - 20px - 34px;
+        border-radius: self.width / 2;
+        background: #000000aa;
+        opacity: touch.has-hover || menu-touch.has-hover ? 1 : 0;
+        animate opacity { duration: 140ms; }
+        Image {
+            source: Icons.ellipsis;
+            colorize: #ffffff;
+            width: 15px;
+            height: 15px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+        }
+        menu-touch := TouchArea {
+            clicked => { card-menu.show(); }
+            mouse-cursor: pointer;
+        }
+    }
+    card-menu := PopupWindow {
+        x: 12px;
+        y: root.width - 16px;
+        width: 190px;
+
+        Rectangle {
+            background: Theme.panel-raised;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 18px;
+
+            VerticalLayout {
+                padding: 6px;
+                CtxMenuItem {
+                    icon: Icons.play;
+                    label: "Play";
+                    clicked => { root.play(); }
+                }
+                CtxMenuItem {
+                    icon: Icons.shuffle;
+                    label: "Shuffle play";
+                    clicked => { root.shuffle-play(); }
+                }
+                CtxMenuItem {
+                    icon: Icons.next;
+                    label: "Play next";
+                    clicked => { root.play-next(); }
+                }
+                CtxMenuItem {
+                    icon: Icons.list-music;
+                    label: "Add to queue";
+                    clicked => { root.add-queue(); }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                CtxMenuItem {
+                    icon: Icons.heart;
+                    label: "Like album";
+                    clicked => { root.like(); }
+                }
+            }
+        }
+    }
+}
+
+// Track tables: every column has an explicit width derived from the row
+// width, so rows and the header line up regardless of text length.
+// (Never use horizontal-stretch here — it distributes leftover space on TOP
+// of each cell's intrinsic width, so columns drift per row.)
+
+export component TrackListHeader inherits Rectangle {
+    property <length> flexible: root.width - 24px - 60px - 30px - 44px - 64px;
+
+    height: 30px;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        Text {
+            text: "#";
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 30px;
+        }
+        Text {
+            text: "TITLE";
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+            overflow: elide;
+            width: root.flexible * 0.45;
+        }
+        Text {
+            text: "ARTIST";
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+            overflow: elide;
+            width: root.flexible * 0.28;
+        }
+        Text {
+            text: "ALBUM";
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+            overflow: elide;
+            width: root.flexible * 0.27;
+        }
+        Text {
+            text: "TIME";
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 44px;
+        }
+        Rectangle { width: 64px; } // actions column (heart + menu)
+    }
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        width: parent.width;
+        background: Theme.border;
+    }
+}
+
+export component TrackRow inherits Rectangle {
+    in property <TrackItem> track;
+    in property <bool> current: false;
+    // Album detail shows the METADATA track number; flat lists show the
+    // row position.
+    in property <bool> use-track-no: false;
+    in property <[PlaylistItem]> playlists: [];
+    callback play;
+    callback like-toggled;
+    callback play-next;
+    callback add-queue;
+    callback go-album;
+    callback add-to-playlist(string);
+    callback browse-playlists;
+
+    property <length> flexible: root.width - 24px - 60px - 30px - 44px - 64px;
+
+    height: 42px;
+    border-radius: Theme.control-radius;
+    background: root.current ? Theme.selected-bg
+        : touch.has-hover ? Theme.hover-bg : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        Rectangle {
+            width: 30px;
+            if !root.current : Text {
+                text: root.use-track-no ? root.track.track-no : root.track.index + 1;
+                color: Theme.text-muted;
+                font-size: 12px;
+                font-family: Theme.font-mono;
+                vertical-alignment: center;
+                horizontal-alignment: right;
+                width: parent.width;
+                height: parent.height;
+            }
+            if root.current : Image {
+                source: Icons.music;
+                colorize: Theme.accent;
+                width: 13px;
+                height: 13px;
+                x: parent.width - self.width;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        Text {
+            text: root.track.title;
+            color: root.current ? Theme.accent : Theme.text;
+            font-size: 13px;
+            font-family: Theme.font-ui;
+            font-weight: root.current ? 600 : 400;
+            vertical-alignment: center;
+            overflow: elide;
+            width: root.flexible * 0.45;
+        }
+        Text {
+            text: root.track.artist;
+            color: Theme.text-dim;
+            font-size: 12px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+            overflow: elide;
+            width: root.flexible * 0.28;
+        }
+        Text {
+            text: root.track.album;
+            color: Theme.text-dim;
+            font-size: 12px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+            overflow: elide;
+            width: root.flexible * 0.27;
+        }
+        Text {
+            text: root.track.duration;
+            color: Theme.text-muted;
+            font-size: 12px;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 44px;
+        }
+        Rectangle { width: 64px; } // reserved for the action buttons below
+    }
+    touch := TouchArea {
+        clicked => { root.play(); }
+        mouse-cursor: pointer;
+    }
+
+    // Actions — declared after the row TouchArea so they win the hit test.
+    like-btn := LikeButton {
+        liked: root.track.liked;
+        icon-size: 20px;
+        width: 26px;
+        height: 26px;
+        x: root.width - 12px - 26px - 6px - 26px;
+        y: (parent.height - self.height) / 2;
+        opacity: root.track.liked || touch.has-hover ? 1 : 0.35;
+        clicked => { root.like-toggled(); }
+    }
+    menu-btn := IconButton {
+        icon: Icons.ellipsis;
+        icon-size: 15px;
+        width: 26px;
+        height: 26px;
+        x: root.width - 12px - 26px;
+        y: (parent.height - self.height) / 2;
+        opacity: touch.has-hover ? 1 : 0.35;
+        clicked => { ctx-menu.show(); }
+    }
+
+    ctx-menu := PopupWindow {
+        x: root.width - 230px;
+        y: 36px;
+        width: 220px;
+
+        Rectangle {
+            background: Theme.panel-raised;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 18px;
+
+            VerticalLayout {
+                padding: 6px;
+                CtxMenuItem {
+                    icon: Icons.play;
+                    label: "Play next";
+                    clicked => { root.play-next(); }
+                }
+                CtxMenuItem {
+                    icon: Icons.list-music;
+                    label: "Add to queue";
+                    clicked => { root.add-queue(); }
+                }
+                if root.track.album-id != "" : CtxMenuItem {
+                    icon: Icons.disc;
+                    label: "Go to album";
+                    clicked => { root.go-album(); }
+                }
+                if root.playlists.length > 0 : Rectangle {
+                    height: 1px;
+                    background: Theme.border;
+                }
+                if root.playlists.length > 0 : Text {
+                    text: "ADD TO PLAYLIST";
+                    color: Theme.text-muted;
+                    font-size: 9px;
+                    letter-spacing: 1.5px;
+                    height: 22px;
+                    vertical-alignment: center;
+                    x: 10px;
+                }
+                for pl[pi] in root.playlists : Rectangle {
+                    height: pi < 3 ? 30px : 0px;
+                    if pi < 3 : CtxMenuItem {
+                        width: 100%;
+                        height: 30px;
+                        icon: Icons.playlist;
+                        label: pl.name;
+                        clicked => { root.add-to-playlist(pl.id); }
+                    }
+                }
+                if root.playlists.length > 3 : CtxMenuItem {
+                    icon: Icons.ellipsis;
+                    label: "Browse all playlists…";
+                    clicked => { root.browse-playlists(); }
+                }
+            }
+        }
+    }
+}
+
+export component ArtistRow inherits Rectangle {
+    in property <ArtistItem> artist;
+    callback play;
+    callback open;
+
+    height: 56px;
+    border-radius: Theme.control-radius;
+    background: touch.has-hover ? Theme.hover-bg : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 14px;
+
+        Rectangle {
+            width: 40px;
+            height: 40px;
+            y: (parent.height - self.height) / 2;
+            border-radius: self.width / 2;
+            background: Theme.art-placeholder;
+            Image {
+                source: Icons.artist;
+                colorize: Theme.text-muted;
+                width: 18px;
+                height: 18px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        Text {
+            text: root.artist.name;
+            color: Theme.text;
+            font-size: 13px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        IconButton {
+            icon: Icons.play;
+            icon-size: 14px;
+            y: (parent.height - self.height) / 2;
+            opacity: touch.has-hover ? 1 : 0.35;
+            clicked => { root.play(); }
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.open(); }
+        mouse-cursor: pointer;
+    }
+}
+
+// Header search affordance — opens the command palette rather than editing
+// in place.
+export component SearchButton inherits Rectangle {
+    callback clicked;
+
+    width: 220px;
+    height: 32px;
+    border-radius: 16px;
+    background: touch.has-hover ? Theme.panel-raised : Theme.panel-bg;
+    border-width: 1px;
+    border-color: Theme.border;
+    animate background { duration: 120ms; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        spacing: 8px;
+        Image {
+            source: Icons.search;
+            colorize: Theme.text-muted;
+            width: 14px;
+            height: 14px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: "Search library";
+            color: Theme.text-muted;
+            font-size: 12px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        Rectangle {
+            width: 20px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 4px;
+            background: Theme.hover-bg;
+            border-width: 1px;
+            border-color: Theme.border;
+            Text {
+                text: "/";
+                color: Theme.text-dim;
+                font-size: 10px;
+                font-family: Theme.font-mono;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}
+
+export component PaletteRow inherits Rectangle {
+    in property <PaletteItem> item;
+    in property <bool> selected: false;
+    callback activate;
+    callback hovered;
+
+    height: 46px;
+    border-radius: Theme.control-radius;
+    background: root.selected ? Theme.selected-bg
+        : touch.has-hover ? Theme.hover-bg : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        Rectangle {
+            width: 28px;
+            height: 28px;
+            y: (parent.height - self.height) / 2;
+            background: root.item.has-art ? Theme.art-placeholder : transparent;
+            clip: true;
+            if root.item.has-art : Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.item.art;
+                image-fit: cover;
+            }
+            if !root.item.has-art : Image {
+                source: root.item.kind == "track" ? Icons.music
+                    : root.item.kind == "album" ? Icons.disc
+                    : root.item.kind == "playlist" ? Icons.playlist
+                    : root.item.kind == "server" ? Icons.broadcast
+                    : root.item.kind == "jellyfin" ? Icons.jellyfin
+                    : root.item.kind == "subsonic" ? Icons.navidrome : Icons.artist;
+                colorize: root.selected ? Theme.accent : Theme.text-dim;
+                width: 15px;
+                height: 15px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.item.title;
+                color: Theme.text;
+                font-size: 13px;
+                font-family: Theme.font-ui;
+                overflow: elide;
+            }
+            if root.item.subtitle != "" : Text {
+                text: root.item.subtitle;
+                color: Theme.text-dim;
+                font-size: 11px;
+                font-family: Theme.font-ui;
+                overflow: elide;
+            }
+        }
+        Text {
+            text: root.item.kind;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.activate(); }
+        moved => { root.hovered(); }
+        mouse-cursor: pointer;
+    }
+}
+
+component KbdChip inherits Rectangle {
+    in property <string> keys;
+    width: t.preferred-width + 16px;
+    height: 22px;
+    border-radius: 5px;
+    background: Theme.hover-bg;
+    border-width: 1px;
+    border-color: Theme.border;
+    t := Text {
+        text: root.keys;
+        color: Theme.text;
+        font-size: 11px;
+        font-family: Theme.font-mono;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component HelpRow inherits HorizontalLayout {
+    in property <string> keys;
+    in property <string> label;
+    spacing: 14px;
+    KbdChip { keys: root.keys; }
+    Text {
+        text: root.label;
+        color: Theme.text-dim;
+        font-size: 13px;
+        font-family: Theme.font-ui;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+}
+
+// ── Audio settings controls ─────────────────────────────────────────────────
+
+export component Toggle inherits Rectangle {
+    in property <bool> checked: false;
+    callback toggled;
+
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: root.checked ? Theme.accent : Theme.slider-track;
+    animate background { duration: 120ms; }
+
+    Rectangle {
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: root.checked ? Theme.on-accent : Theme.text-dim;
+        x: root.checked ? parent.width - self.width - 3px : 3px;
+        y: (parent.height - self.height) / 2;
+        animate x { duration: 120ms; }
+    }
+    TouchArea {
+        clicked => { root.toggled(); }
+        mouse-cursor: pointer;
+    }
+}
+
+// Dropdown option selector (replaygain mode, crossfade mode, …).
+export component Dropdown inherits Rectangle {
+    in property <[string]> options: [];
+    in property <int> current: 0;
+    in property <length> menu-width: 200px;
+    callback selected(int);
+
+    height: 26px;
+    width: t.preferred-width + 42px;
+    border-radius: 13px;
+    background: touch.has-hover ? Theme.panel-raised : Theme.hover-bg;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 10px;
+        spacing: 7px;
+        t := Text {
+            text: root.current >= 0 && root.current < root.options.length
+                ? root.options[root.current] : "—";
+            color: Theme.text;
+            font-size: 11px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+        }
+        Image {
+            source: Icons.chevron-left;
+            colorize: Theme.text-muted;
+            width: 11px;
+            height: 11px;
+            y: (parent.height - self.height) / 2;
+            transform-rotation: -90deg;
+        }
+    }
+    touch := TouchArea {
+        clicked => { menu.show(); }
+        mouse-cursor: pointer;
+    }
+    menu := PopupWindow {
+        x: 0;
+        y: root.height + 4px;
+        width: max(root.menu-width, root.width);
+
+        Rectangle {
+            background: Theme.panel-raised;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 18px;
+
+            VerticalLayout {
+                padding: 6px;
+                for opt[i] in root.options : Rectangle {
+                    height: 30px;
+                    border-radius: 6px;
+                    background: i == root.current ? Theme.selected-bg
+                        : opt-touch.has-hover ? Theme.hover-bg : transparent;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        Text {
+                            text: opt;
+                            color: i == root.current ? Theme.accent : Theme.text;
+                            font-size: 11px;
+                            font-family: Theme.font-ui;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                            overflow: elide;
+                        }
+                    }
+                    opt-touch := TouchArea {
+                        clicked => { root.selected(i); }
+                        mouse-cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Horizontal setting row: label — slider — value readout.
+export component SettingRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value-text;
+    in property <float> progress; // 0..1
+    callback changed(float);
+
+    spacing: 12px;
+    height: 28px;
+
+    Text {
+        text: root.label;
+        color: Theme.text-dim;
+        font-size: 12px;
+        font-family: Theme.font-ui;
+        vertical-alignment: center;
+        width: 130px;
+        overflow: elide;
+    }
+    SlideBar {
+        y: (parent.height - self.height) / 2;
+        bar-height: 4px;
+        progress: root.progress;
+        changed(p) => { root.changed(p); }
+        horizontal-stretch: 1;
+    }
+    Text {
+        text: root.value-text;
+        color: Theme.text;
+        font-size: 11px;
+        font-family: Theme.font-mono;
+        vertical-alignment: center;
+        horizontal-alignment: right;
+        width: 62px;
+    }
+}
+
+// Vertical EQ band slider with gain readout above and Hz label below.
+export component EqBandSlider inherits VerticalLayout {
+    in property <int> gain; // dB x10, -240..240
+    in property <string> freq-label;
+    callback changed(int); // new gain in dB x10
+
+    spacing: 6px;
+    property <float> norm: (root.gain + 240) / 480.0;
+
+    Text {
+        text: (root.gain / 10.0);
+        color: root.gain == 0 ? Theme.text-muted : Theme.accent;
+        font-size: 9px;
+        font-family: Theme.font-mono;
+        horizontal-alignment: center;
+    }
+    slider := Rectangle {
+        vertical-stretch: 1;
+        min-height: 90px;
+
+        track := Rectangle {
+            width: 5px;
+            height: parent.height;
+            x: (parent.width - self.width) / 2;
+            border-radius: 2.5px;
+            background: Theme.slider-track;
+
+            Rectangle {
+                width: parent.width;
+                height: parent.height * root.norm;
+                y: parent.height - self.height;
+                border-radius: parent.border-radius;
+                background: Theme.accent;
+            }
+        }
+        // 0 dB center line
+        Rectangle {
+            width: 13px;
+            height: 1px;
+            x: (parent.width - self.width) / 2;
+            y: parent.height / 2;
+            background: Theme.border;
+        }
+        knob := Rectangle {
+            width: 14px;
+            height: 8px;
+            border-radius: 3px;
+            background: Theme.text;
+            border-width: 1px;
+            border-color: Theme.window-bg;
+            x: (parent.width - self.width) / 2;
+            y: clamp((parent.height * (1 - root.norm)) - self.height / 2, 0, parent.height - self.height);
+        }
+        touch := TouchArea {
+            mouse-cursor: pointer;
+            double-clicked => { root.changed(0); }
+            clicked => {
+                root.changed(round(clamp(1 - self.mouse-y / self.height, 0, 1) * 480) - 240);
+            }
+            moved => {
+                if (self.pressed) {
+                    root.changed(round(clamp(1 - self.mouse-y / self.height, 0, 1) * 480) - 240);
+                }
+            }
+        }
+    }
+    Text {
+        text: root.freq-label;
+        color: Theme.text-muted;
+        font-size: 9px;
+        font-family: Theme.font-mono;
+        horizontal-alignment: center;
+    }
+}
+
+export component SectionHeader inherits HorizontalLayout {
+    in property <string> title;
+    spacing: 10px;
+    height: 30px;
+    Text {
+        text: root.title;
+        color: Theme.text-muted;
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        vertical-alignment: center;
+    }
+    Rectangle {
+        height: 1px;
+        y: (parent.height - self.height) / 2;
+        background: Theme.border;
+        horizontal-stretch: 1;
+    }
+}
+
+// ── Rotary knob (Mixxx-style) ───────────────────────────────────────────────
+// Drag vertically or scroll to adjust; indicator sweeps -135° … +135°.
+
+export component Knob inherits VerticalLayout {
+    in property <string> label;
+    in property <string> value-text;
+    in property <float> norm: 0; // 0..1
+    in property <float> default-norm: 0.5; // double-click resets here
+    in property <length> size: 54px;
+    in property <length> gap: 5px; // value-text ↔ knob spacing
+    callback changed(float);
+
+    property <float> press-start: 0;
+    spacing: root.gap;
+    alignment: center;
+    width: max(root.size + 16px, 72px);
+
+    Text {
+        text: root.value-text;
+        color: Theme.accent;
+        font-size: 9px;
+        font-family: Theme.font-mono;
+        horizontal-alignment: center;
+    }
+    Rectangle {
+        height: root.size;
+
+        face := Rectangle {
+            width: root.size;
+            height: root.size;
+            x: (parent.width - self.width) / 2;
+            border-radius: self.width / 2;
+            background: @linear-gradient(180deg, Theme.panel-raised 0%, Theme.panel-bg 100%);
+            border-width: 2px;
+            border-color: Theme.slider-track;
+            drop-shadow-color: #00000066;
+            drop-shadow-blur: 6px;
+            drop-shadow-offset-y: 2px;
+
+            // Full-diameter bar, opaque only on its top third — rotating
+            // about the (default, center) origin pivots at the knob center.
+            indicator := Rectangle {
+                width: 3px;
+                height: parent.height - 12px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                background: @linear-gradient(180deg,
+                    Theme.accent 0%, Theme.accent 36%,
+                    transparent 36%, transparent 100%);
+                transform-rotation: -135deg + clamp(root.norm, 0, 1) * 270deg;
+            }
+            // center cap
+            Rectangle {
+                width: parent.width * 0.28;
+                height: self.width;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: self.width / 2;
+                background: Theme.panel-raised;
+                border-width: 1px;
+                border-color: Theme.border;
+            }
+        }
+        touch := TouchArea {
+            width: face.width;
+            height: face.height;
+            x: face.x;
+            mouse-cursor: ns-resize;
+            pointer-event(ev) => {
+                if (ev.kind == PointerEventKind.down) {
+                    root.press-start = root.norm;
+                }
+            }
+            double-clicked => { root.changed(root.default-norm); }
+            moved => {
+                if (self.pressed) {
+                    root.changed(clamp(root.press-start + (self.pressed-y - self.mouse-y) / 140px, 0, 1));
+                }
+            }
+            scroll-event(ev) => {
+                root.changed(clamp(root.norm + (ev.delta-y > 0 ? 0.04 : -0.04), 0, 1));
+                accept
+            }
+        }
+    }
+    if root.label != "" : Text {
+        text: root.label;
+        color: Theme.text-dim;
+        font-size: 10px;
+        font-family: Theme.font-ui;
+        horizontal-alignment: center;
+        overflow: elide;
+    }
+}
+
+// ── Remote servers (Subsonic / Jellyfin) ────────────────────────────────────
+
+export component FormField inherits VerticalLayout {
+    in property <string> label;
+    in property <bool> password: false;
+    in-out property <string> text <=> input.text;
+    in property <string> placeholder: "";
+
+    spacing: 5px;
+    Text {
+        text: root.label;
+        color: Theme.text-muted;
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+    Rectangle {
+        height: 32px;
+        border-radius: Theme.control-radius;
+        background: Theme.panel-raised;
+        border-width: 1px;
+        border-color: input.has-focus ? Theme.accent : Theme.border;
+        animate border-color { duration: 120ms; }
+        HorizontalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            input := TextInput {
+                color: Theme.text;
+                font-size: 12px;
+                font-family: Theme.font-ui;
+                vertical-alignment: center;
+                single-line: true;
+                input-type: root.password ? InputType.password : InputType.text;
+            }
+        }
+        if input.text == "" && !input.has-focus : Text {
+            x: 10px;
+            text: root.placeholder;
+            color: Theme.text-muted;
+            font-size: 12px;
+            vertical-alignment: center;
+            height: parent.height;
+        }
+    }
+}
+
+export component ServerRow inherits Rectangle {
+    in property <ServerItem> server;
+    callback connect;
+    callback delete;
+
+    height: 56px;
+    border-radius: Theme.control-radius;
+    background: touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
+
+    touch := TouchArea {
+        clicked => { root.connect(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 10px;
+        spacing: 12px;
+        Image {
+            source: root.server.kind == "jellyfin" ? Icons.jellyfin : Icons.navidrome;
+            colorize: Theme.accent;
+            width: 20px;
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.server.name;
+                color: Theme.text;
+                font-size: 13px;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: (root.server.kind == "jellyfin" ? "Jellyfin · " : "Subsonic · ") + root.server.url;
+                color: Theme.text-dim;
+                font-size: 11px;
+                overflow: elide;
+            }
+        }
+        IconButton {
+            icon: Icons.trash;
+            icon-size: 14px;
+            y: (parent.height - self.height) / 2;
+            opacity: touch.has-hover ? 1 : 0.35;
+            clicked => { root.delete(); }
+        }
+        IconButton {
+            icon: Icons.play;
+            icon-size: 15px;
+            accented: true;
+            y: (parent.height - self.height) / 2;
+            clicked => { root.connect(); }
+        }
+    }
+}
+
+export component BrowseRow inherits Rectangle {
+    in property <BrowseItem> item;
+    callback open;
+    callback play;
+
+    height: 44px;
+    border-radius: Theme.control-radius;
+    background: touch.has-hover ? Theme.hover-bg : transparent;
+
+    touch := TouchArea {
+        clicked => {
+            if (root.item.is-dir) {
+                root.open();
+            } else {
+                root.play();
+            }
+        }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 10px;
+        spacing: 12px;
+        Image {
+            source: root.item.is-dir ? Icons.folder : Icons.music;
+            colorize: root.item.is-dir ? Theme.accent : Theme.text-dim;
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.item.name;
+            color: Theme.text;
+            font-size: 13px;
+            font-family: Theme.font-ui;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        if root.item.is-dir : IconButton {
+            icon: Icons.play;
+            icon-size: 14px;
+            y: (parent.height - self.height) / 2;
+            opacity: touch.has-hover ? 1 : 0.35;
+            clicked => { root.play(); }
+        }
+    }
+}
+
+// ── Playlists ───────────────────────────────────────────────────────────────
+
+export component PlaylistRow inherits Rectangle {
+    in property <PlaylistItem> playlist;
+    callback open;
+    callback play;
+    callback edit;
+    callback delete;
+
+    height: 56px;
+    border-radius: Theme.control-radius;
+    background: touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
+
+    touch := TouchArea {
+        clicked => { root.open(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 10px;
+        spacing: 12px;
+        Image {
+            source: Icons.playlist;
+            colorize: Theme.accent;
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.playlist.name;
+                color: Theme.text;
+                font-size: 13px;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: root.playlist.description == ""
+                    ? (root.playlist.count == 1 ? "1 track" : root.playlist.count + " tracks")
+                    : root.playlist.description + " · "
+                        + (root.playlist.count == 1 ? "1 track" : root.playlist.count + " tracks");
+                color: Theme.text-dim;
+                font-size: 11px;
+                overflow: elide;
+            }
+        }
+        IconButton {
+            icon: Icons.pencil;
+            icon-size: 14px;
+            y: (parent.height - self.height) / 2;
+            opacity: touch.has-hover ? 1 : 0.35;
+            clicked => { root.edit(); }
+        }
+        IconButton {
+            icon: Icons.trash;
+            icon-size: 14px;
+            y: (parent.height - self.height) / 2;
+            opacity: touch.has-hover ? 1 : 0.35;
+            clicked => { root.delete(); }
+        }
+        IconButton {
+            icon: Icons.play;
+            icon-size: 15px;
+            accented: true;
+            y: (parent.height - self.height) / 2;
+            clicked => { root.play(); }
+        }
+    }
+}
+

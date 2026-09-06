@@ -43,7 +43,8 @@ message RemoveTrackAtRequest {
 
 message RemoveTrackAtResponse {}
 
-message SetRepeatRequest {}
+// 0 off, 1 all, 2 one.
+message SetRepeatRequest { int32 mode = 1; }
 
 message SetRepeatResponse {}
 
@@ -64,7 +65,7 @@ message GetNextTrackRequest {}
 
 message GetPreviousTrackRequest {}
 
-message ShuffleRequest {}
+message ShuffleRequest { bool enabled = 1; }
 
 message GetTracklistTracksRequest {}
 

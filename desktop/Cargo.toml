@@ -1,0 +1,90 @@
+[package]
+authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+description = "Skinnable Slint desktop client for music-player (embeds the daemon when none is running)"
+edition = "2021"
+license = "MIT"
+name = "music-player-desktop"
+repository = "https://github.com/tsirysndr/music-player"
+version = "0.2.0"
+
+[[bin]]
+name = "music-player-desktop"
+path = "src/main.rs"
+
+[dependencies.music-player-server]
+path = "../server"
+version = "0.2.0"
+
+[dependencies.music-player-playback]
+path = "../playback"
+version = "0.2.0"
+
+[dependencies.music-player-scanner]
+path = "../scanner"
+version = "0.2.0"
+
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.2.0"
+
+[dependencies.music-player-storage]
+path = "../storage"
+version = "0.2.0"
+
+[dependencies.music-player-entity]
+path = "../entity"
+version = "0.2.0"
+
+[dependencies.music-player-tracklist]
+path = "../tracklist"
+version = "0.2.0"
+
+[dependencies.music-player-migration]
+path = "../migration"
+version = "0.2.0"
+
+[dependencies.music-player-webui]
+path = "../webui"
+version = "0.2.0"
+
+[dependencies.music-player-discovery]
+path = "../discovery"
+version = "0.2.0"
+
+[dependencies.music-player-graphql]
+path = "../graphql"
+version = "0.2.0"
+
+[dependencies.music-player-addons]
+path = "../addons"
+version = "0.2.0"
+
+[dependencies.music-player-types]
+path = "../types"
+version = "0.2.0"
+
+[dependencies]
+anyhow = "1.0.67"
+dirs = "4.0.0"
+if-addrs = "0.13"
+md5 = "0.7.0"
+mdns-sd = "0.11"
+fastrand = "2"
+i-slint-backend-winit = "1.17"
+image = {version = "0.25", default-features = false, features = ["jpeg", "png", "webp"]}
+reqwest = {version = "0.12", default-features = false, features = []}
+sea-orm = {version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
+futures-channel = "0.3.24"
+serde = {version = "1", features = ["derive"]}
+serde_json = "1.0.85"
+tungstenite = "0.17.3"
+slint = "1.17"
+tokio = {version = "1.21.0", features = ["full"]}
+toml = "0.8"
+tonic = "0.14"
+tracing = "0.1"
+tracing-subscriber = {version = "0.3", features = ["env-filter"]}
+winit = "0.30"
+
+[build-dependencies]
+slint-build = "1.17"

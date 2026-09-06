@@ -14,6 +14,64 @@ message SetMuteRequest {
 
 message SetMuteResponse {}
 
+// One parametric-EQ band. `q` is the Q factor x10, `gain` is dB x10 (so the
+// wire format stays integer while the UI works in 0.1 dB steps).
+message EqBand {
+  int32 cutoff = 1; // Hz
+  int32 q = 2;      // Q x10
+  int32 gain = 3;   // dB x10
+}
+
+message GetAudioSettingsRequest {}
+
+// Snapshot of the DSP chain settings. Integer enums follow the Rockbox
+// firmware conventions used by the desktop UI:
+// - replaygain_type: 0 track, 1 album, 2 track (shuffle), 3 off
+// - crossfade: 0 off, 1 auto track change, 2 manual track change, 3 shuffle,
+//   4 shuffle or manual skip, 5 always
+// - fade_out_mixmode: 0 crossfade, 2 mix
+message GetAudioSettingsResponse {
+  bool eq_enabled = 1;
+  int32 eq_precut = 2; // dB x10, 0..240
+  repeated EqBand eq_bands = 3;
+  int32 bass = 4;   // dB
+  int32 bass_min = 5;
+  int32 bass_max = 6;
+  int32 treble = 7; // dB
+  int32 treble_min = 8;
+  int32 treble_max = 9;
+  int32 balance = 10; // -100..100
+  int32 replaygain_type = 11;
+  int32 replaygain_preamp = 12; // dB x10, -120..120
+  bool replaygain_noclip = 13;
+  int32 crossfade = 14;
+  int32 fade_in_delay = 15;     // s, 0..7
+  int32 fade_in_duration = 16;  // s, 0..15
+  int32 fade_out_delay = 17;    // s, 0..7
+  int32 fade_out_duration = 18; // s, 0..15
+  int32 fade_out_mixmode = 19;
+  bool dithering = 20;
+}
+
+// Set a single audio setting by name; `name` is one of: eq_enabled,
+// eq_precut, bass, treble, balance, rg_type, rg_preamp, rg_noclip,
+// crossfade, fade_in_delay, fade_in_duration, fade_out_delay,
+// fade_out_duration, fade_out_mixmode, dithering. Booleans use 0/1;
+// eq_precut and rg_preamp are dB x10.
+message SetAudioSettingRequest {
+  string name = 1;
+  int32 value = 2;
+}
+
+message SetAudioSettingResponse {}
+
+message SetEqBandGainRequest {
+  uint32 band = 1; // 0..9 (32 Hz .. 16 kHz)
+  int32 gain = 2;  // dB x10, -240..240
+}
+
+message SetEqBandGainResponse {}
+
 message GetVolumeRequest {}
 
 message GetVolumeResponse {
@@ -31,4 +89,7 @@ service MixerService {
   rpc SetMute(SetMuteRequest) returns (SetMuteResponse) {}
   rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {}
   rpc SetVolume(SetVolumeRequest) returns (SetVolumeResponse) {}
+  rpc GetAudioSettings(GetAudioSettingsRequest) returns (GetAudioSettingsResponse) {}
+  rpc SetAudioSetting(SetAudioSettingRequest) returns (SetAudioSettingResponse) {}
+  rpc SetEqBandGain(SetEqBandGainRequest) returns (SetEqBandGainResponse) {}
 }

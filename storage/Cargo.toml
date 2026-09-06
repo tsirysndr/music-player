@@ -22,6 +22,10 @@ version = "0.2.0"
 
 [dependencies]
 itertools = "0.10.5"
+reqwest = {version = "0.12", default-features = false, features = ["rustls-tls", "json"]}
+serde = {version = "1.0.145", features = ["derive"]}
+serde_json = "1.0.85"
+tracing = "0.1"
 sea-orm = { version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
 md5 = "0.7.0"
 tokio = { version = "1.22.0", features = ["test-util", "macros"] }

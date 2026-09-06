@@ -1,0 +1,50 @@
+// Skinnable design tokens. Every visual property in the app reads from this
+// global; src/skin.rs overwrites the values at runtime from a skin .toml.
+// The defaults below mirror skins/synthwave.toml so the slint live-preview
+// looks right without the Rust side.
+
+import "../assets/fonts/SpaceGrotesk.ttf";
+import "../assets/fonts/JetBrainsMono.ttf";
+
+export global Theme {
+    // Surfaces
+    in-out property <color> window-bg: #0d0b14;
+    in-out property <color> panel-bg: #151122;
+    in-out property <color> panel-raised: #1e182f;
+    in-out property <color> sidebar-bg: #100d1a;
+
+    // VFD / LCD display (jetAudio-style readout in the player bar)
+    in-out property <color> display-bg: #0a0f1e;
+    in-out property <color> display-glow: #00e5ff40;
+    in-out property <color> display-text: #00e5ff;
+    in-out property <color> display-dim: #1e5f6e;
+
+    // Accent
+    in-out property <color> accent: #ff2d95;
+    in-out property <color> accent-hover: #ff5cab;
+    in-out property <color> on-accent: #1c0713;
+
+    // Text
+    in-out property <color> text: #ece7f5;
+    in-out property <color> text-dim: #a99fc2;
+    in-out property <color> text-muted: #5f5878;
+
+    // Lines & states
+    in-out property <color> border: #251e3a;
+    in-out property <color> hover-bg: #ffffff0f;
+    in-out property <color> selected-bg: #ff2d951f;
+    in-out property <color> slider-track: #2a2344;
+
+    // Level meters (Mixxx-style LED strips)
+    in-out property <color> meter-low: #00e5ff;
+    in-out property <color> meter-mid: #c355ff;
+    in-out property <color> meter-high: #ff2d95;
+    in-out property <color> meter-off: #1c172c;
+
+    // Misc
+    in-out property <color> art-placeholder: #201a33;
+    in-out property <length> radius: 12px;
+    in-out property <length> control-radius: 8px;
+    in-out property <string> font-ui: "Space Grotesk";
+    in-out property <string> font-mono: "JetBrains Mono";
+}

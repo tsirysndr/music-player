@@ -1,0 +1,36 @@
+# Default skin. Inspired by Mixxx "LateNight PaleMoon": near-black surfaces,
+# teal VFD glow, burnt-amber accent, warm cream text.
+name = "Late Night"
+
+[colors]
+window_bg       = "#0c0c0d"
+panel_bg        = "#151517"
+panel_raised    = "#1d1d21"
+sidebar_bg      = "#101012"
+display_bg      = "#0a1416"
+display_glow    = "#14667440"
+display_text    = "#4fd8e0"
+display_dim     = "#24565c"
+accent          = "#ff8f2b"
+accent_hover    = "#ffa952"
+on_accent       = "#16110a"
+text            = "#e8e3da"
+text_dim        = "#a09a8e"
+text_muted      = "#5f5c55"
+border          = "#26262b"
+hover_bg        = "#ffffff0d"
+selected_bg     = "#ff8f2b1a"
+slider_track    = "#2a2a30"
+meter_low       = "#4bb543"
+meter_mid       = "#ffb02b"
+meter_high      = "#e04b3a"
+meter_off       = "#1e1e22"
+art_placeholder = "#222228"
+
+[metrics]
+radius         = 10.0
+control_radius = 7.0
+
+[fonts]
+ui   = "Space Grotesk"
+mono = "JetBrains Mono"

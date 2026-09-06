@@ -1,5 +1,5 @@
 [package]
-authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
 categories = ["command-line-utilities"]
 description = "The server API for the music player"
 edition = "2021"

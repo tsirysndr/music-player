@@ -3,7 +3,7 @@ Version: @VERSION@
 Section: sound
 Priority: optional
 Architecture: @DEB_ARCH@
-Maintainer: Tsiry Sandratraina <tsiry.sndr@aol.com>
+Maintainer: Tsiry Sandratraina <tsiry.sndr@rocksky.app>
 Homepage: https://github.com/tsirysndr/music-player
 Depends: libc6, libasound2, libfontconfig1, libxkbcommon0
 Description: Extensible music player with terminal and Slint desktop clients

@@ -4,7 +4,7 @@ version = "0.2.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
-authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
 description = "The types module of music player"
 
 [dependencies.music-player-discovery]

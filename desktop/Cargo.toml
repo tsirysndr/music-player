@@ -1,5 +1,5 @@
 [package]
-authors = ["Tsiry Sandratraina <tsiry.sndr@aol.com>"]
+authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
 description = "Skinnable Slint desktop client for music-player (embeds the daemon when none is running)"
 edition = "2021"
 license = "MIT"

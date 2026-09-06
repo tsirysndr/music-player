@@ -40,6 +40,10 @@
 </p>
 
 <p style="margin-top: 20px; margin-bottom: 50px;">
+<img src="./.github/assets/preview-slint.png" width="100%" />
+</p>
+
+<p style="margin-top: 20px; margin-bottom: 50px;">
 <img src="./preview.png" width="100%" />
 </p>
 

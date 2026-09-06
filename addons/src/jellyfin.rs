@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 const CLIENT_NAME: &str = "music-player";
-const CLIENT_VERSION: &str = "0.2.0";
+const CLIENT_VERSION: &str = "0.2.1";
 /// Jellyfin RunTimeTicks are expressed in 100ns units.
 const TICKS_PER_SECOND: f64 = 10_000_000.0;
 

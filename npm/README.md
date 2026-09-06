@@ -60,8 +60,8 @@ is installed. Pin a specific release with the `MUSIC_PLAYER_VERSION`
 environment variable (the leading `v` is optional):
 
 ```sh
-MUSIC_PLAYER_VERSION=v0.2.0 npx @tsiry/music-player
-MUSIC_PLAYER_VERSION=0.2.0 npm install -g @tsiry/music-player
+MUSIC_PLAYER_VERSION=v0.2.1 npx @tsiry/music-player
+MUSIC_PLAYER_VERSION=0.2.1 npm install -g @tsiry/music-player
 ```
 
 The binary is cached inside the package after the first download. Changing

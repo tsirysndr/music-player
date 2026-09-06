@@ -103,7 +103,7 @@ With curl (downloads the prebuilt binary for your platform from GitHub releases)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | sh
 # pin a specific release:
-curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | MUSIC_PLAYER_VERSION=v0.2.0 sh
+curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | MUSIC_PLAYER_VERSION=v0.2.1 sh
 # also install the Slint desktop app (music-player-desktop):
 curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | MUSIC_PLAYER_DESKTOP=1 sh
 ```
@@ -112,7 +112,7 @@ Using [npm](https://www.npmjs.com/) (downloads the prebuilt binary from GitHub r
 
 ```bash
 npm install -g @tsiry/music-player   # or: npx @tsiry/music-player
-# pin a specific release: MUSIC_PLAYER_VERSION=v0.2.0 npx @tsiry/music-player
+# pin a specific release: MUSIC_PLAYER_VERSION=v0.2.1 npx @tsiry/music-player
 ```
 
 Using [Homebrew](https://brew.sh/) (macOS/Linux):
@@ -193,15 +193,15 @@ cargo install --path .
 
 **Latest (Desktop):**
 
-- `Mac`: arm64: [music-player-desktop_v0.2.0_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/music-player-desktop_v0.2.0_aarch64-apple-darwin.tar.gz) intel: [Music_Player_v0.2.0_x64.dmg](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/Music_Player_v0.2.0_x64.dmg)
-- `Linux`: [music-player_v0.2.0_amd64.deb](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/music-player_v0.2.0_amd64.deb)
-- `Windows`: [Music_Player_x64_en-US.msi](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/Music_Player_x64_en-US.msi)
+- `Mac`: arm64: [music-player-desktop_v0.2.1_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player-desktop_v0.2.1_aarch64-apple-darwin.tar.gz) intel: [Music_Player_v0.2.1_x64.dmg](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/Music_Player_v0.2.1_x64.dmg)
+- `Linux`: [music-player_v0.2.1_amd64.deb](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player_v0.2.1_amd64.deb)
+- `Windows`: [Music_Player_x64_en-US.msi](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/Music_Player_x64_en-US.msi)
 
 **Latest (CLI):**
 
-- `Mac`: arm64: [music-player_v0.2.0_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/music-player_v0.2.0_aarch64-apple-darwin.tar.gz) intel: [music-player_v0.2.0_x86_64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/music-player_v0.2.0_x86_64-apple-darwin.tar.gz)
-- `Linux`: [music-player_v0.2.0_x86_64-unknown-linux-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/music-player_v0.2.0_x86_64-unknown-linux-gnu.tar.gz)
-- `Windows`: [music-player_x86_64-pc-windows-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.0/music-player_x86_64-pc-windows-gnu.tar.gz)
+- `Mac`: arm64: [music-player_v0.2.1_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player_v0.2.1_aarch64-apple-darwin.tar.gz) intel: [music-player_v0.2.1_x86_64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player_v0.2.1_x86_64-apple-darwin.tar.gz)
+- `Linux`: [music-player_v0.2.1_x86_64-unknown-linux-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player_v0.2.1_x86_64-unknown-linux-gnu.tar.gz)
+- `Windows`: [music-player_x86_64-pc-windows-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player_x86_64-pc-windows-gnu.tar.gz)
 
 [Other version...](https://github.com/tsirysndr/music-player/releases)
 

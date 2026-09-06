@@ -7,37 +7,37 @@ keywords = ["tokio", "music", "cli", "daemon", "streaming"]
 license = "MIT"
 name = "music-player-server"
 repository = "https://github.com/tsirysndr/music-player"
-version = "0.2.0"
+version = "0.2.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies.music-player-playback]
 path = "../playback"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-scanner]
 path = "../scanner"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies]
 dirs = "4.0.0"
@@ -72,4 +72,4 @@ tonic-prost-build = "0.14"
 
 [dev-dependencies.music-player-migration]
 path = "../migration"
-version = "0.2.0"
+version = "0.2.1"

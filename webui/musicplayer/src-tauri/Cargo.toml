@@ -7,7 +7,7 @@ license = ""
 name = "app"
 repository = ""
 rust-version = "1.77.2"
-version = "0.2.0"
+version = "0.2.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,31 +16,31 @@ tauri-build = {version = "2", features = []}
 
 [dependencies.music-player-addons]
 path = "../../../addons"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-graphql]
 path = "../../../graphql"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-settings]
 path = "../../../settings"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-storage]
 path = "../../../storage"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-playback]
 path = "../../../playback"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-tracklist]
 path = "../../../tracklist"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies.music-player-types]
 path = "../../../types"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies]
 actix-web = "4.9.0"

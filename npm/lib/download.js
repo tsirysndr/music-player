@@ -5,7 +5,7 @@
 //
 // Which release: the latest one by default, or the tag named by the
 // MUSIC_PLAYER_VERSION environment variable (with or without the leading
-// "v"), e.g. MUSIC_PLAYER_VERSION=v0.2.0 npx music-player
+// "v"), e.g. MUSIC_PLAYER_VERSION=v0.2.1 npx music-player
 
 "use strict";
 

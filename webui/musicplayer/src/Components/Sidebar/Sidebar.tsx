@@ -29,6 +29,9 @@ const Container = styled.div`
   padding-right: 20px;
   min-width: 222px;
   overflow-y: auto;
+  body.miniplayer-fullscreen & {
+    display: none;
+  }
 `;
 
 const ConnectButton = styled.button<{

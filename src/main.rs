@@ -322,6 +322,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // paused). Daemon mode only — `open`/tests must not touch it.
         let _ = cmd_tx.lock().unwrap().send(PlayerCommand::RestoreQueue);
 
+        let grpc_db = db.clone();
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -332,7 +333,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cloned_tracklist,
                     Arc::clone(&cmd_tx),
                     Arc::clone(&peer_map),
-                    db,
+                    grpc_db,
                 )
                 .start(),
             ) {
@@ -343,14 +344,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
         // Spawn a thread to handle the player events
+        let ws_db = db.clone();
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
-            let db = runtime.block_on(Database::new());
             match runtime.block_on(
-                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, db).start_ws(),
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, ws_db).start_ws(),
             ) {
                 Ok(_) => {}
                 Err(e) => {

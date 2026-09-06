@@ -16,11 +16,16 @@ import { useTheme } from "@emotion/react";
 import DeviceList from "./DeviceList";
 import { Device } from "../../Types/Device";
 
-const Container = styled.div`
+const Container = styled.div<{full?:boolean}>`
   display: flex;
   align-items: center;
   height: 96px;
   padding-left: 26px;
+  position: relative;
+  z-index: 11;
+  background: ${p=>p.full?'rgba(12, 9, 18, .68)':'transparent'};
+  backdrop-filter: ${p=>p.full?'blur(24px) saturate(1.25)':'none'};
+  -webkit-backdrop-filter: ${p=>p.full?'blur(24px) saturate(1.25)':'none'};
 `;
 
 const Controls = styled.div`
@@ -55,6 +60,15 @@ const ButtonGroup = styled.div`
   padding-right: 25px;
   width: 200px;
 `;
+const FullPlayer = styled.div<{cover?:string}>`
+  position:fixed;inset:0 0 96px 0;z-index:10;background:#09070d;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  &:before{content:"";position:absolute;inset:-40px;background:${p=>p.cover?`url("${p.cover}") center/cover`:'none'};filter:blur(30px);opacity:.48;transform:scale(1.08)}
+  &:after{content:"";position:absolute;inset:0;background:#07050bb8}
+`;
+const FullContent=styled.div`position:relative;z-index:1;text-align:center;color:white;`;
+const FullCover=styled.img`width:min(58vh,520px);height:min(58vh,520px);object-fit:cover;box-shadow:0 22px 70px #000b;`;
+const Back=styled(Button)`position:absolute;z-index:2;left:24px;top:24px;color:white;font-size:28px;`;
 
 export type ControlBarProps = {
   nowPlaying?: {
@@ -66,6 +80,7 @@ export type ControlBarProps = {
     progress: number;
     isPlaying?: boolean;
     albumId?: string;
+    id?: string;
   };
   castDevices: Device[];
   currentCastDevice?: Device;
@@ -87,6 +102,7 @@ export type ControlBarProps = {
 const ControlBar: FC<ControlBarProps> = (props) => {
   const theme = useTheme();
   const [played, setPlayed] = useState(false);
+  const [full, setFull] = useState(false);
   const [playQueueButtonColor, setPlayQueueButtonColor] = useState(
     theme.colors.icon
   );
@@ -99,6 +115,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
     onShuffle,
     onRepeat,
   } = props;
+  const isRadio = !!nowPlaying?.id?.startsWith("radio:");
 
   useEffect(() => {
     if (!!nowPlaying) {
@@ -110,6 +127,11 @@ const ControlBar: FC<ControlBarProps> = (props) => {
     setPlayQueueButtonColor(theme.colors.icon);
   }, [theme]);
 
+  useEffect(() => {
+    document.body.classList.toggle("miniplayer-fullscreen", full);
+    return () => document.body.classList.remove("miniplayer-fullscreen");
+  }, [full]);
+
   const handlePlay = () => {
     setPlayed(true);
     onPlay();
@@ -120,15 +142,16 @@ const ControlBar: FC<ControlBarProps> = (props) => {
     onPause();
   };
 
-  return (
-    <Container>
+  return (<>
+    {full && nowPlaying?.title && <FullPlayer cover={nowPlaying.cover}><Back onClick={()=>setFull(false)}>‹</Back><FullContent>{nowPlaying.cover&&<FullCover src={nowPlaying.cover}/>}</FullContent></FullPlayer>}
+    <Container full={full}>
       <Controls>
-        <Button onClick={onShuffle}>
+        {!isRadio && <Button onClick={onShuffle}>
           <Shuffle color={theme.colors.text} />
-        </Button>
-        <Button onClick={onPrevious}>
+        </Button>}
+        {!isRadio && <Button onClick={onPrevious}>
           <Previous color={theme.colors.text} />
-        </Button>
+        </Button>}
         {!played && (
           <Button onClick={handlePlay}>
             <Play color={theme.colors.text} />
@@ -139,14 +162,14 @@ const ControlBar: FC<ControlBarProps> = (props) => {
             <Pause color={theme.colors.text} />
           </Button>
         )}
-        <Button onClick={onNext}>
+        {!isRadio && <Button onClick={onNext}>
           <Next color={theme.colors.text} />
-        </Button>
-        <Button onClick={onRepeat}>
+        </Button>}
+        {!isRadio && <Button onClick={onRepeat}>
           <Repeat color={theme.colors.text} />
-        </Button>
+        </Button>}
       </Controls>
-      <CurrentTrack nowPlaying={nowPlaying} onSeek={props.onSeek} />
+      <CurrentTrack nowPlaying={nowPlaying} onSeek={props.onSeek} onExpand={()=>setFull(true)} hideArt={full} />
 
       <ButtonGroup>
         <StatefulPopover
@@ -192,7 +215,7 @@ const ControlBar: FC<ControlBarProps> = (props) => {
           </PlayQueueButton>
         </StatefulPopover>
       </ButtonGroup>
-    </Container>
+    </Container></>
   );
 };
 

@@ -12,6 +12,9 @@ use config::{Config, ConfigError};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub const DEFAULT_RADIO_BROWSER_URL: &str = "https://de1.api.radio-browser.info";
+pub const DEFAULT_TUNEIN_URL: &str = "https://opml.radiotime.com";
+
 /// Audio/DSP settings persisted in the `[audio]` table of settings.toml and
 /// applied to the playback engine at boot. Integer enums follow the Rockbox
 /// firmware conventions used by the desktop UI:
@@ -103,6 +106,10 @@ pub struct Settings {
     /// How often (in minutes) the music directory is rescanned in the
     /// background. 0 disables periodic refresh.
     pub library_refresh_interval: u64,
+    /// Radio Browser API base URL, without a trailing path.
+    pub radio_browser_url: String,
+    /// TuneIn OPML API base URL, without a trailing path.
+    pub tunein_url: String,
     /// Base URL of a Subsonic-compatible server (Navidrome, Airsonic, gonic, ...).
     /// Empty or absent means the Subsonic integration is disabled.
     pub subsonic_url: Option<String>,
@@ -189,6 +196,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         tauri_enable_graphql_server: false,
         audio_output: "cpal".to_string(),
         library_refresh_interval: 30,
+        radio_browser_url: DEFAULT_RADIO_BROWSER_URL.to_string(),
+        tunein_url: DEFAULT_TUNEIN_URL.to_string(),
         subsonic_url: Some("".to_string()),
         subsonic_username: Some("".to_string()),
         subsonic_password: Some("".to_string()),
@@ -234,6 +243,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             "library_refresh_interval",
             default_settings.library_refresh_interval,
         )?
+        .set_default("radio_browser_url", default_settings.radio_browser_url)?
+        .set_default("tunein_url", default_settings.tunein_url)?
         .set_default("subsonic_url", "")?
         .set_default("subsonic_username", "")?
         .set_default("subsonic_password", "")?

@@ -73,3 +73,4 @@ mdns-sd = "0.5.9"
 anyhow = "1.0.67"
 url = "2.3.1"
 upnp-client = "0.1.9"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }

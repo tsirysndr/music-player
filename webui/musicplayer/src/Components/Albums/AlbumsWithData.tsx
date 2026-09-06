@@ -30,7 +30,16 @@ const AlbumsWithData: FC = () => {
   const navigate = useNavigate();
   const { currentCastDevice } = useDevices();
   const albums = useMemo(
-    () => (!loading && data ? data.pages.flatMap((page) => page.albums) : []),
+    () => {
+      if (loading || !data) return [];
+      // Some remote sources can return the same album more than once. Keep
+      // one card per stable album id while combining paginated results.
+      const unique = new Map<string, GetAlbumsQuery["albums"][number]>();
+      for (const album of data.pages.flatMap((page) => page.albums)) {
+        if (!unique.has(album.id)) unique.set(album.id, album);
+      }
+      return Array.from(unique.values());
+    },
     [loading, data]
   );
   const onFilter = (filter: string) => {

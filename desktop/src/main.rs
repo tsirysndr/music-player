@@ -9,6 +9,7 @@
 
 mod daemon;
 mod likes;
+mod radio;
 mod rpc;
 mod servers;
 mod skin;
@@ -98,8 +99,14 @@ fn album_item(a: &AlbumEntry) -> AlbumItem {
 pub fn ui_set_library(app: &AppWindow, data: rpc::LibraryData) {
     STATE.with(|s| {
         let mut st = s.borrow_mut();
-        st.albums = data
-            .albums
+        let mut seen_albums = std::collections::HashSet::new();
+        let mut albums = Vec::new();
+        for album in data.albums {
+            if seen_albums.insert(album.id.clone()) {
+                albums.push(album);
+            }
+        }
+        st.albums = albums
             .into_iter()
             .map(|a| AlbumEntry {
                 data: a,
@@ -181,7 +188,33 @@ pub fn ui_set_artist_art(app: &AppWindow, idx: usize, w: u32, h: u32, rgba: Vec<
 pub fn ui_set_now_art(app: &AppWindow, w: u32, h: u32, rgba: Vec<u8>) {
     let image = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
     app.set_now_art(image);
+    if let Some(buffer) = image::RgbaImage::from_raw(w, h, rgba) {
+        let blurred = image::imageops::blur(&buffer, 18.0);
+        app.set_now_art_blurred(slint::Image::from_rgba8(
+            SharedPixelBuffer::clone_from_slice(
+                blurred.as_raw(),
+                blurred.width(),
+                blurred.height(),
+            ),
+        ));
+    }
     app.set_now_has_art(true);
+}
+
+pub fn ui_set_radios(app: &AppWindow, radios: Vec<rpc::StationData>) {
+    app.set_radios(ModelRc::new(VecModel::from(
+        radios
+            .into_iter()
+            .map(|station| StationItem {
+                id: station.id.into(),
+                name: station.name.into(),
+                subtitle: station.subtitle.into(),
+                source: station.source.into(),
+                logo: station.logo.into(),
+                bookmarked: station.bookmarked,
+            })
+            .collect::<Vec<_>>(),
+    )));
 }
 
 pub fn ui_set_queue(
@@ -1364,6 +1397,38 @@ fn main() -> Result<(), slint::PlatformError> {
         app.on_open_artist(move |name| {
             let app = app_weak.unwrap();
             app.invoke_open_palette_with(name);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_search(move |query| {
+            if !query.trim().is_empty() {
+                let _ = tx.send(rpc::Cmd::RadioSearch(query.into()));
+            }
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_browse(move |category| {
+            let _ = tx.send(rpc::Cmd::RadioBrowse(category.into()));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_bookmarks(move || {
+            let _ = tx.send(rpc::Cmd::RadioBookmarks);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_play(move |id| {
+            let _ = tx.send(rpc::Cmd::RadioPlay(id.into()));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_bookmark(move |id| {
+            let _ = tx.send(rpc::Cmd::RadioBookmark(id.into()));
         });
     }
 

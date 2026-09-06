@@ -62,6 +62,15 @@ export struct ServerItem {
     url: string,
 }
 
+export struct StationItem {
+    id: string,
+    name: string,
+    subtitle: string,
+    source: string,
+    logo: string,
+    bookmarked: bool,
+}
+
 export struct PaletteItem {
     kind: string, // "track" | "album" | "artist"
     id: string,
@@ -108,6 +117,61 @@ export component CtxMenuItem inherits Rectangle {
         clicked => { root.clicked(); }
         mouse-cursor: pointer;
     }
+}
+
+export component RadioRow inherits Rectangle {
+    in property <StationItem> station;
+    callback play;
+    callback bookmark;
+    height: 58px;
+    border-radius: Theme.control-radius;
+    background: touch.has-hover ? Theme.hover-bg : transparent;
+    touch := TouchArea { clicked => { root.play(); } mouse-cursor: pointer; }
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        Rectangle {
+            width: 40px;
+            height: 40px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 6px;
+            background: Theme.art-placeholder;
+            Image { source: Icons.broadcast; colorize: Theme.accent; width: 19px; height: 19px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text { text: root.station.name; color: Theme.text; font-size: 13px; font-weight: 600; wrap: no-wrap; overflow: elide; }
+            Text { text: root.station.subtitle + (root.station.source != "" ? "  ·  " + root.station.source : ""); color: Theme.text-muted; font-size: 10px; overflow: elide; }
+        }
+        Rectangle {
+            width: 30px; height: 30px; y: (parent.height - self.height) / 2; border-radius: 15px;
+            background: bookmark-touch.has-hover ? Theme.hover-bg : transparent;
+            Image { source: root.station.bookmarked ? Icons.heart : Icons.heart-outline; colorize: root.station.bookmarked ? Theme.accent : Theme.text-dim; width: 18px; height: 18px; x: 6px; y: 6px; }
+            bookmark-touch := TouchArea { clicked => { root.bookmark(); } }
+        }
+    }
+}
+
+export component RadioCategoryTile inherits Rectangle {
+    in property <string> label;
+    in property <string> term;
+    in property <image> icon;
+    in property <brush> icon-color;
+    callback selected(string, string);
+    height: 54px;
+    border-radius: Theme.control-radius;
+    background: touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 10px;
+        spacing: 10px;
+        Image { source: root.icon; colorize: root.icon-color; width: 20px; height: 20px; y: (parent.height - self.height) / 2; }
+        Text { text: root.label; color: Theme.text; font-size: 12px; font-weight: 600; wrap: no-wrap; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
+    }
+    touch := TouchArea { clicked => { root.selected(root.label, root.term); } mouse-cursor: pointer; }
 }
 
 

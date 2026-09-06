@@ -7,7 +7,7 @@ import {
     SearchButton, PaletteItem, PaletteRow, HelpRow,
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
     DetailRow, BrowseItem, ServerItem, FormField, ServerRow, BrowseRow,
-    PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton
+    PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -38,6 +38,8 @@ export component AppWindow inherits Window {
     in-out property <bool> now-liked: false;
     in-out property <image> now-art;
     in-out property <bool> now-has-art: false;
+    in-out property <image> now-art-blurred;
+    in-out property <bool> now-is-radio: false;
     in-out property <bool> playing: false;
     in-out property <bool> stopped: true;
     in-out property <float> progress: 0; // 0..1
@@ -129,6 +131,13 @@ export component AppWindow inherits Window {
     // buttons (set from Rust; 0 on other platforms).
     in-out property <length> titlebar-inset: 0px;
     in-out property <bool> show-sidebar: true;
+    in-out property <bool> show-full-player: false;
+
+    // ── Internet radio ─────────────────────────────────────────────────────
+    in-out property <[StationItem]> radios: [];
+    in-out property <int> radio-tab: 0; // 0 search/categories, 1 bookmarks
+    in-out property <string> radio-category: "";
+    in-out property <bool> show-radio-search: false;
 
     // ── Callbacks into Rust ─────────────────────────────────────────────────
     callback play-pause();
@@ -177,6 +186,11 @@ export component AppWindow inherits Window {
     callback queue-clear();
     callback queue-remove(int);
     callback cycle-skin();
+    callback radio-search(string);
+    callback radio-browse(string);
+    callback radio-bookmarks();
+    callback radio-play(string);
+    callback radio-bookmark(string);
 
     forward-focus: main-focus;
 
@@ -194,6 +208,11 @@ export component AppWindow inherits Window {
         root.switcher-opened();
         root.switcher-query("");
         switcher-input.focus();
+    }
+
+    public function open-radio-category(label: string, term: string) {
+        root.radio-category = label;
+        root.radio-browse(term);
     }
     function activate-switcher() {
         if (root.switcher-results.length > 0) {
@@ -248,6 +267,14 @@ export component AppWindow inherits Window {
                 root.open-palette();
                 return accept;
             }
+            if (event.text == "r") {
+                root.current-tab = 6;
+                root.radio-tab = 0;
+                root.radio-category = "";
+                root.show-radio-search = true;
+                radio-input.focus();
+                return accept;
+            }
             if (event.text == "?") {
                 root.show-help = true;
                 return accept;
@@ -255,9 +282,9 @@ export component AppWindow inherits Window {
             reject
         }
         key-pressed(event) => {
-            // '/' and '?' are handled on release (so the keystroke cannot
+            // '/', 'r' and '?' are handled on release (so the keystroke cannot
             // leak into the palette input) — swallow their press here.
-            if (event.text == "/" || event.text == "?") {
+            if (event.text == "/" || event.text == "r" || event.text == "?") {
                 return accept;
             }
             if (event.text == " ") {
@@ -281,7 +308,12 @@ export component AppWindow inherits Window {
                 return accept;
             }
             if (event.text == Key.Escape) {
-                if (root.show-confirm-delete) {
+                if (root.show-radio-search) {
+                    root.show-radio-search = false;
+                    main-focus.focus();
+                } else if (root.show-full-player) {
+                    root.show-full-player = false;
+                } else if (root.show-confirm-delete) {
                     root.show-confirm-delete = false;
                 } else if (root.show-playlist-picker) {
                     root.show-playlist-picker = false;
@@ -320,7 +352,7 @@ export component AppWindow inherits Window {
         height: 100%;
         // ── Sidebar ─────────────────────────────────────────────────────────
         sidebar := Rectangle {
-            width: root.show-sidebar ? 208px : 0px;
+            width: root.show-sidebar && !root.show-full-player ? 208px : 0px;
             background: Theme.sidebar-bg;
             clip: true;
             animate width { duration: 160ms; easing: ease-out; }
@@ -385,6 +417,12 @@ export component AppWindow inherits Window {
                 }
                 SidebarItem {
                     icon: Icons.broadcast;
+                    label: "Internet Radio";
+                    active: root.current-tab == 6;
+                    clicked => { root.current-tab = 6; root.show-detail = false; root.radio-tab = 0; root.radio-category = ""; }
+                }
+                SidebarItem {
+                    icon: Icons.server;
                     label: "Servers";
                     active: root.current-tab == 4;
                     clicked => { root.current-tab = 4; root.show-detail = false; }
@@ -394,6 +432,7 @@ export component AppWindow inherits Window {
 
                 // Skin switcher
                 skin-row := Rectangle {
+                    visible: !root.show-full-player;
                     height: 52px;
                     border-radius: Theme.control-radius;
                     background: skin-touch.has-hover ? Theme.hover-bg : transparent;
@@ -432,6 +471,7 @@ export component AppWindow inherits Window {
                 Rectangle { height: 6px; }
 
                 status-row := Rectangle {
+                    visible: !root.show-full-player;
                     height: 30px;
                     border-radius: Theme.control-radius;
                     background: status-touch.has-hover ? Theme.hover-bg : transparent;
@@ -481,6 +521,7 @@ export component AppWindow inherits Window {
                             : root.current-tab == 2 ? "Tracks"
                             : root.current-tab == 3 ? "Liked tracks"
                             : root.current-tab == 5 ? (root.pl-detail-open ? "Playlist" : "Playlists")
+                            : root.current-tab == 6 ? "Internet Radio"
                             : "Servers";
                         color: Theme.text;
                         font-size: 20px;
@@ -901,6 +942,69 @@ export component AppWindow inherits Window {
                     }
                 }
 
+                // ── Internet radio ─────────────────────────────────────────
+                if root.current-tab == 6 : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        height: 38px;
+                        spacing: 8px;
+                        for label[i] in ["Search", "Bookmarked"] : Rectangle {
+                            width: 112px;
+                            background: tab-touch.has-hover ? Theme.hover-bg : transparent;
+                            Text { text: label; color: root.radio-tab == i ? Theme.accent : Theme.text-dim; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; font-weight: 600; }
+                            Rectangle { y: parent.height - 2px; height: 2px; width: parent.width; background: root.radio-tab == i ? Theme.accent : transparent; }
+                            tab-touch := TouchArea {
+                                clicked => {
+                                    root.radio-tab = i;
+                                    root.radio-category = "";
+                                    if (i == 1) { root.radio-bookmarks(); }
+                                }
+                            }
+                        }
+                    }
+                    if root.radio-tab == 0 && root.radio-category == "" : Rectangle {
+                        height: 44px;
+                        background: transparent;
+                        Rectangle { y: parent.height - 1px; height: 1px; width: parent.width; background: Theme.border; }
+                        HorizontalLayout { padding-left: 4px; spacing: 10px; Image { source: Icons.search; colorize: Theme.text-muted; width: 19px; height: 19px; y: (parent.height - self.height) / 2; } Text { text: "Search radio stations…"; color: Theme.text-muted; font-size: 14px; vertical-alignment: center; } }
+                        TouchArea { clicked => { root.show-radio-search = true; radio-input.focus(); } mouse-cursor: text; }
+                    }
+                    if root.radio-tab == 0 && root.radio-category == "" : Flickable {
+                        vertical-stretch: 1;
+                        viewport-height: category-grid.preferred-height + 12px;
+                        category-grid := GridLayout {
+                            width: parent.width;
+                            spacing: 8px;
+                            Row { RadioCategoryTile { label:"Synthwave"; term:"synthwave"; icon:Icons.equalizer; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Lo-fi"; term:"lofi"; icon:Icons.volume; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Jazz"; term:"jazz"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Techno"; term:"techno"; icon:Icons.volume; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Ambient"; term:"ambient"; icon:Icons.equalizer; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Classical"; term:"classical"; icon:Icons.music; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Rock"; term:"rock"; icon:Icons.disc; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Pop"; term:"pop"; icon:Icons.artist; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Electronic"; term:"electronic"; icon:Icons.disc; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Hip-Hop"; term:"hip hop"; icon:Icons.disc; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Chillout"; term:"chill"; icon:Icons.heart; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Dance"; term:"dance"; icon:Icons.volume; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Reggae"; term:"reggae"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Metal"; term:"metal"; icon:Icons.disc; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"News"; term:"news"; icon:Icons.broadcast; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"World"; term:"world"; icon:Icons.broadcast; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"House"; term:"house"; icon:Icons.volume; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Trance"; term:"trance"; icon:Icons.equalizer; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Drum & Bass"; term:"drum and bass"; icon:Icons.volume; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Disco"; term:"disco"; icon:Icons.disc; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Funk"; term:"funk"; icon:Icons.disc; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Soul"; term:"soul"; icon:Icons.music; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"R&B"; term:"r&b"; icon:Icons.artist; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Blues"; term:"blues"; icon:Icons.music; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Country"; term:"country"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Folk"; term:"folk"; icon:Icons.music; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Punk"; term:"punk"; icon:Icons.disc; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Indie"; term:"indie"; icon:Icons.volume; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Latin"; term:"latin"; icon:Icons.music; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"K-Pop"; term:"k-pop"; icon:Icons.artist; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Gospel"; term:"gospel"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Oldies"; term:"oldies"; icon:Icons.disc; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Soundtrack"; term:"soundtrack"; icon:Icons.playlist; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } Rectangle {} Rectangle {} Rectangle {} }
+                        }
+                    }
+                    if root.radio-tab == 0 && root.radio-category != "" : VerticalLayout {
+                        spacing: 8px;
+                        HorizontalLayout { height: 40px; spacing: 8px; IconButton { icon:Icons.chevron-left; icon-size:17px; clicked=>{root.radio-category="";} } Text { text:root.radio-category; color:Theme.text; font-size:16px; font-weight:700; vertical-alignment:center; horizontal-stretch:1; } }
+                        ListView { vertical-stretch: 1;
+                            for station in root.radios : RadioRow { station:station; play=>{root.radio-play(station.id);} bookmark=>{root.radio-bookmark(station.id);} }
+                        }
+                    }
+                    if root.radio-tab == 1 : ListView {
+                        vertical-stretch: 1;
+                        for station in root.radios : RadioRow {
+                            station: station;
+                            play => { root.radio-play(station.id); }
+                            bookmark => { root.radio-bookmark(station.id); }
+                        }
+                    }
+                }
+
                 // ── Album detail (covers the tab content when open) ─────────
                 if root.show-detail : Rectangle {
                     background: Theme.window-bg;
@@ -1104,7 +1208,22 @@ export component AppWindow inherits Window {
             // ── Player bar ──────────────────────────────────────────────────
             player := Rectangle {
                 height: 92px;
-                background: Theme.panel-bg;
+                clip: true;
+                background: root.show-full-player ? #100c18dd : Theme.panel-bg;
+                if root.show-full-player && root.now-has-art : Image {
+                    x: -20px;
+                    y: -20px;
+                    width: parent.width + 40px;
+                    height: parent.height + 40px;
+                    source: root.now-art-blurred;
+                    image-fit: cover;
+                    opacity: 0.28;
+                }
+                if root.show-full-player : Rectangle {
+                    width: parent.width;
+                    height: parent.height;
+                    background: #100c18aa;
+                }
                 Rectangle { height: 1px; y: 0; width: parent.width; background: Theme.border; }
 
                 HorizontalLayout {
@@ -1115,8 +1234,9 @@ export component AppWindow inherits Window {
                     // Track info
                     HorizontalLayout {
                         spacing: 12px;
-                        width: 24%;
+                        width: root.show-full-player ? 38% : (root.now-has-art ? 24% : 32%);
                         Rectangle {
+                            visible: !root.show-full-player && root.now-has-art;
                             width: 60px;
                             height: 60px;
                             y: (parent.height - self.height) / 2;
@@ -1128,16 +1248,14 @@ export component AppWindow inherits Window {
                                 source: root.now-art;
                                 image-fit: cover;
                             }
-                            if !root.now-has-art : Image {
-                                source: Icons.music;
-                                colorize: Theme.text-muted;
-                                width: 22px;
-                                height: 22px;
-                                x: (parent.width - self.width) / 2;
-                                y: (parent.height - self.height) / 2;
+                            art-touch := TouchArea {
+                                enabled: !root.stopped;
+                                mouse-cursor: pointer;
+                                clicked => { root.show-full-player = true; }
                             }
                         }
                         VerticalLayout {
+                            horizontal-stretch: 1;
                             alignment: center;
                             spacing: 3px;
                             Text {
@@ -1154,7 +1272,7 @@ export component AppWindow inherits Window {
                                 overflow: elide;
                             }
                         }
-                        LikeButton {
+                        if !root.now-is-radio : LikeButton {
                             liked: root.now-liked;
                             icon-size: 21px;
                             width: 32px;
@@ -1178,14 +1296,14 @@ export component AppWindow inherits Window {
                         HorizontalLayout {
                             alignment: center;
                             spacing: 10px;
-                            IconButton {
+                            if !root.now-is-radio : IconButton {
                                 icon: Icons.shuffle;
                                 icon-size: 15px;
                                 accented: root.shuffle;
                                 y: (parent.height - self.height) / 2;
                                 clicked => { root.toggle-shuffle(); }
                             }
-                            IconButton {
+                            if !root.now-is-radio : IconButton {
                                 icon: Icons.prev;
                                 icon-size: 17px;
                                 y: (parent.height - self.height) / 2;
@@ -1195,13 +1313,13 @@ export component AppWindow inherits Window {
                                 playing: root.playing;
                                 clicked => { root.play-pause(); }
                             }
-                            IconButton {
+                            if !root.now-is-radio : IconButton {
                                 icon: Icons.next;
                                 icon-size: 17px;
                                 y: (parent.height - self.height) / 2;
                                 clicked => { root.next(); }
                             }
-                            repeat-btn := IconButton {
+                            if !root.now-is-radio : repeat-btn := IconButton {
                                 icon: Icons.repeat;
                                 icon-size: 15px;
                                 accented: root.repeat-mode > 0;
@@ -1226,7 +1344,7 @@ export component AppWindow inherits Window {
                                 }
                             }
                         }
-                        HorizontalLayout {
+                        if !root.now-is-radio : HorizontalLayout {
                             spacing: 10px;
                             Text {
                                 text: root.elapsed-text;
@@ -1297,6 +1415,43 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Full-window now-playing canvas. The normal miniplayer remains below it.
+    full-player := Rectangle {
+        visible: root.show-full-player;
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height - 92px;
+        background: Theme.window-bg;
+        if root.now-has-art : Image {
+            width: parent.width;
+            height: parent.height;
+            source: root.now-art-blurred;
+            image-fit: cover;
+            opacity: 0.48;
+        }
+        Rectangle { width: parent.width; height: parent.height; background: #08060dbb; }
+        IconButton { x: 22px; y: 22px + root.titlebar-inset; icon: Icons.chevron-left; icon-size: 20px; width: 42px; height: 42px; clicked => { root.show-full-player = false; } }
+        VerticalLayout {
+            x: max(90px, (parent.width - 480px) / 2);
+            y: 70px;
+            width: min(480px, parent.width - 180px);
+            height: parent.height - 110px;
+            alignment: center;
+            spacing: 16px;
+            Rectangle {
+                width: min(parent.width, parent.height - 110px);
+                height: self.width;
+                background: Theme.art-placeholder;
+                clip: true;
+                drop-shadow-color: #000000aa;
+                drop-shadow-blur: 40px;
+                if root.now-has-art : Image { width: parent.width; height: parent.height; source: root.now-art; image-fit: cover; }
+                if !root.now-has-art : Image { source: Icons.music; colorize: Theme.text-muted; width: 72px; height: 72px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
             }
         }
     }
@@ -1929,7 +2084,40 @@ export component AppWindow inherits Window {
         }
     }
 
-    // ── Command palette (Raycast-style) ─────────────────────────────────────
+    // ── Radio search ────────────────────────────────────────────────────────
+    radio-search-layer := Rectangle {
+        visible: root.show-radio-search;
+        width: 100%; height: 100%; background: #000000a0;
+        TouchArea { clicked => { root.show-radio-search = false; } }
+        Rectangle {
+            x: (parent.width - self.width) / 2; y: 84px;
+            width: min(620px, parent.width - 80px); height: min(480px, parent.height - 168px);
+            border-radius: 14px; background: Theme.panel-bg; border-width: 1px; border-color: Theme.border;
+            drop-shadow-color: #000000aa; drop-shadow-blur: 40px; clip: true;
+            TouchArea {}
+            VerticalLayout {
+                HorizontalLayout {
+                    padding: 18px; spacing: 12px;
+                    Image { source: Icons.broadcast; colorize: Theme.accent; width: 18px; height: 18px; y: (parent.height - self.height) / 2; }
+                    radio-input := TextInput {
+                        horizontal-stretch: 1; height: 28px; color: Theme.text; font-size: 17px; single-line: true;
+                        edited => { root.radio-search(self.text); }
+                    }
+                    Text { text: "esc"; color: Theme.text-muted; font-size: 10px; vertical-alignment: center; }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                ListView {
+                    for station in root.radios : RadioRow {
+                        station: station;
+                        play => { root.radio-play(station.id); root.show-radio-search = false; }
+                        bookmark => { root.radio-bookmark(station.id); }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Command palette ─────────────────────────────────────────────────────
     palette-layer := Rectangle {
         visible: root.show-palette;
         width: 100%;
@@ -2376,7 +2564,7 @@ export component AppWindow inherits Window {
         }
     }
 
-    // ── Server switcher (Raycast-style) ─────────────────────────────────────
+    // ── Server switcher ─────────────────────────────────────────────────────
     switcher-layer := Rectangle {
         visible: root.show-server-switcher;
         width: 100%;
@@ -2728,6 +2916,7 @@ export component AppWindow inherits Window {
                     font-weight: 700;
                 }
                 HelpRow { keys: "/"; label: "Search library"; }
+                HelpRow { keys: "r"; label: "Search internet radio"; }
                 HelpRow { keys: "space"; label: "Play / pause"; }
                 HelpRow { keys: "up / down"; label: "Navigate search results"; }
                 HelpRow { keys: "enter"; label: "Play selection"; }

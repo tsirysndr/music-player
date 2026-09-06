@@ -189,12 +189,12 @@ fn boot() {
         let tracklist = Arc::clone(&tracklist);
         let cmd_tx = Arc::clone(&cmd_tx);
         let peer_map = Arc::clone(&peer_map);
+        let db = db.clone();
         std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
-            let db = runtime.block_on(Database::new());
             if let Err(e) =
                 runtime.block_on(MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db).start_ws())
             {

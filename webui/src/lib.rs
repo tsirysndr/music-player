@@ -140,6 +140,7 @@ pub async fn start_webui(
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
     let db = Database::new().await;
     let searcher = Arc::new(Searcher::new(db.get_connection().clone()));
+    let http_db = db.clone();
     let schema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -158,10 +159,11 @@ pub async fn start_webui(
 
     HttpServer::new(move || {
         let cors = Cors::permissive();
-        let db = futures::executor::block_on(Database::new());
         let covers_path = format!("{}/covers", get_application_directory());
         App::new()
-            .app_data(Data::new(db.clone()))
+            // Database clones share one SeaORM pool. Creating a pool here
+            // would open a separate set of SQLite descriptors per worker.
+            .app_data(Data::new(http_db.clone()))
             .app_data(Data::new(schema.clone()))
             .wrap(cors)
             .service(index_graphql)
@@ -177,6 +179,7 @@ pub async fn start_webui(
             .route("/tracks", web::get().to(index_spa))
             .route("/artists", web::get().to(index_spa))
             .route("/albums", web::get().to(index_spa))
+            .route("/radio", web::get().to(index_spa))
             .route("/artists/{_:.*}", web::get().to(index_spa))
             .route("/albums/{_:.*}", web::get().to(index_spa))
             .route("/folders/{_:.*}", web::get().to(index_spa))

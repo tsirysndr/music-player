@@ -12,6 +12,7 @@ use self::{
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
     playlist::{PlaylistMutation, PlaylistQuery, PlaylistSubscription},
+    radio::{RadioMutation, RadioQuery},
     tracklist::{TracklistMutation, TracklistQuery, TracklistSubscription},
 };
 
@@ -24,6 +25,7 @@ pub mod mixer;
 pub mod objects;
 pub mod playback;
 pub mod playlist;
+pub mod radio;
 pub mod tracklist;
 
 #[derive(MergedObject, Default)]
@@ -34,6 +36,7 @@ pub struct Query(
     PlaybackQuery,
     PlaylistQuery,
     TracklistQuery,
+    RadioQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -44,6 +47,7 @@ pub struct Mutation(
     PlaybackMutation,
     PlaylistMutation,
     TracklistMutation,
+    RadioMutation,
 );
 
 #[derive(MergedSubscription, Default)]

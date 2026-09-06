@@ -64,7 +64,7 @@ UIs (neon accents).
   `remote_player = false` in `settings.toml`. (Remote queue control is off
   for now — the daemon plays the local library, not the Rocksky library.)
 - **Command palette** — press `/` (or click the search box) for a
-  Raycast-style overlay searching tracks, albums and artists (with cover art
+  Search overlay for tracks, albums and artists (with cover art
   thumbnails); `↑`/`↓` + `enter` to play. `?` shows the keyboard-shortcut
   help.
 - **VFD display** — jetAudio-style readout with elapsed time, queue position

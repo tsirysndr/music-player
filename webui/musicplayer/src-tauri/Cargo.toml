@@ -18,6 +18,22 @@ tauri-build = {version = "2", features = []}
 path = "../../../addons"
 version = "0.2.1"
 
+[dependencies.music-player-server]
+path = "../../../server"
+version = "0.2.1"
+
+[dependencies.music-player-migration]
+path = "../../../migration"
+version = "0.2.1"
+
+[dependencies.music-player-webui]
+path = "../../../webui"
+version = "0.2.1"
+
+[dependencies.music-player-discovery]
+path = "../../../discovery"
+version = "0.2.1"
+
 [dependencies.music-player-graphql]
 path = "../../../graphql"
 version = "0.2.1"
@@ -47,10 +63,14 @@ actix-web = "4.9.0"
 async-graphql = "4.0.15"
 async-graphql-actix-web = "4.0.15"
 futures = "0.3.24"
+futures-channel = "0.3.24"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 tauri = {version = "2", features = ["protocol-asset"]}
 tokio = {version = "1.21.2", features = ["full"]}
+tungstenite = "0.17.3"
+sea-orm = {version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
+tracing = "0.1"
 uuid = "1.1.2"
 
 [features]

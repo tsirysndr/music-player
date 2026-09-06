@@ -109,6 +109,11 @@ pub enum Cmd {
         grpc_port: u16,
     },
     DiscoverServers,
+    RadioSearch(String),
+    RadioBrowse(String),
+    RadioBookmarks,
+    RadioPlay(String),
+    RadioBookmark(String),
 }
 
 // ── Plain data handed to the UI thread ──────────────────────────────────────
@@ -128,6 +133,16 @@ pub struct ArtistData {
     pub name: String,
     /// Artist image URL (Rocksky), empty when unknown.
     pub picture: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct StationData {
+    pub id: String,
+    pub name: String,
+    pub subtitle: String,
+    pub source: String,
+    pub logo: String,
+    pub bookmarked: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -286,6 +301,7 @@ struct WorkerState {
     liked: HashSet<String>,
     playing: bool,
     remote: Option<RemoteSource>,
+    radios: HashMap<String, crate::radio::Station>,
 }
 
 /// Spawns the background runtime; returns immediately.
@@ -474,6 +490,7 @@ async fn session(
         }
 
         let stopped = now.track.is_none();
+        let is_radio = track_id.starts_with("radio:");
         let elapsed = now.position_ms as f32 / 1000.0;
         let length = length_ms as f32 / 1000.0;
         let _ = weak.upgrade_in_event_loop(move |app| {
@@ -483,6 +500,7 @@ async fn session(
             app.set_now_path(path.into());
             app.set_now_liked(crate::is_liked(&track_id));
             app.set_now_track_id(track_id.into());
+            app.set_now_is_radio(is_radio);
             app.set_playing(playing);
             app.set_stopped(stopped);
             app.set_elapsed_s(elapsed);
@@ -899,7 +917,11 @@ async fn playlist_tracks(channel: &Channel, id: &str) -> Result<Vec<TrackProto>,
 }
 
 async fn fetch_thumb(covers_base: &str, file: &str, max: u32) -> Option<(u32, u32, Vec<u8>)> {
-    let url = format!("{covers_base}{file}");
+    let url = if file.starts_with("http://") || file.starts_with("https://") {
+        file.to_owned()
+    } else {
+        format!("{covers_base}{file}")
+    };
     let bytes = reqwest::get(&url).await.ok()?.bytes().await.ok()?;
     tokio::task::spawn_blocking(move || {
         let img = image::load_from_memory(&bytes).ok()?;
@@ -911,7 +933,11 @@ async fn fetch_thumb(covers_base: &str, file: &str, max: u32) -> Option<(u32, u3
 }
 
 async fn fetch_now_art(covers_base: String, file: String, track_id: String, weak: Weak<AppWindow>) {
-    let url = format!("{covers_base}{file}");
+    let url = if file.starts_with("http://") || file.starts_with("https://") {
+        file.clone()
+    } else {
+        format!("{covers_base}{file}")
+    };
     let Ok(bytes) = reqwest::get(&url)
         .await
         .and_then(|response| response.error_for_status())
@@ -1328,6 +1354,40 @@ async fn push_liked(state: &Arc<Mutex<WorkerState>>, weak: &Weak<AppWindow>) {
     });
 }
 
+async fn push_radios(
+    state: &Arc<Mutex<WorkerState>>,
+    weak: &Weak<AppWindow>,
+    stations: Vec<crate::radio::Station>,
+) {
+    let saved: HashSet<String> = crate::radio::load_bookmarks()
+        .await
+        .into_iter()
+        .map(|station| station.id)
+        .collect();
+    let rows = {
+        let mut state = state.lock().await;
+        for station in &stations {
+            state.radios.insert(station.id.clone(), station.clone());
+        }
+        stations
+            .into_iter()
+            .map(|station| StationData {
+                id: station.id.clone(),
+                name: station.name,
+                subtitle: [station.genre, station.country]
+                    .into_iter()
+                    .filter(|value| !value.is_empty())
+                    .collect::<Vec<_>>()
+                    .join(" · "),
+                source: station.source,
+                logo: station.logo,
+                bookmarked: saved.contains(&station.id),
+            })
+            .collect()
+    };
+    let _ = weak.upgrade_in_event_loop(move |app| crate::ui_set_radios(&app, rows));
+}
+
 async fn cmd_loop(
     mut rx: UnboundedReceiver<Cmd>,
     state: Arc<Mutex<WorkerState>>,
@@ -1584,6 +1644,46 @@ async fn cmd_loop(
                             crate::ui_set_discovered(&app, found);
                         });
                     });
+                }
+                Cmd::RadioSearch(query) => {
+                    push_radios(&state, &weak, crate::radio::search(&query).await).await;
+                }
+                Cmd::RadioBrowse(tag) => {
+                    let stations = crate::radio::browse(&tag).await.unwrap_or_default();
+                    push_radios(&state, &weak, stations).await;
+                }
+                Cmd::RadioBookmarks => {
+                    let stations = crate::radio::load_bookmarks().await;
+                    push_radios(&state, &weak, stations).await;
+                }
+                Cmd::RadioBookmark(id) => {
+                    let station = state.lock().await.radios.get(&id).cloned();
+                    if let Some(station) = station {
+                        crate::radio::toggle_bookmark(&station).await;
+                        let stations = state.lock().await.radios.values().cloned().collect();
+                        push_radios(&state, &weak, stations).await;
+                    }
+                }
+                Cmd::RadioPlay(id) => {
+                    let station = state.lock().await.radios.get(&id).cloned();
+                    if let Some(station) = station {
+                        let uri = crate::radio::resolve_stream(&station).await;
+                        let track = TrackProto {
+                            id: format!("radio:{}", station.id),
+                            title: station.name,
+                            artist: station.source,
+                            uri,
+                            bitrate: station.bitrate,
+                            album: Some(music_player_server::api::metadata::v1alpha1::Album {
+                                id: "internet-radio".into(),
+                                title: "Internet Radio".into(),
+                                cover: station.logo,
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        };
+                        load_tracks(&channel, vec![track], 0).await?;
+                    }
                 }
                 Cmd::ConnectServer(srv) => {
                     let name = srv.name.clone();

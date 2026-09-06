@@ -274,6 +274,10 @@ bun install
 bun run tauri dev   # or: bun run tauri build
 ```
 
+The Tauri app reuses an existing local music-player daemon when one is
+available; otherwise it starts the daemon in-process so playback and the
+GraphQL, gRPC, websocket, and web UI endpoints are available immediately.
+
 ## GraphQL API
 
 ```bash
@@ -307,6 +311,8 @@ ws_port = 5052     # WebSocket events
 http_port = 5053   # Web UI + GraphQL
 device_name = "Music Player"
 library_refresh_interval = 30  # rescan the music directory every N minutes (0 = off)
+radio_browser_url = "https://de1.api.radio-browser.info"
+tunein_url = "https://opml.radiotime.com"
 ```
 
 The library can also be refreshed manually at any time — `music-player scan` from the CLI, or the `scan` mutation in GraphQL. Re-scans only pick up what's new; existing entries are untouched.

@@ -48,6 +48,7 @@ async fn test_cli() {
         "track_search",
         "album_search",
         "artist_search",
+        "saved_radio",
     ] {
         assert!(
             tables.contains(&table.to_string()),

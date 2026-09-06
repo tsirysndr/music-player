@@ -8,6 +8,7 @@ pub mod artist_tracks;
 pub mod folder;
 pub mod playlist;
 pub mod playlist_tracks;
+pub mod saved_radio;
 pub mod track;
 
 pub mod select_result {

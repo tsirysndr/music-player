@@ -21,7 +21,12 @@ impl Database {
         let settings = config.try_deserialize::<Settings>().unwrap();
 
         let mut opt = ConnectOptions::new(settings.database_url);
-        opt.max_connections(100).min_connections(5);
+        // SQLite uses one file descriptor per pooled connection.  The daemon
+        // exposes several services in the same process, so eagerly opening
+        // five connections for every pool can exhaust the low descriptor
+        // limit used by desktop app bundles.  SQLite serializes writes
+        // anyway; a small, lazily-grown pool is both sufficient and safer.
+        opt.max_connections(8).min_connections(1);
         let connection = sea_orm::Database::connect(opt)
             .await
             .expect("Could not connect to database");

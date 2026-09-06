@@ -1,7 +1,8 @@
 use anyhow::Error;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
+    ColumnTrait, DatabaseConnection, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
+    QuerySelect, QueryTrait, RelationTrait,
 };
 
 pub struct AlbumRepository {
@@ -43,11 +44,17 @@ impl AlbumRepository {
         offset: Option<u64>,
         limit: Option<u64>,
     ) -> Result<Vec<album_entity::Model>, Error> {
+        // An album row can briefly become orphaned when tags change between
+        // scans. Never expose those rows: they render as duplicate, empty
+        // "ghost" albums until the scanner's cleanup pass runs.
+        let mut albums_with_tracks = album_entity::Entity::find()
+            .join(JoinType::InnerJoin, album_entity::Relation::Track.def());
+        QueryTrait::query(&mut albums_with_tracks).distinct();
         let mut query = match offset {
-            Some(offset) => album_entity::Entity::find()
+            Some(offset) => albums_with_tracks
                 .order_by_asc(album_entity::Column::Title)
                 .offset(offset),
-            None => album_entity::Entity::find().order_by_asc(album_entity::Column::Title),
+            None => albums_with_tracks.order_by_asc(album_entity::Column::Title),
         };
         query = match limit {
             Some(limit) => query.limit(limit),

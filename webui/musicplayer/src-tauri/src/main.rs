@@ -25,10 +25,11 @@ use music_player_playback::player::{Player, PlayerEvent};
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
-use tauri::{Emitter, Listener, Manager};
+use tauri::{Emitter, Listener};
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
+mod embedded;
 mod graphql_server;
 
 use graphql_server::run_graphql_server;
@@ -89,13 +90,15 @@ async fn execute_graphql(
 
 #[tokio::main]
 async fn main() {
+    let daemon_available = embedded::ensure_running();
+
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
-    let searcher_db = Database::new().await;
-    let searcher = Arc::new(Searcher::new(searcher_db.get_connection().clone()));
+    let db = Database::new().await;
+    let searcher = Arc::new(Searcher::new(db.get_connection().clone()));
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
@@ -126,7 +129,6 @@ async fn main() {
         Arc::clone(&cmd_rx),
         tracklist.clone(),
     );
-    let db = Database::new().await;
     let schema: MusicPlayerSchema = Schema::build(
         Query::default(),
         Mutation::default(),
@@ -144,7 +146,9 @@ async fn main() {
 
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
-    if settings.tauri_enable_graphql_server {
+    // The embedded daemon already owns the configured HTTP port. Only start
+    // the lightweight Tauri GraphQL server when no daemon is being used.
+    if settings.tauri_enable_graphql_server && !daemon_available {
         tokio::spawn(run_graphql_server(schema.clone()));
     }
 

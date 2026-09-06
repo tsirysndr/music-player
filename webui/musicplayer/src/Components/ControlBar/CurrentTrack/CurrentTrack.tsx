@@ -42,7 +42,8 @@ const NoCover = styled.div`
 const TrackInfo = styled.div`
   display: flex;
   flex-direction: column;
-  width: 430px;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
 `;
 
@@ -51,7 +52,9 @@ const Wrapper = styled.div`
   flex: 1;
   flex-direction: column;
   align-items: center;
-  width: 430px;
+  min-width: 0;
+  width: auto;
+  flex: 1;
   overflow: hidden;
 `;
 
@@ -194,11 +197,14 @@ export type CurrentTrackProps = {
     progress: number;
     isPlaying?: boolean;
     albumId?: string;
+    id?: string;
   };
   onSeek?: (positionMs: number) => void;
+  onExpand?: () => void;
+  hideArt?: boolean;
 };
 
-const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek }) => {
+const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek, onExpand, hideArt }) => {
   const { cover } = useCover(nowPlaying?.cover);
   const { formatTime } = useTimeFormat();
   return (
@@ -215,14 +221,9 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek }) => {
       )}
       {nowPlaying && nowPlaying!.title && (
         <Container>
-          <Link to={`/albums/${nowPlaying!.albumId}`}>
-            {cover && <AlbumCover src={cover} />}
-            {!cover && (
-              <NoCover>
-                <Track width={28} height={28} color="#a4a3a3" />
-              </NoCover>
-            )}
-          </Link>
+          {!hideArt && cover && <span onClick={onExpand} style={{cursor:"pointer",display:"flex",flexShrink:0}}>
+            <AlbumCover src={cover} />
+          </span>}
           <Wrapper>
             <TrackInfo>
               <Title>{nowPlaying?.title}</Title>
@@ -234,7 +235,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek }) => {
                 </Link>
               </Artist>
             </TrackInfo>
-            <Row>
+            {!nowPlaying.id?.startsWith("radio:") && <Row>
               <Time>{formatTime(nowPlaying?.progress)}</Time>
               <ProgressbarContainer>
                 <SeekBar
@@ -244,7 +245,7 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek }) => {
                 />
               </ProgressbarContainer>
               <Time>{formatTime(nowPlaying?.duration)}</Time>
-            </Row>
+            </Row>}
           </Wrapper>
         </Container>
       )}

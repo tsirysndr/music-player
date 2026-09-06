@@ -16,6 +16,14 @@ fn read_settings() {
     assert_eq!(settings.get_int("port").unwrap(), 5051);
     assert_eq!(settings.get_int("ws_port").unwrap(), 5052);
     assert_eq!(settings.get_int("http_port").unwrap(), 5053);
+    assert_eq!(
+        settings.get_string("radio_browser_url").unwrap(),
+        super::DEFAULT_RADIO_BROWSER_URL
+    );
+    assert_eq!(
+        settings.get_string("tunein_url").unwrap(),
+        super::DEFAULT_TUNEIN_URL
+    );
     assert_eq!(settings.get_string("device_name").unwrap(), "Music Player");
     assert_eq!(settings.get_string("device_id").unwrap().len(), 32);
     assert!(!settings.get_array("addons").unwrap().is_empty());

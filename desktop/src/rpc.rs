@@ -320,8 +320,16 @@ pub fn start(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
 }
 
 async fn run(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
+    // Likes restored from the user's atproto repo join the locally-stored ones,
+    // so a fresh install shows the account's likes once the library is scanned.
+    let mut liked = likes::load();
+    let db = music_player_storage::Database::new().await;
+    match music_player_storage::rocksky_likes::matched_track_ids(db.get_connection()).await {
+        Ok(ids) => liked.extend(ids),
+        Err(e) => tracing::debug!("could not read restored likes: {e}"),
+    }
     let state = Arc::new(Mutex::new(WorkerState {
-        liked: likes::load(),
+        liked,
         ..WorkerState::default()
     }));
 
@@ -494,6 +502,7 @@ async fn session(
         let elapsed = now.position_ms as f32 / 1000.0;
         let length = length_ms as f32 / 1000.0;
         let _ = weak.upgrade_in_event_loop(move |app| {
+            let station_changed = app.get_now_track_id().as_str() != track_id;
             app.set_now_title(title.into());
             app.set_now_artist(artist.into());
             app.set_now_album(album.into());
@@ -503,6 +512,13 @@ async fn session(
             app.set_now_is_radio(is_radio);
             app.set_playing(playing);
             app.set_stopped(stopped);
+            // The daemon reports no position for a live stream, so the local
+            // ticker owns the radio clock; only tuning a new station resets it.
+            let elapsed = if is_radio && !station_changed && elapsed <= 0.0 {
+                app.get_elapsed_s()
+            } else {
+                elapsed
+            };
             app.set_elapsed_s(elapsed);
             app.set_length_s(length);
             app.set_progress(if length > 0.0 { elapsed / length } else { 0.0 });
@@ -1364,7 +1380,7 @@ async fn push_radios(
         .into_iter()
         .map(|station| station.id)
         .collect();
-    let rows = {
+    let rows: Vec<StationData> = {
         let mut state = state.lock().await;
         for station in &stations {
             state.radios.insert(station.id.clone(), station.clone());
@@ -1385,7 +1401,53 @@ async fn push_radios(
             })
             .collect()
     };
+    let logos: Vec<(String, String)> = rows
+        .iter()
+        .filter(|row| !row.logo.is_empty())
+        .map(|row| (row.id.clone(), row.logo.clone()))
+        .collect();
     let _ = weak.upgrade_in_event_loop(move |app| crate::ui_set_radios(&app, rows));
+    fetch_radio_logos(weak.clone(), logos);
+}
+
+/// Station logos are fetched after the rows are on screen and pushed in as they
+/// decode, a few at a time so a 100-station result doesn't open 100 sockets.
+fn fetch_radio_logos(weak: Weak<AppWindow>, logos: Vec<(String, String)>) {
+    const PARALLEL: usize = 8;
+    if logos.is_empty() {
+        return;
+    }
+    tokio::spawn(async move {
+        let mut inflight = tokio::task::JoinSet::new();
+        for (id, url) in logos {
+            if inflight.len() >= PARALLEL {
+                let _ = inflight.join_next().await;
+            }
+            inflight.spawn(fetch_radio_logo(weak.clone(), id, url));
+        }
+        while inflight.join_next().await.is_some() {}
+    });
+}
+
+async fn fetch_radio_logo(weak: Weak<AppWindow>, id: String, url: String) {
+    let Some(bytes) = crate::radio::logo_bytes(&url).await else {
+        return;
+    };
+    let decoded = tokio::task::spawn_blocking(move || {
+        let img = image::load_from_memory(&bytes).ok()?;
+        let thumb = img.thumbnail(96, 96).to_rgba8();
+        Some((thumb.width(), thumb.height(), thumb.into_raw()))
+    })
+    .await
+    .ok()
+    .flatten();
+    let Some((w, h, rgba)) = decoded else {
+        tracing::debug!("could not decode radio logo {url}");
+        return;
+    };
+    let _ = weak.upgrade_in_event_loop(move |app| {
+        crate::ui_set_radio_logo(&app, &id, w, h, rgba);
+    });
 }
 
 async fn cmd_loop(
@@ -1811,7 +1873,14 @@ async fn ticker(weak: Weak<AppWindow>) {
         let _ = weak.upgrade_in_event_loop(move |app| {
             if app.get_playing() {
                 let length = app.get_length_s();
-                let elapsed = (app.get_elapsed_s() + TICK_S as f32).min(length.max(0.0));
+                let elapsed = app.get_elapsed_s() + TICK_S as f32;
+                // Live streams have no length; clamping to it would pin the
+                // readout at 00:00 instead of counting up.
+                let elapsed = if length > 0.0 {
+                    elapsed.min(length)
+                } else {
+                    elapsed
+                };
                 app.set_elapsed_s(elapsed);
                 app.set_progress(if length > 0.0 { elapsed / length } else { 0.0 });
                 app.set_elapsed_text(format_time(elapsed as f64).into());

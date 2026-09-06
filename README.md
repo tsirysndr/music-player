@@ -80,6 +80,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
   - [Audio output](#audio-output)
   - [Subsonic / Navidrome & Jellyfin](#subsonic--navidrome--jellyfin)
   - [Rocksky scrobbling](#rocksky-scrobbling)
+  - [AT Protocol sync](#at-protocol-sync)
 - [Casting](#casting)
 - [Star History](#star-history)
 
@@ -94,6 +95,8 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - ☁️ **Browse & stream from Subsonic/Navidrome and Jellyfin servers**
 - 📻 **Cast to Chromecast and UPnP/DLNA renderers**, or control another music-player daemon
 - 🎧 **Rocksky scrobbling** — scrobble your plays to [Rocksky](https://rocksky.app) on the [AT Protocol](https://atproto.com)
+- 📻 **Internet radio** — search and browse thousands of stations (Radio Browser + TuneIn), bookmark them, with a fullscreen now-playing player
+- 🛰️ **AT Protocol sync** — radio bookmarks and liked songs restored from your atproto repo, written back to your PDS, and kept live over Jetstream
 - 🔌 Flexible **audio output**: system device (cpal), stdout, FIFO, Unix or TCP socket
 
 ## Installation
@@ -313,6 +316,8 @@ device_name = "Music Player"
 library_refresh_interval = 30  # rescan the music directory every N minutes (0 = off)
 radio_browser_url = "https://de1.api.radio-browser.info"
 tunein_url = "https://opml.radiotime.com"
+scrobble = true    # Rocksky scrobbling
+atproto = true     # AT Protocol sync (bookmarks, likes, listening status)
 ```
 
 The library can also be refreshed manually at any time — `music-player scan` from the CLI, or the `scan` mutation in GraphQL. Re-scans only pick up what's new; existing entries are untouched.
@@ -352,6 +357,35 @@ If you're logged into [Rocksky](https://rocksky.app) (`rocksky login` writes `~/
 ```toml
 scrobble = false
 ```
+
+### AT Protocol sync
+
+Your radio bookmarks and liked songs live in your own [atproto](https://atproto.com) repo, so they follow you between devices and clients ([atradio.fm](https://atradio.fm), [Rocksky](https://rocksky.app), music-player).
+
+Nothing here is required: with no account linked, music-player skips all of it and never touches the network for it. Turn the whole integration off with:
+
+```toml
+atproto = false
+```
+
+**Linking an account.** Reading your repo only needs your identity, which comes from `rocksky login` (`~/.rocksky/token.json`). Writing back needs a session — either `atradio login`, or password credentials in the environment:
+
+```bash
+export ATPROTO_IDENTIFIER=alice.bsky.social   # handle, DID or email
+export ATPROTO_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+```
+
+The session file is shared with the [atradio](https://atradio.fm) CLI, so signing in once covers both. The daemon logs at startup whether it is authenticated, and what is missing if not.
+
+**What syncs.**
+
+| | |
+|---|---|
+| **Radio bookmarks** | `fm.atradio.favorite` records are imported into your local bookmarks on startup, and bookmarking a station writes the record to your PDS (unbookmarking deletes it). Bookmarks that only existed locally are pushed up. |
+| **Liked songs** | `app.rocksky.like` records are imported, then matched against your library on title + artist + album (case-insensitive, indexed). A match links the track to the song record through the new `aturi` column on `track` / `album` / `artist`. A like whose file isn't in the library yet is kept and re-matched after the next scan. |
+| **Listening status** | While a station plays, it is published as your `fm.atradio.actor.status` record, written straight to your PDS; the record is deleted when playback stops. |
+
+**How it reads and stays in sync.** The initial import downloads your repo once as a CAR archive (`com.atproto.sync.getRepo`) and walks its Merkle Search Tree, so one request covers every collection — `listRecords` is the fallback. After that the daemon subscribes to several public Jetstream instances at once and de-duplicates events by repo revision, so a like or bookmark added on another device shows up here within seconds without depending on any single instance staying up.
 
 ## Casting
 

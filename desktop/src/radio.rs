@@ -5,6 +5,7 @@ use music_player_settings::{
 use music_player_storage::Database;
 use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::time::Duration;
 
 pub const CATEGORIES: &[(&str, &str)] = &[
@@ -225,6 +226,50 @@ fn from_rb(row: RbStation) -> Station {
     }
 }
 
+fn logo_cache_dir() -> Option<PathBuf> {
+    dirs::cache_dir().map(|dir| dir.join("music-player").join("radio-logos"))
+}
+
+/// Station logo bytes, cached on disk between runs. Directories hand out a
+/// couple hundred logos per search and most of them come back on the next
+/// search too, so re-downloading them every time is pure latency.
+pub async fn logo_bytes(url: &str) -> Option<Vec<u8>> {
+    if url.is_empty() {
+        return None;
+    }
+    let cached = logo_cache_dir().map(|dir| dir.join(format!("{:x}", md5::compute(url))));
+    if let Some(path) = &cached {
+        if let Ok(bytes) = tokio::fs::read(path).await {
+            if !bytes.is_empty() {
+                return Some(bytes);
+            }
+        }
+    }
+
+    let bytes = client()
+        .get(url)
+        .send()
+        .await
+        .ok()?
+        .error_for_status()
+        .ok()?
+        .bytes()
+        .await
+        .ok()?;
+    if bytes.is_empty() {
+        return None;
+    }
+    if let Some(path) = &cached {
+        if let Some(parent) = path.parent() {
+            let _ = tokio::fs::create_dir_all(parent).await;
+        }
+        if let Err(e) = tokio::fs::write(path, &bytes).await {
+            tracing::debug!("could not cache radio logo {url}: {e}");
+        }
+    }
+    Some(bytes.to_vec())
+}
+
 pub async fn resolve_stream(station: &Station) -> String {
     let lower = station.stream_url.to_lowercase();
     let playlist = station.id.starts_with("tunein:")
@@ -279,6 +324,16 @@ pub async fn load_bookmarks() -> Vec<Station> {
 pub async fn toggle_bookmark(station: &Station) -> bool {
     let db = Database::new().await;
     let conn = db.get_connection();
+    let row = saved_radio::Model {
+        id: station.id.clone(),
+        name: station.name.clone(),
+        stream_url: station.stream_url.clone(),
+        source: station.source.clone(),
+        genre: station.genre.clone(),
+        country: station.country.clone(),
+        logo: station.logo.clone(),
+        bitrate: station.bitrate,
+    };
     if saved_radio::Entity::find_by_id(station.id.clone())
         .one(conn)
         .await
@@ -289,18 +344,30 @@ pub async fn toggle_bookmark(station: &Station) -> bool {
         let _ = saved_radio::Entity::delete_by_id(station.id.clone())
             .exec(conn)
             .await;
+        // Mirror into the user's atproto repo; a no-op when signed out.
+        if let Err(e) = music_player_storage::atradio::unfavorite(&row).await {
+            tracing::warn!("could not remove the bookmark on atradio.fm: {e}");
+        }
         false
     } else {
-        let row = saved_radio::ActiveModel {
-            id: ActiveValue::Set(station.id.clone()),
-            name: ActiveValue::Set(station.name.clone()),
-            stream_url: ActiveValue::Set(station.stream_url.clone()),
-            source: ActiveValue::Set(station.source.clone()),
-            genre: ActiveValue::Set(station.genre.clone()),
-            country: ActiveValue::Set(station.country.clone()),
-            logo: ActiveValue::Set(station.logo.clone()),
-            bitrate: ActiveValue::Set(station.bitrate),
-        };
-        row.insert(conn).await.is_ok()
+        let saved = saved_radio::ActiveModel {
+            id: ActiveValue::Set(row.id.clone()),
+            name: ActiveValue::Set(row.name.clone()),
+            stream_url: ActiveValue::Set(row.stream_url.clone()),
+            source: ActiveValue::Set(row.source.clone()),
+            genre: ActiveValue::Set(row.genre.clone()),
+            country: ActiveValue::Set(row.country.clone()),
+            logo: ActiveValue::Set(row.logo.clone()),
+            bitrate: ActiveValue::Set(row.bitrate),
+        }
+        .insert(conn)
+        .await
+        .is_ok();
+        if saved {
+            if let Err(e) = music_player_storage::atradio::favorite(&row).await {
+                tracing::warn!("could not mirror the bookmark to atradio.fm: {e}");
+            }
+        }
+        saved
     }
 }

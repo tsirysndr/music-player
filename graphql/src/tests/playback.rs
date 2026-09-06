@@ -57,7 +57,7 @@ async fn currently_playing_song() {
         .execute(
             r#"
               mutation PlayAlbum {
-                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+                playAlbum(id: "ecd3fb5214ef4faf77a0eba4eedb2638", shuffle: false) 
               }
             "#,
         )
@@ -103,11 +103,11 @@ async fn currently_playing_song() {
                     "artist": "J. Cole",
                     "duration": 239.38099670410156,
                     "album": {
-                        "id": "216ccc791352fbbffc11268b984db19a",
+                        "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
                         "title": "2014 Forest Hills Drive",
                         "artist": "J. Cole",
                         "year": 2014,
-                        "cover": "216ccc791352fbbffc11268b984db19a.jpg",
+                        "cover": "ecd3fb5214ef4faf77a0eba4eedb2638.jpg",
                     },
                 },
                 "index": 1,
@@ -131,7 +131,7 @@ async fn next() {
         .execute(
             r#"
               mutation PlayAlbum {
-                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+                playAlbum(id: "ecd3fb5214ef4faf77a0eba4eedb2638", shuffle: false) 
               }
             "#,
         )
@@ -189,11 +189,11 @@ async fn next() {
                     "artist": "J. Cole",
                     "duration": 288.2380065917969,
                     "album": {
-                        "id": "216ccc791352fbbffc11268b984db19a",
+                        "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
                         "title": "2014 Forest Hills Drive",
                         "artist": "J. Cole",
                         "year": 2014,
-                        "cover": "216ccc791352fbbffc11268b984db19a.jpg",
+                        "cover": "ecd3fb5214ef4faf77a0eba4eedb2638.jpg",
                     },
                 },
                 "index": 2,
@@ -217,7 +217,7 @@ async fn previous() {
         .execute(
             r#"
               mutation PlayAlbum {
-                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+                playAlbum(id: "ecd3fb5214ef4faf77a0eba4eedb2638", shuffle: false) 
               }
             "#,
         )
@@ -287,11 +287,11 @@ async fn previous() {
                     "artist": "J. Cole",
                     "duration": 239.38099670410156,
                     "album": {
-                        "id": "216ccc791352fbbffc11268b984db19a",
+                        "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
                         "title": "2014 Forest Hills Drive",
                         "artist": "J. Cole",
                         "year": 2014,
-                        "cover": "216ccc791352fbbffc11268b984db19a.jpg",
+                        "cover": "ecd3fb5214ef4faf77a0eba4eedb2638.jpg",
                     },
                 },
                 "index": 1,
@@ -315,7 +315,7 @@ async fn play() {
         .execute(
             r#"
               mutation PlayAlbum {
-                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+                playAlbum(id: "ecd3fb5214ef4faf77a0eba4eedb2638", shuffle: false) 
               }
             "#,
         )
@@ -385,11 +385,11 @@ async fn play() {
                     "artist": "J. Cole",
                     "duration": 239.38099670410156,
                     "album": {
-                        "id": "216ccc791352fbbffc11268b984db19a",
+                        "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
                         "title": "2014 Forest Hills Drive",
                         "artist": "J. Cole",
                         "year": 2014,
-                        "cover": "216ccc791352fbbffc11268b984db19a.jpg",
+                        "cover": "ecd3fb5214ef4faf77a0eba4eedb2638.jpg",
                     },
                 },
                 "index": 1,
@@ -413,7 +413,7 @@ async fn pause() {
         .execute(
             r#"
               mutation PlayAlbum {
-                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+                playAlbum(id: "ecd3fb5214ef4faf77a0eba4eedb2638", shuffle: false) 
               }
             "#,
         )
@@ -471,11 +471,11 @@ async fn pause() {
                     "artist": "J. Cole",
                     "duration": 239.38099670410156,
                     "album": {
-                        "id": "216ccc791352fbbffc11268b984db19a",
+                        "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
                         "title": "2014 Forest Hills Drive",
                         "artist": "J. Cole",
                         "year": 2014,
-                        "cover": "216ccc791352fbbffc11268b984db19a.jpg",
+                        "cover": "ecd3fb5214ef4faf77a0eba4eedb2638.jpg",
                     },
                 },
                 "index": 1,

@@ -102,7 +102,7 @@ pub async fn play_album(schema: MusicPlayerSchema) {
         .execute(
             r#"
               mutation PlayAlbum {
-                playAlbum(id: "216ccc791352fbbffc11268b984db19a", shuffle: false) 
+                playAlbum(id: "ecd3fb5214ef4faf77a0eba4eedb2638", shuffle: false) 
               }
             "#,
         )

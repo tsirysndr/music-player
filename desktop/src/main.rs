@@ -47,6 +47,8 @@ struct UiState {
     pl_detail_id: Option<String>,
     pl_detail_track_ids: Vec<String>,
     picker_query: String,
+    /// Decoded station logos, keyed by station id.
+    radio_logos: std::collections::HashMap<String, slint::Image>,
 }
 
 thread_local! {
@@ -202,19 +204,47 @@ pub fn ui_set_now_art(app: &AppWindow, w: u32, h: u32, rgba: Vec<u8>) {
 }
 
 pub fn ui_set_radios(app: &AppWindow, radios: Vec<rpc::StationData>) {
+    app.set_radio_loading(false);
     app.set_radios(ModelRc::new(VecModel::from(
         radios
             .into_iter()
-            .map(|station| StationItem {
-                id: station.id.into(),
-                name: station.name.into(),
-                subtitle: station.subtitle.into(),
-                source: station.source.into(),
-                logo: station.logo.into(),
-                bookmarked: station.bookmarked,
+            .map(|station| {
+                // Logos decoded earlier in the session are reused, so toggling
+                // a bookmark doesn't blank every row back to the placeholder.
+                let logo = STATE.with(|s| s.borrow().radio_logos.get(&station.id).cloned());
+                StationItem {
+                    id: station.id.into(),
+                    name: station.name.into(),
+                    subtitle: station.subtitle.into(),
+                    source: station.source.into(),
+                    has_logo: logo.is_some(),
+                    logo: logo.unwrap_or_default(),
+                    bookmarked: station.bookmarked,
+                }
             })
             .collect::<Vec<_>>(),
     )));
+}
+
+/// Called per decoded station logo.
+pub fn ui_set_radio_logo(app: &AppWindow, id: &str, w: u32, h: u32, rgba: Vec<u8>) {
+    let image = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
+    STATE.with(|s| {
+        s.borrow_mut()
+            .radio_logos
+            .insert(id.to_owned(), image.clone())
+    });
+    let model = app.get_radios();
+    for i in 0..model.row_count() {
+        let Some(mut row) = model.row_data(i) else {
+            continue;
+        };
+        if row.id.as_str() == id {
+            row.logo = image.clone();
+            row.has_logo = true;
+            model.set_row_data(i, row);
+        }
+    }
 }
 
 pub fn ui_set_queue(

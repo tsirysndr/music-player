@@ -67,7 +67,8 @@ export struct StationItem {
     name: string,
     subtitle: string,
     source: string,
-    logo: string,
+    logo: image,
+    has-logo: bool,
     bookmarked: bool,
 }
 
@@ -119,6 +120,66 @@ export component CtxMenuItem inherits Rectangle {
     }
 }
 
+// ── Content loader ──────────────────────────────────────────────────────────
+
+// One shimmering placeholder block. The highlight sweeps left to right off
+// `animation-tick()`, so it runs without any driver on the Rust side. Both
+// colors come from the skin.
+export component SkeletonBox inherits Rectangle {
+    in property <length> corner: 4px;
+
+    background: Theme.skeleton-bg;
+    border-radius: root.corner;
+    clip: true;
+
+    Rectangle {
+        width: parent.width * 0.5 + 32px;
+        height: parent.height;
+        x: -self.width + (parent.width + self.width) * Math.mod(animation-tick(), 1400ms) / 1400ms;
+        background: @linear-gradient(90deg,
+            Theme.skeleton-bg 0%,
+            Theme.skeleton-fg 50%,
+            Theme.skeleton-bg 100%);
+    }
+}
+
+// Placeholder for a single station while a search / browse request is in
+// flight. Mirrors the layout of RadioRow so nothing jumps when results land.
+export component RadioSkeletonRow inherits Rectangle {
+    height: 58px;
+
+    SkeletonBox {
+        x: 12px;
+        y: 9px;
+        width: 40px;
+        height: 40px;
+        corner: 6px;
+    }
+    SkeletonBox {
+        x: 64px;
+        y: 15px;
+        width: parent.width * 0.42;
+        height: 12px;
+    }
+    SkeletonBox {
+        x: 64px;
+        y: 35px;
+        width: parent.width * 0.26;
+        height: 9px;
+        corner: 3px;
+    }
+}
+
+// A short list of skeleton rows, used everywhere stations are loaded.
+export component RadioSkeletonList inherits VerticalLayout {
+    in property <int> rows: 7;
+
+    alignment: start;
+    spacing: 2px;
+
+    for row in root.rows : RadioSkeletonRow {}
+}
+
 export component RadioRow inherits Rectangle {
     in property <StationItem> station;
     callback play;
@@ -137,7 +198,21 @@ export component RadioRow inherits Rectangle {
             y: (parent.height - self.height) / 2;
             border-radius: 6px;
             background: Theme.art-placeholder;
-            Image { source: Icons.broadcast; colorize: Theme.accent; width: 19px; height: 19px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+            clip: true;
+            if root.station.has-logo : Image {
+                source: root.station.logo;
+                width: parent.width;
+                height: parent.height;
+                image-fit: cover;
+            }
+            if !root.station.has-logo : Image {
+                source: Icons.broadcast;
+                colorize: Theme.accent;
+                width: 19px;
+                height: 19px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
         }
         VerticalLayout {
             alignment: center;

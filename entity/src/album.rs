@@ -14,6 +14,8 @@ pub struct Model {
     pub artist_id: Option<String>,
     pub year: Option<u32>,
     pub cover: Option<String>,
+    /// `at://` uri of the matching `app.rocksky.album` record, if any.
+    pub aturi: Option<String>,
     #[sea_orm(ignore)]
     pub tracks: Vec<super::track::Model>,
 }
@@ -57,6 +59,9 @@ impl From<&Song> for ActiveModel {
             ))),
             year: ActiveValue::Set(song.year),
             cover: ActiveValue::Set(song.cover.clone()),
+            // Preserved across rescans: the atproto link is set by the likes
+            // importer, not by the scanner.
+            aturi: ActiveValue::NotSet,
         }
     }
 }
@@ -79,6 +84,7 @@ impl From<AlbumType> for Model {
             artist: album.artist,
             artist_id: album.artist_id,
             year: album.year,
+            aturi: None,
             tracks: tracks.into_iter().map(Into::into).collect(),
         }
     }

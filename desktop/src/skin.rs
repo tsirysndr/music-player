@@ -43,6 +43,12 @@ pub struct Colors {
     pub meter_mid: String,
     pub meter_high: String,
     pub meter_off: String,
+    /// Content-loader shimmer. Optional so skins written before these tokens
+    /// existed keep loading; they fall back to the panel/slider surfaces.
+    #[serde(default)]
+    pub skeleton_bg: Option<String>,
+    #[serde(default)]
+    pub skeleton_fg: Option<String>,
     pub art_placeholder: String,
 }
 
@@ -103,6 +109,12 @@ pub fn apply(skin: &Skin, app: &AppWindow) {
     th.set_meter_mid(parse_hex(&c.meter_mid));
     th.set_meter_high(parse_hex(&c.meter_high));
     th.set_meter_off(parse_hex(&c.meter_off));
+    th.set_skeleton_bg(parse_hex(
+        c.skeleton_bg.as_deref().unwrap_or(&c.panel_raised),
+    ));
+    th.set_skeleton_fg(parse_hex(
+        c.skeleton_fg.as_deref().unwrap_or(&c.slider_track),
+    ));
     th.set_art_placeholder(parse_hex(&c.art_placeholder));
     th.set_radius(skin.metrics.radius);
     th.set_control_radius(skin.metrics.control_radius);

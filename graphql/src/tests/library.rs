@@ -117,7 +117,7 @@ async fn albums() {
         value!({
           "albums": [
             {
-              "id": "216ccc791352fbbffc11268b984db19a",
+              "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
               "title": "2014 Forest Hills Drive",
               "artist": "J. Cole",
               "year": 2014
@@ -237,7 +237,7 @@ async fn album() {
         .execute(
             r#"
               query Album {
-                album(id: "216ccc791352fbbffc11268b984db19a") {
+                album(id: "ecd3fb5214ef4faf77a0eba4eedb2638") {
                     id
                     title
                     artist
@@ -252,7 +252,7 @@ async fn album() {
         resp.data,
         value!({
           "album": {
-            "id": "216ccc791352fbbffc11268b984db19a",
+            "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
             "title": "2014 Forest Hills Drive",
             "artist": "J. Cole",
             "year": 2014

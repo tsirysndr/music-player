@@ -29,9 +29,9 @@ async fn setup_client(
 #[tokio::test]
 async fn album() -> Result<(), Box<dyn std::error::Error>> {
     let (mut client, _shutdown) = setup_client(6091).await?;
-    let response = client.album("216ccc791352fbbffc11268b984db19a").await?;
+    let response = client.album("ecd3fb5214ef4faf77a0eba4eedb2638").await?;
     let response = response.unwrap();
-    assert_eq!(response.id, "216ccc791352fbbffc11268b984db19a");
+    assert_eq!(response.id, "ecd3fb5214ef4faf77a0eba4eedb2638");
     assert_eq!(response.title, "2014 Forest Hills Drive");
     assert_eq!(response.artist, "J. Cole");
     assert_eq!(response.year, 2014);
@@ -43,7 +43,7 @@ async fn albums() -> Result<(), Box<dyn std::error::Error>> {
     let (mut client, _shutdown) = setup_client(6092).await?;
     let response = client.albums(None, 0, 100).await?;
     assert_eq!(response.len(), 1);
-    assert_eq!(response[0].id, "216ccc791352fbbffc11268b984db19a");
+    assert_eq!(response[0].id, "ecd3fb5214ef4faf77a0eba4eedb2638");
     assert_eq!(response[0].title, "2014 Forest Hills Drive");
     assert_eq!(response[0].artist, "J. Cole");
     assert_eq!(response[0].year, 2014);

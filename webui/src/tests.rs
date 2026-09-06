@@ -81,7 +81,7 @@ async fn start_webui() {
     assert_eq!(res.status(), 200);
 
     let res = client
-        .get("/albums/216ccc791352fbbffc11268b984db19a")
+        .get("/albums/ecd3fb5214ef4faf77a0eba4eedb2638")
         .await
         .unwrap();
     assert_eq!(res.status(), 200);
@@ -102,7 +102,7 @@ async fn start_webui() {
     assert_eq!(res.status(), 200);
 
     let _res = client
-        .get("/covers/216ccc791352fbbffc11268b984db19a.jpg")
+        .get("/covers/ecd3fb5214ef4faf77a0eba4eedb2638.jpg")
         .await
         .unwrap();
     // assert_eq!(res.status(), 200);

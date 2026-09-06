@@ -71,7 +71,7 @@ md5 = "0.7.0"
 mdns-sd = "0.11"
 fastrand = "2"
 i-slint-backend-winit = "1.17"
-image = {version = "0.25", default-features = false, features = ["jpeg", "png", "webp"]}
+image = {version = "0.25", default-features = false, features = ["gif", "ico", "jpeg", "png", "webp"]}
 reqwest = {version = "0.12", default-features = false, features = ["rustls-tls"]}
 rockbox-metadata = "0.1.0"
 sea-orm = {version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}

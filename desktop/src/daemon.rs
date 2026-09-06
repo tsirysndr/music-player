@@ -155,6 +155,7 @@ fn boot() {
     music_player_discovery::register_services();
     runtime.block_on(async {
         music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
+        music_player_server::atproto_sync::spawn(Arc::clone(&tracklist));
         music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
     });
     // MPRIS media controls (Linux only; the app handles macOS Now Playing).

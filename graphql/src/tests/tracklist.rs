@@ -441,11 +441,11 @@ async fn play_track_at() {
                     "artist": "J. Cole",
                     "duration": 288.2380065917969,
                     "album": {
-                        "id": "216ccc791352fbbffc11268b984db19a",
+                        "id": "ecd3fb5214ef4faf77a0eba4eedb2638",
                         "title": "2014 Forest Hills Drive",
                         "artist": "J. Cole",
                         "year": 2014,
-                        "cover": "216ccc791352fbbffc11268b984db19a.jpg",
+                        "cover": "ecd3fb5214ef4faf77a0eba4eedb2638.jpg",
                     },
                 },
                 "index": 2,

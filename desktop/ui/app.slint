@@ -7,7 +7,8 @@ import {
     SearchButton, PaletteItem, PaletteRow, HelpRow,
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
     DetailRow, BrowseItem, ServerItem, FormField, ServerRow, BrowseRow,
-    PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile
+    PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
+    RadioSkeletonList
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -138,6 +139,7 @@ export component AppWindow inherits Window {
     in-out property <int> radio-tab: 0; // 0 search/categories, 1 bookmarks
     in-out property <string> radio-category: "";
     in-out property <bool> show-radio-search: false;
+    in-out property <bool> radio-loading: false;
 
     // ── Callbacks into Rust ─────────────────────────────────────────────────
     callback play-pause();
@@ -212,6 +214,8 @@ export component AppWindow inherits Window {
 
     public function open-radio-category(label: string, term: string) {
         root.radio-category = label;
+        root.radios = [];
+        root.radio-loading = true;
         root.radio-browse(term);
     }
     function activate-switcher() {
@@ -959,7 +963,11 @@ export component AppWindow inherits Window {
                                 clicked => {
                                     root.radio-tab = i;
                                     root.radio-category = "";
-                                    if (i == 1) { root.radio-bookmarks(); }
+                                    if (i == 1) {
+                                        root.radios = [];
+                                        root.radio-loading = true;
+                                        root.radio-bookmarks();
+                                    }
                                 }
                             }
                         }
@@ -991,11 +999,15 @@ export component AppWindow inherits Window {
                     if root.radio-tab == 0 && root.radio-category != "" : VerticalLayout {
                         spacing: 8px;
                         HorizontalLayout { height: 40px; spacing: 8px; IconButton { icon:Icons.chevron-left; icon-size:17px; clicked=>{root.radio-category="";} } Text { text:root.radio-category; color:Theme.text; font-size:16px; font-weight:700; vertical-alignment:center; horizontal-stretch:1; } }
-                        ListView { vertical-stretch: 1;
+                        if root.radio-loading : RadioSkeletonList { vertical-stretch: 1; }
+                        if !root.radio-loading : ListView { vertical-stretch: 1;
                             for station in root.radios : RadioRow { station:station; play=>{root.radio-play(station.id);} bookmark=>{root.radio-bookmark(station.id);} }
                         }
                     }
-                    if root.radio-tab == 1 : ListView {
+                    if root.radio-tab == 1 && root.radio-loading : RadioSkeletonList {
+                        vertical-stretch: 1;
+                    }
+                    if root.radio-tab == 1 && !root.radio-loading : ListView {
                         vertical-stretch: 1;
                         for station in root.radios : RadioRow {
                             station: station;
@@ -2101,12 +2113,17 @@ export component AppWindow inherits Window {
                     Image { source: Icons.broadcast; colorize: Theme.accent; width: 18px; height: 18px; y: (parent.height - self.height) / 2; }
                     radio-input := TextInput {
                         horizontal-stretch: 1; height: 28px; color: Theme.text; font-size: 17px; single-line: true;
-                        edited => { root.radio-search(self.text); }
+                        edited => {
+                            root.radios = [];
+                            root.radio-loading = self.text != "";
+                            root.radio-search(self.text);
+                        }
                     }
                     Text { text: "esc"; color: Theme.text-muted; font-size: 10px; vertical-alignment: center; }
                 }
                 Rectangle { height: 1px; background: Theme.border; }
-                ListView {
+                if root.radio-loading : RadioSkeletonList { vertical-stretch: 1; rows: 6; }
+                if !root.radio-loading : ListView {
                     for station in root.radios : RadioRow {
                         station: station;
                         play => { root.radio-play(station.id); root.show-radio-search = false; }

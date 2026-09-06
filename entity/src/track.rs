@@ -23,6 +23,10 @@ pub struct Model {
     pub uri: String,
     pub album_id: Option<String>,
     pub artist_id: Option<String>,
+    /// `at://` uri of the matching `app.rocksky.song` record, when the track
+    /// has been linked to the user's atproto repo. Optional: unmatched tracks
+    /// and libraries with no linked account leave it null.
+    pub aturi: Option<String>,
     #[sea_orm(ignore)]
     pub artists: Vec<artist::Model>,
     #[sea_orm(ignore)]
@@ -139,6 +143,9 @@ impl From<&Song> for ActiveModel {
                 "{:x}",
                 md5::compute(song.album_artist.to_owned())
             ))),
+            // Preserved across rescans: the atproto link is set by the likes
+            // importer, not by the scanner.
+            aturi: ActiveValue::NotSet,
         }
     }
 }

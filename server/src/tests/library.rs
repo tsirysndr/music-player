@@ -114,7 +114,7 @@ async fn get_albums() {
     let response = client.get_albums(request).await.unwrap();
     let response = response.into_inner();
     assert_eq!(response.albums.len(), 1);
-    assert_eq!(response.albums[0].id, "216ccc791352fbbffc11268b984db19a");
+    assert_eq!(response.albums[0].id, "ecd3fb5214ef4faf77a0eba4eedb2638");
     assert_eq!(response.albums[0].title, "2014 Forest Hills Drive");
     tx.send(()).unwrap();
     jh.await.unwrap();
@@ -223,12 +223,12 @@ async fn get_album_details() {
 
     let mut client = LibraryServiceClient::connect(url).await.unwrap();
     let request = tonic::Request::new(GetAlbumDetailsRequest {
-        id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+        id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
     });
     let response = client.get_album_details(request).await.unwrap();
     let response = response.into_inner();
     let album = response.album.unwrap();
-    assert_eq!(album.id, "216ccc791352fbbffc11268b984db19a");
+    assert_eq!(album.id, "ecd3fb5214ef4faf77a0eba4eedb2638");
     assert_eq!(album.title, "2014 Forest Hills Drive");
     assert_eq!(album.artist, "J. Cole");
     assert_eq!(album.year, 2014);

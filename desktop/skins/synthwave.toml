@@ -25,6 +25,8 @@ meter_low       = "#00e5ff"
 meter_mid       = "#c355ff"
 meter_high      = "#ff2d95"
 meter_off       = "#1c172c"
+skeleton_bg     = "#1d1830"
+skeleton_fg     = "#2c2547"
 art_placeholder = "#201a33"
 
 [metrics]

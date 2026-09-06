@@ -12,6 +12,8 @@ mod m20221117_211308_add_created_at_column;
 mod m20260905_000001_create_search_index;
 mod m20260906_000001_add_artist_picture;
 mod m20260906_000002_create_saved_radio;
+mod m20260906_000003_add_aturi_and_rocksky_likes;
+mod m20260906_000004_create_atproto_repo_sync;
 
 /// Create the database file if needed and bring the schema up to date,
 /// without going through the sea-orm migration CLI (which parses argv).
@@ -42,6 +44,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260905_000001_create_search_index::Migration),
             Box::new(m20260906_000001_add_artist_picture::Migration),
             Box::new(m20260906_000002_create_saved_radio::Migration),
+            Box::new(m20260906_000003_add_aturi_and_rocksky_likes::Migration),
+            Box::new(m20260906_000004_create_atproto_repo_sync::Migration),
         ]
     }
 }

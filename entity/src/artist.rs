@@ -10,6 +10,8 @@ pub struct Model {
     pub name: String,
     /// Artist image URL, filled in batch from the Rocksky API after scans.
     pub picture: Option<String>,
+    /// `at://` uri of the matching `app.rocksky.artist` record, if any.
+    pub aturi: Option<String>,
     #[sea_orm(ignore)]
     pub albums: Vec<super::album::Model>,
     #[sea_orm(ignore)]
@@ -45,6 +47,9 @@ impl From<&Song> for ActiveModel {
             id: ActiveValue::set(id),
             name: ActiveValue::Set(song.album_artist.clone()),
             picture: ActiveValue::NotSet,
+            // Preserved across rescans: the atproto link is set by the likes
+            // importer, not by the scanner.
+            aturi: ActiveValue::NotSet,
         }
     }
 }

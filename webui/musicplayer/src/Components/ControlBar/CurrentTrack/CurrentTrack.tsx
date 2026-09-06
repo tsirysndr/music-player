@@ -4,6 +4,7 @@ import Track from "../../Icons/Track";
 import { useCover } from "../../../Hooks/useCover";
 import { useTimeFormat } from "../../../Hooks/useFormat";
 import { Link } from "react-router-dom";
+import RadioArt from "../../RadioArt";
 
 const FlexContainer = styled.div`
   display: flex;
@@ -28,6 +29,27 @@ const Container = styled.div`
 const AlbumCover = styled.img`
   height: 62px;
   width: 62px;
+`;
+
+const Art = styled.span`
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+`;
+
+const Elapsed = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-family: RockfordSansRegular;
+  color: ${(props) => props.theme.colors.secondaryText};
+`;
+
+const LiveBadge = styled.span`
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: #ab28fc;
 `;
 
 const NoCover = styled.div`
@@ -204,9 +226,15 @@ export type CurrentTrackProps = {
   hideArt?: boolean;
 };
 
-const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek, onExpand, hideArt }) => {
+const CurrentTrack: FC<CurrentTrackProps> = ({
+  nowPlaying,
+  onSeek,
+  onExpand,
+  hideArt,
+}) => {
   const { cover } = useCover(nowPlaying?.cover);
   const { formatTime } = useTimeFormat();
+  const isRadio = !!nowPlaying?.id?.startsWith("radio:");
   return (
     <FlexContainer>
       {(!nowPlaying || !nowPlaying!.title) && (
@@ -221,31 +249,49 @@ const CurrentTrack: FC<CurrentTrackProps> = ({ nowPlaying, onSeek, onExpand, hid
       )}
       {nowPlaying && nowPlaying!.title && (
         <Container>
-          {!hideArt && cover && <span onClick={onExpand} style={{cursor:"pointer",display:"flex",flexShrink:0}}>
-            <AlbumCover src={cover} />
-          </span>}
+          {!hideArt && (isRadio || cover) && (
+            <Art onClick={onExpand}>
+              {isRadio ? (
+                <RadioArt logo={nowPlaying.cover} size={62} radius={0} />
+              ) : (
+                <AlbumCover src={cover} />
+              )}
+            </Art>
+          )}
           <Wrapper>
             <TrackInfo>
               <Title>{nowPlaying?.title}</Title>
               <Artist>
                 <span>{nowPlaying?.artist}</span>
-                <Separator>-</Separator>
-                <Link to={`/albums/${nowPlaying!.albumId}`}>
-                  <AlbumTitle>{nowPlaying?.album}</AlbumTitle>
-                </Link>
+                {!isRadio && (
+                  <>
+                    <Separator>-</Separator>
+                    <Link to={`/albums/${nowPlaying!.albumId}`}>
+                      <AlbumTitle>{nowPlaying?.album}</AlbumTitle>
+                    </Link>
+                  </>
+                )}
               </Artist>
             </TrackInfo>
-            {!nowPlaying.id?.startsWith("radio:") && <Row>
-              <Time>{formatTime(nowPlaying?.progress)}</Time>
-              <ProgressbarContainer>
-                <SeekBar
-                  progress={nowPlaying!.progress}
-                  duration={nowPlaying!.duration}
-                  onSeek={onSeek}
-                />
-              </ProgressbarContainer>
-              <Time>{formatTime(nowPlaying?.duration)}</Time>
-            </Row>}
+            {!isRadio && (
+              <Row>
+                <Time>{formatTime(nowPlaying?.progress)}</Time>
+                <ProgressbarContainer>
+                  <SeekBar
+                    progress={nowPlaying!.progress}
+                    duration={nowPlaying!.duration}
+                    onSeek={onSeek}
+                  />
+                </ProgressbarContainer>
+                <Time>{formatTime(nowPlaying?.duration)}</Time>
+              </Row>
+            )}
+            {isRadio && (
+              <Elapsed>
+                <LiveBadge>LIVE</LiveBadge>
+                <span>{formatTime(nowPlaying!.progress)}</span>
+              </Elapsed>
+            )}
           </Wrapper>
         </Container>
       )}

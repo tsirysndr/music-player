@@ -1341,6 +1341,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "atradio-sdk"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90e0c056175e4c5509bebcce743226409d6c5db81582d8f6396fce6cd7ad4046"
+dependencies = [
+ "chrono",
+ "futures",
+ "jacquard",
+ "jacquard-common",
+ "jacquard-derive",
+ "jacquard-lexicon",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.6",
+ "smol_str 0.3.6",
+ "thiserror 2.0.20",
+ "tokio",
+]
+
+[[package]]
 name = "atspi"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2109,6 +2130,12 @@ checksum = "b544cf8c89359205f4f990d0e6f3828db42df85b5dac95d09157a250eb0749c4"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "cbor4ii"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "faed1a83001dc2c9201451030cc317e35bef36c84d3781d7c5bb9f343c397da8"
 
 [[package]]
 name = "cc"
@@ -3518,6 +3545,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "directories"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a49173b84e034382284f27f1af4dcbbd231ffa358c0fe316541a7337f376a35"
+dependencies = [
+ "dirs-sys 0.4.1",
+]
+
+[[package]]
 name = "dirs"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3544,6 +3580,18 @@ dependencies = [
  "libc",
  "redox_users 0.4.3",
  "winapi",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
+dependencies = [
+ "libc",
+ "option-ext",
+ "redox_users 0.4.3",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -6647,7 +6695,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_html_form",
- "serde_ipld_dagcbor",
+ "serde_ipld_dagcbor 0.6.4",
  "serde_json",
  "signature",
  "smol_str 0.3.6",
@@ -6713,7 +6761,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde",
- "serde_ipld_dagcbor",
+ "serde_ipld_dagcbor 0.6.4",
  "serde_json",
  "serde_path_to_error",
  "serde_repr",
@@ -8151,6 +8199,7 @@ dependencies = [
  "slab",
  "tide",
  "tokio",
+ "tracing",
  "upnp-client",
  "url",
 ]
@@ -8260,7 +8309,13 @@ name = "music-player-storage"
 version = "0.2.1"
 dependencies = [
  "anyhow",
+ "atradio-sdk",
+ "base64 0.22.1",
+ "cid",
+ "directories",
  "dirs 4.0.0",
+ "futures-util",
+ "ipld-core",
  "itertools 0.10.5",
  "md5",
  "music-player-entity",
@@ -8270,10 +8325,12 @@ dependencies = [
  "reqwest 0.12.28",
  "sea-orm",
  "serde",
+ "serde_ipld_dagcbor 0.7.0",
  "serde_json",
  "sha2 0.10.6",
  "tempfile",
  "tokio",
+ "tokio-tungstenite 0.24.0",
  "tracing",
 ]
 
@@ -12018,7 +12075,19 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46182f4f08349a02b45c998ba3215d3f9de826246ba02bb9dddfe9a2a2100778"
 dependencies = [
- "cbor4ii",
+ "cbor4ii 0.2.14",
+ "ipld-core",
+ "scopeguard",
+ "serde",
+]
+
+[[package]]
+name = "serde_ipld_dagcbor"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2918680761336241e07049131fdc59f63c5691a8aaf592a167c0706b473c5fe5"
+dependencies = [
+ "cbor4ii 1.2.2",
  "ipld-core",
  "scopeguard",
  "serde",
@@ -14119,6 +14188,22 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edc5f74e248dc973e0dbb7b74c7e0d6fcc301c694ff50049504004ef4d0cdcd9"
+dependencies = [
+ "futures-util",
+ "log",
+ "rustls 0.23.43",
+ "rustls-pki-types",
+ "tokio",
+ "tokio-rustls 0.26.5",
+ "tungstenite 0.24.0",
+ "webpki-roots 0.26.11",
+]
+
+[[package]]
+name = "tokio-tungstenite"
 version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a9daff607c6d2bf6c16fd681ccb7eecc83e4e2cdc1ca067ffaadfca5de7f084"
@@ -14577,6 +14662,26 @@ dependencies = [
  "sha-1 0.10.1",
  "thiserror 1.0.69",
  "url",
+ "utf-8",
+]
+
+[[package]]
+name = "tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18e5b8366ee7a95b16d32197d0b2604b43a0be89dc5fac9f8e96ccafbaedda8a"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "data-encoding",
+ "http 1.5.0",
+ "httparse",
+ "log",
+ "rand 0.8.5",
+ "rustls 0.23.43",
+ "rustls-pki-types",
+ "sha1 0.10.5",
+ "thiserror 1.0.69",
  "utf-8",
 ]
 

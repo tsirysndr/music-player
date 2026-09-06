@@ -30,7 +30,7 @@ async fn load_tracklist() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -44,7 +44,7 @@ async fn load_tracklist() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -88,7 +88,7 @@ fn play() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -102,7 +102,7 @@ fn play() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -159,7 +159,7 @@ fn pause() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -173,7 +173,7 @@ fn pause() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -222,7 +222,7 @@ fn stop() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -236,7 +236,7 @@ fn stop() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -285,7 +285,7 @@ fn next() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -299,7 +299,7 @@ fn next() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -348,7 +348,7 @@ fn previous() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -362,7 +362,7 @@ fn previous() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -423,7 +423,7 @@ fn clear() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -437,7 +437,7 @@ fn clear() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -488,7 +488,7 @@ fn play_track_at() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -502,7 +502,7 @@ fn play_track_at() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -555,7 +555,7 @@ fn play_next() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -569,7 +569,7 @@ fn play_next() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -603,7 +603,7 @@ fn play_next() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -639,7 +639,7 @@ fn current_track() {
             duration: Some(239.38099670410156),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },
@@ -653,7 +653,7 @@ fn current_track() {
             duration: Some(288.2380065917969),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
-                id: "216ccc791352fbbffc11268b984db19a".to_owned(),
+                id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
                 title: "2014 Forest Hills Drive".to_owned(),
                 ..Default::default()
             },

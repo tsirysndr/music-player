@@ -123,6 +123,12 @@ pub struct Settings {
     /// Rocksky auto-scrobbling (needs `rocksky login`).
     #[serde(default = "default_true")]
     pub scrobble: bool,
+    /// atproto integration: import radio bookmarks and liked songs from the
+    /// user's repo, write bookmarks and the now-listening status back, and
+    /// follow the repo on Jetstream. Off means nothing atproto runs at all,
+    /// whether or not credentials happen to be present.
+    #[serde(default = "default_true")]
+    pub atproto: bool,
     /// Register as a Rocksky remote-player device (needs `rocksky login`),
     /// so the daemon shows up in the web/desktop miniplayer device picker.
     #[serde(default = "default_true")]
@@ -205,6 +211,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         jellyfin_username: Some("".to_string()),
         jellyfin_password: Some("".to_string()),
         scrobble: true,
+        atproto: true,
         remote_player: true,
         typesense: None,
         audio: AudioSettings::default(),
@@ -252,6 +259,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("jellyfin_username", "")?
         .set_default("jellyfin_password", "")?
         .set_default("scrobble", true)?
+        .set_default("atproto", true)?
         .set_default("remote_player", true)?
         .build()
 }

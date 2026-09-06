@@ -200,26 +200,49 @@ pub struct RadioMutation;
 impl RadioMutation {
     async fn save_radio(&self, ctx: &Context<'_>, station: RadioStation) -> Result<bool> {
         let db = ctx.data::<Database>()?;
+        let row = saved_radio::Model {
+            id: station.id,
+            name: station.name,
+            stream_url: station.stream_url,
+            source: station.source,
+            genre: station.genre,
+            country: station.country,
+            logo: station.logo,
+            bitrate: station.bitrate,
+        };
         saved_radio::ActiveModel {
-            id: ActiveValue::Set(station.id),
-            name: ActiveValue::Set(station.name),
-            stream_url: ActiveValue::Set(station.stream_url),
-            source: ActiveValue::Set(station.source),
-            genre: ActiveValue::Set(station.genre),
-            country: ActiveValue::Set(station.country),
-            logo: ActiveValue::Set(station.logo),
-            bitrate: ActiveValue::Set(station.bitrate),
+            id: ActiveValue::Set(row.id.clone()),
+            name: ActiveValue::Set(row.name.clone()),
+            stream_url: ActiveValue::Set(row.stream_url.clone()),
+            source: ActiveValue::Set(row.source.clone()),
+            genre: ActiveValue::Set(row.genre.clone()),
+            country: ActiveValue::Set(row.country.clone()),
+            logo: ActiveValue::Set(row.logo.clone()),
+            bitrate: ActiveValue::Set(row.bitrate),
         }
         .insert(db.get_connection())
         .await?;
+        // Mirror the bookmark into the user's atproto repo. Signed out, this
+        // does nothing; a failure there must not fail the local bookmark.
+        if let Err(e) = music_player_storage::atradio::favorite(&row).await {
+            tracing::warn!("could not mirror the bookmark to atradio.fm: {e}");
+        }
         Ok(true)
     }
 
     async fn remove_saved_radio(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
         let db = ctx.data::<Database>()?;
+        let row = saved_radio::Entity::find_by_id(id.clone())
+            .one(db.get_connection())
+            .await?;
         saved_radio::Entity::delete_by_id(id)
             .exec(db.get_connection())
             .await?;
+        if let Some(row) = row {
+            if let Err(e) = music_player_storage::atradio::unfavorite(&row).await {
+                tracing::warn!("could not remove the bookmark on atradio.fm: {e}");
+            }
+        }
         Ok(true)
     }
 

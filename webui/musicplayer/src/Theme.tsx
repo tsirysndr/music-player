@@ -53,6 +53,8 @@ export const LightTheme = {
     hover: "#b1b2b51a",
     cover: "#f3f3f3b9",
     tooltip: "#ab28fc1a",
+    loaderBackground: "#ececf1",
+    loaderForeground: "#f8f7fb",
   },
 };
 
@@ -72,5 +74,22 @@ export const DarkTheme = {
     hover: "#242424",
     cover: "#2f2f2fb9",
     tooltip: "#ab28fc38",
+    loaderBackground: "#221d29",
+    loaderForeground: "#332c3d",
+  },
+};
+
+// Colors used by the miniplayer while it floats over the fullscreen player.
+// The bar sits on a dark, blurred backdrop whatever the active theme is, so it
+// needs light-on-dark tokens instead of the ones from the current theme.
+export const FullscreenOverlayTheme = {
+  colors: {
+    ...DarkTheme.colors,
+    text: "#fff",
+    icon: "#dcdce1",
+    secondaryText: "rgba(255, 255, 255, 0.66)",
+    currentTrackBorder: "rgba(255, 255, 255, 0.22)",
+    cover: "rgba(255, 255, 255, 0.12)",
+    background: "transparent",
   },
 };

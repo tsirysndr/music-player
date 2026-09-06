@@ -5,9 +5,11 @@ pub mod addon;
 pub mod album;
 pub mod artist;
 pub mod artist_tracks;
+pub mod atproto_repo_sync;
 pub mod folder;
 pub mod playlist;
 pub mod playlist_tracks;
+pub mod rocksky_like;
 pub mod saved_radio;
 pub mod track;
 

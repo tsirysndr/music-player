@@ -51,7 +51,7 @@ fn song_to_track() {
         track.album_id,
         ActiveValue::Set(Some(format!(
             "{:x}",
-            md5::compute(format!("{}", song.album))
+            md5::compute(format!("{}\0{}", song.album_artist, song.album))
         )))
     );
     assert_eq!(
@@ -117,7 +117,10 @@ fn song_to_album() {
         ..Default::default()
     };
     let album = album_entity::ActiveModel::from(&song);
-    let id = format!("{:x}", md5::compute(format!("{}", song.album.clone())));
+    let id = format!(
+        "{:x}",
+        md5::compute(format!("{}\0{}", song.album_artist, song.album))
+    );
     assert_eq!(album.id, ActiveValue::set(id));
     assert_eq!(album.title, ActiveValue::Set(song.album.clone()));
     assert_eq!(

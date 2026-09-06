@@ -636,6 +636,8 @@ fn setup_media_controls(
         MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition,
         PlatformConfig, SeekDirection,
     };
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
     use std::time::Duration;
 
     let mut controls = match MediaControls::new(PlatformConfig {
@@ -650,17 +652,35 @@ fn setup_media_controls(
         }
     };
 
+    let playing = Arc::new(AtomicBool::new(app.get_playing()));
     {
         let tx = tx.clone();
         let app_weak = app.as_weak();
+        let playing = playing.clone();
         if let Err(e) = controls.attach(move |event| {
             let elapsed_ms = app_weak
                 .upgrade()
                 .map(|app| (app.get_elapsed_s() * 1000.0) as u32)
                 .unwrap_or(0);
             let cmd = match event {
-                MediaControlEvent::Play | MediaControlEvent::Pause | MediaControlEvent::Toggle => {
-                    Some(rpc::Cmd::PlayPause)
+                MediaControlEvent::Play => {
+                    playing.store(true, Ordering::SeqCst);
+                    let _ = app_weak.upgrade_in_event_loop(|app| app.set_playing(true));
+                    Some(rpc::Cmd::Play)
+                }
+                MediaControlEvent::Pause => {
+                    playing.store(false, Ordering::SeqCst);
+                    let _ = app_weak.upgrade_in_event_loop(|app| app.set_playing(false));
+                    Some(rpc::Cmd::Pause)
+                }
+                MediaControlEvent::Toggle => {
+                    let play = !playing.fetch_xor(true, Ordering::SeqCst);
+                    let _ = app_weak.upgrade_in_event_loop(move |app| app.set_playing(play));
+                    Some(if play {
+                        rpc::Cmd::Play
+                    } else {
+                        rpc::Cmd::Pause
+                    })
                 }
                 MediaControlEvent::Next => Some(rpc::Cmd::Next),
                 MediaControlEvent::Previous => Some(rpc::Cmd::Previous),
@@ -689,33 +709,48 @@ fn setup_media_controls(
         }
     }
 
-    // Mirror the UI's now-playing state into the system center once a second.
+    // Mirror playback promptly; metadata itself is only republished when it
+    // changes so an in-flight macOS artwork load is never invalidated.
     let app_weak = app.as_weak();
     let controls = std::cell::RefCell::new(controls);
+    let mut last_metadata: Option<(String, String, String, String, f32)> = None;
     let timer = slint::Timer::default();
     timer.start(
         slint::TimerMode::Repeated,
-        Duration::from_millis(1000),
+        Duration::from_millis(100),
         move || {
             let Some(app) = app_weak.upgrade() else {
                 return;
             };
             let mut controls = controls.borrow_mut();
             if app.get_stopped() {
+                playing.store(false, Ordering::SeqCst);
                 let _ = controls.set_playback(MediaPlayback::Stopped);
                 return;
             }
-            let _ = controls.set_metadata(MediaMetadata {
-                title: Some(&app.get_now_title()),
-                artist: Some(&app.get_now_artist()),
-                album: None,
-                duration: Some(Duration::from_secs_f32(app.get_length_s().max(0.0))),
-                cover_url: None,
-            });
+            let metadata = (
+                app.get_now_title().to_string(),
+                app.get_now_artist().to_string(),
+                app.get_now_album().to_string(),
+                app.get_now_cover_url().to_string(),
+                app.get_length_s().max(0.0),
+            );
+            if last_metadata.as_ref() != Some(&metadata) {
+                let _ = controls.set_metadata(MediaMetadata {
+                    title: Some(&metadata.0),
+                    artist: Some(&metadata.1),
+                    album: Some(&metadata.2),
+                    duration: Some(Duration::from_secs_f32(metadata.4)),
+                    cover_url: (!metadata.3.is_empty()).then_some(metadata.3.as_str()),
+                });
+                last_metadata = Some(metadata);
+            }
             let progress = Some(MediaPosition(Duration::from_secs_f32(
                 app.get_elapsed_s().max(0.0),
             )));
-            let _ = controls.set_playback(if app.get_playing() {
+            let is_playing = app.get_playing();
+            playing.store(is_playing, Ordering::SeqCst);
+            let _ = controls.set_playback(if is_playing {
                 MediaPlayback::Playing { progress }
             } else {
                 MediaPlayback::Paused { progress }
@@ -822,8 +857,16 @@ fn main() -> Result<(), slint::PlatformError> {
 
     {
         let tx = tx.clone();
+        let app_weak = app.as_weak();
         app.on_play_pause(move || {
-            let _ = tx.send(rpc::Cmd::PlayPause);
+            let app = app_weak.unwrap();
+            let play = !app.get_playing();
+            app.set_playing(play);
+            let _ = tx.send(if play {
+                rpc::Cmd::Play
+            } else {
+                rpc::Cmd::Pause
+            });
         });
     }
     {

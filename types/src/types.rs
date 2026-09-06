@@ -87,6 +87,11 @@ pub struct Artist {
     pub songs: Vec<Track>,
 }
 
+/// Stable identity for an album within an album artist's discography.
+pub fn album_id(title: &str, artist: &str) -> String {
+    format!("{:x}", md5::compute(format!("{artist}\0{title}")))
+}
+
 fn tag_or_none(value: &str) -> String {
     if value.is_empty() {
         "None".to_string()
@@ -141,7 +146,7 @@ impl From<&AudioMetadata> for Album {
     fn from(meta: &AudioMetadata) -> Self {
         let title = tag_or_none(&meta.album);
         let artist = album_artist_of(meta);
-        let id = format!("{:x}", md5::compute(&title));
+        let id = album_id(&title, &artist);
         let artist_id = Some(format!("{:x}", md5::compute(&artist)));
         Self {
             id,

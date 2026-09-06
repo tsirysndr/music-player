@@ -1,4 +1,5 @@
 use super::*;
+use crate::repo::track::TrackRepository;
 use crate::searcher::Searcher;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
@@ -119,4 +120,43 @@ async fn delete_removes_row_from_index() {
         .unwrap();
 
     assert!(searcher.search_song("futsal").await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn track_repository_matches_albums_by_id_when_titles_are_equal() {
+    let dir = tempfile::tempdir().unwrap();
+    let url = format!(
+        "sqlite://{}?mode=rwc",
+        dir.path().join("albums.sqlite3").display()
+    );
+    let conn = sea_orm::Database::connect(&url).await.unwrap();
+    Migrator::up(&conn, None).await.unwrap();
+
+    for sql in [
+        "INSERT INTO artist (id, name) VALUES ('muse', 'Muse'), ('chris', 'Chris Brown')",
+        "INSERT INTO album (id, title, artist, artist_id) VALUES ('muse-album', 'The 2nd Law', 'Muse', 'muse'), ('brown-album', 'BROWN (The Chocolate Edition)', 'Chris Brown', 'chris')",
+        "INSERT INTO track (id, title, artist, genre, uri, album_id, artist_id) VALUES ('muse-track', 'Save Me', 'Muse', 'Rock', '/music/muse.flac', 'muse-album', 'muse'), ('brown-track', 'Save Me', 'Chris Brown', 'R&B', '/music/brown.flac', 'brown-album', 'chris')",
+    ] {
+        conn.execute(Statement::from_string(DbBackend::Sqlite, sql.to_owned()))
+            .await
+            .unwrap();
+    }
+
+    let tracks = TrackRepository::new(&conn)
+        .find_all(None, None, 100)
+        .await
+        .unwrap();
+    let muse = tracks
+        .iter()
+        .find(|track| track.id == "muse-track")
+        .unwrap();
+    let brown = tracks
+        .iter()
+        .find(|track| track.id == "brown-track")
+        .unwrap();
+
+    assert_eq!(muse.album.id, "muse-album");
+    assert_eq!(muse.album.artist, "Muse");
+    assert_eq!(brown.album.id, "brown-album");
+    assert_eq!(brown.album.artist, "Chris Brown");
 }

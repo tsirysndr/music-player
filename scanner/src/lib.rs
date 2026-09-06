@@ -5,7 +5,7 @@ use anyhow::Error;
 use futures::stream::{self, StreamExt};
 use music_player_entity::{album, artist, artist_tracks, playlist_tracks, track};
 use music_player_storage::Database;
-use music_player_types::types::Song;
+use music_player_types::types::{album_id, Song};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DbBackend, EntityTrait,
     QueryFilter, Statement, TransactionTrait,
@@ -51,8 +51,8 @@ async fn parse_music_library(enable_log: bool) -> Result<Vec<Song>, Error> {
                     let mut song: Song = (&meta).into();
                     song.uri = Some(path.clone());
 
-                    let album = song.album.clone();
-                    song.cover = extract_and_save_album_cover(&path, &meta, &album);
+                    song.cover =
+                        extract_and_save_album_cover(&path, &meta, &song.album, &song.album_artist);
                     if enable_log {
                         // user-facing progress output for the CLI `scan` command
                         println!("{}", path);
@@ -83,10 +83,23 @@ async fn save_songs(db: &Database, songs: &[Song]) -> Result<(), Error> {
         item.insert(&txn).await.ok();
 
         let item: album::ActiveModel = song.try_into().unwrap();
-        item.insert(&txn).await.ok();
+        let id = album_id(&song.album, &song.album_artist);
+        if album::Entity::find_by_id(id).one(&txn).await?.is_none() {
+            item.insert(&txn).await?;
+        }
 
         let item: track::ActiveModel = song.try_into().unwrap();
-        item.insert(&txn).await.ok();
+        let id = format!(
+            "{:x}",
+            md5::compute(song.uri.as_deref().unwrap_or_default())
+        );
+        if track::Entity::find_by_id(id).one(&txn).await?.is_some() {
+            // Re-scanning must repair metadata and album associations, not
+            // merely ignore an existing primary key.
+            item.update(&txn).await?;
+        } else {
+            item.insert(&txn).await?;
+        }
 
         let item: artist_tracks::ActiveModel = song.try_into().unwrap();
         item.insert(&txn).await.ok();
@@ -96,11 +109,16 @@ async fn save_songs(db: &Database, songs: &[Song]) -> Result<(), Error> {
 }
 
 /// Read the embedded album art out of the audio file and save it under
-/// `<app_dir>/covers/<md5(album)>.{jpg,png}`, returning the file name.
+/// `<app_dir>/covers/<album-id>.{jpg,png}`, returning the file name.
 ///
 /// Art that needs ID3 de-unsynchronization or base64 decoding (rare —
 /// mostly Vorbis `METADATA_BLOCK_PICTURE`) is skipped.
-fn extract_and_save_album_cover(path: &str, meta: &Metadata, album: &str) -> Option<String> {
+fn extract_and_save_album_cover(
+    path: &str,
+    meta: &Metadata,
+    album: &str,
+    album_artist: &str,
+) -> Option<String> {
     let art: AlbumArt = meta.album_art?;
     if art.id3_unsync || art.vorbis_base64 || art.size == 0 {
         return None;
@@ -121,11 +139,11 @@ fn extract_and_save_album_cover(path: &str, meta: &Metadata, album: &str) -> Opt
     };
 
     let covers_path = format!("{}/covers", get_application_directory());
-    let album = md5::compute(album.as_bytes());
-    let filename = format!("{}/{:x}.{}", covers_path, album, extension);
+    let album = album_id(album, album_artist);
+    let filename = format!("{}/{}.{}", covers_path, album, extension);
     let mut file = File::create(filename).ok()?;
     file.write_all(&data).ok()?;
-    Some(format!("{:x}.{}", album, extension))
+    Some(format!("{}.{}", album, extension))
 }
 
 pub async fn scan_music_library(enable_log: bool, db: Database) -> Result<Vec<Song>, Error> {
@@ -147,6 +165,9 @@ pub async fn scan_music_library(enable_log: bool, db: Database) -> Result<Vec<So
 pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec<Song>, Error> {
     prune_missing_tracks(&db).await?;
     let songs = scan_music_library(enable_log, db.clone()).await?;
+    // A metadata refresh can move tracks to newly identified albums.
+    // Remove legacy title-only album rows after those updates have landed.
+    prune_orphaned_library_rows(&db).await?;
     // Re-sync the Typesense collections when that backend is configured
     // (no-op on FTS5 — its triggers already track the writes above). A
     // failed sync must not fail the scan; search just falls back to FTS5.
@@ -243,6 +264,11 @@ async fn prune_missing_tracks(db: &Database) -> Result<(), Error> {
             .await?;
         track::Entity::delete_by_id(t.id).exec(conn).await?;
     }
+    prune_orphaned_library_rows(db).await
+}
+
+async fn prune_orphaned_library_rows(db: &Database) -> Result<(), Error> {
+    let conn = db.get_connection();
     conn.execute(Statement::from_string(
         DbBackend::Sqlite,
         "DELETE FROM album WHERE id NOT IN (SELECT album_id FROM track WHERE album_id IS NOT NULL)"

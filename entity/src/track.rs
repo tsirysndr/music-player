@@ -1,4 +1,4 @@
-use music_player_types::types::{RemoteTrackUrl, Song, Track as TrackType};
+use music_player_types::types::{album_id, RemoteTrackUrl, Song, Track as TrackType};
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
 use upnp_client::types::Metadata;
@@ -134,10 +134,7 @@ impl From<&Song> for ActiveModel {
             channels: ActiveValue::Set(song.channels),
             duration: ActiveValue::Set(Some(song.duration.as_secs_f32())),
             uri: ActiveValue::Set(song.uri.clone().unwrap_or_default()),
-            album_id: ActiveValue::Set(Some(format!(
-                "{:x}",
-                md5::compute(format!("{}", song.album))
-            ))),
+            album_id: ActiveValue::Set(Some(album_id(&song.album, &song.album_artist))),
             artist_id: ActiveValue::Set(Some(format!(
                 "{:x}",
                 md5::compute(song.album_artist.to_owned())

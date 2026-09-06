@@ -24,12 +24,20 @@ fn metadata_to_artist() {
 fn metadata_to_album() {
     let album = Album::from(&metadata());
 
-    assert_eq!(album.id, format!("{:x}", md5::compute("The Off-Season")));
+    assert_eq!(album.id, album_id("The Off-Season", "J. Cole"));
     assert_eq!(album.title, "The Off-Season");
     assert_eq!(album.artist, "J. Cole");
     assert_eq!(
         album.artist_id,
         Some(format!("{:x}", md5::compute("J. Cole")))
+    );
+}
+
+#[test]
+fn same_album_title_by_different_artists_has_distinct_ids() {
+    assert_ne!(
+        album_id("Greatest Hits", "Artist A"),
+        album_id("Greatest Hits", "Artist B")
     );
 }
 

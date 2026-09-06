@@ -1,6 +1,7 @@
 use anyhow::Error;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use std::collections::HashMap;
 
 pub struct TrackRepository {
     db: DatabaseConnection,
@@ -75,33 +76,32 @@ impl TrackRepository {
             }
         };
 
-        let query = match offset {
-            Some(offset) => track_entity::Entity::find().offset(offset).limit(limit),
-            None => track_entity::Entity::find().limit(limit),
-        };
-
-        let albums: Vec<(track_entity::Model, Option<album_entity::Model>)> = query
-            .order_by_asc(track_entity::Column::Title)
-            .find_also_related(album_entity::Entity)
+        let albums: HashMap<String, album_entity::Model> = album_entity::Entity::find()
             .all(&self.db)
-            .await?;
-
-        let albums: Vec<Option<album_entity::Model>> = albums
+            .await?
             .into_iter()
-            .map(|(_track, album)| album.clone())
+            .map(|album| (album.id.clone(), album))
             .collect();
-        let mut albums = albums.into_iter();
 
-        Ok(results
+        results
             .into_iter()
-            .map(|(track, artists)| {
-                let album = albums.next().unwrap().unwrap();
-                track_entity::Model {
+            .map(|(track, artists)| -> Result<_, Error> {
+                let album_id = track
+                    .album_id
+                    .as_ref()
+                    .ok_or_else(|| Error::msg(format!("track {} has no album", track.id)))?;
+                let album = albums.get(album_id).cloned().ok_or_else(|| {
+                    Error::msg(format!(
+                        "track {} references missing album {album_id}",
+                        track.id
+                    ))
+                })?;
+                Ok(track_entity::Model {
                     artists,
                     album,
                     ..track
-                }
+                })
             })
-            .collect())
+            .collect()
     }
 }

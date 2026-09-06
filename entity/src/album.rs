@@ -1,5 +1,5 @@
 use music_player_types::types::{
-    Album as AlbumType, RemoteCoverUrl, RemoteTrackUrl, Song, Track as TrackType,
+    album_id, Album as AlbumType, RemoteCoverUrl, RemoteTrackUrl, Song, Track as TrackType,
 };
 use sea_orm::{entity::prelude::*, ActiveValue};
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ impl ActiveModelBehavior for ActiveModel {}
 
 impl From<&Song> for ActiveModel {
     fn from(song: &Song) -> Self {
-        let id = format!("{:x}", md5::compute(format!("{}", song.album)));
+        let id = album_id(&song.album, &song.album_artist);
         Self {
             id: ActiveValue::set(id),
             title: ActiveValue::Set(song.album.clone()),

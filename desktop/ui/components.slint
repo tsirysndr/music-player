@@ -270,54 +270,54 @@ export component VfdDisplay inherits Rectangle {
     border-width: 1px;
     border-color: Theme.display-glow;
 
-    HorizontalLayout {
+    VerticalLayout {
         padding: 10px;
-        spacing: 10px;
+        spacing: 3px;
 
-        VerticalLayout {
-            spacing: 2px;
-            HorizontalLayout {
-                spacing: 8px;
-                Rectangle {
-                    width: 12px;
-                    // stop = square, playing = play icon, else pause icon
-                    if root.stopped : Rectangle {
-                        width: 8px;
-                        height: 8px;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-                        background: Theme.display-text;
-                    }
-                    if !root.stopped : Image {
-                        source: root.playing ? Icons.play : Icons.pause;
-                        colorize: Theme.display-text;
-                        width: 11px;
-                        height: 11px;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-                    }
+        HorizontalLayout {
+            spacing: 8px;
+            Rectangle {
+                width: 12px;
+                // stop = square, playing = play icon, else pause icon
+                if root.stopped : Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    background: Theme.display-text;
                 }
-                Text {
-                    text: root.time-text;
-                    color: Theme.display-text;
-                    font-family: Theme.font-mono;
-                    font-size: 22px;
-                    font-weight: 600;
-                    vertical-alignment: center;
+                if !root.stopped : Image {
+                    source: root.playing ? Icons.play : Icons.pause;
+                    colorize: Theme.display-text;
+                    width: 11px;
+                    height: 11px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
             }
             Text {
-                text: root.info-text;
-                color: Theme.display-dim;
+                text: root.time-text;
+                color: Theme.display-text;
                 font-family: Theme.font-mono;
-                font-size: 10px;
+                font-size: 22px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            VerticalLayout {
+                alignment: center;
+                spacing: 4px;
+                MeterStrip { level: root.vu-left; width: 70px; }
+                MeterStrip { level: root.vu-right; width: 70px; }
             }
         }
-        VerticalLayout {
-            alignment: center;
-            spacing: 4px;
-            MeterStrip { level: root.vu-left; width: 70px; }
-            MeterStrip { level: root.vu-right; width: 70px; }
+        Text {
+            text: root.info-text;
+            color: Theme.display-dim;
+            font-family: Theme.font-mono;
+            font-size: 9px;
+            horizontal-stretch: 1;
+            horizontal-alignment: center;
+            overflow: elide;
         }
     }
 }
@@ -1556,4 +1556,3 @@ export component PlaylistRow inherits Rectangle {
         }
     }
 }
-

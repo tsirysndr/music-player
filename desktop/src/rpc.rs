@@ -2,7 +2,7 @@
 //! Slint UI. music-player has no server-streaming RPCs, so now-playing and
 //! queue state are polled (1 s) instead of followed.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::sync::{LazyLock, RwLock as StdRwLock};
@@ -21,8 +21,8 @@ use music_player_server::api::music::v1alpha1::{
     library_service_client::LibraryServiceClient, mixer_service_client::MixerServiceClient,
     playback_service_client::PlaybackServiceClient, playlist_service_client::PlaylistServiceClient,
     tracklist_service_client::TracklistServiceClient, AddItemRequest, AddTrackRequest,
-    ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumsRequest,
-    GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
+    ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest,
+    GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
     GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest, GetVolumeRequest,
     LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest,
     PlayTrackAtRequest, PreviousRequest, RemoveItemRequest, RemoveTrackAtRequest, RenameRequest,
@@ -42,7 +42,8 @@ const PAGE: i32 = 100_000;
 
 #[derive(Debug)]
 pub enum Cmd {
-    PlayPause,
+    Play,
+    Pause,
     Next,
     Previous,
     SeekMs(u32),
@@ -271,8 +272,6 @@ struct FullTrack {
     proto: TrackProto,
     album_id: String,
     artist: String,
-    disc_number: i32,
-    track_number: i32,
 }
 
 /// Live connection to a saved Subsonic/Jellyfin server.
@@ -358,6 +357,7 @@ async fn session(
     // Poll now-playing + queue until the daemon (or the target) goes away.
     let mut tracklist = TracklistServiceClient::new(channel.clone());
     let mut last_art: Option<String> = None;
+    let mut format_cache: HashMap<String, (u32, u32)> = HashMap::new();
     loop {
         if SWITCH_GEN.load(Ordering::SeqCst) != session_gen {
             return Err("server switched".into());
@@ -370,7 +370,7 @@ async fn session(
         let playing = now.is_playing;
         state.lock().await.playing = playing;
 
-        let (title, artist, path, length_ms, art_file, track_id) = match &now.track {
+        let (title, artist, album, path, length_ms, art_file, track_id) = match &now.track {
             Some(t) => (
                 if t.title.is_empty() {
                     filename_stem(&t.uri)
@@ -378,6 +378,10 @@ async fn session(
                     t.title.clone()
                 },
                 t.artist.clone(),
+                t.album
+                    .as_ref()
+                    .map(|a| a.title.clone())
+                    .unwrap_or_default(),
                 t.uri.clone(),
                 (t.duration * 1000.0) as u64,
                 t.album.as_ref().and_then(|a| {
@@ -393,27 +397,53 @@ async fn session(
                 "Nothing playing".to_string(),
                 String::new(),
                 String::new(),
+                String::new(),
                 0,
                 None,
                 String::new(),
             ),
         };
         // VFD readout: codec (from the uri extension), bitrate and sample
-        // rate — "FLAC 986k 44.1kHz". The queue position is prepended once
+        // rate — "FLAC 986 kbps 44.1 kHz". The queue position is prepended once
         // the queue snapshot below is in (compact units keep it on one line).
         let format_info = match &now.track {
             Some(t) => {
                 let codec = codec_of(&t.uri);
+                let (probed_bitrate, probed_sample_rate) = if t.bitrate == 0 || t.sample_rate == 0 {
+                    if let Some(values) = format_cache.get(&t.id) {
+                        *values
+                    } else {
+                        let values = probe_audio_format(&t.uri).await.unwrap_or_default();
+                        format_cache.insert(t.id.clone(), values);
+                        values
+                    }
+                } else {
+                    (0, 0)
+                };
+                let bitrate = if t.bitrate > 0 {
+                    t.bitrate
+                } else {
+                    probed_bitrate
+                };
+                let sample_rate = if t.sample_rate > 0 {
+                    t.sample_rate
+                } else {
+                    probed_sample_rate
+                };
                 let mut parts: Vec<String> = Vec::with_capacity(3);
                 if !codec.is_empty() {
                     parts.push(codec);
                 }
-                if t.bitrate > 0 {
-                    parts.push(format!("{}k", t.bitrate));
-                }
-                if t.sample_rate > 0 {
-                    parts.push(format!("{:.1}kHz", t.sample_rate as f64 / 1000.0));
-                }
+                parts.push(if bitrate > 0 {
+                    format!("{} kbps", bitrate)
+                } else {
+                    "--- kbps".to_string()
+                });
+                parts.push(if sample_rate > 0 {
+                    format!("{:.1} kHz", sample_rate as f64 / 1000.0)
+                } else {
+                    "--.- kHz".to_string()
+                });
                 parts.join(" ")
             }
             None => String::new(),
@@ -423,10 +453,22 @@ async fn session(
             last_art = art_file.clone();
             match &art_file {
                 Some(file) => {
-                    tokio::spawn(fetch_now_art(ep.covers.clone(), file.clone(), weak.clone()));
+                    let _ = weak.upgrade_in_event_loop(|app| {
+                        app.set_now_has_art(false);
+                        app.set_now_cover_url("".into());
+                    });
+                    tokio::spawn(fetch_now_art(
+                        ep.covers.clone(),
+                        file.clone(),
+                        track_id.clone(),
+                        weak.clone(),
+                    ));
                 }
                 None => {
-                    let _ = weak.upgrade_in_event_loop(|app| app.set_now_has_art(false));
+                    let _ = weak.upgrade_in_event_loop(|app| {
+                        app.set_now_has_art(false);
+                        app.set_now_cover_url("".into());
+                    });
                 }
             }
         }
@@ -437,6 +479,7 @@ async fn session(
         let _ = weak.upgrade_in_event_loop(move |app| {
             app.set_now_title(title.into());
             app.set_now_artist(artist.into());
+            app.set_now_album(album.into());
             app.set_now_path(path.into());
             app.set_now_liked(crate::is_liked(&track_id));
             app.set_now_track_id(track_id.into());
@@ -473,7 +516,7 @@ async fn session(
                 .map(|(i, t)| track_data(t, i as i32))
                 .collect();
             history.reverse(); // most recent first
-                               // "TRK  3/12  FLAC 986k 44.1kHz"
+                               // "TRK  3/12  FLAC 986 kbps 44.1 kHz"
             let mut vfd = if total > 0 {
                 format!("TRK {:>2}/{:<2}", now.index + 1, total)
             } else {
@@ -514,6 +557,98 @@ fn codec_of(uri: &str) -> String {
         .map(|e| e.to_string_lossy().to_uppercase())
         .filter(|e| e.len() <= 4 && e.chars().all(|c| c.is_ascii_alphanumeric()))
         .unwrap_or_default()
+}
+
+/// Read technical audio properties directly from a local current-track file
+/// when an older database row (or client) did not provide them over gRPC.
+/// Network streams are left to their server metadata rather than downloaded.
+async fn probe_audio_format(uri: &str) -> Option<(u32, u32)> {
+    if uri.starts_with("http://") || uri.starts_with("https://") {
+        return probe_remote_audio_format(uri).await;
+    }
+    let path = uri.strip_prefix("file://").unwrap_or(uri).to_owned();
+    probe_local_audio_format(path.into()).await
+}
+
+/// Probe a finite remote file without downloading the audio payload. Rockbox
+/// metadata opens paths directly, so HTTP ranges are written into a sparse
+/// file at their original offsets. The head covers stream headers/ID3; the
+/// tail covers formats such as MP4/M4A whose `moov` atom may be at EOF.
+async fn probe_remote_audio_format(uri: &str) -> Option<(u32, u32)> {
+    use reqwest::header::{CONTENT_RANGE, RANGE};
+    use reqwest::StatusCode;
+    use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+
+    const RANGE_BYTES: u64 = 2 * 1024 * 1024;
+
+    let client = reqwest::Client::new();
+    let head = client
+        .get(uri)
+        .header(RANGE, format!("bytes=0-{}", RANGE_BYTES - 1))
+        .send()
+        .await
+        .ok()?;
+    if head.status() != StatusCode::PARTIAL_CONTENT {
+        return None;
+    }
+    let total = content_range_total(head.headers().get(CONTENT_RANGE)?.to_str().ok()?)?;
+    if total == 0 {
+        return None;
+    }
+    let head_bytes = head.bytes().await.ok()?;
+
+    let parsed_url = reqwest::Url::parse(uri).ok()?;
+    let extension = std::path::Path::new(parsed_url.path())
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| value.len() <= 8 && value.chars().all(|c| c.is_ascii_alphanumeric()))
+        .unwrap_or("audio");
+    let cache_dir = std::env::temp_dir().join("music-player-remote-metadata");
+    tokio::fs::create_dir_all(&cache_dir).await.ok()?;
+    let cache_path = cache_dir.join(format!("{:x}.{extension}", md5::compute(uri)));
+    let mut file = tokio::fs::File::create(&cache_path).await.ok()?;
+    file.set_len(total).await.ok()?;
+    file.write_all(&head_bytes).await.ok()?;
+    file.flush().await.ok()?;
+
+    if let Some(values) = probe_local_audio_format(cache_path.clone()).await {
+        if values.0 > 0 && values.1 > 0 {
+            return Some(values);
+        }
+    }
+
+    if total > RANGE_BYTES {
+        let tail_start = total.saturating_sub(RANGE_BYTES);
+        let tail = client
+            .get(uri)
+            .header(RANGE, format!("bytes={tail_start}-{}", total - 1))
+            .send()
+            .await
+            .ok()?;
+        if tail.status() != StatusCode::PARTIAL_CONTENT {
+            return None;
+        }
+        let tail_bytes = tail.bytes().await.ok()?;
+        file.seek(std::io::SeekFrom::Start(tail_start)).await.ok()?;
+        file.write_all(&tail_bytes).await.ok()?;
+        file.flush().await.ok()?;
+    }
+    drop(file);
+    probe_local_audio_format(cache_path).await
+}
+
+fn content_range_total(value: &str) -> Option<u64> {
+    let (_, total) = value.rsplit_once('/')?;
+    (total != "*").then(|| total.parse().ok()).flatten()
+}
+
+async fn probe_local_audio_format(path: std::path::PathBuf) -> Option<(u32, u32)> {
+    tokio::task::spawn_blocking(move || {
+        let metadata = rockbox_metadata::read(path).ok()?;
+        Some((metadata.bitrate, metadata.sample_rate))
+    })
+    .await
+    .ok()?
 }
 
 fn track_data(t: &TrackProto, index: i32) -> TrackData {
@@ -631,8 +766,6 @@ async fn load_library(
             proto: t.clone(),
             album_id: t.album.as_ref().map(|a| a.id.clone()).unwrap_or_default(),
             artist: t.artist.clone(),
-            disc_number: t.disc_number,
-            track_number: t.track_number,
         })
         .collect();
 
@@ -777,30 +910,50 @@ async fn fetch_thumb(covers_base: &str, file: &str, max: u32) -> Option<(u32, u3
     .ok()?
 }
 
-async fn fetch_now_art(covers_base: String, file: String, weak: Weak<AppWindow>) {
-    if let Some((w, h, rgba)) = fetch_thumb(&covers_base, &file, 256).await {
+async fn fetch_now_art(covers_base: String, file: String, track_id: String, weak: Weak<AppWindow>) {
+    let url = format!("{covers_base}{file}");
+    let Ok(bytes) = reqwest::get(&url)
+        .await
+        .and_then(|response| response.error_for_status())
+    else {
+        return;
+    };
+    let Ok(bytes) = bytes.bytes().await else {
+        return;
+    };
+
+    // Souvlaki/macOS loads artwork from a URL. Keep a local copy so artwork
+    // works with the embedded HTTP server, remote servers, and macOS App
+    // Transport Security alike.
+    let cache_dir = std::env::temp_dir().join("music-player-now-playing");
+    let cache_name = std::path::Path::new(&file)
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("cover"));
+    let cache_path = cache_dir.join(cache_name);
+    let cover_url = if tokio::fs::create_dir_all(&cache_dir).await.is_ok()
+        && tokio::fs::write(&cache_path, &bytes).await.is_ok()
+    {
+        format!("file://{}", cache_path.to_string_lossy())
+    } else {
+        url
+    };
+
+    let decoded = tokio::task::spawn_blocking(move || {
+        let img = image::load_from_memory(&bytes).ok()?;
+        let thumb = img.thumbnail(256, 256).to_rgba8();
+        Some((thumb.width(), thumb.height(), thumb.into_raw()))
+    })
+    .await
+    .ok()
+    .flatten();
+    if let Some((w, h, rgba)) = decoded {
         let _ = weak.upgrade_in_event_loop(move |app| {
-            crate::ui_set_now_art(&app, w, h, rgba);
+            if app.get_now_track_id().as_str() == track_id {
+                crate::ui_set_now_art(&app, w, h, rgba);
+                app.set_now_cover_url(cover_url.into());
+            }
         });
     }
-}
-
-/// Sorted, deduped album tracks (disc, then track number) for detail/play.
-fn album_tracks(state: &WorkerState, album_id: &str) -> Vec<TrackProto> {
-    let mut with_order: Vec<(&FullTrack, i32, i32)> = state
-        .tracks
-        .iter()
-        .filter(|t| t.album_id == album_id)
-        .map(|t| (t, t.disc_number, t.track_number))
-        .collect();
-    with_order.sort_by_key(|(_, disc, num)| (*disc, *num));
-    // The library can hold the same song twice (rescans, duplicate files);
-    // don't show it twice within one album.
-    with_order.dedup_by(|a, b| a.1 == b.1 && a.2 == b.2 && a.0.proto.title == b.0.proto.title);
-    with_order
-        .into_iter()
-        .map(|(t, _, _)| t.proto.clone())
-        .collect()
 }
 
 async fn load_tracks(
@@ -821,35 +974,67 @@ async fn load_tracks(
     Ok(())
 }
 
-async fn open_album(state: &Arc<Mutex<WorkerState>>, weak: &Weak<AppWindow>, id: String) {
-    let (title, artist, year, tracks) = {
-        let st = state.lock().await;
-        let tracks = album_tracks(&st, &id);
-        let (title, artist, year) = tracks
-            .first()
-            .and_then(|t| t.album.as_ref())
-            .map(|a| {
-                (
-                    a.title.clone(),
-                    tracks.first().map(|t| t.artist.clone()).unwrap_or_default(),
-                    if a.year > 0 {
-                        a.year.to_string()
-                    } else {
-                        String::new()
-                    },
-                )
-            })
-            .unwrap_or_default();
-        (title, artist, year, tracks)
+async fn fetch_album(
+    channel: &Channel,
+    id: &str,
+) -> Result<Option<music_player_server::api::metadata::v1alpha1::Album>, tonic::Status> {
+    let mut library = LibraryServiceClient::new(channel.clone());
+    Ok(library
+        .get_album_details(GetAlbumDetailsRequest { id: id.to_owned() })
+        .await?
+        .into_inner()
+        .album)
+}
+
+async fn fetch_album_tracks(
+    channel: &Channel,
+    state: &Arc<Mutex<WorkerState>>,
+    id: &str,
+) -> Result<Vec<TrackProto>, tonic::Status> {
+    let Some(mut album) = fetch_album(channel, id).await? else {
+        return Ok(Vec::new());
     };
-    if tracks.is_empty() {
+    let songs = std::mem::take(&mut album.tracks);
+    let by_id: HashMap<String, TrackProto> = state
+        .lock()
+        .await
+        .tracks
+        .iter()
+        .map(|track| (track.proto.id.clone(), track.proto.clone()))
+        .collect();
+    Ok(songs
+        .into_iter()
+        .filter_map(|song| {
+            let mut track = by_id.get(&song.id)?.clone();
+            track.album = Some(album.clone());
+            track.track_number = song.track_number;
+            track.disc_number = song.disc_number;
+            Some(track)
+        })
+        .collect())
+}
+
+async fn open_album(
+    channel: &Channel,
+    state: &Arc<Mutex<WorkerState>>,
+    weak: &Weak<AppWindow>,
+    id: String,
+) {
+    let Ok(Some(album)) = fetch_album(channel, &id).await else {
         return;
-    }
+    };
+    let Ok(tracks) = fetch_album_tracks(channel, state, &id).await else {
+        return;
+    };
     let detail = AlbumDetailData {
         id,
-        title,
-        artist,
-        year,
+        title: album.title,
+        artist: album.artist,
+        year: if album.year > 0 {
+            album.year.to_string()
+        } else {
+            String::new()
+        },
         label: String::new(),
         tracks: tracks
             .iter()
@@ -1155,12 +1340,13 @@ async fn cmd_loop(
         let mut tracklist = TracklistServiceClient::new(channel.clone());
         let res: Result<(), tonic::Status> = async {
             match cmd {
-                Cmd::PlayPause => {
-                    if state.lock().await.playing {
-                        playback.pause(PauseRequest {}).await?;
-                    } else {
-                        playback.play(PlayRequest {}).await?;
-                    }
+                Cmd::Play => {
+                    playback.play(PlayRequest {}).await?;
+                    state.lock().await.playing = true;
+                }
+                Cmd::Pause => {
+                    playback.pause(PauseRequest {}).await?;
+                    state.lock().await.playing = false;
                 }
                 Cmd::Next => {
                     playback.next(NextRequest {}).await?;
@@ -1176,15 +1362,15 @@ async fn cmd_loop(
                     mixer.set_volume(SetVolumeRequest { volume }).await?;
                 }
                 Cmd::PlayAlbum(id) => {
-                    let tracks = album_tracks(&*state.lock().await, &id);
+                    let tracks = fetch_album_tracks(&channel, &state, &id).await?;
                     load_tracks(&channel, tracks, 0).await?;
                 }
                 Cmd::PlayAlbumAt(id, pos) => {
-                    let tracks = album_tracks(&*state.lock().await, &id);
+                    let tracks = fetch_album_tracks(&channel, &state, &id).await?;
                     load_tracks(&channel, tracks, pos).await?;
                 }
                 Cmd::PlayAlbumShuffled(id) => {
-                    let mut tracks = album_tracks(&*state.lock().await, &id);
+                    let mut tracks = fetch_album_tracks(&channel, &state, &id).await?;
                     // Fisher–Yates via fastrand: shuffle client-side.
                     for i in (1..tracks.len()).rev() {
                         tracks.swap(i, fastrand::usize(..=i));
@@ -1243,7 +1429,7 @@ async fn cmd_loop(
                         .await?;
                 }
                 Cmd::OpenAlbum(id) => {
-                    open_album(&state, &weak, id).await;
+                    open_album(&channel, &state, &weak, id).await;
                 }
                 Cmd::SetShuffle(enabled) => {
                     tracklist.shuffle(ShuffleRequest { enabled }).await?;
@@ -1343,7 +1529,8 @@ async fn cmd_loop(
                     insert_track_ids(&channel, &state, position, tracks).await?;
                 }
                 Cmd::InsertAlbum { album_id, position } => {
-                    let ids: Vec<String> = album_tracks(&*state.lock().await, &album_id)
+                    let ids: Vec<String> = fetch_album_tracks(&channel, &state, &album_id)
+                        .await?
                         .iter()
                         .map(|t| t.id.clone())
                         .collect();

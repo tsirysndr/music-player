@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 use music_player_entity::saved_radio;
 use music_player_settings::read_settings;
-use music_player_storage::{atradio, rocksky_likes, Database};
+use music_player_storage::{atradio, rocksky_likes};
 use music_player_tracklist::Tracklist;
 use tracing::{info, warn};
 
@@ -54,7 +54,7 @@ pub fn spawn(tracklist: Arc<Mutex<Tracklist>>) {
         };
         info!(%did, "atproto integration on");
 
-        let db = Database::new().await;
+        let db = music_player_storage::shared().await;
         let bookmarks = db.get_connection().clone();
         let likes = db.get_connection().clone();
         tokio::spawn(atradio::sync(bookmarks));
@@ -91,7 +91,7 @@ fn current_station(tracklist: &Arc<Mutex<Tracklist>>) -> Option<saved_radio::Mod
 }
 
 async fn status_loop(tracklist: Arc<Mutex<Tracklist>>) {
-    let db = Database::new().await;
+    let db = music_player_storage::shared().await;
     // The station id currently published, so the record is only rewritten when
     // the station actually changes.
     let mut published: Option<String> = None;

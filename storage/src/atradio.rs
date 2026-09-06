@@ -657,7 +657,9 @@ mod tests {
         assert!(is_auth_error(&SdkError::Auth(
             "update play status: AgentError { kind: Auth(TokenExpired), source: None }".into()
         )));
-        assert!(!is_auth_error(&SdkError::Auth("create favorite: 400".into())));
+        assert!(!is_auth_error(&SdkError::Auth(
+            "create favorite: 400".into()
+        )));
         assert!(!is_auth_error(&SdkError::RecordNotFound));
     }
 
@@ -711,7 +713,9 @@ mod tests {
         let (_dir, conn) = temp_db().await;
 
         upsert(&conn, station("Lofi 24/7")).await.expect("insert");
-        upsert(&conn, station("Lofi Renamed")).await.expect("update");
+        upsert(&conn, station("Lofi Renamed"))
+            .await
+            .expect("update");
 
         let rows = saved_radio::Entity::find().all(&conn).await.unwrap();
         assert_eq!(rows.len(), 1, "the second import must not add a row");

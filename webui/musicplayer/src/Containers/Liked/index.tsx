@@ -23,29 +23,27 @@ type LikedTrack = {
   album: { id: string; title: string; cover?: string };
 };
 
+// index.css pins `body { overflow-y: hidden }`, so the whole page scrolls here
+// rather than an inner pane.
 const Container = styled.div`
   display: flex;
   flex-direction: row;
-  background-color: ${(props) => props.theme.colors.background};
-`;
-
-const Content = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
-// The document does not scroll (index.css pins body overflow); every page
-// brings its own scroll container.
-const Scrollable = styled.div`
-  height: calc(100vh - 100px);
+  height: 100vh;
   overflow-y: auto;
+  background-color: ${(props) => props.theme.colors.background};
 
   &::-webkit-scrollbar {
     display: none;
   }
   scrollbar-width: none;
   -ms-overflow-style: none;
+`;
+
+const Content = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 `;
 
 const Message = styled.div`
@@ -153,8 +151,7 @@ export default function LikedPage() {
         <Sidebar active="liked" />
         <Content>
           <ControlBar />
-          <Scrollable>
-            <MainContent
+          <MainContent
               title="Liked"
               placeholder="Filter Liked"
               displayHeader={!loading && !error && tracks.length > 0}
@@ -183,9 +180,8 @@ export default function LikedPage() {
                   addTrackToPlaylist({ playlistId, trackId })
                 }
               />
-              )}
-            </MainContent>
-          </Scrollable>
+            )}
+          </MainContent>
         </Content>
       </Container>
     </>

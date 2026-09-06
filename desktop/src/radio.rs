@@ -2,7 +2,6 @@ use music_player_entity::saved_radio;
 use music_player_settings::{
     read_settings, Settings, DEFAULT_RADIO_BROWSER_URL, DEFAULT_TUNEIN_URL,
 };
-use music_player_storage::Database;
 use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -266,7 +265,7 @@ pub async fn resolve_stream(station: &Station) -> String {
 }
 
 pub async fn load_bookmarks() -> Vec<Station> {
-    let db = Database::new().await;
+    let db = music_player_storage::shared().await;
     saved_radio::Entity::find()
         .all(db.get_connection())
         .await
@@ -286,7 +285,7 @@ pub async fn load_bookmarks() -> Vec<Station> {
 }
 
 pub async fn toggle_bookmark(station: &Station) -> bool {
-    let db = Database::new().await;
+    let db = music_player_storage::shared().await;
     let conn = db.get_connection();
     let row = saved_radio::Model {
         id: station.id.clone(),

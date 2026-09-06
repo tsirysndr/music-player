@@ -160,3 +160,19 @@ async fn track_repository_matches_albums_by_id_when_titles_are_equal() {
     assert_eq!(brown.album.id, "brown-album");
     assert_eq!(brown.album.artist, "Chris Brown");
 }
+
+/// `shared()` must hand back one pool, not a new one per call: a pool costs a
+/// file descriptor per connection, and anything calling it on a timer would
+/// otherwise run the process out of descriptors ("Too many open files").
+#[tokio::test]
+async fn shared_database_is_opened_once() {
+    env::set_var("MUSIC_PLAYER_DATABASE_URL", "sqlite::memory:");
+
+    let first = crate::shared().await;
+    let second = crate::shared().await;
+
+    assert!(
+        std::ptr::eq(first, second),
+        "shared() opened a second pool instead of reusing the first"
+    );
+}

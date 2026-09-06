@@ -76,12 +76,21 @@ const categories = [
   { label: "Soundtrack", term: "soundtrack", Icon: Headphones, color: "#4d8dff" },
 ];
 
+// index.css pins `body { overflow-y: hidden }`, so the document never scrolls
+// and a page has to bring its own scroller. This one is the whole page: the
+// shell fills the viewport and scrolls everything inside it.
 const Shell = styled.div`
   display: flex;
   background: ${(props) => props.theme.colors.background};
   height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
   font-family: RockfordSansRegular;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
   & button,
   & input {
@@ -94,18 +103,8 @@ const Main = styled.main`
   min-width: 0;
 `;
 
-// The document itself does not scroll (index.css pins body overflow), so the
-// page has to own its scroll container the way the other pages do.
 const Body = styled.div`
-  height: calc(100vh - 100px);
-  overflow-y: auto;
   padding: 24px 32px 130px;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 `;
 
 const PageTitle = styled.h1`

@@ -34,7 +34,6 @@ use music_player_types::types as mp_types;
 use crate::likes;
 use crate::servers::SavedServer;
 use music_player_entity::saved_radio;
-use music_player_storage::Database;
 use sea_orm::EntityTrait;
 
 /// All albums/artists/tracks in one page — a limit of 0 means "none" on the
@@ -325,7 +324,7 @@ async fn run(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
     // Likes restored from the user's atproto repo join the locally-stored ones,
     // so a fresh install shows the account's likes once the library is scanned.
     let mut liked = likes::load();
-    let db = music_player_storage::Database::new().await;
+    let db = music_player_storage::shared().await;
     match music_player_storage::rocksky_likes::matched_track_ids(db.get_connection()).await {
         Ok(ids) => liked.extend(ids),
         Err(e) => tracing::debug!("could not read restored likes: {e}"),
@@ -509,7 +508,7 @@ async fn session(
         // second and the answer only moves when the user tunes or bookmarks.
         let bookmarked = if is_radio && !station_id.is_empty() {
             saved_radio::Entity::find_by_id(station_id.clone())
-                .one(Database::new().await.get_connection())
+                .one(music_player_storage::shared().await.get_connection())
                 .await
                 .ok()
                 .flatten()
@@ -866,11 +865,13 @@ async fn load_library(
         liked,
     };
 
-    let art_files: Vec<(usize, String)> = data
+    // Keyed by album id, not by position: `ui_set_library` de-duplicates the
+    // list it is given, so an index taken from this side can address a
+    // different album — or none at all — by the time the art arrives.
+    let art_files: Vec<(String, String)> = data
         .albums
         .iter()
-        .enumerate()
-        .filter_map(|(i, a)| a.art_file.clone().map(|f| (i, f)))
+        .filter_map(|a| a.art_file.clone().map(|f| (a.id.clone(), f)))
         .collect();
 
     let _ = weak.upgrade_in_event_loop(move |app| crate::ui_set_library(&app, data));
@@ -879,13 +880,30 @@ async fn load_library(
     let covers = ep.covers.clone();
     let weak2 = weak.clone();
     tokio::spawn(async move {
-        for (idx, file) in art_files {
-            if let Some((w, h, rgba)) = fetch_thumb(&covers, &file, 320).await {
-                let _ = weak2.upgrade_in_event_loop(move |app| {
-                    crate::ui_set_album_art(&app, idx, w, h, rgba);
-                });
+        if !await_covers(&covers).await {
+            return;
+        }
+        let total = art_files.len();
+        let mut loaded = 0usize;
+        let mut failed = 0usize;
+        for (album_id, file) in art_files {
+            match fetch_thumb(&covers, &file, 320).await {
+                Some((w, h, rgba)) => {
+                    loaded += 1;
+                    let _ = weak2.upgrade_in_event_loop(move |app| {
+                        crate::ui_set_album_art(&app, &album_id, w, h, rgba);
+                    });
+                }
+                None => {
+                    failed += 1;
+                    // Silence here is what made a broken art pipeline look like
+                    // "every album shows the placeholder" with nothing to go on.
+                    tracing::warn!(album = %album_id, url = %format!("{covers}{file}"),
+                        "could not load album art");
+                }
             }
         }
+        tracing::info!(total, loaded, failed, "album art loaded");
     });
 
     // Artist pictures are full URLs (Rocksky CDN), fetched the same way.
@@ -954,13 +972,49 @@ async fn playlist_tracks(channel: &Channel, id: &str) -> Result<Vec<TrackProto>,
     Ok(resp.tracks)
 }
 
+/// The shared HTTP client for artwork.
+///
+/// One client, cloned per call: each `reqwest::Client` owns a connection pool,
+/// so building one per cover (a library is hundreds) burns a file descriptor
+/// apiece and reuses nothing.
+fn http() -> reqwest::Client {
+    static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
+    CLIENT.clone()
+}
+
+/// Block until the daemon's HTTP port answers, or give up.
+///
+/// When the desktop boots the daemon in-process, gRPC comes up before the HTTP
+/// server that serves `/covers/`. The library — and with it every cover fetch —
+/// lands in that window, so without this the whole grid fails in one burst of
+/// connection-refused and stays on placeholders for the rest of the session.
+/// Any response counts, including a 404: it proves something is listening.
+async fn await_covers(covers_base: &str) -> bool {
+    const ATTEMPTS: usize = 40;
+    const DELAY: Duration = Duration::from_millis(250);
+    for attempt in 0..ATTEMPTS {
+        if http().get(covers_base).send().await.is_ok() {
+            if attempt > 0 {
+                tracing::info!(attempt, "cover server is up");
+            }
+            return true;
+        }
+        tokio::time::sleep(DELAY).await;
+    }
+    tracing::warn!(
+        covers_base,
+        "cover server never came up; album art is unavailable"
+    );
+    false
+}
+
 async fn fetch_thumb(covers_base: &str, file: &str, max: u32) -> Option<(u32, u32, Vec<u8>)> {
     let url = if file.starts_with("http://") || file.starts_with("https://") {
         file.to_owned()
     } else {
         format!("{covers_base}{file}")
     };
-    let bytes = reqwest::get(&url).await.ok()?.bytes().await.ok()?;
+    let bytes = http().get(&url).send().await.ok()?.bytes().await.ok()?;
     tokio::task::spawn_blocking(move || {
         let img = image::load_from_memory(&bytes).ok()?;
         let thumb = img.thumbnail(max, max).to_rgba8();
@@ -1930,5 +1984,54 @@ async fn ticker(weak: Weak<AppWindow>) {
                 app.set_vu_right((app.get_vu_right() * 0.8).max(0.0));
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// What the albums screen is actually given: the gRPC library response must
+    /// carry a cover filename, or `art_file` is None and every card falls back
+    /// to the disc icon. Ignored by default — it needs the daemon up.
+    /// `cargo test -p music-player-desktop -- --ignored grpc_albums`
+    #[tokio::test]
+    #[ignore]
+    async fn grpc_albums_carry_covers() {
+        let mut lib = LibraryServiceClient::new(chan());
+        let albums = lib
+            .get_albums(GetAlbumsRequest {
+                limit: 10,
+                offset: 0,
+                filter: String::new(),
+            })
+            .await
+            .expect("get_albums")
+            .into_inner()
+            .albums;
+        assert!(!albums.is_empty(), "the daemon returned no albums");
+        for album in albums.iter().take(5) {
+            println!("album={:?} cover={:?}", album.title, album.cover);
+        }
+        let with_cover = albums.iter().filter(|a| !a.cover.is_empty()).count();
+        assert!(
+            with_cover > 0,
+            "no album in the gRPC response carries a cover filename"
+        );
+    }
+
+    /// End-to-end check of the album-art pipeline against a running daemon:
+    /// fetch a cover over HTTP and decode it to a thumbnail, exactly as the
+    /// albums screen does. Ignored by default — it needs the daemon up.
+    /// `cargo test -p music-player-desktop -- --ignored fetch_thumb`
+    #[tokio::test]
+    #[ignore]
+    async fn fetch_thumb_decodes_a_real_cover() {
+        let covers = "http://127.0.0.1:5053/covers/";
+        let file = "376c5380f8b5ac9666f3775b9abd3774.jpg";
+        let thumb = fetch_thumb(covers, file, 320).await;
+        let (w, h, rgba) = thumb.expect("cover fetch/decode returned None");
+        assert!(w > 0 && h > 0, "decoded a {w}x{h} thumbnail");
+        assert_eq!(rgba.len(), (w * h * 4) as usize);
     }
 }

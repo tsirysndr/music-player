@@ -248,7 +248,10 @@ impl RadioMutation {
         };
 
         let conn = db.get_connection();
-        if let Some(existing) = saved_radio::Entity::find_by_id(id.clone()).one(conn).await? {
+        if let Some(existing) = saved_radio::Entity::find_by_id(id.clone())
+            .one(conn)
+            .await?
+        {
             saved_radio::Entity::delete_by_id(id).exec(conn).await?;
             if let Err(e) = music_player_storage::atradio::unfavorite(&existing).await {
                 tracing::warn!("could not remove the bookmark on atradio.fm: {e}");

@@ -1,14 +1,33 @@
 //! Public repo reads: PDS discovery, `listRecords`, `getRecord`, and at-uri
 //! handling. None of these need a session.
 
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
 use anyhow::{anyhow, Error};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use tokio::sync::RwLock;
 
 use super::http;
 
 /// Resolve the DID document and pull out the account's PDS endpoint.
+///
+/// Memoized: resolving a like's subject means resolving its author's PDS, and
+/// a few hundred likes point at a handful of repos — without this that is one
+/// round trip to plc.directory per record.
 pub async fn pds_endpoint(did: &str) -> Result<String, Error> {
+    static CACHE: OnceLock<RwLock<HashMap<String, String>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+    if let Some(endpoint) = cache.read().await.get(did) {
+        return Ok(endpoint.clone());
+    }
+    let endpoint = resolve_pds_endpoint(did).await?;
+    cache.write().await.insert(did.to_owned(), endpoint.clone());
+    Ok(endpoint)
+}
+
+async fn resolve_pds_endpoint(did: &str) -> Result<String, Error> {
     let url = if let Some(host) = did.strip_prefix("did:web:") {
         format!("https://{host}/.well-known/did.json")
     } else {

@@ -19,7 +19,26 @@ pub struct Database {
     pub connection: DatabaseConnection,
 }
 
+/// The process-wide database handle.
+///
+/// Every `Database::new()` opens its own sqlite pool, and a pool costs one file
+/// descriptor per connection — so calling it on a timer exhausts the (low)
+/// descriptor limit of a desktop app bundle and takes the whole process down
+/// with "Too many open files". Anything that needs the database outside of
+/// startup should go through here.
+pub async fn shared() -> &'static Database {
+    static DB: tokio::sync::OnceCell<Database> = tokio::sync::OnceCell::const_new();
+    DB.get_or_init(|| async { Database::new().await }).await
+}
+
 impl Database {
+    /// Open a **new** connection pool.
+    ///
+    /// Prefer [`shared`]. Each call opens its own pool, and every pooled
+    /// connection costs a file descriptor, so calling this repeatedly — on a
+    /// poll tick, per request, inside a loop — runs the process out of
+    /// descriptors and kills it with "Too many open files". Reserve it for
+    /// process startup and for tests that want an isolated database.
     pub async fn new() -> Database {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();

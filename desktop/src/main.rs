@@ -142,31 +142,31 @@ pub fn ui_set_library(app: &AppWindow, data: rpc::LibraryData) {
     });
 }
 
-/// Called per decoded album-art thumbnail.
-pub fn ui_set_album_art(app: &AppWindow, idx: usize, w: u32, h: u32, rgba: Vec<u8>) {
+/// Called per decoded album-art thumbnail, keyed by album id so it cannot land
+/// on the wrong row when the list is de-duplicated or re-ordered.
+pub fn ui_set_album_art(app: &AppWindow, album_id: &str, w: u32, h: u32, rgba: Vec<u8>) {
     let image = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
     STATE.with(|s| {
         let mut st = s.borrow_mut();
-        if let Some(entry) = st.albums.get_mut(idx) {
+        if let Some(entry) = st.albums.iter_mut().find(|a| a.data.id == album_id) {
             entry.image = Some(image.clone());
         }
     });
     let model = app.get_albums();
-    if let Some(mut row) = model.row_data(idx) {
-        row.art = image.clone();
-        row.has_art = true;
-        model.set_row_data(idx, row);
+    for i in 0..model.row_count() {
+        let Some(mut row) = model.row_data(i) else {
+            continue;
+        };
+        if row.id.as_str() == album_id {
+            row.art = image.clone();
+            row.has_art = true;
+            model.set_row_data(i, row);
+            break;
+        }
     }
     // Keep an open detail view in sync with the freshly loaded art.
     let mut detail = app.get_detail_album();
-    let matches = STATE.with(|s| {
-        s.borrow()
-            .albums
-            .get(idx)
-            .map(|a| a.data.id == detail.id.as_str())
-            .unwrap_or(false)
-    });
-    if matches {
+    if detail.id.as_str() == album_id {
         detail.art = image;
         detail.has_art = true;
         app.set_detail_album(detail);

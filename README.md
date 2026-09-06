@@ -57,7 +57,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 
 > [!NOTE]
 > **Looking for more?**
-> If you're interested in this project, you might want to check out [Rockbox Zig](https://github.com/tsirysndr/rockbox-zig),
+> If you're interested in this project, you might want to check out [rockboxd](https://github.com/tsirysndr/rockboxd),
 > a music player daemon built on the [Rockbox](https://www.rockbox.org) Open Source Firmware. It offers advanced audio playback
 > features, bringing the best of Rockbox to modern platforms with the power of [Zig](https://ziglang.org/) and [Rust](https://www.rust-lang.org).
 >
@@ -196,9 +196,8 @@ cargo install --path .
 
 **Latest (Desktop):**
 
-- `Mac`: arm64: [music-player-desktop_v0.2.1_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player-desktop_v0.2.1_aarch64-apple-darwin.tar.gz) intel: [Music_Player_v0.2.1_x64.dmg](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/Music_Player_v0.2.1_x64.dmg)
-- `Linux`: [music-player_v0.2.1_amd64.deb](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player_v0.2.1_amd64.deb)
-- `Windows`: [Music_Player_x64_en-US.msi](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/Music_Player_x64_en-US.msi)
+- `Mac`: arm64: [music-player-desktop_v0.2.1_aarch64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player-desktop_v0.2.1_aarch64-apple-darwin.tar.gz) intel: [music-player-desktop_v0.2.1_x86_64-apple-darwin.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player-desktop_v0.2.1_x86_64-apple-darwin.tar.gz)
+- `Linux`: amd64: [music-player-desktop_v0.2.1_x86_64-unknown-linux-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player-desktop_v0.2.1_x86_64-unknown-linux-gnu.tar.gz) arm64: [music-player-desktop_v0.2.1_aarch64-unknown-linux-gnu.tar.gz](https://github.com/tsirysndr/music-player/releases/download/v0.2.1/music-player-desktop_v0.2.1_aarch64-unknown-linux-gnu.tar.gz)
 
 **Latest (CLI):**
 

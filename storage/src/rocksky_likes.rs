@@ -3,8 +3,9 @@
 //! `app.rocksky.like` records only carry a subject uri, so a like is resolved
 //! in two steps:
 //!
-//! 1. **extract** — the user's repo is downloaded once as a CAR archive and
-//!    scanned for both `app.rocksky.like` and `app.rocksky.song` records. Songs
+//! 1. **extract** — the user's repo is downloaded once as a CAR archive (see
+//!    [`crate::repo_sync`], which is what keeps it to one download per repo)
+//!    and scanned for both `app.rocksky.like` and `app.rocksky.song`. Songs
 //!    liked from someone else's repo are not in this CAR, so those subjects are
 //!    fetched individually with `getRecord`. The result lands in the
 //!    `rocksky_like` table, which is the durable copy: a like whose song is not
@@ -29,7 +30,7 @@ use sea_orm::{
 };
 use serde::Deserialize;
 
-use crate::atproto;
+use crate::{atproto, repo_sync};
 
 const LIKE_COLLECTION: &str = "app.rocksky.like";
 const SONG_COLLECTION: &str = "app.rocksky.song";
@@ -78,18 +79,18 @@ struct Like {
 
 // ── Extraction ──────────────────────────────────────────────────────────────
 
-/// Read every like in `did`'s repo together with the song it points at.
+/// Read every like in `car` — `did`'s repo archive — together with the song it
+/// points at.
 ///
-/// The CAR gives likes and locally-hosted songs in one request; `listRecords`
+/// The CAR gives likes and locally-hosted songs in one pass; `listRecords`
 /// supplies the like uris (a CAR block has no record path) and `getRecord`
 /// fills in songs that live in other people's repos.
-async fn extract(did: &str) -> Result<Vec<Like>, Error> {
-    // One download covers both collections: the archive is walked through its
-    // MST, so each record arrives with the path — and therefore the uri — it is
-    // stored under.
-    let car = atproto::get_repo_car(did).await?;
+async fn extract(did: &str, car: &[u8]) -> Result<Vec<Like>, Error> {
+    // One archive covers both collections: it is walked through its MST, so
+    // each record arrives with the path — and therefore the uri — it is stored
+    // under.
     let likes: Vec<(String, LikeRecord)> =
-        match atproto::records_from_car::<LikeRecord>(&car, did, LIKE_COLLECTION) {
+        match atproto::records_from_car::<LikeRecord>(car, did, LIKE_COLLECTION) {
             Ok(likes) if !likes.is_empty() => likes,
             Ok(_) => Vec::new(),
             Err(e) => {
@@ -105,7 +106,7 @@ async fn extract(did: &str) -> Result<Vec<Like>, Error> {
     // Songs hosted in this repo come out of the same archive, so only songs
     // liked from someone else's repo need a request.
     let own_songs: HashMap<String, SongRecord> =
-        atproto::records_from_car::<SongRecord>(&car, did, SONG_COLLECTION)
+        atproto::records_from_car::<SongRecord>(car, did, SONG_COLLECTION)
             .unwrap_or_default()
             .into_iter()
             .collect();
@@ -185,11 +186,18 @@ async fn upsert(conn: &DatabaseConnection, like: &Like) -> Result<(), Error> {
 }
 
 /// Import every like in the repo into `rocksky_like`. Returns how many landed.
+///
+/// A no-op when the repo was downloaded recently enough that `rocksky_like`
+/// already holds it — see [`crate::repo_sync`].
 pub async fn import(conn: &DatabaseConnection) -> Result<usize, Error> {
     let Some(did) = atproto::resolve_did().await else {
         return Ok(0);
     };
-    let likes = extract(&did).await?;
+    let Some(car) = repo_sync::repo_car(conn, &did).await? else {
+        tracing::info!("keeping the liked songs already imported from the repo");
+        return Ok(0);
+    };
+    let likes = extract(&did, &car).await?;
     let total = likes.len();
     let mut imported = 0;
     for (i, like) in likes.iter().enumerate() {

@@ -8,42 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub const CATEGORIES: &[(&str, &str)] = &[
-    ("Synthwave", "synthwave"),
-    ("Lo-fi", "lofi"),
-    ("Jazz", "jazz"),
-    ("Techno", "techno"),
-    ("Ambient", "ambient"),
-    ("Classical", "classical"),
-    ("Rock", "rock"),
-    ("Pop", "pop"),
-    ("Electronic", "electronic"),
-    ("Hip-Hop", "hip hop"),
-    ("Chillout", "chill"),
-    ("Dance", "dance"),
-    ("Reggae", "reggae"),
-    ("Metal", "metal"),
-    ("News", "news"),
-    ("World", "world"),
-    ("House", "house"),
-    ("Trance", "trance"),
-    ("Drum & Bass", "drum and bass"),
-    ("Disco", "disco"),
-    ("Funk", "funk"),
-    ("Soul", "soul"),
-    ("R&B", "r&b"),
-    ("Blues", "blues"),
-    ("Country", "country"),
-    ("Folk", "folk"),
-    ("Punk", "punk"),
-    ("Indie", "indie"),
-    ("Latin", "latin"),
-    ("K-Pop", "k-pop"),
-    ("Gospel", "gospel"),
-    ("Oldies", "oldies"),
-    ("Soundtrack", "soundtrack"),
-];
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Station {
     pub id: String,

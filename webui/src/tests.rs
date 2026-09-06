@@ -1,9 +1,6 @@
-use futures_util::FutureExt;
-use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_playback::player::Player;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist;
-use sea_orm::ActiveModelTrait;
 use std::{env, sync::Arc, thread, time::Duration};
 use surf::{Client, Config, Url};
 use tokio::runtime;

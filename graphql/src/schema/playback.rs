@@ -58,8 +58,15 @@ impl PlaybackQuery {
     }
 
     async fn get_player_state(&self, ctx: &Context<'_>) -> PlayerState {
-        let _tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
-        todo!()
+        let tracklist = ctx.data::<Arc<Mutex<Tracklist>>>().unwrap();
+        let tracklist = tracklist.lock().unwrap();
+        let (_, index) = tracklist.current_track();
+        let playback_state = tracklist.playback_state();
+        PlayerState {
+            index: index as u32,
+            position_ms: playback_state.position_ms,
+            is_playing: playback_state.is_playing,
+        }
     }
 }
 

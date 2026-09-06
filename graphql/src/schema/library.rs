@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use async_graphql::{futures_util::FutureExt, *};
+use async_graphql::*;
 use music_player_addons::CurrentSourceDevice;
 use music_player_storage::{
     repo::{album::AlbumRepository, artist::ArtistRepository, track::TrackRepository},
@@ -8,7 +8,6 @@ use music_player_storage::{
     Database,
 };
 use music_player_types::types::{RemoteCoverUrl, RemoteTrackUrl};
-use sea_orm::ActiveModelTrait;
 use tokio::sync::Mutex;
 
 use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};

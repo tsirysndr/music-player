@@ -1,4 +1,3 @@
-use futures::future::FutureExt;
 use music_player_storage::repo::album::AlbumRepository;
 use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::track::TrackRepository;

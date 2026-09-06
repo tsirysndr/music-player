@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use cuid::cuid;
+use cuid::cuid2;
 use futures_util::Stream;
 use music_player_addons::CurrentSourceDevice;
 use music_player_entity::{
@@ -11,7 +11,6 @@ use music_player_entity::{
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
-    QuerySelect,
 };
 use tokio::sync::Mutex;
 
@@ -136,7 +135,7 @@ impl PlaylistMutation {
             None => None,
         };
         let playlist = playlist_entity::ActiveModel {
-            id: ActiveValue::set(cuid().unwrap()),
+            id: ActiveValue::set(cuid2()),
             name: ActiveValue::Set(name),
             description: ActiveValue::Set(description),
             folder_id: ActiveValue::Set(folder_id.clone()),
@@ -200,7 +199,7 @@ impl PlaylistMutation {
                 match playlist {
                     Some(playlist) => {
                         let playlist_track = playlist_tracks_entity::ActiveModel {
-                            id: ActiveValue::set(cuid().unwrap()),
+                            id: ActiveValue::set(cuid2()),
                             playlist_id: ActiveValue::Set(playlist.id.clone()),
                             track_id: ActiveValue::Set(track.id.clone()),
                             created_at: ActiveValue::set(chrono::Utc::now()),
@@ -285,7 +284,7 @@ impl PlaylistMutation {
     async fn create_folder(&self, ctx: &Context<'_>, name: String) -> Result<Folder, Error> {
         let db = ctx.data::<Database>().unwrap();
         let folder = folder_entity::ActiveModel {
-            id: ActiveValue::set(cuid().unwrap()),
+            id: ActiveValue::set(cuid2()),
             name: ActiveValue::Set(name),
             created_at: ActiveValue::set(chrono::Utc::now()),
         };

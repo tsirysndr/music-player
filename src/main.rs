@@ -176,6 +176,15 @@ A simple music player written in Rust — single binary, zero dependency"#,
         .subcommand(
             Command::new("reset").about("Reset the database and clear the config directory"),
         )
+        .arg(
+            Arg::new("force-car-sync")
+                .long("force-car-sync")
+                .help(
+                    "Re-download the atproto repo archive on start, even if the last \
+                     download is still recent",
+                )
+                .action(clap::ArgAction::SetTrue),
+        )
 }
 
 #[tokio::main]
@@ -189,6 +198,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .try_init();
     let matches = cli().get_matches();
+    if matches.get_flag("force-car-sync") {
+        music_player_storage::repo_sync::force_download();
+    }
 
     let parsed = parse_args(matches.clone()).await;
 

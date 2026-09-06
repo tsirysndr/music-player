@@ -7,6 +7,7 @@ use sea_orm::{sea_query, ConnectOptions, ConnectionTrait, DatabaseConnection};
 
 pub mod atproto;
 pub mod atradio;
+pub mod repo_sync;
 pub mod rocksky;
 pub mod rocksky_likes;
 pub mod searcher;

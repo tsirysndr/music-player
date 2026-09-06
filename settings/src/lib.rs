@@ -129,6 +129,14 @@ pub struct Settings {
     /// whether or not credentials happen to be present.
     #[serde(default = "default_true")]
     pub atproto: bool,
+    /// Download the repo CAR archive on every start, instead of only when the
+    /// last download has aged out. Same effect as `--force-car-sync`.
+    #[serde(default)]
+    pub atproto_force_car_sync: bool,
+    /// How old the last repo CAR download may be, in hours, before the repo is
+    /// pulled again. 0 means every start.
+    #[serde(default = "default_car_max_age_hours")]
+    pub atproto_car_max_age_hours: u64,
     /// Register as a Rocksky remote-player device (needs `rocksky login`),
     /// so the daemon shows up in the web/desktop miniplayer device picker.
     #[serde(default = "default_true")]
@@ -153,6 +161,12 @@ pub fn read_typesense_settings() -> Option<TypesenseSettings> {
 
 fn default_true() -> bool {
     true
+}
+
+/// A day: long enough that a restart does not re-download a whole repo, short
+/// enough that a repo edited elsewhere is picked up without asking.
+fn default_car_max_age_hours() -> u64 {
+    24
 }
 
 pub fn read_settings() -> Result<Config, ConfigError> {
@@ -212,6 +226,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         jellyfin_password: Some("".to_string()),
         scrobble: true,
         atproto: true,
+        atproto_force_car_sync: false,
+        atproto_car_max_age_hours: default_car_max_age_hours(),
         remote_player: true,
         typesense: None,
         audio: AudioSettings::default(),
@@ -260,6 +276,11 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("jellyfin_password", "")?
         .set_default("scrobble", true)?
         .set_default("atproto", true)?
+        .set_default("atproto_force_car_sync", false)?
+        .set_default(
+            "atproto_car_max_age_hours",
+            default_car_max_age_hours() as i64,
+        )?
         .set_default("remote_player", true)?
         .build()
 }

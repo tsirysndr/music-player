@@ -217,7 +217,6 @@ pub struct AudioSettingsData {
 }
 
 pub struct Endpoints {
-    pub grpc: String,
     pub covers: String,
     pub display: String,
 }
@@ -270,7 +269,6 @@ pub fn endpoints() -> Endpoints {
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(grpc_port + 2);
     Endpoints {
-        grpc: format!("http://{host}:{grpc_port}"),
         covers: format!("http://{host}:{http_port}/covers/"),
         display: format!("{host}:{grpc_port}"),
     }

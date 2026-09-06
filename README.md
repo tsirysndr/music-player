@@ -318,6 +318,7 @@ radio_browser_url = "https://de1.api.radio-browser.info"
 tunein_url = "https://opml.radiotime.com"
 scrobble = true    # Rocksky scrobbling
 atproto = true     # AT Protocol sync (bookmarks, likes, listening status)
+atproto_car_max_age_hours = 24  # re-download the atproto repo archive at most once a day
 ```
 
 The library can also be refreshed manually at any time — `music-player scan` from the CLI, or the `scan` mutation in GraphQL. Re-scans only pick up what's new; existing entries are untouched.
@@ -386,6 +387,17 @@ The session file is shared with the [atradio](https://atradio.fm) CLI, so signin
 | **Listening status** | While a station plays, it is published as your `fm.atradio.actor.status` record, written straight to your PDS; the record is deleted when playback stops. |
 
 **How it reads and stays in sync.** The initial import downloads your repo once as a CAR archive (`com.atproto.sync.getRepo`) and walks its Merkle Search Tree, so one request covers every collection — `listRecords` is the fallback. After that the daemon subscribes to several public Jetstream instances at once and de-duplicates events by repo revision, so a like or bookmark added on another device shows up here within seconds without depending on any single instance staying up.
+
+**Downloading the repo again.** Bookmarks and likes share the same archive, so a start pulls it at most once, and the date of the last successful download is kept in the database: a restart within `atproto_car_max_age_hours` keeps what is already imported instead of pulling the whole repo again (Jetstream has been applying changes in the meantime). To force a fresh download:
+
+```bash
+music-player --force-car-sync
+```
+
+```toml
+atproto_force_car_sync = true   # force it on every start
+atproto_car_max_age_hours = 24  # otherwise re-download only once a day (0 = every start)
+```
 
 ## Casting
 

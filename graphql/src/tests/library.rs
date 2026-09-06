@@ -1,10 +1,7 @@
 use async_graphql::*;
-use futures_util::FutureExt;
-use music_player_entity::{album, artist, artist_tracks, track};
 use music_player_playback::player::Player;
 use music_player_storage::Database;
-use sea_orm::ActiveModelTrait;
-use std::{sync::Arc, thread, time::Duration};
+use std::sync::Arc;
 
 use super::setup_schema;
 

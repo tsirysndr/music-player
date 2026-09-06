@@ -28,7 +28,7 @@ use music_player_entity::saved_radio;
 use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection, EntityTrait};
 use serde::Deserialize;
 
-use crate::atproto;
+use crate::{atproto, repo_sync};
 
 const COLLECTION: &str = "fm.atradio.favorite";
 
@@ -238,11 +238,10 @@ fn rows_of(records: Vec<FavoriteRecord>) -> Vec<saved_radio::Model> {
 
 // ── Repo reads ──────────────────────────────────────────────────────────────
 
-/// Every favorite in `did`'s repo, extracted from the repo CAR archive.
-pub async fn car_favorites(did: &str) -> Result<Vec<saved_radio::Model>, Error> {
-    let car = atproto::get_repo_car(did).await?;
+/// Every favorite in `car`, the repo archive of `did`.
+pub fn car_favorites(car: &[u8], did: &str) -> Result<Vec<saved_radio::Model>, Error> {
     Ok(rows_of(
-        atproto::records_from_car::<FavoriteRecord>(&car, did, COLLECTION)?
+        atproto::records_from_car::<FavoriteRecord>(car, did, COLLECTION)?
             .into_iter()
             .map(|(_, record)| record)
             .collect(),
@@ -291,12 +290,23 @@ pub async fn import_favorites(conn: &DatabaseConnection) -> Result<usize, Error>
     let Some(did) = resolve_did().await else {
         return Ok(0);
     };
-    // The CAR archive is one request for the whole repo; `listRecords` is the
-    // fallback for a PDS that will not serve it.
-    let remote = match car_favorites(&did).await {
-        Ok(stations) => stations,
+    // The CAR archive is one request for the whole repo, and only downloaded
+    // when the local copy has aged out; `listRecords` is the fallback for a PDS
+    // that will not serve it.
+    let remote = match repo_sync::repo_car(conn, &did).await {
+        Ok(None) => {
+            tracing::info!("keeping the radio bookmarks already imported from the repo");
+            return Ok(0);
+        }
+        Ok(Some(car)) => match car_favorites(&car, &did) {
+            Ok(stations) => stations,
+            Err(e) => {
+                tracing::warn!("could not read the repo CAR ({e}); falling back to listRecords");
+                repo_favorites(&did).await?
+            }
+        },
         Err(e) => {
-            tracing::warn!("could not import from the repo CAR ({e}); falling back to listRecords");
+            tracing::warn!("could not download the repo CAR ({e}); falling back to listRecords");
             repo_favorites(&did).await?
         }
     };
@@ -540,7 +550,8 @@ mod tests {
         let did = resolve_did()
             .await
             .expect("a rocksky token or atproto credentials are required");
-        let from_car = car_favorites(&did).await.unwrap();
+        let car = atproto::get_repo_car(&did).await.unwrap();
+        let from_car = car_favorites(&car, &did).unwrap();
         let from_list = repo_favorites(&did).await.unwrap();
         let mut car_ids: Vec<&str> = from_car.iter().map(|row| row.id.as_str()).collect();
         let mut list_ids: Vec<&str> = from_list.iter().map(|row| row.id.as_str()).collect();

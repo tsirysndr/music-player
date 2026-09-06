@@ -22,6 +22,10 @@ pub type PlayerResult = Result<(), anyhow::Error>;
 /// Minimum change in position before a `TrackTimePosition` event is broadcast.
 const POSITION_BROADCAST_STEP_MS: u32 = 250;
 
+/// Track-id prefix every internet-radio entry carries. It is what marks a
+/// queue entry as a live stream, so it is also what arms ICY metadata.
+pub const RADIO_ID_PREFIX: &str = "radio:";
+
 pub enum RepeatState {
     Off,
     One,
@@ -112,6 +116,8 @@ impl Player {
                 resume: false,
                 last_queue_save: Instant::now(),
                 stopped_ticks: 0,
+                icy_station: None,
+                icy_last: None,
             })
         };
 
@@ -289,7 +295,27 @@ struct PlayerInternal {
     /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
     /// decode failure still ends the track instead of wedging the queue.
     stopped_ticks: u32,
+    /// The pristine station entry of the live stream that is playing, kept so
+    /// every ICY refresh folds onto the original instead of onto the previous
+    /// song. `None` for anything that is not internet radio.
+    icy_station: Option<Track>,
+    /// Last ICY snapshot folded into the tracklist, so an unchanged
+    /// `StreamTitle` costs nothing.
+    icy_last: Option<IcySnapshot>,
     event_broadcaster: Box<dyn Fn(PlayerEvent) + Send + 'static>,
+}
+
+/// The parts of the engine's metadata that a live stream actually moves:
+/// the ICY `StreamTitle` (split into artist/title), the `icy-name` station,
+/// and the format numbers that are only known once decoding starts.
+#[derive(Clone, Default, PartialEq)]
+struct IcySnapshot {
+    title: String,
+    artist: String,
+    station: String,
+    genre: String,
+    bitrate: u32,
+    sample_rate: u32,
 }
 
 impl PlayerInternal {
@@ -382,6 +408,7 @@ impl PlayerInternal {
         self.position_ms = saved.position_ms;
         self.last_broadcast_position_ms = saved.position_ms;
         self.queue_next_into_engine();
+        self.arm_icy();
         let (track, position) = self.tracklist.lock().unwrap().current_track();
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
             track: track.clone(),
@@ -428,6 +455,7 @@ impl PlayerInternal {
                     }
                     if advanced {
                         self.queue_next_into_engine();
+                        self.arm_icy();
                         self.save_queue();
                     }
                 }
@@ -451,6 +479,7 @@ impl PlayerInternal {
                 if self.last_queue_save.elapsed() >= QUEUE_SAVE_INTERVAL {
                     self.save_queue();
                 }
+                self.refresh_icy(&status);
             }
             EngineState::Stopped => {
                 if self.engine_started {
@@ -500,6 +529,90 @@ impl PlayerInternal {
                 }
             }
         }
+    }
+
+    /// Latch the pristine station entry when the track that just started is
+    /// internet radio, so [`Self::refresh_icy`] has a base to fold onto.
+    /// Clears the overlay for anything else — a local file carries its own
+    /// tags and must never be rewritten from the engine.
+    fn arm_icy(&mut self) {
+        let (track, _) = self.tracklist.lock().unwrap().current_track();
+        self.icy_last = None;
+        self.icy_station = track.filter(|t| t.id.starts_with(RADIO_ID_PREFIX));
+    }
+
+    /// Fold the live stream's ICY metadata onto the station entry so every
+    /// consumer of the tracklist — the gRPC/GraphQL now-playing, the desktop
+    /// bar, the web UI — shows the song that is on the air rather than the
+    /// station name forever. A no-op for anything but internet radio, and
+    /// cheap while the `StreamTitle` holds still.
+    fn refresh_icy(&mut self, status: &rockbox_playback::Status) {
+        let Some(station) = self.icy_station.clone() else {
+            return;
+        };
+        let snapshot = match status.metadata.as_ref() {
+            Some(meta) => IcySnapshot {
+                title: meta.title.trim().to_string(),
+                artist: meta.artist.trim().to_string(),
+                station: meta.album.trim().to_string(),
+                genre: meta.genre.trim().to_string(),
+                bitrate: meta.bitrate,
+                sample_rate: meta.sample_rate,
+            },
+            None => IcySnapshot::default(),
+        };
+        if self.icy_last.as_ref() == Some(&snapshot) {
+            return;
+        }
+        self.icy_last = Some(snapshot.clone());
+
+        // `icy-name` is the station's own name; fall back to the directory's
+        // when the server does not send one.
+        let station_name = if snapshot.station.is_empty() {
+            station.title.clone()
+        } else {
+            snapshot.station.clone()
+        };
+        let mut track = station.clone();
+        track.album.title = station_name.clone();
+        if !snapshot.title.is_empty() {
+            track.title = snapshot.title.clone();
+            // A bare `StreamTitle` with no " - " leaves the artist slot free;
+            // the station reads better there than the directory's source name.
+            track.artist = if snapshot.artist.is_empty() {
+                station_name
+            } else {
+                snapshot.artist.clone()
+            };
+        }
+        if !snapshot.genre.is_empty() {
+            track.genre = snapshot.genre.clone();
+        }
+        if snapshot.bitrate > 0 {
+            track.bitrate = Some(snapshot.bitrate);
+        }
+        if snapshot.sample_rate > 0 {
+            track.sample_rate = Some(snapshot.sample_rate);
+        }
+
+        let position = {
+            let mut tracklist = self.tracklist.lock().unwrap();
+            tracklist.update_current_track(track.clone());
+            tracklist.current_track().1
+        };
+        let is_playing = status.state == EngineState::Playing;
+        (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+            track: Some(track.clone()),
+            position,
+            position_ms: self.position_ms,
+            is_playing,
+        });
+        self.send_event(PlayerEvent::CurrentTrack {
+            track: Some(track),
+            position,
+            position_ms: self.position_ms,
+            is_playing,
+        });
     }
 
     fn handle_command(&mut self, cmd: PlayerCommand) -> PlayerResult {
@@ -624,6 +737,7 @@ impl PlayerInternal {
         self.position_ms = 0;
         self.last_broadcast_position_ms = 0;
         self.queue_next_into_engine();
+        self.arm_icy();
 
         self.send_event(PlayerEvent::Playing {});
         let (track, position) = self.tracklist.lock().unwrap().current_track();
@@ -703,6 +817,8 @@ impl PlayerInternal {
         self.track_loaded = false;
         self.engine_started = false;
         self.engine_index = 0;
+        self.icy_station = None;
+        self.icy_last = None;
         self.tracklist.lock().unwrap().stop();
     }
 

@@ -14,6 +14,9 @@ use uuid::Uuid;
 
 pub const DEFAULT_RADIO_BROWSER_URL: &str = "https://de1.api.radio-browser.info";
 pub const DEFAULT_TUNEIN_URL: &str = "https://opml.radiotime.com";
+/// atradio.fm's media proxy. Stations whose playlist or stream the origin will
+/// not serve us directly are played through it — see `media_proxy_url`.
+pub const DEFAULT_MEDIA_PROXY_URL: &str = "https://media.atradio.fm";
 
 /// Audio/DSP settings persisted in the `[audio]` table of settings.toml and
 /// applied to the playback engine at boot. Integer enums follow the Rockbox
@@ -110,6 +113,12 @@ pub struct Settings {
     pub radio_browser_url: String,
     /// TuneIn OPML API base URL, without a trailing path.
     pub tunein_url: String,
+    /// Base URL of a CORS/relay media proxy exposing `/api/stream?url=`.
+    /// Used as the fallback for stations that refuse a direct connection —
+    /// a bot wall in front of a station's `.pls` is common, and the proxy is
+    /// the only way past it. Empty disables the fallback: an unreachable
+    /// station then simply fails to play.
+    pub media_proxy_url: String,
     /// Base URL of a Subsonic-compatible server (Navidrome, Airsonic, gonic, ...).
     /// Empty or absent means the Subsonic integration is disabled.
     pub subsonic_url: Option<String>,
@@ -218,6 +227,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         library_refresh_interval: 30,
         radio_browser_url: DEFAULT_RADIO_BROWSER_URL.to_string(),
         tunein_url: DEFAULT_TUNEIN_URL.to_string(),
+        media_proxy_url: DEFAULT_MEDIA_PROXY_URL.to_string(),
         subsonic_url: Some("".to_string()),
         subsonic_username: Some("".to_string()),
         subsonic_password: Some("".to_string()),
@@ -268,6 +278,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         )?
         .set_default("radio_browser_url", default_settings.radio_browser_url)?
         .set_default("tunein_url", default_settings.tunein_url)?
+        .set_default("media_proxy_url", default_settings.media_proxy_url)?
         .set_default("subsonic_url", "")?
         .set_default("subsonic_username", "")?
         .set_default("subsonic_password", "")?

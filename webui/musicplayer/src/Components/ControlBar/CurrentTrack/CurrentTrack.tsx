@@ -235,6 +235,10 @@ const CurrentTrack: FC<CurrentTrackProps> = ({
   const { cover } = useCover(nowPlaying?.cover);
   const { formatTime } = useTimeFormat();
   const isRadio = !!nowPlaying?.id?.startsWith("radio:");
+  const showStation =
+    !!nowPlaying?.album &&
+    nowPlaying.album !== nowPlaying.artist &&
+    nowPlaying.album !== nowPlaying.title;
   return (
     <FlexContainer>
       {(!nowPlaying || !nowPlaying!.title) && (
@@ -269,6 +273,16 @@ const CurrentTrack: FC<CurrentTrackProps> = ({
                     <Link to={`/albums/${nowPlaying!.albumId}`}>
                       <AlbumTitle>{nowPlaying?.album}</AlbumTitle>
                     </Link>
+                  </>
+                )}
+                {/* For a station the album slot carries the station name; it
+                    is only worth a line once ICY metadata has replaced the
+                    title with the song actually on the air (before that the
+                    title already IS the station name). */}
+                {isRadio && showStation && (
+                  <>
+                    <Separator>·</Separator>
+                    <AlbumTitle>{nowPlaying?.album}</AlbumTitle>
                   </>
                 )}
               </Artist>

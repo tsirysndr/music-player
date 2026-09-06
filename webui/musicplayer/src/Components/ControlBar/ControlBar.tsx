@@ -393,8 +393,17 @@ const ControlBar: FC<ControlBarProps> = (props) => {
             )}
             <FullTitle>{nowPlaying.title}</FullTitle>
             <FullArtist>
-              {[nowPlaying.artist, isRadio ? undefined : nowPlaying.album]
-                .filter(Boolean)
+              {/* A station keeps its name in the album slot, so it still
+                  reads "Artist - Station" once ICY metadata names the song.
+                  Before any metadata arrives the title already IS the station
+                  name, so drop the repeat. */}
+              {[nowPlaying.artist, nowPlaying.album]
+                .filter(
+                  (part, i, all) =>
+                    !!part &&
+                    all.indexOf(part) === i &&
+                    part !== nowPlaying.title
+                )
                 .join(" - ")}
             </FullArtist>
           </FullContent>

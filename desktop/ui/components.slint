@@ -463,6 +463,62 @@ export component MeterStrip inherits Rectangle {
     }
 }
 
+// ── Marquee (self-scrolling single line) ────────────────────────────────────
+
+// One line of text that scrolls itself when it does not fit, then slides back.
+// Text that fits is left completely alone — only an overlong title (an ICY
+// `StreamTitle` is routinely longer than the player bar) ever moves.
+export component MarqueeText inherits Rectangle {
+    in property <string> text;
+    in property <length> font-size: 13px;
+    in property <int> font-weight: 400;
+    in property <brush> text-color;
+    // Scroll speed in pixels per second.
+    in property <float> speed: 26;
+    // Hold at each end before travelling back.
+    in property <duration> dwell: 1800ms;
+
+    // The bar allots the width; never let the full text widen the layout.
+    min-width: 0px;
+    preferred-width: 0px;
+    height: label.preferred-height;
+    clip: true;
+
+    property <length> overflow-width: max(0px, label.preferred-width - root.width);
+    property <duration> travel: 1s * (root.overflow-width / 1px) / root.speed;
+    // Parked at the far end of the travel rather than the start.
+    property <bool> at-end: false;
+
+    // A new song resets the run, so it always starts from the beginning.
+    changed text => {
+        root.at-end = false;
+    }
+
+    label := Text {
+        text: root.text;
+        color: root.text-color;
+        font-size: root.font-size;
+        font-weight: root.font-weight;
+        vertical-alignment: center;
+        width: self.preferred-width;
+        height: parent.height;
+        x: root.at-end ? -root.overflow-width : 0px;
+        animate x {
+            duration: root.travel;
+            easing: ease-in-out;
+        }
+    }
+
+    // One leg of the round trip per tick: travel, then dwell at that end.
+    Timer {
+        interval: root.travel + root.dwell;
+        running: root.overflow-width > 0px;
+        triggered => {
+            root.at-end = !root.at-end;
+        }
+    }
+}
+
 // ── VFD display (jetAudio-style readout) ────────────────────────────────────
 
 export component VfdDisplay inherits Rectangle {
@@ -1545,6 +1601,11 @@ export component FormField inherits VerticalLayout {
     in property <bool> password: false;
     in-out property <string> text <=> input.text;
     in property <string> placeholder: "";
+    /// Every keystroke.
+    callback edited(string);
+    /// The value the user settled on — Enter, or moving off the field. What to
+    /// hang an expensive check (a network round trip) off, rather than `edited`.
+    callback committed(string);
 
     spacing: 5px;
     Text {
@@ -1570,6 +1631,13 @@ export component FormField inherits VerticalLayout {
                 vertical-alignment: center;
                 single-line: true;
                 input-type: root.password ? InputType.password : InputType.text;
+                edited => { root.edited(self.text); }
+                accepted => { root.committed(self.text); }
+                changed has-focus => {
+                    if (!self.has-focus) {
+                        root.committed(self.text);
+                    }
+                }
             }
         }
         if input.text == "" && !input.has-focus : Text {

@@ -117,6 +117,11 @@ pub enum Cmd {
     RadioBookmarks,
     RadioPlay(String),
     RadioBookmark(String),
+    /// The user's own stations.
+    RadioStations,
+    /// Check the stream url in the add-station form.
+    RadioCheckStream(String),
+    RadioAddStation(crate::radio::NewStation),
 }
 
 // ── Plain data handed to the UI thread ──────────────────────────────────────
@@ -1809,6 +1814,33 @@ async fn cmd_loop(
                     let stations = crate::radio::load_bookmarks().await;
                     push_radios(&state, &weak, stations).await;
                 }
+                Cmd::RadioStations => {
+                    let stations = crate::radio::load_stations().await;
+                    push_radios(&state, &weak, stations).await;
+                }
+                Cmd::RadioCheckStream(url) => {
+                    let check = music_player_storage::radio_stream::probe(&url).await;
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        crate::ui_set_stream_check(&app, &check);
+                    });
+                }
+                Cmd::RadioAddStation(draft) => match crate::radio::add_station(draft).await {
+                    Ok(_) => {
+                        let stations = crate::radio::load_stations().await;
+                        let _ = weak.upgrade_in_event_loop(|app| {
+                            app.set_add_station_saving(false);
+                            app.invoke_close_add_station();
+                        });
+                        push_radios(&state, &weak, stations).await;
+                    }
+                    Err(e) => {
+                        let _ = weak.upgrade_in_event_loop(move |app| {
+                            app.set_add_station_saving(false);
+                            app.set_add_station_status(e.into());
+                            app.set_add_station_ok(false);
+                        });
+                    }
+                },
                 Cmd::RadioBookmark(id) => {
                     let station = state.lock().await.radios.get(&id).cloned();
                     if let Some(station) = station {
@@ -1823,13 +1855,17 @@ async fn cmd_loop(
                         let uri = crate::radio::resolve_stream(&station).await;
                         let track = TrackProto {
                             id: format!("radio:{}", station.id),
-                            title: station.name,
+                            title: station.name.clone(),
                             artist: station.source,
                             uri,
                             bitrate: station.bitrate,
                             album: Some(music_player_server::api::metadata::v1alpha1::Album {
                                 id: "internet-radio".into(),
-                                title: "Internet Radio".into(),
+                                // The station name doubles as the "album": once
+                                // ICY metadata arrives the title/artist become
+                                // the song on the air, and this is what still
+                                // says which station it came from.
+                                title: station.name,
                                 cover: station.logo,
                                 ..Default::default()
                             }),

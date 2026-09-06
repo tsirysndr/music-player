@@ -2,7 +2,7 @@ use music_player_entity::saved_radio;
 use music_player_settings::{
     read_settings, Settings, DEFAULT_RADIO_BROWSER_URL, DEFAULT_TUNEIN_URL,
 };
-use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -234,34 +234,20 @@ pub async fn logo_bytes(url: &str) -> Option<Vec<u8>> {
 }
 
 pub async fn resolve_stream(station: &Station) -> String {
-    let lower = station.stream_url.to_lowercase();
-    let playlist = station.id.starts_with("tunein:")
-        || lower.contains("tune.ashx")
-        || lower
-            .split('?')
-            .next()
-            .is_some_and(|p| p.ends_with(".pls") || p.ends_with(".m3u"));
-    if !playlist {
-        return station.stream_url.clone();
+    music_player_storage::radio_resolve::resolve(&station.stream_url).await
+}
+
+fn from_row(row: saved_radio::Model) -> Station {
+    Station {
+        id: row.id,
+        name: row.name,
+        stream_url: row.stream_url,
+        source: row.source,
+        genre: row.genre,
+        country: row.country,
+        logo: row.logo,
+        bitrate: row.bitrate,
     }
-    let Ok(response) = client().get(&station.stream_url).send().await else {
-        return station.stream_url.clone();
-    };
-    let Ok(body) = response.text().await else {
-        return station.stream_url.clone();
-    };
-    for line in body.lines() {
-        let line = line.trim();
-        let candidate = line
-            .strip_prefix("File1=")
-            .or_else(|| (!line.starts_with('#')).then_some(line));
-        if let Some(url) =
-            candidate.filter(|url| url.starts_with("http://") || url.starts_with("https://"))
-        {
-            return url.to_owned();
-        }
-    }
-    station.stream_url.clone()
 }
 
 pub async fn load_bookmarks() -> Vec<Station> {
@@ -271,17 +257,67 @@ pub async fn load_bookmarks() -> Vec<Station> {
         .await
         .unwrap_or_default()
         .into_iter()
-        .map(|row| Station {
-            id: row.id,
-            name: row.name,
-            stream_url: row.stream_url,
-            source: row.source,
-            genre: row.genre,
-            country: row.country,
-            logo: row.logo,
-            bitrate: row.bitrate,
-        })
+        .map(from_row)
         .collect()
+}
+
+/// The user's own stations — the ones typed in by hand here, on atradio.fm, or
+/// on another device. A subset of the bookmarks, told apart by their source.
+pub async fn load_stations() -> Vec<Station> {
+    let db = music_player_storage::shared().await;
+    saved_radio::Entity::find()
+        .filter(saved_radio::Column::Source.eq(music_player_storage::atradio::CUSTOM_SOURCE))
+        .all(db.get_connection())
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(from_row)
+        .collect()
+}
+
+/// What the "add station" form collects. The id is derived from the stream url
+/// (or handed out by atradio once published), so it is not asked for.
+#[derive(Clone, Debug, Default)]
+pub struct NewStation {
+    pub name: String,
+    pub stream_url: String,
+    pub genre: String,
+    pub country: String,
+    pub logo: String,
+}
+
+/// Save a hand-entered station, refusing one whose url is not a reachable
+/// stream — the single mistake that makes a station useless. Whatever the form
+/// left blank the station's own ICY headers fill in.
+pub async fn add_station(draft: NewStation) -> Result<Station, String> {
+    let name = draft.name.trim().to_owned();
+    if name.is_empty() {
+        return Err("The station needs a name.".into());
+    }
+    let stream_url = draft.stream_url.trim().to_owned();
+    let check = music_player_storage::radio_stream::probe(&stream_url).await;
+    if !check.ok {
+        return Err(check.error);
+    }
+    let genre = match draft.genre.trim() {
+        "" => check.genre,
+        genre => genre.to_owned(),
+    };
+    let row = saved_radio::Model {
+        id: String::new(),
+        name,
+        stream_url,
+        source: music_player_storage::atradio::CUSTOM_SOURCE.to_owned(),
+        genre,
+        country: draft.country.trim().to_owned(),
+        logo: draft.logo.trim().to_owned(),
+        bitrate: check.bitrate,
+    };
+    let db = music_player_storage::shared().await;
+    music_player_storage::atradio::add_station(db.get_connection(), row)
+        .await
+        .map(from_row)
+        .map_err(|e| e.to_string())
 }
 
 pub async fn toggle_bookmark(station: &Station) -> bool {

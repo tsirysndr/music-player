@@ -249,6 +249,34 @@ pub fn ui_render_radios(app: &AppWindow) {
     )));
 }
 
+/// Report the verdict on the stream url in the add-station form, and let a
+/// station that announces itself over ICY fill in the fields left blank.
+pub fn ui_set_stream_check(
+    app: &AppWindow,
+    check: &music_player_storage::radio_stream::StreamCheck,
+) {
+    app.set_add_station_checking(false);
+    app.set_add_station_ok(check.ok);
+    if !check.ok {
+        app.set_add_station_status(check.error.as_str().into());
+        return;
+    }
+    let mut parts = vec!["Stream reachable".to_owned()];
+    if !check.codec.is_empty() {
+        parts.push(check.codec.clone());
+    }
+    if check.bitrate > 0 {
+        parts.push(format!("{} kbps", check.bitrate));
+    }
+    app.set_add_station_status(parts.join(" · ").into());
+    if app.get_add_station_name().is_empty() && !check.name.is_empty() {
+        app.set_add_station_name(check.name.as_str().into());
+    }
+    if app.get_add_station_genre().is_empty() && !check.genre.is_empty() {
+        app.set_add_station_genre(check.genre.as_str().into());
+    }
+}
+
 /// Called per decoded station logo.
 pub fn ui_set_radio_logo(app: &AppWindow, id: &str, w: u32, h: u32, rgba: Vec<u8>) {
     let image = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
@@ -1502,6 +1530,30 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_radio_bookmark(move |id| {
             let _ = tx.send(rpc::Cmd::RadioBookmark(id.into()));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_stations(move || {
+            let _ = tx.send(rpc::Cmd::RadioStations);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_check_stream(move |url| {
+            let _ = tx.send(rpc::Cmd::RadioCheckStream(url.into()));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_radio_add_station(move |name, url, genre, country, logo| {
+            let _ = tx.send(rpc::Cmd::RadioAddStation(radio::NewStation {
+                name: name.into(),
+                stream_url: url.into(),
+                genre: genre.into(),
+                country: country.into(),
+                logo: logo.into(),
+            }));
         });
     }
 

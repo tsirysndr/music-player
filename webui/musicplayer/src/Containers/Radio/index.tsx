@@ -284,6 +284,112 @@ const ErrorText = styled.div`
   color: #d45769;
 `;
 
+// ── Add-station form ────────────────────────────────────────────────────────
+
+const FormPanel = styled.div`
+  width: min(520px, calc(100vw - 80px));
+  max-height: calc(100vh - 160px);
+  background: ${(props) => props.theme.colors.popoverBackground};
+  border-radius: 14px;
+  padding: 22px 24px 18px;
+  overflow: auto;
+  color: ${(props) => props.theme.colors.text};
+`;
+
+const FormTitle = styled.h2`
+  font-family: RockfordSansBold;
+  font-size: 18px;
+  margin: 0 0 4px;
+`;
+
+const FormHint = styled.p`
+  color: ${(props) => props.theme.colors.secondaryText};
+  font-size: 13px;
+  margin: 0 0 18px;
+`;
+
+const Field = styled.label`
+  display: block;
+  margin-bottom: 14px;
+`;
+
+const FieldLabel = styled.span`
+  display: block;
+  font-size: 12px;
+  color: ${(props) => props.theme.colors.secondaryText};
+  margin-bottom: 5px;
+`;
+
+const FieldInput = styled.input`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border-radius: 7px;
+  border: 1px solid ${(props) => props.theme.colors.separator};
+  background: ${(props) => props.theme.colors.secondaryBackground};
+  color: ${(props) => props.theme.colors.text};
+  font-size: 14px;
+  outline: 0;
+
+  &:focus {
+    border-color: #ab28fc;
+  }
+`;
+
+const FormActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+`;
+
+const Button = styled.button<{ primary?: boolean }>`
+  padding: 9px 18px;
+  border-radius: 7px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid
+    ${(props) => (props.primary ? "#ab28fc" : props.theme.colors.separator)};
+  background: ${(props) => (props.primary ? "#ab28fc" : "transparent")};
+  color: ${(props) => (props.primary ? "#fff" : props.theme.colors.text)};
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+`;
+
+const Status = styled.div<{ tone: "ok" | "error" | "muted" }>`
+  font-size: 12px;
+  min-height: 16px;
+  margin-top: -8px;
+  margin-bottom: 12px;
+  color: ${(props) =>
+    props.tone === "error"
+      ? "#d45769"
+      : props.tone === "ok"
+      ? "#2fbf71"
+      : props.theme.colors.secondaryText};
+`;
+
+const AddStationButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding: 9px 14px;
+  border-radius: 7px;
+  border: 1px dashed ${(props) => props.theme.colors.separator};
+  background: transparent;
+  color: ${(props) => props.theme.colors.text};
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #ab28fc99;
+  }
+`;
+
 const EmptyText = styled.div`
   padding: 24px 0;
   color: ${(props) => props.theme.colors.secondaryText};
@@ -330,13 +436,182 @@ async function gql(query: string, variables: any = {}) {
 
 const fields = `id name streamUrl source genre country logo bitrate`;
 
+export type AddStationProps = {
+  onClose: () => void;
+  onAdded: (station: Station) => void;
+};
+
+/**
+ * The "add station" form. The stream url is checked against the station itself
+ * before anything is saved — an unreachable url is the one mistake that makes a
+ * station useless — and a station that announces itself over ICY fills in its
+ * own name, genre and bitrate.
+ */
+const AddStationForm: FC<AddStationProps> = ({ onClose, onAdded }) => {
+  const [name, setName] = useState("");
+  const [streamUrl, setStreamUrl] = useState("");
+  const [genre, setGenre] = useState("");
+  const [country, setCountry] = useState("");
+  const [logo, setLogo] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{
+    tone: "ok" | "error" | "muted";
+    text: string;
+  }>({ tone: "muted", text: "" });
+  // Only the newest check may write the status: a url typed quickly leaves
+  // several in flight, and a slow early one must not overwrite a later verdict.
+  const checkId = useRef(0);
+
+  const checkUrl = async (url: string) => {
+    const id = ++checkId.current;
+    if (!url.trim()) {
+      setStatus({ tone: "muted", text: "" });
+      return null;
+    }
+    setChecking(true);
+    try {
+      const d = await gql(
+        `query($url:String!){checkRadioStream(url:$url){ok error name genre bitrate codec}}`,
+        { url }
+      );
+      const check = d.checkRadioStream;
+      if (id !== checkId.current) return null;
+      if (!check.ok) {
+        setStatus({ tone: "error", text: check.error });
+        return check;
+      }
+      setStatus({
+        tone: "ok",
+        text: [
+          "Stream reachable",
+          check.codec,
+          check.bitrate ? `${check.bitrate} kbps` : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      });
+      // Only fill in what the user has not typed themselves.
+      setName((current) => current || check.name);
+      setGenre((current) => current || check.genre);
+      return check;
+    } catch (e) {
+      if (id !== checkId.current) return null;
+      setStatus({
+        tone: "error",
+        text: e instanceof Error ? e.message : "Could not check the stream",
+      });
+      return null;
+    } finally {
+      if (id === checkId.current) setChecking(false);
+    }
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const d = await gql(
+        `mutation($station:NewRadioStationInput!){addRadioStation(station:$station){${fields}}}`,
+        { station: { name, streamUrl, genre, country, logo } }
+      );
+      onAdded(d.addRadioStation);
+      onClose();
+    } catch (err) {
+      setStatus({
+        tone: "error",
+        text: err instanceof Error ? err.message : "Could not add the station",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <FormPanel onClick={(e) => e.stopPropagation()}>
+      <FormTitle>Add a station</FormTitle>
+      <FormHint>
+        Signed in to atradio.fm, it is published to your account and follows you
+        to your other devices.
+      </FormHint>
+      <form onSubmit={submit}>
+        <Field>
+          <FieldLabel>Stream url</FieldLabel>
+          <FieldInput
+            autoFocus
+            required
+            placeholder="https://example.com/stream"
+            value={streamUrl}
+            onChange={(e) => {
+              setStreamUrl(e.target.value);
+              setStatus({ tone: "muted", text: "" });
+            }}
+            onBlur={(e) => checkUrl(e.target.value)}
+          />
+        </Field>
+        <Status tone={checking ? "muted" : status.tone}>
+          {checking ? "Checking the stream…" : status.text}
+        </Status>
+        <Field>
+          <FieldLabel>Name</FieldLabel>
+          <FieldInput
+            required
+            placeholder="Station name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Genre</FieldLabel>
+          <FieldInput
+            placeholder="Optional"
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Country</FieldLabel>
+          <FieldInput
+            placeholder="Optional"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Logo url</FieldLabel>
+          <FieldInput
+            placeholder="Optional"
+            value={logo}
+            onChange={(e) => setLogo(e.target.value)}
+          />
+        </Field>
+        <FormActions>
+          <Button type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            primary
+            type="submit"
+            disabled={saving || checking || !name.trim() || !streamUrl.trim()}
+          >
+            {saving ? "Adding…" : "Add station"}
+          </Button>
+        </FormActions>
+      </form>
+    </FormPanel>
+  );
+};
+
 export default function RadioPage() {
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab] = useState<"search" | "saved">("search");
+  const [tab, setTab] = useState<"search" | "saved" | "stations">("search");
   const [stations, setStations] = useState<Station[]>([]);
   const [saved, setSaved] = useState<Station[]>([]);
+  const [mine, setMine] = useState<Station[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
+  const [mineLoading, setMineLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
   const [search, setSearch] = useState(false);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<{ label: string; term: string }>();
@@ -354,8 +629,19 @@ export default function RadioPage() {
     }
   };
 
+  const loadMine = async () => {
+    setMineLoading(true);
+    try {
+      const d = await gql(`query { radioStations { ${fields} } }`);
+      setMine(d.radioStations || []);
+    } finally {
+      setMineLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadSaved();
+    loadMine();
   }, []);
 
   useEffect(() => {
@@ -401,7 +687,9 @@ export default function RadioPage() {
         : `mutation($station:RadioStationInput!){saveRadio(station:$station)}`,
       exists ? { id: s.id } : { station: s }
     );
-    await loadSaved();
+    // Unbookmarking one of the user's own stations drops it from that list too
+    // — locally the two are the same row.
+    await Promise.all([loadSaved(), loadMine()]);
   };
 
   const BookmarkButton: FC<{ station: Station }> = ({ station }) => {
@@ -479,7 +767,9 @@ export default function RadioPage() {
           ) : (
             <Tabs
               activeKey={tab}
-              onChange={({ activeKey }) => setTab(activeKey as "search" | "saved")}
+              onChange={({ activeKey }) =>
+                setTab(activeKey as "search" | "saved" | "stations")
+              }
               overrides={{
                 TabList: { style: { marginLeft: 0, marginRight: 0 } },
                 TabBorder: { style: { marginLeft: 0, marginRight: 0 } },
@@ -513,10 +803,36 @@ export default function RadioPage() {
                   <EmptyText>No bookmarked station yet.</EmptyText>
                 )}
               </Tab>
+              <Tab key="stations" title="Stations" overrides={tabOverrides}>
+                <AddStationButton onClick={() => setAddOpen(true)}>
+                  <span>+</span>
+                  <span>Add a station</span>
+                </AddStationButton>
+                {mineLoading ? (
+                  <StationLoader />
+                ) : mine.length ? (
+                  stationRows(mine)
+                ) : (
+                  <EmptyText>
+                    No station of your own yet. Add one with its stream url.
+                  </EmptyText>
+                )}
+              </Tab>
             </Tabs>
           )}
         </Body>
       </Main>
+      {addOpen && (
+        <Modal onClick={() => setAddOpen(false)}>
+          <AddStationForm
+            onClose={() => setAddOpen(false)}
+            onAdded={() => {
+              loadSaved();
+              loadMine();
+            }}
+          />
+        </Modal>
+      )}
       {search && (
         <Modal onClick={closeSearch}>
           <Panel onClick={(e) => e.stopPropagation()}>

@@ -23,7 +23,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, OnceLock, RwLock};
 
 use anyhow::{anyhow, Error};
-use atradio_sdk::{AtradioAgent, StationInfo};
+use atradio_sdk::{AtradioAgent, StationDraft, StationInfo};
 use music_player_entity::saved_radio;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
@@ -32,6 +32,13 @@ use serde::Deserialize;
 use crate::{atproto, repo_sync};
 
 const COLLECTION: &str = "fm.atradio.favorite";
+/// The user's own stations — the ones typed in by hand rather than found in a
+/// directory. Separate from a favorite: a station is *authored*, a favorite is
+/// a bookmark of one (a custom station is normally both).
+const STATION_COLLECTION: &str = "fm.atradio.station";
+
+/// Provider label a hand-entered station carries in `saved_radio.source`.
+pub const CUSTOM_SOURCE: &str = "Custom";
 
 // ── Identity ────────────────────────────────────────────────────────────────
 
@@ -182,6 +189,7 @@ fn source_label(source: &str) -> String {
     match source {
         "radio-browser" => "Radio Browser".to_owned(),
         "tunein" => "TuneIn".to_owned(),
+        "custom" => CUSTOM_SOURCE.to_owned(),
         "" => "atradio".to_owned(),
         other => other.to_owned(),
     }
@@ -191,7 +199,7 @@ fn source_lexicon(source: &str) -> String {
     match source {
         "Radio Browser" => "radio-browser".to_owned(),
         "TuneIn" => "tunein".to_owned(),
-        "" => "custom".to_owned(),
+        CUSTOM_SOURCE | "" => "custom".to_owned(),
         other => other.to_lowercase(),
     }
 }
@@ -211,6 +219,83 @@ fn station_info(row: &saved_radio::Model) -> StationInfo {
         bitrate: Some(row.bitrate).filter(|bitrate| *bitrate > 0),
         codec: None,
         tags: Vec::new(),
+    }
+}
+
+fn station_draft(row: &saved_radio::Model) -> StationDraft {
+    StationDraft {
+        name: row.name.clone(),
+        stream_url: row.stream_url.clone(),
+        genre: Some(row.genre.clone()).filter(|value| !value.is_empty()),
+        homepage: None,
+        logo: Some(row.logo.clone()).filter(|value| !value.is_empty()),
+    }
+}
+
+/// Turn a station snapshot from the AppView into a bookmark row.
+fn row_of(info: StationInfo) -> saved_radio::Model {
+    saved_radio::Model {
+        id: info.station_id,
+        name: info.name,
+        stream_url: info.stream_url,
+        source: source_label(&info.source),
+        genre: info.genre.unwrap_or_default(),
+        country: info.country.unwrap_or_default(),
+        logo: info.logo.unwrap_or_default(),
+        bitrate: info.bitrate.unwrap_or_default(),
+    }
+}
+
+/// atradio keys a user's own station by its record rkey, so the id the AppView
+/// lists it under is derivable from the uri `create_station` hands back.
+fn custom_id(rkey: &str) -> String {
+    format!("custom:{rkey}")
+}
+
+fn rkey_of(uri: &str) -> Option<&str> {
+    uri.rsplit('/').next().filter(|rkey| !rkey.is_empty())
+}
+
+/// The id a hand-entered station gets before it reaches a PDS. Derived from the
+/// stream url so adding the same station twice updates one row instead of
+/// piling up duplicates.
+pub fn local_station_id(stream_url: &str) -> String {
+    custom_id(&format!("local-{:x}", md5::compute(stream_url.trim())))
+}
+
+/// True for an id this device minted, i.e. a station that has not been
+/// published yet.
+fn is_local_id(id: &str) -> bool {
+    id.starts_with("custom:local-")
+}
+
+/// The `fm.atradio.station` record shape, for the Jetstream feed. The station
+/// id is not in the record — atradio derives it from the record's rkey.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StationRecord {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    stream_url: String,
+    #[serde(default)]
+    genre: Option<String>,
+    #[serde(default)]
+    logo: Option<String>,
+}
+
+impl StationRecord {
+    fn into_row(self, rkey: &str) -> saved_radio::Model {
+        saved_radio::Model {
+            id: custom_id(rkey),
+            name: self.name,
+            stream_url: self.stream_url,
+            source: CUSTOM_SOURCE.to_owned(),
+            genre: self.genre.unwrap_or_default(),
+            country: String::new(),
+            logo: self.logo.unwrap_or_default(),
+            bitrate: 0,
+        }
     }
 }
 
@@ -495,6 +580,118 @@ pub async fn unfavorite(station: &saved_radio::Model) -> Result<(), Error> {
     Ok(())
 }
 
+// ── The user's own stations ─────────────────────────────────────────────────
+
+/// Save a hand-entered station and, when signed in, publish it to the user's
+/// repo as `fm.atradio.station` so it shows up on atradio.fm and on their other
+/// devices. Returns the stored row.
+///
+/// Publishing re-keys the row from the local id to the `custom:<rkey>` the
+/// AppView will list it under, so a later [`import_stations`] recognises it as
+/// the same station instead of importing a second copy. Signed out, the station
+/// stays local with its local id and is published by the next sync.
+pub async fn add_station(
+    conn: &DatabaseConnection,
+    mut row: saved_radio::Model,
+) -> Result<saved_radio::Model, Error> {
+    row.source = CUSTOM_SOURCE.to_owned();
+    if row.id.is_empty() {
+        row.id = local_station_id(&row.stream_url);
+    }
+    upsert(conn, row.clone()).await?;
+    if let Some(published) = publish_station(&row).await? {
+        row = replace_id(conn, &row, published).await?;
+    }
+    // A station the user added is one they want in their list of stations, so
+    // it is favorited too — that is what puts it in the bookmarks everywhere.
+    if let Err(e) = favorite(&row).await {
+        tracing::warn!(station = %row.id, "could not mirror the new station to atradio.fm: {e}");
+    }
+    Ok(row)
+}
+
+/// Move a row to a new primary key. sea-orm cannot update a primary key in
+/// place, so the new row is written first and the old one dropped after.
+async fn replace_id(
+    conn: &DatabaseConnection,
+    row: &saved_radio::Model,
+    id: String,
+) -> Result<saved_radio::Model, Error> {
+    if row.id == id {
+        return Ok(row.clone());
+    }
+    let moved = saved_radio::Model { id, ..row.clone() };
+    upsert(conn, moved.clone()).await?;
+    saved_radio::Entity::delete_by_id(row.id.clone())
+        .exec(conn)
+        .await?;
+    Ok(moved)
+}
+
+/// Publish `station` as a `fm.atradio.station` record and return the
+/// `custom:<rkey>` id the AppView will list it under. `Ok(None)` when signed
+/// out — nothing is written and the caller keeps the local id.
+pub async fn publish_station(station: &saved_radio::Model) -> Result<Option<String>, Error> {
+    if !ensure_session().await {
+        return Ok(None);
+    }
+    let draft = &station_draft(station);
+    let uri = write("atradio station", move |agent| async move {
+        agent.create_station(draft).await
+    })
+    .await?;
+    tracing::info!(station = %station.id, %uri, "published a station to atradio.fm");
+    Ok(rkey_of(&uri).map(custom_id))
+}
+
+/// Pull the account's own `fm.atradio.station` records into `saved_radio`, then
+/// publish any hand-entered station that has never reached the PDS.
+///
+/// Runs before the favorite import so a station published here is favorited
+/// under its final `custom:<rkey>` id rather than the local one.
+pub async fn import_stations(conn: &DatabaseConnection) -> Result<usize, Error> {
+    let Some(did) = resolve_did().await else {
+        return Ok(0);
+    };
+    let remote = agent()
+        .appview()
+        .stations(&did, 100)
+        .await
+        .map_err(|e| anyhow!("could not list the stations on atradio.fm: {e}"))?;
+
+    let imported = remote.items.len();
+    for view in remote.items {
+        let row = row_of(view.station);
+        if row.id.is_empty() || row.stream_url.is_empty() {
+            continue;
+        }
+        tracing::info!(station = %row.id, name = %row.name, "importing an atradio station");
+        upsert(conn, row).await?;
+    }
+
+    // Anything still carrying a local id was added while signed out (or before
+    // the account was linked); this is its first chance to go up.
+    let unpublished: Vec<saved_radio::Model> = saved_radio::Entity::find()
+        .all(conn)
+        .await?
+        .into_iter()
+        .filter(|row| is_local_id(&row.id))
+        .collect();
+    let mut published = 0;
+    for row in unpublished {
+        match publish_station(&row).await {
+            Ok(Some(id)) => {
+                replace_id(conn, &row, id).await?;
+                published += 1;
+            }
+            Ok(None) => break, // signed out; the rest would fail the same way
+            Err(e) => tracing::warn!(station = %row.id, "could not publish the station: {e}"),
+        }
+    }
+    tracing::info!(imported, published, "synced stations with atradio.fm");
+    Ok(imported)
+}
+
 // ── Listening status ────────────────────────────────────────────────────────
 
 /// Publish `station` as the account's now-listening status.
@@ -552,6 +749,9 @@ pub async fn enrich_from_bookmark(conn: &DatabaseConnection, station: &mut saved
 // ── Live sync ───────────────────────────────────────────────────────────────
 
 async fn apply_commit(conn: &DatabaseConnection, commit: atproto::JetstreamCommit) {
+    if commit.collection == STATION_COLLECTION {
+        return apply_station_commit(conn, commit).await;
+    }
     match commit.operation.as_str() {
         "create" | "update" => {
             let Some(record) = commit
@@ -588,8 +788,39 @@ async fn apply_commit(conn: &DatabaseConnection, commit: atproto::JetstreamCommi
     }
 }
 
-/// Import the account's favorites, then follow its repo for changes until the
-/// process exits. Returns immediately when no user is signed in.
+/// A station created or removed on atradio.fm (or another device) while the
+/// daemon runs. The record has no station id of its own — atradio keys it by
+/// rkey — so both halves re-derive `custom:<rkey>`.
+async fn apply_station_commit(conn: &DatabaseConnection, commit: atproto::JetstreamCommit) {
+    match commit.operation.as_str() {
+        "create" | "update" => {
+            let Some(record) = commit
+                .record
+                .and_then(|value| serde_json::from_value::<StationRecord>(value).ok())
+            else {
+                return;
+            };
+            let row = record.into_row(&commit.rkey);
+            if row.name.is_empty() || row.stream_url.is_empty() {
+                return;
+            }
+            tracing::info!(station = %row.id, "station added from atradio.fm");
+            if let Err(e) = upsert(conn, row).await {
+                tracing::warn!("could not store a station from Jetstream: {e}");
+            }
+        }
+        "delete" => {
+            let id = custom_id(&commit.rkey);
+            tracing::info!(station = %id, "station removed from atradio.fm");
+            let _ = saved_radio::Entity::delete_by_id(id).exec(conn).await;
+        }
+        _ => {}
+    }
+}
+
+/// Import the account's stations and favorites, then follow its repo for
+/// changes until the process exits. Returns immediately when no user is signed
+/// in.
 pub async fn sync(conn: DatabaseConnection) {
     let Some(did) = resolve_did().await else {
         tracing::info!(
@@ -600,12 +831,18 @@ pub async fn sync(conn: DatabaseConnection) {
     };
     tracing::info!(%did, "linking radio bookmarks to atradio.fm");
     announce_session(&did).await;
+    // Stations first: publishing one re-keys its local row, and the favorite
+    // import pushes local-only bookmarks up — in the other order it would
+    // favorite the throwaway local id.
+    if let Err(e) = import_stations(&conn).await {
+        tracing::warn!("could not import atradio stations: {e}");
+    }
     if let Err(e) = import_favorites(&conn).await {
         tracing::warn!("could not import atradio favorites: {e}");
     }
 
     let applier = conn.clone();
-    atproto::subscribe(&did, &[COLLECTION], |commit| {
+    atproto::subscribe(&did, &[COLLECTION, STATION_COLLECTION], |commit| {
         let conn = applier.clone();
         async move { apply_commit(&conn, commit).await }
     })
@@ -665,9 +902,37 @@ mod tests {
 
     #[test]
     fn source_names_round_trip() {
-        for label in ["Radio Browser", "TuneIn"] {
+        for label in ["Radio Browser", "TuneIn", CUSTOM_SOURCE] {
             assert_eq!(source_label(&source_lexicon(label)), label);
         }
+    }
+
+    /// A station added while signed out gets a local id derived from its
+    /// stream url; publishing swaps it for the `custom:<rkey>` the AppView
+    /// lists. Both halves have to agree or every sync imports a duplicate.
+    #[test]
+    fn custom_station_ids() {
+        let id = local_station_id("https://example.com/stream");
+        assert_eq!(id, local_station_id("  https://example.com/stream  "));
+        assert!(is_local_id(&id));
+
+        let published = rkey_of("at://did:plc:abc/fm.atradio.station/3labcd234").map(custom_id);
+        assert_eq!(published.as_deref(), Some("custom:3labcd234"));
+        assert!(!is_local_id(published.as_deref().unwrap()));
+    }
+
+    /// A Jetstream station commit carries no station id — it has to come from
+    /// the rkey, or the row lands under a key nothing else can find.
+    #[test]
+    fn station_records_are_keyed_by_rkey() {
+        let record: StationRecord = serde_json::from_str(
+            r#"{"name":"Night Drive","streamUrl":"https://example.com/nd","genre":"Synthwave"}"#,
+        )
+        .unwrap();
+        let row = record.into_row("3lxyz789");
+        assert_eq!(row.id, "custom:3lxyz789");
+        assert_eq!(row.source, CUSTOM_SOURCE);
+        assert_eq!(row.genre, "Synthwave");
     }
 
     /// A Jetstream delete carries only the rkey, so the local row is found by

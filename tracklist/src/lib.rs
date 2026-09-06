@@ -76,6 +76,22 @@ impl Tracklist {
         (self.current_track.clone(), self.played.len())
     }
 
+    /// Replace the current track in place, keeping the queue split intact.
+    /// Used to fold a live stream's ICY metadata (the song playing right now)
+    /// onto the station entry — the history copy is updated too so the queue
+    /// drawer and the now-playing bar keep showing the same thing.
+    pub fn update_current_track(&mut self, track: Track) {
+        if self.current_track.as_ref().map(|t| t.id.as_str()) != Some(track.id.as_str()) {
+            return;
+        }
+        if let Some(last) = self.played.last_mut() {
+            if last.id == track.id {
+                *last = track.clone();
+            }
+        }
+        self.current_track = Some(track);
+    }
+
     pub fn tracks(&self) -> (Vec<Track>, Vec<Track>) {
         (self.played.clone(), self.tracks.clone())
     }

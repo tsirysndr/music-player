@@ -95,16 +95,32 @@ impl Seen {
     }
 }
 
+/// The subscription query string.
+///
+/// `wantedCollections` is **repeated**, once per collection — Jetstream
+/// validates each value as an NSID, so a comma-joined list is rejected outright
+/// with `400 Bad Request` the moment there is more than one collection.
+///
+/// DIDs and NSIDs are drawn from `[a-z0-9:._-]`, all legal unescaped in a query
+/// value, so nothing here needs percent-encoding.
+fn subscribe_query(did: &str, collections: &[&str]) -> String {
+    let mut query = format!("wantedDids={did}");
+    for collection in collections {
+        query.push_str("&wantedCollections=");
+        query.push_str(collection);
+    }
+    query
+}
+
 /// Read one connection to `endpoint` until it closes, forwarding every event.
 async fn stream_once(
     endpoint: &str,
-    did: &str,
-    collections: &str,
+    query: &str,
     events: &tokio::sync::mpsc::UnboundedSender<JetstreamEvent>,
 ) -> Result<(), Error> {
-    let url = format!("{endpoint}?wantedCollections={collections}&wantedDids={did}");
+    let url = format!("{endpoint}?{query}");
     let (mut socket, _) = tokio_tungstenite::connect_async(&url).await?;
-    tracing::info!(endpoint, collections, "following the repo on Jetstream");
+    tracing::info!(endpoint, query, "following the repo on Jetstream");
     while let Some(message) = socket.next().await {
         let text = match message? {
             tokio_tungstenite::tungstenite::Message::Text(text) => text,
@@ -129,12 +145,11 @@ async fn stream_once(
 /// Keep one endpoint connected for as long as the daemon runs.
 async fn follow_endpoint(
     endpoint: &'static str,
-    did: String,
-    collections: String,
+    query: String,
     events: tokio::sync::mpsc::UnboundedSender<JetstreamEvent>,
 ) {
     loop {
-        if let Err(e) = stream_once(endpoint, &did, &collections, &events).await {
+        if let Err(e) = stream_once(endpoint, &query, &events).await {
             tracing::warn!(endpoint, "Jetstream disconnected: {e}");
         }
         if events.is_closed() {
@@ -152,15 +167,10 @@ where
     F: FnMut(JetstreamCommit) -> Fut,
     Fut: std::future::Future<Output = ()>,
 {
-    let wanted = collections.join(",");
+    let query = subscribe_query(did, collections);
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     for endpoint in JETSTREAM_ENDPOINTS {
-        tokio::spawn(follow_endpoint(
-            endpoint,
-            did.to_owned(),
-            wanted.clone(),
-            tx.clone(),
-        ));
+        tokio::spawn(follow_endpoint(endpoint, query.clone(), tx.clone()));
     }
     drop(tx);
 
@@ -196,5 +206,30 @@ where
             "new Jetstream event received"
         );
         apply(commit).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Jetstream validates every `wantedCollections` value as an NSID, so
+    /// joining them with a comma made it reject the whole subscription with
+    /// `400 Bad Request` as soon as there was more than one.
+    #[test]
+    fn repeats_wanted_collections_rather_than_joining_them() {
+        assert_eq!(
+            subscribe_query(
+                "did:plc:abc",
+                &["fm.atradio.favorite", "fm.atradio.station"]
+            ),
+            "wantedDids=did:plc:abc\
+             &wantedCollections=fm.atradio.favorite\
+             &wantedCollections=fm.atradio.station"
+        );
+        assert_eq!(
+            subscribe_query("did:plc:abc", &["app.rocksky.like"]),
+            "wantedDids=did:plc:abc&wantedCollections=app.rocksky.like"
+        );
     }
 }

@@ -8,7 +8,7 @@ import {
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
     DetailRow, BrowseItem, ServerItem, FormField, ServerRow, BrowseRow,
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
-    RadioSkeletonList, RadioFilterBox
+    RadioSkeletonList, RadioFilterBox, MarqueeText
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -45,6 +45,16 @@ export component AppWindow inherits Window {
     // player bar's heart can toggle the bookmark like anywhere else.
     in-out property <string> now-station-id: "";
     in-out property <bool> now-radio-bookmarked: false;
+    // Second line of the player bar. For a station the album slot holds the
+    // station name, so once ICY metadata names the song on the air this reads
+    // "Artist · Station"; before that the title already IS the station name,
+    // so the repeat is dropped.
+    property <bool> show-station: root.now-album != ""
+        && root.now-album != root.now-artist
+        && root.now-album != root.now-title;
+    property <string> now-subtitle: !root.now-is-radio || !root.show-station
+        ? root.now-artist
+        : (root.now-artist != "" ? root.now-artist + " · " + root.now-album : root.now-album);
     in-out property <bool> playing: false;
     in-out property <bool> stopped: true;
     in-out property <float> progress: 0; // 0..1
@@ -140,12 +150,26 @@ export component AppWindow inherits Window {
 
     // ── Internet radio ─────────────────────────────────────────────────────
     in-out property <[StationItem]> radios: [];
-    in-out property <int> radio-tab: 0; // 0 search/categories, 1 bookmarks
+    in-out property <int> radio-tab: 0; // 0 search/categories, 1 bookmarks, 2 own stations
     in-out property <string> radio-category: "";
     in-out property <bool> show-radio-search: false;
     in-out property <bool> radio-loading: false;
     /// Quick filter over the station list currently on screen.
     in-out property <string> radio-filter: "";
+
+    // ── Add-station form ───────────────────────────────────────────────────
+    in-out property <bool> show-add-station: false;
+    in-out property <string> add-station-name: "";
+    in-out property <string> add-station-url: "";
+    in-out property <string> add-station-genre: "";
+    in-out property <string> add-station-country: "";
+    in-out property <string> add-station-logo: "";
+    /// Verdict on the stream url: the form will not save a url the station
+    /// itself does not answer.
+    in-out property <string> add-station-status: "";
+    in-out property <bool> add-station-ok: false;
+    in-out property <bool> add-station-checking: false;
+    in-out property <bool> add-station-saving: false;
 
     // ── Callbacks into Rust ─────────────────────────────────────────────────
     callback play-pause();
@@ -202,6 +226,9 @@ export component AppWindow inherits Window {
     callback radio-play(string);
     callback radio-bookmark(string);
     callback radio-filter-changed(string);
+    callback radio-stations();
+    callback radio-check-stream(string);
+    callback radio-add-station(string, string, string, string, string); // name,url,genre,country,logo
 
     forward-focus: main-focus;
 
@@ -230,6 +257,39 @@ export component AppWindow inherits Window {
         if (root.radio-filter != "") {
             root.set-radio-filter("");
         }
+    }
+
+    public function open-add-station() {
+        root.add-station-name = "";
+        root.add-station-url = "";
+        root.add-station-genre = "";
+        root.add-station-country = "";
+        root.add-station-logo = "";
+        root.add-station-status = "";
+        root.add-station-ok = false;
+        root.add-station-checking = false;
+        root.add-station-saving = false;
+        root.show-add-station = true;
+    }
+
+    // Also the way Rust dismisses the form once the station is stored.
+    public function close-add-station() {
+        root.show-add-station = false;
+        root.add-station-saving = false;
+    }
+
+    public function submit-add-station() {
+        if (root.add-station-name == "" || root.add-station-url == "" || root.add-station-saving) {
+            return;
+        }
+        root.add-station-saving = true;
+        root.add-station-status = "";
+        root.radio-add-station(
+            root.add-station-name,
+            root.add-station-url,
+            root.add-station-genre,
+            root.add-station-country,
+            root.add-station-logo);
     }
 
     public function open-radio-category(label: string, term: string) {
@@ -348,6 +408,9 @@ export component AppWindow inherits Window {
                     main-focus.focus();
                 } else if (root.show-server-form) {
                     root.show-server-form = false;
+                } else if (root.show-add-station) {
+                    root.close-add-station();
+                    main-focus.focus();
                 } else if (root.show-track-picker) {
                     root.show-track-picker = false;
                     main-focus.focus();
@@ -995,7 +1058,7 @@ export component AppWindow inherits Window {
                     HorizontalLayout {
                         height: 38px;
                         spacing: 8px;
-                        for label[i] in ["Search", "Bookmarked"] : Rectangle {
+                        for label[i] in ["Search", "Bookmarked", "Stations"] : Rectangle {
                             width: 112px;
                             background: tab-touch.has-hover ? Theme.hover-bg : transparent;
                             Text { text: label; color: root.radio-tab == i ? Theme.accent : Theme.text-dim; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; font-weight: 600; }
@@ -1005,17 +1068,28 @@ export component AppWindow inherits Window {
                                     root.radio-tab = i;
                                     root.radio-category = "";
                                     root.clear-radio-filter();
-                                    if (i == 1) {
+                                    if (i != 0) {
                                         root.radios = [];
                                         root.radio-loading = true;
+                                    }
+                                    if (i == 1) {
                                         root.radio-bookmarks();
+                                    }
+                                    if (i == 2) {
+                                        root.radio-stations();
                                     }
                                 }
                             }
                         }
                         Rectangle { horizontal-stretch: 1; }
-                        // Quick filter over the bookmarked stations.
-                        if root.radio-tab == 1 : RadioFilterBox {
+                        if root.radio-tab == 2 : IconButton {
+                            icon: Icons.circle-plus;
+                            icon-size: 17px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { root.open-add-station(); }
+                        }
+                        // Quick filter over the station list on screen.
+                        if root.radio-tab != 0 : RadioFilterBox {
                             width: 190px;
                             y: (parent.height - self.height) / 2;
                             text: root.radio-filter;
@@ -1070,16 +1144,25 @@ export component AppWindow inherits Window {
                             for station in root.radios : RadioRow { station:station; play=>{root.radio-play(station.id);} bookmark=>{root.radio-bookmark(station.id);} }
                         }
                     }
-                    if root.radio-tab == 1 && root.radio-loading : RadioSkeletonList {
+                    if root.radio-tab != 0 && root.radio-loading : RadioSkeletonList {
                         vertical-stretch: 1;
                     }
-                    if root.radio-tab == 1 && !root.radio-loading : ListView {
+                    if root.radio-tab != 0 && !root.radio-loading && root.radios.length > 0 : ListView {
                         vertical-stretch: 1;
                         for station in root.radios : RadioRow {
                             station: station;
                             play => { root.radio-play(station.id); }
                             bookmark => { root.radio-bookmark(station.id); }
                         }
+                    }
+                    if root.radio-tab != 0 && !root.radio-loading && root.radios.length == 0 : Text {
+                        text: root.radio-tab == 2
+                            ? "No station of your own yet. Add one with its stream url."
+                            : "No bookmarked station yet.";
+                        color: Theme.text-muted;
+                        font-size: 13px;
+                        vertical-stretch: 1;
+                        horizontal-alignment: center;
                     }
                 }
 
@@ -1346,18 +1429,18 @@ export component AppWindow inherits Window {
                             horizontal-stretch: 1;
                             alignment: center;
                             spacing: 3px;
-                            Text {
+                            // A long song title (or an ICY `StreamTitle`)
+                            // scrolls itself rather than being cut off.
+                            MarqueeText {
                                 text: root.now-title;
-                                color: Theme.text;
+                                text-color: Theme.text;
                                 font-size: 13px;
                                 font-weight: 600;
-                                overflow: elide;
                             }
-                            Text {
-                                text: root.now-artist;
-                                color: Theme.text-dim;
+                            MarqueeText {
+                                text: root.now-subtitle;
+                                text-color: Theme.text-dim;
                                 font-size: 11px;
-                                overflow: elide;
                             }
                         }
                         if !root.now-is-radio : LikeButton {
@@ -1711,7 +1794,7 @@ export component AppWindow inherits Window {
                                     overflow: elide;
                                 }
                                 Text {
-                                    text: root.now-artist;
+                                    text: root.now-subtitle;
                                     color: Theme.text-dim;
                                     font-size: 10px;
                                     overflow: elide;
@@ -2462,6 +2545,152 @@ export component AppWindow inherits Window {
                                     user-field.text = "";
                                     pass-field.text = "";
                                     root.show-server-form = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Add station (hand-entered internet radio) ───────────────────────────
+    add-station-layer := Rectangle {
+        visible: root.show-add-station;
+        width: 100%;
+        height: 100%;
+        background: #000000a0;
+
+        TouchArea {
+            clicked => { root.close-add-station(); }
+        }
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: 460px;
+            height: add-station-content.preferred-height;
+            border-radius: 14px;
+            background: Theme.panel-bg;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 40px;
+
+            TouchArea {}
+
+            add-station-content := VerticalLayout {
+                padding: 24px;
+                spacing: 14px;
+                Text {
+                    text: "Add a station";
+                    color: Theme.text;
+                    font-size: 16px;
+                    font-weight: 700;
+                }
+                Text {
+                    text: "Signed in to atradio.fm, it is published to your account and follows you to your other devices.";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+                FormField {
+                    label: "STREAM URL";
+                    placeholder: "https://example.com/stream";
+                    text <=> root.add-station-url;
+                    // A typed-over url invalidates the last verdict; the check
+                    // itself waits until the user leaves the field, since it is
+                    // a round trip to the station.
+                    edited(value) => {
+                        root.add-station-status = "";
+                        root.add-station-ok = false;
+                    }
+                    committed(value) => {
+                        if (value != "" && !root.add-station-checking) {
+                            root.add-station-checking = true;
+                            root.add-station-status = "";
+                            root.radio-check-stream(value);
+                        }
+                    }
+                }
+                if root.add-station-checking || root.add-station-status != "" : Text {
+                    text: root.add-station-checking ? "Checking the stream…" : root.add-station-status;
+                    // The skins carry no error color, and one that shifted with
+                    // the accent would read as success on half of them.
+                    color: root.add-station-checking
+                        ? Theme.text-muted
+                        : (root.add-station-ok ? Theme.accent : #d45769);
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+                FormField {
+                    label: "NAME";
+                    placeholder: "Station name";
+                    text <=> root.add-station-name;
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    FormField {
+                        label: "GENRE";
+                        horizontal-stretch: 1;
+                        text <=> root.add-station-genre;
+                    }
+                    FormField {
+                        label: "COUNTRY";
+                        horizontal-stretch: 1;
+                        text <=> root.add-station-country;
+                    }
+                }
+                FormField {
+                    label: "LOGO URL";
+                    placeholder: "Optional";
+                    text <=> root.add-station-logo;
+                }
+                HorizontalLayout {
+                    padding-top: 4px;
+                    spacing: 10px;
+                    Rectangle { horizontal-stretch: 1; }
+                    Rectangle {
+                        width: 90px;
+                        height: 32px;
+                        border-radius: 16px;
+                        background: add-station-cancel.has-hover ? Theme.hover-bg : transparent;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        Text {
+                            text: "Cancel";
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        add-station-cancel := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.close-add-station(); }
+                        }
+                    }
+                    Rectangle {
+                        property <bool> ready: root.add-station-name != ""
+                            && root.add-station-url != ""
+                            && !root.add-station-saving
+                            && !root.add-station-checking;
+                        width: 130px;
+                        height: 32px;
+                        border-radius: 16px;
+                        opacity: self.ready ? 1.0 : 0.5;
+                        background: add-station-submit.has-hover && self.ready ? Theme.accent-hover : Theme.accent;
+                        Text {
+                            text: root.add-station-saving ? "Adding…" : "Add station";
+                            color: Theme.on-accent;
+                            font-size: 12px;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        add-station-submit := TouchArea {
+                            mouse-cursor: parent.ready ? pointer : default;
+                            clicked => {
+                                if (parent.ready) {
+                                    root.submit-add-station();
                                 }
                             }
                         }

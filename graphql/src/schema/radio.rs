@@ -3,7 +3,7 @@ use music_player_entity::{album, saved_radio, track};
 use music_player_playback::player::PlayerCommand;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
-use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
@@ -19,6 +19,49 @@ pub struct RadioStation {
     pub country: String,
     pub logo: String,
     pub bitrate: u32,
+}
+
+/// The fields the "add station" form collects. The id is derived from the
+/// stream url (or handed out by atradio once published), so it is not asked for.
+#[derive(Clone, InputObject)]
+#[graphql(name = "NewRadioStationInput")]
+pub struct NewRadioStation {
+    pub name: String,
+    pub stream_url: String,
+    #[graphql(default)]
+    pub genre: String,
+    #[graphql(default)]
+    pub country: String,
+    #[graphql(default)]
+    pub logo: String,
+}
+
+/// The verdict on a stream url, so the form can say what is wrong before the
+/// station is saved — and fill itself in from the station's own ICY headers
+/// when it is right.
+#[derive(SimpleObject)]
+pub struct StreamCheck {
+    pub ok: bool,
+    pub error: String,
+    pub name: String,
+    pub genre: String,
+    pub bitrate: u32,
+    pub codec: String,
+    pub homepage: String,
+}
+
+impl From<music_player_storage::radio_stream::StreamCheck> for StreamCheck {
+    fn from(check: music_player_storage::radio_stream::StreamCheck) -> Self {
+        Self {
+            ok: check.ok,
+            error: check.error,
+            name: check.name,
+            genre: check.genre,
+            bitrate: check.bitrate,
+            codec: check.codec,
+            homepage: check.homepage,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -89,6 +132,24 @@ impl RadioQuery {
             .into_iter()
             .map(from_row)
             .collect())
+    }
+
+    /// The user's own stations — the ones added by hand here, on atradio.fm, or
+    /// on another device. A subset of the bookmarks, told apart by their source.
+    async fn radio_stations(&self, ctx: &Context<'_>) -> Result<Vec<RadioStation>> {
+        let db = ctx.data::<Database>()?;
+        Ok(saved_radio::Entity::find()
+            .filter(saved_radio::Column::Source.eq(music_player_storage::atradio::CUSTOM_SOURCE))
+            .all(db.get_connection())
+            .await?
+            .into_iter()
+            .map(from_row)
+            .collect())
+    }
+
+    /// Check a stream url before the "add station" form saves it.
+    async fn check_radio_stream(&self, url: String) -> StreamCheck {
+        music_player_storage::radio_stream::probe(&url).await.into()
     }
 
     async fn radios(
@@ -198,6 +259,43 @@ pub struct RadioMutation;
 
 #[Object]
 impl RadioMutation {
+    /// Add a station the user typed in themselves, after checking the url is
+    /// actually a reachable stream. Signed in to atradio.fm, it is published as
+    /// a `fm.atradio.station` record so it follows the account everywhere.
+    async fn add_radio_station(
+        &self,
+        ctx: &Context<'_>,
+        station: NewRadioStation,
+    ) -> Result<RadioStation> {
+        let db = ctx.data::<Database>()?;
+        let name = station.name.trim().to_owned();
+        if name.is_empty() {
+            return Err(Error::new("The station needs a name."));
+        }
+        let stream_url = station.stream_url.trim().to_owned();
+        let check = music_player_storage::radio_stream::probe(&stream_url).await;
+        if !check.ok {
+            return Err(Error::new(check.error));
+        }
+        // Whatever the form left blank, the station's own ICY headers fill in.
+        let genre = match station.genre.trim() {
+            "" => check.genre,
+            genre => genre.to_owned(),
+        };
+        let row = saved_radio::Model {
+            id: String::new(),
+            name,
+            stream_url,
+            source: music_player_storage::atradio::CUSTOM_SOURCE.to_owned(),
+            genre,
+            country: station.country.trim().to_owned(),
+            logo: station.logo.trim().to_owned(),
+            bitrate: check.bitrate,
+        };
+        let saved = music_player_storage::atradio::add_station(db.get_connection(), row).await?;
+        Ok(from_row(saved))
+    }
+
     async fn save_radio(&self, ctx: &Context<'_>, station: RadioStation) -> Result<bool> {
         let db = ctx.data::<Database>()?;
         let row = saved_radio::Model {
@@ -307,16 +405,23 @@ impl RadioMutation {
 
     async fn play_radio(&self, ctx: &Context<'_>, station: RadioStation) -> Result<bool> {
         let sender = ctx.data::<Arc<Mutex<UnboundedSender<PlayerCommand>>>>()?;
+        // A directory entry is often a playlist pointing at another playlist
+        // (TuneIn always is), and some origins only answer a media proxy — so
+        // the url is resolved before the engine ever sees it.
+        let uri = music_player_storage::radio_resolve::resolve(&station.stream_url).await;
         let model = track::Model {
             id: format!("radio:{}", station.id),
-            title: station.name,
+            title: station.name.clone(),
             artist: station.source,
-            uri: station.stream_url,
+            uri,
             bitrate: Some(station.bitrate),
             album_id: Some("internet-radio".into()),
             album: album::Model {
                 id: "internet-radio".into(),
-                title: "Internet Radio".into(),
+                // The station name doubles as the "album": once ICY metadata
+                // arrives the title/artist become the song on the air, and
+                // this is what still says which station it came from.
+                title: station.name,
                 cover: (!station.logo.is_empty()).then_some(station.logo),
                 ..Default::default()
             },

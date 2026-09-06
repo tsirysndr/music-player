@@ -159,7 +159,7 @@ impl Searcher {
             None => return Ok(vec![]),
         };
         let sql = format!(
-            r#"SELECT ar.id, ar.name
+            r#"SELECT ar.id, ar.name, ar.picture
             FROM (SELECT id, rank FROM artist_search WHERE artist_search MATCH ? ORDER BY rank LIMIT {}) s
             JOIN artist ar ON ar.id = s.id
             ORDER BY s.rank"#,
@@ -179,6 +179,7 @@ impl Searcher {
             artists.push(Artist {
                 id: row.try_get("", "id")?,
                 name: row.try_get("", "name")?,
+                picture: row.try_get::<Option<String>>("", "picture")?,
                 ..Default::default()
             });
         }

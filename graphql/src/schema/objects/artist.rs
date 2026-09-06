@@ -61,6 +61,7 @@ impl From<Model> for Artist {
         Self {
             id: ID(model.id),
             name: model.name,
+            picture: model.picture.unwrap_or_default(),
             albums: model.albums.into_iter().map(Into::into).collect(),
             songs: model.tracks.into_iter().map(Into::into).collect(),
             ..Default::default()

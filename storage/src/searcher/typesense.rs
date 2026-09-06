@@ -117,6 +117,7 @@ impl Typesense {
             .map(|d| Artist {
                 id: str_field(d, "id"),
                 name: str_field(d, "name"),
+                picture: opt_field(d, "picture"),
                 ..Default::default()
             })
             .collect())
@@ -212,7 +213,7 @@ impl Typesense {
         let artists = connection
             .query_all(Statement::from_string(
                 DbBackend::Sqlite,
-                "SELECT id, name FROM artist".to_owned(),
+                "SELECT id, name, picture FROM artist".to_owned(),
             ))
             .await?
             .iter()
@@ -220,6 +221,7 @@ impl Typesense {
                 Ok(json!({
                     "id": row.try_get::<String>("", "id")?,
                     "name": row.try_get::<String>("", "name")?,
+                    "picture": row.try_get::<Option<String>>("", "picture")?.unwrap_or_default(),
                 }))
             })
             .collect::<Result<Vec<Value>, Error>>()?;

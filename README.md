@@ -121,8 +121,7 @@ Using [Homebrew](https://brew.sh/) (macOS/Linux):
 brew install tsirysndr/tap/musicplayer
 ```
 
-Using the Gemfury repository on Debian, Ubuntu, and other APT-based systems
-(`amd64` and `arm64`):
+On Debian, Ubuntu, and other APT-based systems (`amd64` and `arm64`):
 
 ```bash
 echo "deb [trusted=yes] https://apt.fury.io/tsiry/ /" \
@@ -131,8 +130,8 @@ sudo apt-get update
 sudo apt-get install music-player
 ```
 
-Using the Gemfury repository on Fedora, RHEL, Rocky Linux, AlmaLinux, and
-other DNF-based systems (`x86_64` and `aarch64`):
+On Fedora, RHEL, Rocky Linux, AlmaLinux, and other DNF-based systems
+(`x86_64` and `aarch64`):
 
 ```bash
 sudo tee /etc/yum.repos.d/music-player.repo <<'EOF'

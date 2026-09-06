@@ -216,6 +216,16 @@ music-player
 
 The daemon scans your music directory (`$HOME/Music` by default), serves gRPC on `:5051`, WebSocket events on `:5052`, and the web UI + GraphQL on `:5053`.
 
+The same binary is both the server and the client — the first instance starts the daemon, and any later invocation detects it and talks to it:
+
+```bash
+# terminal 1 — becomes the server
+music-player
+
+# terminal 2 — detects the daemon, acts as a client
+music-player scan
+```
+
 ## Usage
 
 ```

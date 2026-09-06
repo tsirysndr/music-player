@@ -24,6 +24,7 @@ use std::collections::HashMap;
 
 use anyhow::Error;
 use music_player_entity::{album, artist, rocksky_like, track};
+use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
     QueryFilter, Statement,
@@ -169,7 +170,7 @@ async fn upsert(conn: &DatabaseConnection, like: &Like) -> Result<(), Error> {
     let Some(song) = &like.song else {
         return Ok(());
     };
-    rocksky_like::ActiveModel {
+    let model = rocksky_like::ActiveModel {
         uri: ActiveValue::Set(like.uri.clone()),
         song_uri: ActiveValue::Set(like.song_uri.clone()),
         title: ActiveValue::Set(song.title.clone()),
@@ -177,11 +178,28 @@ async fn upsert(conn: &DatabaseConnection, like: &Like) -> Result<(), Error> {
         album: ActiveValue::Set(song.album.clone()),
         album_artist: ActiveValue::Set(song.album_artist.clone()),
         created_at: ActiveValue::Set(like.created_at.clone()),
-        // Left as-is; the matching pass fills it in.
+        // Left unset on insert, and left alone on conflict: the matching pass
+        // owns this column, and re-importing must not undo a match.
         track_id: ActiveValue::NotSet,
-    }
-    .save(conn)
-    .await?;
+    };
+    // An explicit upsert, not `save()`: the primary key is the record uri, so
+    // it is always Set and sea-orm would take every like for an existing row
+    // and issue an UPDATE that matches nothing (RecordNotFound).
+    rocksky_like::Entity::insert(model)
+        .on_conflict(
+            OnConflict::column(rocksky_like::Column::Uri)
+                .update_columns([
+                    rocksky_like::Column::SongUri,
+                    rocksky_like::Column::Title,
+                    rocksky_like::Column::Artist,
+                    rocksky_like::Column::Album,
+                    rocksky_like::Column::AlbumArtist,
+                    rocksky_like::Column::CreatedAt,
+                ])
+                .to_owned(),
+        )
+        .exec(conn)
+        .await?;
     Ok(())
 }
 

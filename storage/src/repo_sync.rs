@@ -23,7 +23,8 @@ use anyhow::Error;
 use chrono::{DateTime, Duration, Utc};
 use music_player_entity::atproto_repo_sync;
 use music_player_settings::read_settings;
-use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::sea_query::OnConflict;
+use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 
 use crate::atproto;
 
@@ -75,14 +76,25 @@ pub async fn last_download(
 }
 
 async fn record_download(conn: &DatabaseConnection, did: &str, bytes: usize) -> Result<(), Error> {
-    atproto_repo_sync::ActiveModel {
+    let model = atproto_repo_sync::ActiveModel {
         did: ActiveValue::Set(did.to_owned()),
         last_downloaded_at: ActiveValue::Set(Utc::now().to_rfc3339()),
         bytes: ActiveValue::Set(bytes as i64),
-    }
-    // `save` inserts or updates depending on whether the primary key exists.
-    .save(conn)
-    .await?;
+    };
+    // An explicit upsert, not `save()`: the DID is a primary key we assign, so
+    // sea-orm always sees it Set and issues an UPDATE — which matches nothing
+    // on the first run and fails with RecordNotFound.
+    atproto_repo_sync::Entity::insert(model)
+        .on_conflict(
+            OnConflict::column(atproto_repo_sync::Column::Did)
+                .update_columns([
+                    atproto_repo_sync::Column::LastDownloadedAt,
+                    atproto_repo_sync::Column::Bytes,
+                ])
+                .to_owned(),
+        )
+        .exec(conn)
+        .await?;
     Ok(())
 }
 

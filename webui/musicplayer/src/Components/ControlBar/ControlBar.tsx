@@ -16,6 +16,9 @@ import { ThemeProvider, useTheme } from "@emotion/react";
 import DeviceList from "./DeviceList";
 import { Device } from "../../Types/Device";
 import RadioArt from "../RadioArt";
+import Heart from "../Icons/Heart";
+import HeartOutline from "../Icons/HeartOutline";
+import { fetcher } from "../../Api/fetcher";
 import { FullscreenOverlayTheme } from "../../Theme";
 
 const Container = styled.div<{ full?: boolean }>`
@@ -164,6 +167,49 @@ const Back = styled(Button)`
   line-height: 1;
 `;
 
+/// Whether the station playing right now is bookmarked, and a toggle for it.
+/// The station may have been queued in an earlier session, so the state comes
+/// from the saved list rather than from whatever queued it.
+const useRadioBookmark = (stationId?: string) => {
+  const [bookmarked, setBookmarked] = useState(false);
+
+  useEffect(() => {
+    if (!stationId) {
+      setBookmarked(false);
+      return;
+    }
+    let active = true;
+    fetcher<any, any>(`query { savedRadios { id } }`, {})()
+      .then((data) => {
+        if (active) {
+          setBookmarked(
+            (data.savedRadios || []).some((s: { id: string }) => s.id === stationId)
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [stationId]);
+
+  const toggle = async () => {
+    // Optimistic: the heart should answer the click, not the round trip.
+    setBookmarked((was) => !was);
+    try {
+      const data = await fetcher<any, any>(
+        `mutation { toggleCurrentRadioBookmark }`,
+        {}
+      )();
+      setBookmarked(!!data.toggleCurrentRadioBookmark);
+    } catch {
+      setBookmarked((was) => !was);
+    }
+  };
+
+  return { bookmarked, toggle };
+};
+
 export type ControlBarProps = {
   nowPlaying?: {
     album?: string;
@@ -213,6 +259,9 @@ const ControlBar: FC<ControlBarProps> = (props) => {
   // While the fullscreen player is open the bar floats over a dark backdrop,
   // so it has to stop reading colors from the (possibly light) active theme.
   const barTheme = full ? FullscreenOverlayTheme : theme;
+  const { bookmarked, toggle: toggleBookmark } = useRadioBookmark(
+    isRadio ? nowPlaying?.id?.replace(/^radio:/, "") : undefined
+  );
 
   useEffect(() => {
     if (!!nowPlaying) {
@@ -264,6 +313,15 @@ const ControlBar: FC<ControlBarProps> = (props) => {
         {played && (
           <Button onClick={handlePause}>
             <Pause color={barTheme.colors.text} />
+          </Button>
+        )}
+        {isRadio && (
+          <Button onClick={toggleBookmark} title="Bookmark station">
+            {bookmarked ? (
+              <Heart size={22} color="#fe099c" />
+            ) : (
+              <HeartOutline size={22} color={barTheme.colors.icon} />
+            )}
           </Button>
         )}
         {!isRadio && <Button onClick={onNext}>

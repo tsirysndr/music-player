@@ -33,6 +33,9 @@ use music_player_types::types as mp_types;
 
 use crate::likes;
 use crate::servers::SavedServer;
+use music_player_entity::saved_radio;
+use music_player_storage::Database;
+use sea_orm::EntityTrait;
 
 /// All albums/artists/tracks in one page — a limit of 0 means "none" on the
 /// server side, so ask for effectively-everything instead.
@@ -53,6 +56,7 @@ pub enum Cmd {
     PlayArtist(String),
     PlayAllAt(i32),
     PlayLikedAt(i32),
+    PlayLikedShuffled,
     QueueJump(i32),
     QueueClear,
     QueueRemove(i32),
@@ -497,6 +501,22 @@ async fn session(
 
         let stopped = now.track.is_none();
         let is_radio = track_id.starts_with("radio:");
+        let station_id = track_id
+            .strip_prefix("radio:")
+            .unwrap_or_default()
+            .to_owned();
+        // Only hit the database when the station changes; the poll runs every
+        // second and the answer only moves when the user tunes or bookmarks.
+        let bookmarked = if is_radio && !station_id.is_empty() {
+            saved_radio::Entity::find_by_id(station_id.clone())
+                .one(Database::new().await.get_connection())
+                .await
+                .ok()
+                .flatten()
+                .is_some()
+        } else {
+            false
+        };
         let elapsed = now.position_ms as f32 / 1000.0;
         let length = length_ms as f32 / 1000.0;
         let _ = weak.upgrade_in_event_loop(move |app| {
@@ -508,6 +528,10 @@ async fn session(
             app.set_now_liked(crate::is_liked(&track_id));
             app.set_now_track_id(track_id.into());
             app.set_now_is_radio(is_radio);
+            if station_changed || !is_radio {
+                app.set_now_station_id(station_id.into());
+                app.set_now_radio_bookmarked(bookmarked);
+            }
             app.set_playing(playing);
             app.set_stopped(stopped);
             // The daemon reports no position for a live stream, so the local
@@ -1521,6 +1545,21 @@ async fn cmd_loop(
                         .map(|t| t.proto.clone())
                         .collect();
                     load_tracks(&channel, tracks, pos).await?;
+                }
+                Cmd::PlayLikedShuffled => {
+                    let mut tracks: Vec<TrackProto> = {
+                        let st = state.lock().await;
+                        st.tracks
+                            .iter()
+                            .filter(|t| st.liked.contains(&t.proto.id))
+                            .map(|t| t.proto.clone())
+                            .collect()
+                    };
+                    // Fisher–Yates via fastrand: shuffle client-side.
+                    for i in (1..tracks.len()).rev() {
+                        tracks.swap(i, fastrand::usize(..=i));
+                    }
+                    load_tracks(&channel, tracks, 0).await?;
                 }
                 Cmd::PlayLikedAt(pos) => {
                     let tracks: Vec<TrackProto> = {

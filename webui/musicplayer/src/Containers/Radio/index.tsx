@@ -79,7 +79,8 @@ const categories = [
 const Shell = styled.div`
   display: flex;
   background: ${(props) => props.theme.colors.background};
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   font-family: RockfordSansRegular;
 
   & button,
@@ -93,8 +94,18 @@ const Main = styled.main`
   min-width: 0;
 `;
 
+// The document itself does not scroll (index.css pins body overflow), so the
+// page has to own its scroll container the way the other pages do.
 const Body = styled.div`
+  height: calc(100vh - 100px);
+  overflow-y: auto;
   padding: 24px 32px 130px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 `;
 
 const PageTitle = styled.h1`

@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { resourceUriResolver } from "./ResourceUriResolver";
 import AppStateSync from "./Components/AppStateSync";
 import RadioPage from "./Containers/Radio";
+import LikedPage from "./Containers/Liked";
 
 const hasNativeWrapper = !!process.env.REACT_APP_NATIVE_WRAPPER;
 
@@ -56,6 +57,7 @@ function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/folders/:id" element={<FolderPage />} />
         <Route path="/playlists/:id" element={<PlaylistPage />} />
+        <Route path="/liked" element={<LikedPage />} />
         <Route path="/radio" element={<RadioPage />} />
       </Routes>
     </BrowserRouter>

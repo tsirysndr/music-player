@@ -20,12 +20,13 @@
 //! here returns without touching the network.
 
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock, RwLock};
 
 use anyhow::{anyhow, Error};
 use atradio_sdk::{AtradioAgent, StationInfo};
 use music_player_entity::saved_radio;
-use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::sea_query::OnConflict;
+use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 use serde::Deserialize;
 
 use crate::{atproto, repo_sync};
@@ -42,9 +43,22 @@ fn session_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(".atradio-session.json"))
 }
 
-fn agent() -> &'static AtradioAgent {
-    static AGENT: OnceLock<AtradioAgent> = OnceLock::new();
-    AGENT.get_or_init(|| AtradioAgent::new(session_path()))
+/// The agent is cached rather than rebuilt per call: it owns the lock that
+/// keeps refresh-token rotations ordered, so every write must go through the
+/// same one. It is swapped out only when the session is thrown away.
+static AGENT: OnceLock<RwLock<Arc<AtradioAgent>>> = OnceLock::new();
+
+fn agent_cell() -> &'static RwLock<Arc<AtradioAgent>> {
+    AGENT.get_or_init(|| RwLock::new(Arc::new(AtradioAgent::new(session_path()))))
+}
+
+fn agent() -> Arc<AtradioAgent> {
+    agent_cell().read().unwrap().clone()
+}
+
+/// Rebuild the agent around the (now empty) session store.
+fn reset_agent() {
+    *agent_cell().write().unwrap() = Arc::new(AtradioAgent::new(session_path()));
 }
 
 /// True when a session file exists or password credentials are in the
@@ -92,17 +106,23 @@ pub async fn ensure_session() -> bool {
 ///
 /// `None` means nothing identifies a user, and the whole integration stays off.
 pub async fn resolve_did() -> Option<String> {
+    // Both the daemon's startup check and each sync task resolve the identity;
+    // saying so once is enough.
+    fn announce(source: &str, did: &str) {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| tracing::info!(%did, "atproto identity resolved from the {source}"));
+    }
     if let Some(did) = atproto::token_did() {
-        tracing::info!(%did, "atproto identity resolved from the Rocksky token");
+        announce("Rocksky token", &did);
         return Some(did);
     }
     if let Some(profile) = agent().profile() {
-        tracing::info!(did = %profile.did, "atproto identity resolved from the stored session");
+        announce("stored session", &profile.did);
         return Some(profile.did);
     }
     let (identifier, _) = atproto::env_credentials()?;
     if identifier.starts_with("did:") {
-        tracing::info!(did = %identifier, "atproto identity taken from the environment");
+        announce("environment", &identifier);
         return Some(identifier);
     }
     if ensure_session().await {
@@ -123,6 +143,12 @@ pub async fn resolve_did() -> Option<String> {
 /// not, exactly what is missing. Silent failures here are the confusing kind:
 /// bookmarks would keep working locally while nothing reached the PDS.
 async fn announce_session(did: &str) {
+    // A stored password session is usually already past its access-token
+    // lifetime by the time the daemon starts, so refresh before the first
+    // write rather than letting that write fail and retry.
+    if agent().is_logged_in() {
+        reauthenticate().await;
+    }
     if ensure_session().await {
         match agent().profile() {
             Some(profile) => tracing::info!(
@@ -272,9 +298,103 @@ async fn upsert(conn: &DatabaseConnection, row: saved_radio::Model) -> Result<()
         logo: ActiveValue::Set(row.logo),
         bitrate: ActiveValue::Set(row.bitrate),
     };
-    // `save` inserts or updates depending on whether the primary key exists.
-    model.save(conn).await?;
+    // `save()` would issue an UPDATE here: these primary keys are assigned by
+    // us, never auto-incremented, so sea-orm always sees one that is Set and
+    // takes a new station for an existing row — an update matching nothing,
+    // which comes back as RecordNotFound. An explicit upsert is what this
+    // wants.
+    saved_radio::Entity::insert(model)
+        .on_conflict(
+            OnConflict::column(saved_radio::Column::Id)
+                .update_columns([
+                    saved_radio::Column::Name,
+                    saved_radio::Column::StreamUrl,
+                    saved_radio::Column::Source,
+                    saved_radio::Column::Genre,
+                    saved_radio::Column::Country,
+                    saved_radio::Column::Logo,
+                    saved_radio::Column::Bitrate,
+                ])
+                .to_owned(),
+        )
+        .exec(conn)
+        .await?;
     Ok(())
+}
+
+/// Re-establish a session after the PDS rejected the current one.
+///
+/// A password session's access token is short-lived, and the stored one is
+/// often already stale by the time the daemon starts. Refreshing is tried
+/// first; when the refresh token is dead too, the environment credentials mint
+/// a completely new session.
+async fn reauthenticate() -> bool {
+    if agent().refresh_session().await.is_ok() {
+        tracing::info!("refreshed the atradio session");
+        return true;
+    }
+    let Some((identifier, password)) = atproto::env_credentials() else {
+        tracing::warn!(
+            "the atradio session expired and cannot be refreshed; run `atradio login`, or set \
+             ATPROTO_IDENTIFIER + ATPROTO_APP_PASSWORD"
+        );
+        return false;
+    };
+    // `login_password` resumes a stored session when it finds one, so with the
+    // dead session still on disk it would hand back the same expired token and
+    // report success. Dropping it first forces a real login.
+    agent().logout();
+    reset_agent();
+    match agent().login_password(&identifier, &password).await {
+        Ok(profile) => {
+            tracing::info!(
+                user = %profile.handle,
+                "the atradio session expired; signed in again with the environment credentials"
+            );
+            true
+        }
+        Err(e) => {
+            tracing::warn!("could not re-authenticate with atradio.fm: {e}");
+            false
+        }
+    }
+}
+
+/// True for the errors that mean "this session is no longer good", as opposed
+/// to a network blip or a genuine rejection.
+fn is_auth_error(e: &atradio_sdk::SdkError) -> bool {
+    match e {
+        atradio_sdk::SdkError::NotAuthenticated | atradio_sdk::SdkError::SessionExpired => true,
+        // jacquard's own errors are erased to a string by the SDK, so the
+        // expired-token case can only be recognised by name.
+        atradio_sdk::SdkError::Auth(message) => {
+            message.contains("TokenExpired") || message.contains("ExpiredToken")
+        }
+        _ => false,
+    }
+}
+
+/// Run a PDS write, re-authenticating and retrying once if the session had
+/// expired. Every write here is an idempotent put or delete, so a retry cannot
+/// duplicate anything.
+async fn write<T, F, Fut>(what: &str, operation: F) -> Result<T, Error>
+where
+    F: Fn(Arc<AtradioAgent>) -> Fut,
+    Fut: std::future::Future<Output = atradio_sdk::Result<T>>,
+{
+    match operation(agent()).await {
+        Ok(value) => Ok(value),
+        Err(e) if is_auth_error(&e) => {
+            if !reauthenticate().await {
+                return Err(anyhow!("{what} failed: {e}"));
+            }
+            // Deliberately re-read the agent: re-authenticating replaces it.
+            operation(agent())
+                .await
+                .map_err(|e| anyhow!("{what} failed after re-authenticating: {e}"))
+        }
+        Err(e) => Err(anyhow!("{what} failed: {e}")),
+    }
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -352,10 +472,11 @@ pub async fn favorite(station: &saved_radio::Model) -> Result<(), Error> {
     if !ensure_session().await {
         return Ok(());
     }
-    agent()
-        .favorite(&station_info(station))
-        .await
-        .map_err(|e| anyhow!("atradio favorite failed: {e}"))?;
+    let info = &station_info(station);
+    write("atradio favorite", move |agent| async move {
+        agent.favorite(info).await
+    })
+    .await?;
     tracing::info!(station = %station.id, "favorited on atradio.fm");
     Ok(())
 }
@@ -365,10 +486,11 @@ pub async fn unfavorite(station: &saved_radio::Model) -> Result<(), Error> {
     if !ensure_session().await {
         return Ok(());
     }
-    agent()
-        .unfavorite(&station_info(station))
-        .await
-        .map_err(|e| anyhow!("atradio unfavorite failed: {e}"))?;
+    let info = &station_info(station);
+    write("atradio unfavorite", move |agent| async move {
+        agent.unfavorite(info).await
+    })
+    .await?;
     tracing::info!(station = %station.id, "unfavorited on atradio.fm");
     Ok(())
 }
@@ -385,10 +507,11 @@ pub async fn set_status(station: &saved_radio::Model) -> Result<(), Error> {
     if !ensure_session().await {
         return Ok(());
     }
-    agent()
-        .set_play_status(&station_info(station))
-        .await
-        .map_err(|e| anyhow!("atradio status update failed: {e}"))?;
+    let info = &station_info(station);
+    write("atradio status update", move |agent| async move {
+        agent.set_play_status(info).await
+    })
+    .await?;
     tracing::info!(station = %station.id, "published listening status to atradio.fm");
     Ok(())
 }
@@ -399,10 +522,10 @@ pub async fn clear_status() -> Result<(), Error> {
     if !ensure_session().await {
         return Ok(());
     }
-    agent()
-        .delete_play_status()
-        .await
-        .map_err(|e| anyhow!("atradio status delete failed: {e}"))?;
+    write("atradio status delete", move |agent| async move {
+        agent.delete_play_status().await
+    })
+    .await?;
     tracing::info!("cleared listening status on atradio.fm");
     Ok(())
 }
@@ -524,6 +647,20 @@ mod tests {
         assert_eq!(row.bitrate, 0);
     }
 
+    /// The expired-token case only reaches us as a string inside
+    /// `SdkError::Auth`, and getting this wrong means writes stop retrying.
+    #[test]
+    fn recognises_expired_sessions() {
+        use atradio_sdk::SdkError;
+        assert!(is_auth_error(&SdkError::SessionExpired));
+        assert!(is_auth_error(&SdkError::NotAuthenticated));
+        assert!(is_auth_error(&SdkError::Auth(
+            "update play status: AgentError { kind: Auth(TokenExpired), source: None }".into()
+        )));
+        assert!(!is_auth_error(&SdkError::Auth("create favorite: 400".into())));
+        assert!(!is_auth_error(&SdkError::RecordNotFound));
+    }
+
     #[test]
     fn source_names_round_trip() {
         for label in ["Radio Browser", "TuneIn"] {
@@ -539,6 +676,47 @@ mod tests {
             atradio_sdk::agent::favorite_rkey("rb:a5213a32-d614-47bc-8d52-70a2b6eed8e1"),
             "93218bda705528f6"
         );
+    }
+
+    async fn temp_db() -> (tempfile::TempDir, DatabaseConnection) {
+        use migration::{Migrator, MigratorTrait};
+        let dir = tempfile::tempdir().unwrap();
+        let url = format!(
+            "sqlite://{}?mode=rwc",
+            dir.path().join("music-player.sqlite3").display()
+        );
+        let conn = sea_orm::Database::connect(&url).await.unwrap();
+        Migrator::up(&conn, None).await.unwrap();
+        (dir, conn)
+    }
+
+    fn station(name: &str) -> saved_radio::Model {
+        saved_radio::Model {
+            id: "rb:test".into(),
+            name: name.into(),
+            stream_url: "https://example.com/stream".into(),
+            source: "Radio Browser".into(),
+            genre: "lofi".into(),
+            country: "Ghana".into(),
+            logo: String::new(),
+            bitrate: 128,
+        }
+    }
+
+    /// Importing the same favorite twice must insert then update. `save()` used
+    /// to issue an UPDATE for the insert too, which matched no rows and failed
+    /// the whole import with RecordNotFound.
+    #[tokio::test]
+    async fn importing_a_favorite_twice_inserts_then_updates() {
+        let (_dir, conn) = temp_db().await;
+
+        upsert(&conn, station("Lofi 24/7")).await.expect("insert");
+        upsert(&conn, station("Lofi Renamed")).await.expect("update");
+
+        let rows = saved_radio::Entity::find().all(&conn).await.unwrap();
+        assert_eq!(rows.len(), 1, "the second import must not add a row");
+        assert_eq!(rows[0].name, "Lofi Renamed");
+        assert_eq!(rows[0].bitrate, 128);
     }
 
     /// Live check of the CAR import against the signed-in account's real repo.

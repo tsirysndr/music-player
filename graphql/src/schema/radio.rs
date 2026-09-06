@@ -230,6 +230,62 @@ impl RadioMutation {
         Ok(true)
     }
 
+    /// Bookmark or unbookmark whatever station is playing, and report the new
+    /// state — what the heart in the miniplayer needs.
+    ///
+    /// The station is rebuilt from the queued track rather than taken from the
+    /// caller, so the miniplayer can toggle a bookmark without having to know
+    /// where the station came from (it may be playing from a previous session).
+    async fn toggle_current_radio_bookmark(&self, ctx: &Context<'_>) -> Result<bool> {
+        let db = ctx.data::<Database>()?;
+        let tracklist = ctx.data::<Arc<Mutex<music_player_tracklist::Tracklist>>>()?;
+        let current = tracklist.lock().unwrap().current_track().0;
+        let Some(current) = current else {
+            return Ok(false);
+        };
+        let Some(id) = current.id.strip_prefix("radio:").map(str::to_owned) else {
+            return Ok(false);
+        };
+
+        let conn = db.get_connection();
+        if let Some(existing) = saved_radio::Entity::find_by_id(id.clone()).one(conn).await? {
+            saved_radio::Entity::delete_by_id(id).exec(conn).await?;
+            if let Err(e) = music_player_storage::atradio::unfavorite(&existing).await {
+                tracing::warn!("could not remove the bookmark on atradio.fm: {e}");
+            }
+            return Ok(false);
+        }
+
+        let row = saved_radio::Model {
+            id: id.clone(),
+            name: current.title.clone(),
+            stream_url: current.uri.clone(),
+            // The queue keeps the station's provider in the artist slot and its
+            // logo as the album cover.
+            source: current.artist.clone(),
+            genre: String::new(),
+            country: String::new(),
+            logo: current.album.cover.clone().unwrap_or_default(),
+            bitrate: current.bitrate.unwrap_or_default(),
+        };
+        saved_radio::ActiveModel {
+            id: ActiveValue::Set(row.id.clone()),
+            name: ActiveValue::Set(row.name.clone()),
+            stream_url: ActiveValue::Set(row.stream_url.clone()),
+            source: ActiveValue::Set(row.source.clone()),
+            genre: ActiveValue::Set(row.genre.clone()),
+            country: ActiveValue::Set(row.country.clone()),
+            logo: ActiveValue::Set(row.logo.clone()),
+            bitrate: ActiveValue::Set(row.bitrate),
+        }
+        .insert(conn)
+        .await?;
+        if let Err(e) = music_player_storage::atradio::favorite(&row).await {
+            tracing::warn!("could not mirror the bookmark to atradio.fm: {e}");
+        }
+        Ok(true)
+    }
+
     async fn remove_saved_radio(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
         let db = ctx.data::<Database>()?;
         let row = saved_radio::Entity::find_by_id(id.clone())

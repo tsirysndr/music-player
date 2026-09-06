@@ -49,6 +49,9 @@ struct UiState {
     picker_query: String,
     /// Decoded station logos, keyed by station id.
     radio_logos: std::collections::HashMap<String, slint::Image>,
+    /// The unfiltered station list currently on screen, so the quick filter
+    /// can re-render without another request.
+    radios: Vec<rpc::StationData>,
 }
 
 thread_local! {
@@ -205,6 +208,26 @@ pub fn ui_set_now_art(app: &AppWindow, w: u32, h: u32, rgba: Vec<u8>) {
 
 pub fn ui_set_radios(app: &AppWindow, radios: Vec<rpc::StationData>) {
     app.set_radio_loading(false);
+    STATE.with(|s| s.borrow_mut().radios = radios);
+    ui_render_radios(app);
+}
+
+/// Push the stored station list through the quick filter and onto the UI.
+pub fn ui_render_radios(app: &AppWindow) {
+    let filter = app.get_radio_filter().to_lowercase();
+    let radios = STATE.with(|s| {
+        s.borrow()
+            .radios
+            .iter()
+            .filter(|station| {
+                filter.is_empty()
+                    || station.name.to_lowercase().contains(&filter)
+                    || station.subtitle.to_lowercase().contains(&filter)
+                    || station.source.to_lowercase().contains(&filter)
+            })
+            .cloned()
+            .collect::<Vec<_>>()
+    });
     app.set_radios(ModelRc::new(VecModel::from(
         radios
             .into_iter()
@@ -1004,6 +1027,18 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        app.on_play_liked(move || {
+            let _ = tx.send(rpc::Cmd::PlayLikedAt(0));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_play_liked_shuffled(move || {
+            let _ = tx.send(rpc::Cmd::PlayLikedShuffled);
+        });
+    }
+    {
+        let tx = tx.clone();
         app.on_play_queue_at(move |i| {
             let _ = tx.send(rpc::Cmd::QueueJump(i));
         });
@@ -1453,6 +1488,14 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_radio_play(move |id| {
             let _ = tx.send(rpc::Cmd::RadioPlay(id.into()));
+        });
+    }
+    {
+        let app_weak = app.as_weak();
+        app.on_radio_filter_changed(move |_| {
+            if let Some(app) = app_weak.upgrade() {
+                ui_render_radios(&app);
+            }
         });
     }
     {

@@ -65,6 +65,36 @@ impl LibraryQuery {
         Ok(results.into_iter().map(Into::into).collect())
     }
 
+    /// Tracks the user liked on Rocksky that exist in the local library.
+    ///
+    /// The likes come from their atproto repo (see
+    /// `music_player_storage::rocksky_likes`); only the ones matched to a local
+    /// file have a track to return, so an unmatched like is simply absent.
+    async fn liked_tracks(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Track>, Error> {
+        let db = ctx.data::<Database>().unwrap();
+        let ids = music_player_storage::rocksky_likes::matched_track_ids(db.get_connection())
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let offset = offset.unwrap_or(0).max(0) as usize;
+        let limit = limit.unwrap_or(100).max(0) as usize;
+        let repository = TrackRepository::new(db.get_connection());
+        let mut tracks = Vec::new();
+        for id in ids.into_iter().skip(offset).take(limit) {
+            // A like can outlive the file it matched (a rescan may drop it);
+            // skip those rather than failing the whole query.
+            if let Ok(track) = repository.find(&id).await {
+                tracks.push(track.into());
+            }
+        }
+        Ok(tracks)
+    }
+
     async fn artists(
         &self,
         ctx: &Context<'_>,

@@ -180,6 +180,77 @@ export component RadioSkeletonList inherits VerticalLayout {
     for row in root.rows : RadioSkeletonRow {}
 }
 
+/// Compact search box used to filter the station list in place.
+export component RadioFilterBox inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder: "Filter stations…";
+    callback edited(string);
+
+    height: 30px;
+    border-radius: Theme.control-radius;
+    background: Theme.panel-bg;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.border;
+
+    HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 6px;
+        spacing: 7px;
+        Image {
+            source: Icons.search;
+            colorize: Theme.text-muted;
+            width: 13px;
+            height: 13px;
+            y: (parent.height - self.height) / 2;
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            input := TextInput {
+                width: parent.width;
+                height: 18px;
+                y: (parent.height - self.height) / 2;
+                color: Theme.text;
+                font-size: 12px;
+                font-family: Theme.font-ui;
+                single-line: true;
+                text: root.text;
+                edited => { root.edited(self.text); }
+            }
+            // Placeholder sits under the input, hidden as soon as it has content.
+            if root.text == "" : Text {
+                text: root.placeholder;
+                color: Theme.text-muted;
+                font-size: 12px;
+                vertical-alignment: center;
+                height: parent.height;
+            }
+        }
+        // Clear button, only once there is something to clear.
+        if root.text != "" : Rectangle {
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 9px;
+            background: clear-touch.has-hover ? Theme.hover-bg : transparent;
+            Text {
+                text: "×";
+                color: Theme.text-dim;
+                font-size: 13px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+            clear-touch := TouchArea {
+                clicked => {
+                    input.text = "";
+                    root.edited("");
+                }
+            }
+        }
+    }
+}
+
 export component RadioRow inherits Rectangle {
     in property <StationItem> station;
     callback play;

@@ -8,7 +8,7 @@ import {
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
     DetailRow, BrowseItem, ServerItem, FormField, ServerRow, BrowseRow,
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
-    RadioSkeletonList
+    RadioSkeletonList, RadioFilterBox
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -41,6 +41,10 @@ export component AppWindow inherits Window {
     in-out property <bool> now-has-art: false;
     in-out property <image> now-art-blurred;
     in-out property <bool> now-is-radio: false;
+    // Station id (no `radio:` prefix) and whether it is bookmarked, so the
+    // player bar's heart can toggle the bookmark like anywhere else.
+    in-out property <string> now-station-id: "";
+    in-out property <bool> now-radio-bookmarked: false;
     in-out property <bool> playing: false;
     in-out property <bool> stopped: true;
     in-out property <float> progress: 0; // 0..1
@@ -140,6 +144,8 @@ export component AppWindow inherits Window {
     in-out property <string> radio-category: "";
     in-out property <bool> show-radio-search: false;
     in-out property <bool> radio-loading: false;
+    /// Quick filter over the station list currently on screen.
+    in-out property <string> radio-filter: "";
 
     // ── Callbacks into Rust ─────────────────────────────────────────────────
     callback play-pause();
@@ -157,6 +163,8 @@ export component AppWindow inherits Window {
     callback open-artist(string);
     callback play-track-at(int);
     callback play-liked-at(int);
+    callback play-liked();
+    callback play-liked-shuffled();
     callback track-like(string);
     callback track-insert(string, int); // id, rockbox position (-2 next, -3 last)
     callback album-insert(string, int);
@@ -193,6 +201,7 @@ export component AppWindow inherits Window {
     callback radio-bookmarks();
     callback radio-play(string);
     callback radio-bookmark(string);
+    callback radio-filter-changed(string);
 
     forward-focus: main-focus;
 
@@ -212,10 +221,22 @@ export component AppWindow inherits Window {
         switcher-input.focus();
     }
 
+    public function set-radio-filter(value: string) {
+        root.radio-filter = value;
+        root.radio-filter-changed(value);
+    }
+
+    public function clear-radio-filter() {
+        if (root.radio-filter != "") {
+            root.set-radio-filter("");
+        }
+    }
+
     public function open-radio-category(label: string, term: string) {
         root.radio-category = label;
         root.radios = [];
         root.radio-loading = true;
+        root.clear-radio-filter();
         root.radio-browse(term);
     }
     function activate-switcher() {
@@ -532,6 +553,26 @@ export component AppWindow inherits Window {
                         font-weight: 700;
                         vertical-alignment: center;
                         horizontal-stretch: 1;
+                    }
+                    // Play / shuffle the whole liked list, next to its title.
+                    if root.current-tab == 3 && !root.show-detail && root.liked.length > 0 : HorizontalLayout {
+                        spacing: 8px;
+                        IconButton {
+                            icon: Icons.shuffle;
+                            icon-size: 16px;
+                            width: 38px;
+                            height: 38px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { root.play-liked-shuffled(); }
+                        }
+                        IconButton {
+                            icon: Icons.play;
+                            icon-size: 16px;
+                            width: 38px;
+                            height: 38px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { root.play-liked(); }
+                        }
                     }
                     SearchButton {
                         y: (parent.height - self.height) / 2;
@@ -963,6 +1004,7 @@ export component AppWindow inherits Window {
                                 clicked => {
                                     root.radio-tab = i;
                                     root.radio-category = "";
+                                    root.clear-radio-filter();
                                     if (i == 1) {
                                         root.radios = [];
                                         root.radio-loading = true;
@@ -970,6 +1012,14 @@ export component AppWindow inherits Window {
                                     }
                                 }
                             }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        // Quick filter over the bookmarked stations.
+                        if root.radio-tab == 1 : RadioFilterBox {
+                            width: 190px;
+                            y: (parent.height - self.height) / 2;
+                            text: root.radio-filter;
+                            edited(value) => { root.set-radio-filter(value); }
                         }
                     }
                     if root.radio-tab == 0 && root.radio-category == "" : Rectangle {
@@ -998,7 +1048,23 @@ export component AppWindow inherits Window {
                     }
                     if root.radio-tab == 0 && root.radio-category != "" : VerticalLayout {
                         spacing: 8px;
-                        HorizontalLayout { height: 40px; spacing: 8px; IconButton { icon:Icons.chevron-left; icon-size:17px; clicked=>{root.radio-category="";} } Text { text:root.radio-category; color:Theme.text; font-size:16px; font-weight:700; vertical-alignment:center; horizontal-stretch:1; } }
+                        HorizontalLayout {
+                            height: 40px;
+                            spacing: 8px;
+                            IconButton {
+                                icon: Icons.chevron-left;
+                                icon-size: 17px;
+                                clicked => { root.radio-category = ""; root.clear-radio-filter(); }
+                            }
+                            Text { text: root.radio-category; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; horizontal-stretch: 1; }
+                            // Quick filter over the stations in this category.
+                            RadioFilterBox {
+                                width: 190px;
+                                y: (parent.height - self.height) / 2;
+                                text: root.radio-filter;
+                                edited(value) => { root.set-radio-filter(value); }
+                            }
+                        }
                         if root.radio-loading : RadioSkeletonList { vertical-stretch: 1; }
                         if !root.radio-loading : ListView { vertical-stretch: 1;
                             for station in root.radios : RadioRow { station:station; play=>{root.radio-play(station.id);} bookmark=>{root.radio-bookmark(station.id);} }
@@ -1248,7 +1314,9 @@ export component AppWindow inherits Window {
                         spacing: 12px;
                         width: root.show-full-player ? 38% : (root.now-has-art ? 24% : 32%);
                         Rectangle {
-                            visible: !root.show-full-player && root.now-has-art;
+                            // A station without a logo still gets the slot, so
+                            // the bar does not reflow when one loads.
+                            visible: !root.show-full-player && (root.now-has-art || root.now-is-radio);
                             width: 60px;
                             height: 60px;
                             y: (parent.height - self.height) / 2;
@@ -1259,6 +1327,14 @@ export component AppWindow inherits Window {
                                 height: parent.height;
                                 source: root.now-art;
                                 image-fit: cover;
+                            }
+                            if !root.now-has-art && root.now-is-radio : Image {
+                                source: Icons.broadcast;
+                                colorize: Theme.accent;
+                                width: 24px;
+                                height: 24px;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
                             }
                             art-touch := TouchArea {
                                 enabled: !root.stopped;
@@ -1294,6 +1370,20 @@ export component AppWindow inherits Window {
                             clicked => {
                                 if (root.now-track-id != "") {
                                     root.track-like(root.now-track-id);
+                                }
+                            }
+                        }
+                        // For a station the heart is the bookmark.
+                        if root.now-is-radio : LikeButton {
+                            liked: root.now-radio-bookmarked;
+                            icon-size: 21px;
+                            width: 32px;
+                            height: 32px;
+                            y: (parent.height - self.height) / 2 - 8px;
+                            clicked => {
+                                if (root.now-station-id != "") {
+                                    root.now-radio-bookmarked = !root.now-radio-bookmarked;
+                                    root.radio-bookmark(root.now-station-id);
                                 }
                             }
                         }
@@ -1398,7 +1488,9 @@ export component AppWindow inherits Window {
                         }
                         VfdDisplay {
                             y: (parent.height - self.height) / 2;
-                            time-text: root.elapsed-text;
+                            // A live stream has no meaningful position, so the
+                            // readout names the source instead of counting.
+                            time-text: root.now-is-radio ? "RADIO" : root.elapsed-text;
                             info-text: root.vfd-info;
                             playing: root.playing;
                             stopped: root.stopped;

@@ -6,6 +6,8 @@ import Artist from "../Icons/Artist";
 import Disc from "../Icons/Disc";
 import MusicNote from "../Icons/MusicNote";
 import { Radio } from "@styled-icons/feather";
+import Heart from "../Icons/Heart";
+import HeartOutline from "../Icons/HeartOutline";
 
 const Title = styled.div`
   font-size: 16px;
@@ -76,6 +78,19 @@ const Library: FC<LibraryProps> = ({ active, onClickLibraryItem }) => {
           <Artist size={18} color={iconColor(pathname.includes("/artists"))} />
         </Icon>
         Artists
+      </Item>
+      <Item
+        active={pathname.includes("/liked")}
+        onClick={() => onClickLibraryItem("liked")}
+      >
+        <Icon>
+          {pathname.includes("/liked") ? (
+            <Heart size={18} color="#ab28fc" />
+          ) : (
+            <HeartOutline size={18} color={theme.colors.icon} />
+          )}
+        </Icon>
+        Liked
       </Item>
       <Item active={pathname.includes("/radio")} onClick={() => onClickLibraryItem("radio")}>
         <Icon><Radio size={18} color={iconColor(pathname.includes("/radio"))} /></Icon>

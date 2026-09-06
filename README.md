@@ -98,6 +98,16 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 
 ## Installation
 
+With curl (downloads the prebuilt binary for your platform from GitHub releases):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | sh
+# pin a specific release:
+curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | MUSIC_PLAYER_VERSION=v0.2.0 sh
+# also install the Slint desktop app (music-player-desktop):
+curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | MUSIC_PLAYER_DESKTOP=1 sh
+```
+
 Compiling from source, without Nix:
 
 ```bash

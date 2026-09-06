@@ -1,3 +1,5 @@
+![synthwave](../.github/assets/preview-slint.png)
+
 # music-player-desktop — Slint client for music-player
 
 A modern, skinnable desktop app for the
@@ -6,7 +8,6 @@ Inspired by jetAudio (VFD readout), Mixxx (LED level meters, LateNight
 palette), Cambridge Audio (lunar-grey hi-fi restraint), FL Studio / VST synth
 UIs (neon accents).
 
-![synthwave](../preview.png)
 
 ## Features
 

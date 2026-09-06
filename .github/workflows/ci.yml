@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler
+          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler libfontconfig1-dev
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov

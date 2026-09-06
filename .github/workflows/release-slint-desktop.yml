@@ -59,7 +59,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config protobuf-compiler \
             libasound2-dev libdbus-1-dev libfontconfig1-dev \
-            libxkbcommon-dev libwayland-dev
+            libxkbcommon-dev libwayland-dev libfontconfig1-dev
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'

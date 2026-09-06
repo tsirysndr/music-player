@@ -6,6 +6,7 @@ import AddAlt from "../Icons/AddAlt";
 import NewFolderModal from "./NewFolderModal";
 import NewPlaylistModal from "./NewPlaylistModal";
 import { Folder as FolderIcon } from "@styled-icons/bootstrap";
+import PlaylistOutline from "../Icons/PlaylistOutline";
 import { Link, useParams } from "react-router-dom";
 import FolderContextMenu from "./FolderContextMenu";
 import ContextMenu from "./ContextMenu";
@@ -213,16 +214,14 @@ const Playlist: FC<PlaylistProps> = ({
             setIsOpen(true);
           }}
         >
-          <Item
-            active={playlist.id === id}
-            style={
-              {
-                /*marginLeft: 28*/
-              }
-            }
-          >
-            {playlist.name}
-          </Item>
+          <FolderItem>
+            <PlaylistOutline
+              size={18}
+              style={{ marginRight: 10, flexShrink: 0 }}
+              color={playlist.id === id ? "#ab28fc" : theme.colors.icon}
+            />
+            <Item active={playlist.id === id}>{playlist.name}</Item>
+          </FolderItem>
         </Link>
       </Popover>
       <EditPlaylistModal

@@ -121,6 +121,34 @@ Using [Homebrew](https://brew.sh/) (macOS/Linux):
 brew install tsirysndr/tap/musicplayer
 ```
 
+Using the Gemfury repository on Debian, Ubuntu, and other APT-based systems
+(`amd64` and `arm64`):
+
+```bash
+echo "deb [trusted=yes] https://apt.fury.io/tsiry/ /" \
+  | sudo tee /etc/apt/sources.list.d/music-player.list
+sudo apt-get update
+sudo apt-get install music-player
+```
+
+Using the Gemfury repository on Fedora, RHEL, Rocky Linux, AlmaLinux, and
+other DNF-based systems (`x86_64` and `aarch64`):
+
+```bash
+sudo tee /etc/yum.repos.d/music-player.repo <<'EOF'
+[music-player]
+name=Music Player
+baseurl=https://yum.fury.io/tsiry/
+enabled=1
+gpgcheck=0
+EOF
+sudo dnf install music-player
+```
+
+The Debian and RPM packages include both `music-player` and the Slint desktop
+application, `music-player-desktop`. Launch the desktop app from your
+application menu or run `music-player-desktop`.
+
 Using [Nix](https://nixos.org/) (macOS/Linux):
 
 ```bash

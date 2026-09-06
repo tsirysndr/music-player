@@ -1,0 +1,32 @@
+Name:           music-player
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        Extensible music player with terminal and Slint desktop clients
+
+License:        MIT
+URL:            https://github.com/tsirysndr/music-player
+BuildArch:      @RPM_ARCH@
+
+Requires:       alsa-lib
+Requires:       fontconfig
+Requires:       glibc
+Requires:       libxkbcommon
+
+%description
+music-player is an extensible music player daemon and client. This package
+includes the command-line and terminal interface, the skinnable Slint desktop
+application, an application-menu entry, and its icon.
+
+%prep
+
+%build
+
+%install
+cp -a %{_sourcedir}/root/. %{buildroot}/
+
+%files
+%license /usr/share/licenses/music-player/LICENSE
+/usr/bin/music-player
+/usr/bin/music-player-desktop
+/usr/share/applications/music-player.desktop
+/usr/share/icons/hicolor/scalable/apps/music-player.svg

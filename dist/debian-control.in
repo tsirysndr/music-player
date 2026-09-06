@@ -1,0 +1,12 @@
+Package: music-player
+Version: @VERSION@
+Section: sound
+Priority: optional
+Architecture: @DEB_ARCH@
+Maintainer: Tsiry Sandratraina <tsiry.sndr@aol.com>
+Homepage: https://github.com/tsirysndr/music-player
+Depends: libc6, libasound2, libfontconfig1, libxkbcommon0
+Description: Extensible music player with terminal and Slint desktop clients
+ music-player is an extensible music player daemon and client. This package
+ includes the command-line and terminal interface, the skinnable Slint desktop
+ application, an application-menu entry, and its icon.

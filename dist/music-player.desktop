@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Music Player
+Comment=Skinnable desktop music player
+Exec=music-player-desktop
+Icon=music-player
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;audio;player;
+StartupNotify=true

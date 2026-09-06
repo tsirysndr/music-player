@@ -75,7 +75,25 @@ jobs:
           bun run build
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} -p music-player-desktop
+        run: cargo build --release --target ${{ matrix.target }} -p music-player -p music-player-desktop
+
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y dpkg-dev rpm
+
+      - name: Build Debian and RPM packages
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          case "${{ matrix.target }}" in
+            x86_64-unknown-linux-gnu) package_arch=x86_64 ;;
+            aarch64-unknown-linux-gnu) package_arch=aarch64 ;;
+            *) echo "Unsupported Linux target: ${{ matrix.target }}" >&2; exit 1 ;;
+          esac
+          ./dist/package-linux.sh all \
+            "${{ env.RELEASE_VERSION }}" \
+            "$package_arch" \
+            "target/${{ matrix.target }}/release"
 
       - name: Package binary
         run: |
@@ -95,3 +113,37 @@ jobs:
             --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux packages to GitHub release
+        if: runner.os == 'Linux'
+        shell: bash
+        run: gh release upload "${{ env.RELEASE_VERSION }}" dist/*.deb dist/*.deb.sha256 dist/*.rpm dist/*.rpm.sha256 --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Gemfury secrets
+        if: runner.os == 'Linux'
+        id: gemfury
+        env:
+          FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
+          FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
+        run: |
+          if [ -n "$FURY_TOKEN" ] && [ -n "$FURY_ACCOUNT" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Gemfury secrets not set; skipping package upload"
+          fi
+
+      - name: Push Debian and RPM packages to Gemfury
+        if: runner.os == 'Linux' && steps.gemfury.outputs.available == 'true'
+        shell: bash
+        env:
+          FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
+          FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
+        run: |
+          for package in dist/*.deb dist/*.rpm; do
+            curl -fsS -F package=@"$package" \
+              "https://${FURY_TOKEN}@push.fury.io/${FURY_ACCOUNT}/"
+            echo
+          done

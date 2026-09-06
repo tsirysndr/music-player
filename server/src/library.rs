@@ -12,7 +12,8 @@ use crate::api::music::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
-    GetTracksRequest, GetTracksResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
+    GetTracksRequest, GetTracksResponse, LikeTrackRequest, LikeTrackResponse, ScanRequest,
+    ScanResponse, SearchRequest, SearchResponse,
 };
 
 pub struct Library {
@@ -165,6 +166,15 @@ impl LibraryService for Library {
             tracks: tracks.into_iter().map(Into::into).collect(),
         };
         Ok(tonic::Response::new(response))
+    }
+
+    async fn like_track(
+        &self,
+        request: tonic::Request<LikeTrackRequest>,
+    ) -> Result<tonic::Response<LikeTrackResponse>, tonic::Status> {
+        let request = request.into_inner();
+        music_player_storage::rocksky::sync_like(&self.db, request.id, request.like);
+        Ok(tonic::Response::new(LikeTrackResponse {}))
     }
 
     async fn get_track_details(

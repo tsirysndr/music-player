@@ -262,6 +262,14 @@ pub struct LibraryMutation;
 
 #[Object]
 impl LibraryMutation {
+    /// Forward a like/unlike to Rocksky (the like itself lives with the
+    /// client; a missing `rocksky login` token makes this a silent no-op).
+    async fn like_track(&self, ctx: &Context<'_>, id: String, like: bool) -> Result<bool, Error> {
+        let db = ctx.data::<Database>().unwrap();
+        music_player_storage::rocksky::sync_like(db, id, like);
+        Ok(like)
+    }
+
     async fn scan(&self, _ctx: &Context<'_>) -> Result<bool, Error> {
         music_player_scanner::refresh_music_library(false, Database::new().await)
             .await

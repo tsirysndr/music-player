@@ -26,7 +26,9 @@ UIs (neon accents).
   shared with every other client.
 - **Liked tracks** — heart any track (or a whole album) and find it in the
   Liked tab. The daemon has no favorites concept, so likes are the desktop
-  app's own (`desktop_liked.json` in the config dir).
+  app's own (`desktop_liked.json` in the config dir) — and every heart is
+  forwarded to [Rocksky](https://rocksky.app) when a `rocksky login` token
+  exists.
 - **Artist pictures** — filled in batch from the Rocksky API after every
   library scan (`artist.picture` in the daemon DB) and shown in the Artists
   list.

@@ -29,8 +29,9 @@ export type Album = {
 };
 
 export enum App {
+  Jellyfin = 'JELLYFIN',
   MusicPlayer = 'MUSIC_PLAYER',
-  Xbmc = 'XBMC'
+  Subsonic = 'SUBSONIC'
 }
 
 export type Artist = {
@@ -115,6 +116,11 @@ export type Mutation = {
   deletePlaylist: Playlist;
   disconnectFromCastDevice?: Maybe<Device>;
   disconnectFromDevice?: Maybe<Device>;
+  /**
+   * Forward a like/unlike to Rocksky (the like itself lives with the
+   * client; a missing `rocksky login` token makes this a silent no-op).
+   */
+  likeTrack: Scalars['Boolean']['output'];
   movePlaylistToFolder: Folder;
   movePlaylistsToFolder: Folder;
   next: Scalars['Boolean']['output'];
@@ -184,6 +190,12 @@ export type MutationDeleteFolderArgs = {
 
 export type MutationDeletePlaylistArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationLikeTrackArgs = {
+  id: Scalars['String']['input'];
+  like: Scalars['Boolean']['input'];
 };
 
 
@@ -314,6 +326,7 @@ export type Query = {
   currentlyPlayingSong: CurrentlyPlayingSong;
   folder: Folder;
   folders: Array<Folder>;
+  getMute: Scalars['Boolean']['output'];
   getNextTrack?: Maybe<Track>;
   getPlayerState: PlayerState;
   getPreviousTrack?: Maybe<Track>;
@@ -532,6 +545,14 @@ export type TrackFragmentFragment = { __typename?: 'Track', id: string, trackNum
 export type PlaylistFragmentFragment = { __typename?: 'Playlist', id: string, name: string, description?: string | null, tracks: Array<{ __typename?: 'Track', id: string, title: string, albumTitle: string, artist: string, artistId: string, albumId: string, cover?: string | null, duration?: number | null }> };
 
 export type FolderFragmentFragment = { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
+
+export type LikeTrackMutationVariables = Exact<{
+  id: Scalars['String']['input'];
+  like: Scalars['Boolean']['input'];
+}>;
+
+
+export type LikeTrackMutation = { __typename?: 'Mutation', likeTrack: boolean };
 
 export type GetAlbumsQueryVariables = Exact<{
   filter?: InputMaybe<Scalars['String']['input']>;
@@ -1210,6 +1231,30 @@ export const OnDeviceDisconnectedDocument = `
   }
 }
     `;
+export const LikeTrackDocument = `
+    mutation LikeTrack($id: String!, $like: Boolean!) {
+  likeTrack(id: $id, like: $like)
+}
+    `;
+
+export const useLikeTrackMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<LikeTrackMutation, TError, LikeTrackMutationVariables, TContext>) => {
+    
+    return useMutation<LikeTrackMutation, TError, LikeTrackMutationVariables, TContext>(
+      {
+    mutationKey: ['LikeTrack'],
+    mutationFn: (variables?: LikeTrackMutationVariables) => fetcher<LikeTrackMutation, LikeTrackMutationVariables>(LikeTrackDocument, variables)(),
+    ...options
+  }
+    )};
+
+useLikeTrackMutation.getKey = () => ['LikeTrack'];
+
+
+useLikeTrackMutation.fetcher = (variables: LikeTrackMutationVariables, options?: RequestInit['headers']) => fetcher<LikeTrackMutation, LikeTrackMutationVariables>(LikeTrackDocument, variables, options);
+
 export const GetAlbumsDocument = `
     query GetAlbums($filter: String, $offset: Int, $limit: Int) {
   albums(filter: $filter, offset: $offset, limit: $limit) {

@@ -60,7 +60,17 @@ message GetTrackDetailsRequest {
 
 message GetTrackDetailsResponse { metadata.v1alpha1.Track track = 1; }
 
+// Like/unlike a track. The like itself lives with the client; the daemon
+// forwards it to Rocksky (no-op without a `rocksky login` token).
+message LikeTrackRequest {
+  string id = 1;
+  bool like = 2;
+}
+
+message LikeTrackResponse {}
+
 service LibraryService {
+  rpc LikeTrack(LikeTrackRequest) returns (LikeTrackResponse) {}
   rpc Scan(ScanRequest) returns (ScanResponse) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}
   rpc GetAlbums(GetAlbumsRequest) returns (GetAlbumsResponse) {}

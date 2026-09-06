@@ -24,9 +24,9 @@ use music_player_server::api::music::v1alpha1::{
     ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumsRequest,
     GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
     GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest, GetVolumeRequest,
-    LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest, PlayTrackAtRequest,
-    PreviousRequest, RemoveItemRequest, RemoveTrackAtRequest, RenameRequest, SeekRequest,
-    SetAudioSettingRequest, SetEqBandGainRequest, SetRepeatRequest, SetVolumeRequest,
+    LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest,
+    PlayTrackAtRequest, PreviousRequest, RemoveItemRequest, RemoveTrackAtRequest, RenameRequest,
+    SeekRequest, SetAudioSettingRequest, SetEqBandGainRequest, SetRepeatRequest, SetVolumeRequest,
     ShuffleRequest,
 };
 use music_player_types::types as mp_types;
@@ -1353,15 +1353,18 @@ async fn cmd_loop(
                     {
                         let mut st = state.lock().await;
                         if like {
-                            st.liked.insert(id);
+                            st.liked.insert(id.clone());
                         } else {
                             st.liked.remove(&id);
                         }
                     }
                     push_liked(&state, &weak).await;
+                    // The daemon forwards the like to Rocksky.
+                    let mut lib = LibraryServiceClient::new(channel.clone());
+                    lib.like_track(LikeTrackRequest { id, like }).await?;
                 }
                 Cmd::LikeAlbum(id) => {
-                    {
+                    let ids: Vec<String> = {
                         let mut st = state.lock().await;
                         let ids: Vec<String> = st
                             .tracks
@@ -1369,9 +1372,14 @@ async fn cmd_loop(
                             .filter(|t| t.album_id == id)
                             .map(|t| t.proto.id.clone())
                             .collect();
-                        st.liked.extend(ids);
-                    }
+                        st.liked.extend(ids.iter().cloned());
+                        ids
+                    };
                     push_liked(&state, &weak).await;
+                    let mut lib = LibraryServiceClient::new(channel.clone());
+                    for id in ids {
+                        lib.like_track(LikeTrackRequest { id, like: true }).await?;
+                    }
                 }
                 Cmd::SwitchServer { host, grpc_port } => {
                     switch_server(&host, grpc_port);

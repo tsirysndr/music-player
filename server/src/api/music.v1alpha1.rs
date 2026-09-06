@@ -1173,6 +1173,17 @@ pub struct GetTrackDetailsResponse {
     #[prost(message, optional, tag = "1")]
     pub track: ::core::option::Option<super::super::metadata::v1alpha1::Track>,
 }
+/// Like/unlike a track. The like itself lives with the client; the daemon
+/// forwards it to Rocksky (no-op without a `rocksky login` token).
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct LikeTrackRequest {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(bool, tag = "2")]
+    pub like: bool,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct LikeTrackResponse {}
 /// Generated client implementations.
 pub mod library_service_client {
     #![allow(
@@ -1263,6 +1274,30 @@ pub mod library_service_client {
         pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
+        }
+        pub async fn like_track(
+            &mut self,
+            request: impl tonic::IntoRequest<super::LikeTrackRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::LikeTrackResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.LibraryService/LikeTrack",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("music.v1alpha1.LibraryService", "LikeTrack"));
+            self.inner.unary(req, path, codec).await
         }
         pub async fn scan(
             &mut self,
@@ -1471,6 +1506,13 @@ pub mod library_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with LibraryServiceServer.
     #[async_trait]
     pub trait LibraryService: std::marker::Send + std::marker::Sync + 'static {
+        async fn like_track(
+            &self,
+            request: tonic::Request<super::LikeTrackRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::LikeTrackResponse>,
+            tonic::Status,
+        >;
         async fn scan(
             &self,
             request: tonic::Request<super::ScanRequest>,
@@ -1598,6 +1640,51 @@ pub mod library_service_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
+                "/music.v1alpha1.LibraryService/LikeTrack" => {
+                    #[allow(non_camel_case_types)]
+                    struct LikeTrackSvc<T: LibraryService>(pub Arc<T>);
+                    impl<
+                        T: LibraryService,
+                    > tonic::server::UnaryService<super::LikeTrackRequest>
+                    for LikeTrackSvc<T> {
+                        type Response = super::LikeTrackResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::LikeTrackRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LibraryService>::like_track(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = LikeTrackSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
                 "/music.v1alpha1.LibraryService/Scan" => {
                     #[allow(non_camel_case_types)]
                     struct ScanSvc<T: LibraryService>(pub Arc<T>);

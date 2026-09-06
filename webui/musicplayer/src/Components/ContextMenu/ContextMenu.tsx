@@ -10,6 +10,7 @@ import TrackIcon from "../Icons/Track";
 import { useCover } from "../../Hooks/useCover";
 import NewPlaylistModal from "../Playlists/NewPlaylistModal";
 import { useTheme } from "@emotion/react";
+import { useLikes } from "../../Hooks/useLikes";
 
 const Container = styled.div`
   display: flex;
@@ -137,6 +138,7 @@ const ContextMenu: FC<ContextMenuProps> = ({
   const theme = useTheme();
   const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
   const { cover } = useCover(track.cover);
+  const { isLiked, toggleLike } = useLikes();
   return (
     <Container>
       <Hover>
@@ -273,13 +275,13 @@ const ContextMenu: FC<ContextMenuProps> = ({
         </Icon>
       </StatefulPopover>
       <Separator />
-      {liked && (
-        <Icon>
-          <Heart height={24} width={24} color={theme.colors.icon} />
+      {(liked || isLiked(track.id)) && (
+        <Icon onClick={() => toggleLike(track.id)}>
+          <Heart height={24} width={24} color="#fe099c" />
         </Icon>
       )}
-      {!liked && (
-        <Icon>
+      {!(liked || isLiked(track.id)) && (
+        <Icon onClick={() => toggleLike(track.id)}>
           <HeartOutline height={24} width={24} color={theme.colors.icon} />
         </Icon>
       )}

@@ -8250,6 +8250,7 @@ name = "music-player-storage"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "dirs 4.0.0",
  "itertools 0.10.5",
  "md5",
  "music-player-entity",
@@ -8260,6 +8261,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "sha2 0.10.6",
  "tempfile",
  "tokio",
  "tracing",

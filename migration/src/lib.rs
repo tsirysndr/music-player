@@ -10,6 +10,7 @@ mod m20220101_000001_create_table;
 mod m20221115_220318_add_folder_table;
 mod m20221117_211308_add_created_at_column;
 mod m20260905_000001_create_search_index;
+mod m20260906_000001_add_artist_picture;
 
 /// Create the database file if needed and bring the schema up to date,
 /// without going through the sea-orm migration CLI (which parses argv).
@@ -38,6 +39,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20221115_220318_add_folder_table::Migration),
             Box::new(m20221117_211308_add_created_at_column::Migration),
             Box::new(m20260905_000001_create_search_index::Migration),
+            Box::new(m20260906_000001_add_artist_picture::Migration),
         ]
     }
 }

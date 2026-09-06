@@ -27,6 +27,12 @@ UIs (neon accents).
 - **Liked tracks** — heart any track (or a whole album) and find it in the
   Liked tab. The daemon has no favorites concept, so likes are the desktop
   app's own (`desktop_liked.json` in the config dir).
+- **Artist pictures** — filled in batch from the Rocksky API after every
+  library scan (`artist.picture` in the daemon DB) and shown in the Artists
+  list.
+- **Media keys** — on macOS the app publishes to the system Now Playing
+  center (Control Center, media keys, AirPods controls); on Linux the
+  embedded daemon registers MPRIS, so playerctl and desktop widgets work.
 - **Server switcher** — a palette listing the embedded daemon, every
   `music-player` daemon discovered on the LAN (mDNS), saved
   Subsonic/Jellyfin servers, and free-form `host[:port]` — pick one to
@@ -60,7 +66,7 @@ UIs (neon accents).
   thumbnails); `↑`/`↓` + `enter` to play. `?` shows the keyboard-shortcut
   help.
 - **VFD display** — jetAudio-style readout with elapsed time, queue position
-  and animated LED VU meters.
+  (`TRK 3/12`), codec, bitrate, sample rate and animated LED VU meters.
 - **Skins** — five bundled (`Synthwave` default, `Late Night`, `Neutron`,
   `Lunar`, `Porcelain`); click the SKIN entry in the sidebar (or press `s`)
   to cycle. The choice persists in the music-player config directory
@@ -74,6 +80,8 @@ UIs (neon accents).
 | `space`     | Play / pause                  |
 | `e`         | Audio settings (EQ)           |
 | `s`         | Cycle skin                    |
+| `q`         | Show / hide the play queue    |
+| `b`         | Show / hide the sidebar       |
 | `↑` / `↓`   | Navigate search results       |
 | `enter`     | Play selection                |
 | `esc`       | Close dialog / go back        |

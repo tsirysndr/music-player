@@ -27,9 +27,11 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
     steps:
+      # Always build the ref the workflow runs on (the selected branch for a
+      # manual dispatch, the tag for a release event). Checking out the INPUT
+      # tag would rebuild that tag's tree — which may predate the desktop
+      # crate entirely; the tag input only selects which release to upload to.
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
 
       - name: Set release version
         run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV

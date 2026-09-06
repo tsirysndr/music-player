@@ -17,4 +17,6 @@ message Track {
   metadata.v1alpha1.Lyrics lyrics = 8;
   string uri = 9;
   string artist = 10;
+  uint32 bitrate = 11;     // kbps, 0 = unknown
+  uint32 sample_rate = 12; // Hz, 0 = unknown
 }

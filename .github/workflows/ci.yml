@@ -58,8 +58,9 @@ jobs:
         # Linux and has no tests — excluded so CI doesn't build it.
         run: cargo llvm-cov --workspace --exclude app --lcov --output-path lcov.info
         env:
-          # CI runners have no sound device; the engine writes PCM to stdout.
-          MUSIC_PLAYER_AUDIO_OUTPUT: stdout
+          # CI runners have no sound device; discard decoded PCM instead of
+          # spraying it over the test log (stdout corrupts the harness output).
+          MUSIC_PLAYER_AUDIO_OUTPUT: "fifo:/dev/null"
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4

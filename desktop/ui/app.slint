@@ -270,6 +270,14 @@ export component AppWindow inherits Window {
                 root.cycle-skin();
                 return accept;
             }
+            if (event.text == "q") {
+                root.show-queue = !root.show-queue;
+                return accept;
+            }
+            if (event.text == "b") {
+                root.show-sidebar = !root.show-sidebar;
+                return accept;
+            }
             if (event.text == Key.Escape) {
                 if (root.show-confirm-delete) {
                     root.show-confirm-delete = false;
@@ -2723,6 +2731,8 @@ export component AppWindow inherits Window {
                 HelpRow { keys: "enter"; label: "Play selection"; }
                 HelpRow { keys: "e"; label: "Audio settings (EQ, replaygain…)"; }
                 HelpRow { keys: "s"; label: "Cycle skin"; }
+                HelpRow { keys: "q"; label: "Show / hide the play queue"; }
+                HelpRow { keys: "b"; label: "Show / hide the sidebar"; }
                 HelpRow { keys: "esc"; label: "Close dialog / go back"; }
                 HelpRow { keys: "?"; label: "Show this help"; }
             }

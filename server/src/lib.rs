@@ -9,6 +9,7 @@ pub mod core;
 pub mod event;
 pub mod history;
 pub mod library;
+pub mod media_controls;
 pub mod mixer;
 pub mod playback;
 pub mod playlist;
@@ -109,6 +110,7 @@ pub mod api {
                 Self {
                     id: model.id,
                     name: model.name,
+                    picture: model.picture.unwrap_or_default(),
                     songs: model.tracks.into_iter().map(Into::into).collect(),
                     albums: model.albums.into_iter().map(Into::into).collect(),
                     ..Default::default()
@@ -138,6 +140,8 @@ pub mod api {
                     uri: model.uri,
                     duration: model.duration.unwrap_or(0.0),
                     track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
+                    bitrate: model.bitrate.unwrap_or_default(),
+                    sample_rate: model.sample_rate.unwrap_or_default(),
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
                     artist: model.artist,

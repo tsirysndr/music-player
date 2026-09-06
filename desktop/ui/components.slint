@@ -27,6 +27,8 @@ export struct AlbumItem {
 export struct ArtistItem {
     id: string,
     name: string,
+    art: image,
+    has-art: bool,
 }
 
 export struct EqBand {
@@ -788,7 +790,14 @@ export component ArtistRow inherits Rectangle {
             y: (parent.height - self.height) / 2;
             border-radius: self.width / 2;
             background: Theme.art-placeholder;
-            Image {
+            clip: true;
+            if root.artist.has-art : Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.artist.art;
+                image-fit: cover;
+            }
+            if !root.artist.has-art : Image {
                 source: Icons.artist;
                 colorize: Theme.text-muted;
                 width: 18px;

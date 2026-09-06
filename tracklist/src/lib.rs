@@ -126,6 +126,11 @@ impl Tracklist {
         self.tracks.shuffle(&mut rand::thread_rng());
     }
 
+    /// The upcoming track, without advancing.
+    pub fn peek_next(&self) -> Option<Track> {
+        self.tracks.first().cloned()
+    }
+
     pub fn play_track_at(&mut self, index: usize) -> (Option<Track>, usize) {
         if index >= (self.tracks.len() + self.played.len()) {
             return (None, 0);

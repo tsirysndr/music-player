@@ -10,7 +10,7 @@ use std::{
 
 use app::{App, CurrentlyPlaybackContext};
 use args::parse_args;
-use clap::{arg, Command};
+use clap::{arg, Arg, Command};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -30,7 +30,7 @@ use music_player_graphql::{
     },
     simple_broker::SimpleBroker,
 };
-use music_player_playback::player::{Player, PlayerEvent};
+use music_player_playback::player::{Player, PlayerCommand, PlayerEvent};
 use music_player_server::event::{Event, TrackEvent};
 use music_player_server::server::MusicPlayerServer;
 use music_player_settings::{read_settings, Settings};
@@ -57,26 +57,50 @@ mod user_config;
 type Tx = UnboundedSender<Message>;
 type PeerMap = Arc<sync::Mutex<HashMap<SocketAddr, Tx>>>;
 
-fn cli() -> Command<'static> {
+/// Help colors, matching pocketenv's CLI palette: aqua headers, sky-blue
+/// literals, violet placeholders, soft red errors.
+fn cli_styles() -> clap::builder::Styles {
+    use clap::builder::styling::{RgbColor, Style};
+    let primary = Style::new()
+        .bold()
+        .fg_color(Some(RgbColor(0, 232, 198).into()));
+    let secondary = Style::new().fg_color(Some(RgbColor(0, 198, 232).into()));
+    let accent = Style::new().fg_color(Some(RgbColor(130, 100, 255).into()));
+    let highlight = Style::new().fg_color(Some(RgbColor(100, 232, 130).into()));
+    let error = Style::new()
+        .bold()
+        .fg_color(Some(RgbColor(255, 100, 100).into()));
+    clap::builder::Styles::styled()
+        .header(primary)
+        .usage(primary)
+        .literal(secondary)
+        .placeholder(accent)
+        .valid(highlight)
+        .invalid(error)
+        .error(error)
+}
+
+fn cli() -> Command {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     Command::new("music-player")
         .version(VERSION)
         .author("Tsiry Sandratraina <tsiry.sndr@rocksky.app>")
+        .styles(cli_styles())
         .about(
             r#"
-     __  ___           _      ____  __                     
+     __  ___           _      ____  __
     /  |/  /_  _______(_)____/ __ \/ /___ ___  _____  _____
    / /|_/ / / / / ___/ / ___/ /_/ / / __ `/ / / / _ \/ ___/
-  / /  / / /_/ (__  ) / /__/ ____/ / /_/ / /_/ /  __/ /    
- /_/  /_/\__,_/____/_/\___/_/   /_/\__,_/\__, /\___/_/     
-                                        /____/             
- 
-A simple music player written in Rust"#,
+  / /  / / /_/ (__  ) / /__/ ____/ / /_/ / /_/ /  __/ /
+ /_/  /_/\__,_/____/_/\___/_/   /_/\__,_/\__, /\___/_/
+                                        /____/
+
+A simple music player written in Rust — single binary, zero dependency"#,
         )
         .subcommand(
             Command::new("open")
                 .about("open audio file")
-                .arg_from_usage("<song> 'The path to the song'"),
+                .arg(Arg::new("song").help("The path to the song").required(true)),
         )
         .subcommand(Command::new("scan").about("Scan music library: $HOME/Music"))
         .subcommand(
@@ -91,12 +115,12 @@ A simple music player written in Rust"#,
                 .subcommand(
                     Command::new("open")
                         .about("Play the playlist")
-                        .arg_from_usage("<id> 'The playlist id'"),
+                        .arg(Arg::new("id").help("The playlist id").required(true)),
                 )
                 .subcommand(
                     Command::new("show")
                         .about("Show the playlist details")
-                        .arg_from_usage("<id> 'The playlist id'"),
+                        .arg(Arg::new("id").help("The playlist id").required(true)),
                 )
                 .about("Manage playlists")
                 .arg_required_else_help(true),
@@ -106,12 +130,18 @@ A simple music player written in Rust"#,
                 .subcommand(
                     Command::new("list")
                         .about("List all songs in the queue")
-                        .arg_from_usage("-a, --all 'List all songs in the queue'"),
+                        .arg(
+                            Arg::new("all")
+                                .short('a')
+                                .long("all")
+                                .help("List all songs in the queue")
+                                .action(clap::ArgAction::SetTrue),
+                        ),
                 )
                 .subcommand(
                     Command::new("add")
                         .about("Add a song to the queue")
-                        .arg_from_usage("<track_id> 'The track id'"),
+                        .arg(Arg::new("track_id").help("The track id").required(true)),
                 )
                 .about("Manage the queue")
                 .arg_required_else_help(true),
@@ -120,7 +150,11 @@ A simple music player written in Rust"#,
         .subcommand(
             Command::new("search")
                 .about("Search for a song, album, artist or playlist")
-                .arg_from_usage("<query> 'The query to search for'"),
+                .arg(
+                    Arg::new("query")
+                        .help("The query to search for")
+                        .required(true),
+                ),
         )
         .subcommand(Command::new("pause").about("Pause the current song"))
         .subcommand(Command::new("play").about("Resume the current song"))
@@ -282,6 +316,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         register_services();
         music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
         music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
+        // MPRIS media controls (Linux only; no-op elsewhere).
+        music_player_server::media_controls::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
+        // Arm queue persistence + restore the last session's queue (cued
+        // paused). Daemon mode only — `open`/tests must not touch it.
+        let _ = cmd_tx.lock().unwrap().send(PlayerCommand::RestoreQueue);
 
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -340,7 +379,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
             match runtime.block_on(Network::new(&app)) {
                 Ok(mut network) => start_tokio(sync_io_rx, &mut network),
-                Err(err) => println!("{}", err),
+                // Printing would corrupt the TUI this thread runs beside.
+                Err(err) => tracing::error!("network worker failed: {err}"),
             }
         });
         return start_ui(&cloned_app).await;
@@ -433,15 +473,19 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
         runtime.block_on(ws_client.read.for_each(|message| async {
             match message {
                 Ok(msg) => match serde_json::from_str(&msg.to_string()) {
+                    // A closed receiver just means the TUI is gone.
                     Ok(event) => {
-                        tx.send(event).unwrap();
+                        let _ = tx.send(event);
                     }
                     Err(e) => {
-                        println!("{}", e);
+                        tracing::debug!("ignoring malformed player event: {e}");
                     }
                 },
+                // Expected on exit: the socket's reactor lives on the main
+                // runtime, which shuts down first — printing here would land
+                // on the restored terminal after the TUI closes.
                 Err(e) => {
-                    println!("Error: {}", e);
+                    tracing::debug!("player event stream ended: {e}");
                 }
             }
         }));

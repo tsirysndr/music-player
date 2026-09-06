@@ -109,4 +109,10 @@ pub struct Track {
     pub uri: ::prost::alloc::string::String,
     #[prost(string, tag = "10")]
     pub artist: ::prost::alloc::string::String,
+    /// kbps, 0 = unknown
+    #[prost(uint32, tag = "11")]
+    pub bitrate: u32,
+    /// Hz, 0 = unknown
+    #[prost(uint32, tag = "12")]
+    pub sample_rate: u32,
 }

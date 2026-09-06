@@ -7,8 +7,8 @@ use music_player_entity::{album, artist, artist_tracks, playlist_tracks, track};
 use music_player_storage::Database;
 use music_player_types::types::Song;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, QueryFilter, Statement,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DbBackend, EntityTrait,
+    QueryFilter, Statement, TransactionTrait,
 };
 use std::{
     fs::File,
@@ -154,7 +154,73 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     if let Err(e) = searcher.reindex().await {
         tracing::warn!("typesense reindex failed: {e}");
     }
+    // Artist pictures come from the Rocksky API in batch; network problems
+    // must not fail the scan either.
+    if let Err(e) = update_artist_pictures(&db).await {
+        tracing::warn!("artist picture update failed: {e}");
+    }
     Ok(songs)
+}
+
+/// Fills `artist.picture` for every artist that has none yet, in batches of
+/// names against Rocksky's public `app.rocksky.artist.getArtists` endpoint
+/// (matched by name; misses stay NULL and are retried on the next scan).
+pub async fn update_artist_pictures(db: &Database) -> Result<(), Error> {
+    #[derive(serde::Deserialize)]
+    struct RockskyArtist {
+        name: String,
+        picture: Option<String>,
+    }
+    #[derive(serde::Deserialize)]
+    struct RockskyArtists {
+        artists: Vec<RockskyArtist>,
+    }
+
+    const BATCH: usize = 50;
+    let api_url =
+        std::env::var("ROCKSKY_API_URL").unwrap_or_else(|_| "https://api.rocksky.app".to_string());
+    let conn = db.get_connection();
+    let missing: Vec<artist::Model> = artist::Entity::find()
+        .filter(artist::Column::Picture.is_null())
+        .all(conn)
+        .await?;
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()?;
+    let mut updated = 0usize;
+    for chunk in missing.chunks(BATCH) {
+        let names: Vec<&str> = chunk.iter().map(|a| a.name.as_str()).collect();
+        let response = client
+            .get(format!("{}/xrpc/app.rocksky.artist.getArtists", api_url))
+            .query(&[("names", names.join(","))])
+            .send()
+            .await?
+            .error_for_status()?;
+        let found: RockskyArtists = response.json().await?;
+        let by_name: std::collections::HashMap<String, Option<String>> = found
+            .artists
+            .into_iter()
+            .map(|a| (a.name.to_lowercase(), a.picture))
+            .collect();
+        for local in chunk {
+            let Some(Some(picture)) = by_name.get(&local.name.to_lowercase()) else {
+                continue;
+            };
+            let mut active: artist::ActiveModel = local.clone().into();
+            active.picture = ActiveValue::Set(Some(picture.clone()));
+            active.update(conn).await?;
+            updated += 1;
+        }
+    }
+    info!(
+        "artist pictures: {updated}/{} filled from Rocksky",
+        missing.len()
+    );
+    Ok(())
 }
 
 /// Remove every track whose local file is gone, then any album or artist that

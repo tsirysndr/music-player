@@ -63,6 +63,9 @@ tonic-web = "0.14"
 tungstenite = "0.17.3"
 uuid = "1.1.2"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+souvlaki = "0.8"
+
 [build-dependencies]
 tonic-prost-build = "0.14"
 

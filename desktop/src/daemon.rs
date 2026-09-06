@@ -157,6 +157,13 @@ fn boot() {
         music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
         music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
     });
+    // MPRIS media controls (Linux only; the app handles macOS Now Playing).
+    music_player_server::media_controls::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
+    // Arm queue persistence + restore the last session's queue (cued paused).
+    let _ = cmd_tx
+        .lock()
+        .unwrap()
+        .send(music_player_playback::player::PlayerCommand::RestoreQueue);
 
     // gRPC server
     {

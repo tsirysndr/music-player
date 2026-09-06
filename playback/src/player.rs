@@ -108,6 +108,8 @@ impl Player {
                 last_duration_ms: 0,
                 shuffle: false,
                 repeat_mode: 0,
+                engine_index: 0,
+                resume: false,
                 last_queue_save: Instant::now(),
                 stopped_ticks: 0,
             })
@@ -268,10 +270,20 @@ struct PlayerInternal {
     engine_started: bool,
     /// Duration of the current track as last reported while playing.
     last_duration_ms: u32,
-    /// Queue-level shuffle flag (the engine queue only holds one URI).
+    /// Queue-level shuffle flag (the queue itself lives in the tracklist).
     shuffle: bool,
     /// Queue-level repeat mode: 0 off, 1 all, 2 one.
     repeat_mode: i32,
+    /// The engine's queue index last observed. The engine holds the current
+    /// track plus ONE lookahead (so crossfade/gapless transitions happen
+    /// inside the engine); when its index moves past this, the engine
+    /// advanced on its own and the tracklist has to catch up.
+    engine_index: usize,
+    /// Queue persistence armed. Off until `PlayerCommand::RestoreQueue`
+    /// arrives (sent by daemon boot paths only), so short-lived players —
+    /// tests, `music-player open` — neither restore nor overwrite the
+    /// daemon's persisted queue.
+    resume: bool,
     /// Last time the queue snapshot was written while playing.
     last_queue_save: Instant,
     /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
@@ -284,7 +296,6 @@ impl PlayerInternal {
     /// The player task: reacts to commands as they arrive and reconciles the
     /// engine's status on a fixed tick. Ends when every command sender is gone.
     async fn run(mut self) {
-        self.restore_queue();
         let mut tick = tokio::time::interval(Duration::from_millis(100));
         tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
@@ -311,7 +322,11 @@ impl PlayerInternal {
     }
 
     /// Write the queue snapshot (or remove it when the queue is empty).
+    /// No-op until persistence was armed by `RestoreQueue`.
     fn save_queue(&mut self) {
+        if !self.resume {
+            return;
+        }
         let (played, tracks) = self.tracklist.lock().unwrap().tracks();
         let path = queue_file();
         if played.is_empty() && tracks.is_empty() {
@@ -363,8 +378,10 @@ impl PlayerInternal {
         }
         self.track_loaded = true;
         self.engine_started = false;
+        self.engine_index = 0;
         self.position_ms = saved.position_ms;
         self.last_broadcast_position_ms = saved.position_ms;
+        self.queue_next_into_engine();
         let (track, position) = self.tracklist.lock().unwrap().current_track();
         (self.event_broadcaster)(PlayerEvent::CurrentTrack {
             track: track.clone(),
@@ -387,6 +404,33 @@ impl PlayerInternal {
             EngineState::Playing | EngineState::Paused => {
                 self.engine_started = true;
                 self.stopped_ticks = 0;
+                // The engine advanced into its lookahead track on its own
+                // (crossfade / gapless transition) — catch the tracklist up
+                // and queue the next lookahead.
+                if let Some(index) = status.index {
+                    let mut advanced = false;
+                    while index > self.engine_index {
+                        self.engine_index += 1;
+                        advanced = true;
+                        self.send_event(PlayerEvent::EndOfTrack {
+                            is_last_track: false,
+                        });
+                        if self.tracklist.lock().unwrap().next_track().is_some() {
+                            let (track, position) = self.tracklist.lock().unwrap().current_track();
+                            self.send_event(PlayerEvent::Playing {});
+                            (self.event_broadcaster)(PlayerEvent::CurrentTrack {
+                                track,
+                                position,
+                                position_ms: 0,
+                                is_playing: status.state == EngineState::Playing,
+                            });
+                        }
+                    }
+                    if advanced {
+                        self.queue_next_into_engine();
+                        self.save_queue();
+                    }
+                }
                 self.last_duration_ms = status.duration.as_millis() as u32;
                 let position_ms = status.position.as_millis() as u32;
                 self.position_ms = position_ms;
@@ -476,6 +520,10 @@ impl PlayerInternal {
             PlayerCommand::PlayNext(track) => self.handle_play_next(track),
             PlayerCommand::RemoveTrack(index) => self.handle_remove_track(index),
             PlayerCommand::SetVolume(volume) => self.handle_set_volume(volume),
+            PlayerCommand::RestoreQueue => {
+                self.resume = true;
+                self.restore_queue();
+            }
             PlayerCommand::SetEqEnabled(enabled) => self.engine.set_eq_enabled(enabled),
             PlayerCommand::SetEqBandGain { band, gain_db } => {
                 if band < EQ_BANDS {
@@ -516,15 +564,21 @@ impl PlayerInternal {
                 mix_mode,
             )),
             PlayerCommand::SetDither(enabled) => self.engine.set_dither(enabled),
-            // The engine queue only ever holds the current URI — the queue
-            // lives in the tracklist, so shuffle/repeat act on it here.
+            // The queue lives in the tracklist (the engine only holds the
+            // current track + one lookahead), so shuffle/repeat act here.
             PlayerCommand::SetShuffle(enabled) => {
                 self.shuffle = enabled;
                 if enabled {
                     self.tracklist.lock().unwrap().shuffle();
                 }
+                self.resync_engine_next();
             }
-            PlayerCommand::SetRepeat(mode) => self.repeat_mode = mode.clamp(0, 2),
+            PlayerCommand::SetRepeat(mode) => {
+                self.repeat_mode = mode.clamp(0, 2);
+                // Repeat-one must drop the lookahead (the engine has to stop
+                // at track end); leaving it re-queues the lookahead.
+                self.resync_engine_next();
+            }
         }
         Ok(())
     }
@@ -534,16 +588,42 @@ impl PlayerInternal {
             .retain(|sender| sender.send(event.clone()).is_ok());
     }
 
+    /// Queue the tracklist's upcoming track into the engine as lookahead,
+    /// so the engine performs the transition itself (crossfade / gapless).
+    /// Repeat-one skips the lookahead — the engine must stop at track end so
+    /// the Stopped handler can reload the same track.
+    fn queue_next_into_engine(&mut self) {
+        if self.repeat_mode == 2 {
+            return;
+        }
+        if let Some(next) = self.tracklist.lock().unwrap().peek_next() {
+            self.engine.insert_last(next.uri);
+        }
+    }
+
+    /// Drop the engine's lookahead (if any) and re-queue the CURRENT
+    /// upcoming track. Call after anything that changes what comes next:
+    /// play-next inserts, queue removals, appends, shuffle, repeat changes.
+    fn resync_engine_next(&mut self) {
+        if !self.track_loaded {
+            return;
+        }
+        self.engine.remove(self.engine_index + 1);
+        self.queue_next_into_engine();
+    }
+
     fn handle_command_load(&mut self, uri: &str) {
         self.engine.stop();
         self.engine.set_queue(vec![uri.to_string()]);
         self.engine.play();
         self.track_loaded = true;
         self.engine_started = false;
+        self.engine_index = 0;
         self.stopped_ticks = 0;
         self.last_duration_ms = 0;
         self.position_ms = 0;
         self.last_broadcast_position_ms = 0;
+        self.queue_next_into_engine();
 
         self.send_event(PlayerEvent::Playing {});
         let (track, position) = self.tracklist.lock().unwrap().current_track();
@@ -571,6 +651,9 @@ impl PlayerInternal {
         let (current_track, _) = self.tracklist.lock().unwrap().current_track();
         if current_track.is_none() {
             self.handle_next();
+        } else {
+            // Appended while playing — the lookahead may have been empty.
+            self.resync_engine_next();
         }
     }
 
@@ -619,6 +702,7 @@ impl PlayerInternal {
         self.engine.clear_queue();
         self.track_loaded = false;
         self.engine_started = false;
+        self.engine_index = 0;
         self.tracklist.lock().unwrap().stop();
     }
 
@@ -666,7 +750,9 @@ impl PlayerInternal {
 
     fn handle_clear(&mut self) {
         self.tracklist.lock().unwrap().clear();
-        let _ = std::fs::remove_file(queue_file());
+        if self.resume {
+            let _ = std::fs::remove_file(queue_file());
+        }
     }
 
     fn handle_get_tracks(&mut self) {
@@ -676,10 +762,12 @@ impl PlayerInternal {
 
     fn handle_play_next(&mut self, track: Track) {
         self.tracklist.lock().unwrap().insert_next(track);
+        self.resync_engine_next();
     }
 
     fn handle_remove_track(&mut self, index: usize) {
         self.tracklist.lock().unwrap().remove_track_at(index);
+        self.resync_engine_next();
     }
 
     fn handle_get_current_track(&mut self) {
@@ -716,6 +804,9 @@ pub enum PlayerCommand {
     RemoveTrack(usize),
     PlayNext(Track),
     SetVolume(u16),
+    /// Arm queue persistence and restore the persisted queue (cued paused at
+    /// the saved position). Sent once at boot by daemon entry points only.
+    RestoreQueue,
     // Audio/DSP settings (integer enums follow the Rockbox firmware
     // conventions documented on music_player_settings::AudioSettings).
     SetEqEnabled(bool),

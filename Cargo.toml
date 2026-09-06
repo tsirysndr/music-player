@@ -107,7 +107,7 @@ version = "^0.9.0"
 
 [dependencies]
 anyhow = "1.0.67"
-clap = "3.2.20"
+clap = "4.5"
 crossterm = {version = "0.29", features = ["serde"]}
 dirs = "4.0.0"
 nucleo-matcher = "0.3"

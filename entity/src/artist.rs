@@ -8,6 +8,8 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub name: String,
+    /// Artist image URL, filled in batch from the Rocksky API after scans.
+    pub picture: Option<String>,
     #[sea_orm(ignore)]
     pub albums: Vec<super::album::Model>,
     #[sea_orm(ignore)]
@@ -42,6 +44,7 @@ impl From<&Song> for ActiveModel {
         Self {
             id: ActiveValue::set(id),
             name: ActiveValue::Set(song.album_artist.clone()),
+            picture: ActiveValue::NotSet,
         }
     }
 }

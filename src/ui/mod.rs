@@ -79,8 +79,8 @@ pub fn draw_main_layout(f: &mut Frame, app: &App) {
 
     draw_routes(f, app, parent_layout[0]);
     draw_playbar(f, app, parent_layout[1]);
-    draw_status_line(f, app, parent_layout[2]);
-    draw_hint_bar(f, app, parent_layout[3]);
+    draw_hint_bar(f, app, parent_layout[2]);
+    draw_status_line(f, app, parent_layout[3]);
 
     if app.search.active {
         draw_search_overlay(f, app);
@@ -755,7 +755,8 @@ pub fn draw_status_line(f: &mut Frame, app: &App, layout_chunk: Rect) {
     );
 }
 
-/// Context-sensitive keybinding hints, displayed under the status line.
+/// Context-sensitive keybinding hints, displayed above the status line
+/// (the status line sits at the very bottom).
 pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
     let hints: &[(&str, &str)] = if app.show_help {
         &[("?/q/esc", "close"), ("j/k", "scroll")]
@@ -778,6 +779,7 @@ pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
             (">", "+5s"),
             ("+/-", "volume"),
             ("z", "queue"),
+            ("u", "play queue"),
             ("q", "back/quit"),
         ]
     };
@@ -1039,6 +1041,7 @@ pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> 
                 (">", "Seek forwards 5s"),
                 ("+ / -", "Volume up / down"),
                 ("z", "Add selected track to the queue"),
+                ("u", "Toggle the play-queue view"),
             ],
         ),
         (

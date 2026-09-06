@@ -125,6 +125,8 @@ pub struct AlbumData {
 pub struct ArtistData {
     pub id: String,
     pub name: String,
+    /// Artist image URL (Rocksky), empty when unknown.
+    pub picture: String,
 }
 
 #[derive(Clone, Debug)]
@@ -396,6 +398,26 @@ async fn session(
                 String::new(),
             ),
         };
+        // VFD readout: codec (from the uri extension), bitrate and sample
+        // rate — "FLAC 986k 44.1kHz". The queue position is prepended once
+        // the queue snapshot below is in (compact units keep it on one line).
+        let format_info = match &now.track {
+            Some(t) => {
+                let codec = codec_of(&t.uri);
+                let mut parts: Vec<String> = Vec::with_capacity(3);
+                if !codec.is_empty() {
+                    parts.push(codec);
+                }
+                if t.bitrate > 0 {
+                    parts.push(format!("{}k", t.bitrate));
+                }
+                if t.sample_rate > 0 {
+                    parts.push(format!("{:.1}kHz", t.sample_rate as f64 / 1000.0));
+                }
+                parts.join(" ")
+            }
+            None => String::new(),
+        };
 
         if art_file != last_art {
             last_art = art_file.clone();
@@ -412,7 +434,6 @@ async fn session(
         let stopped = now.track.is_none();
         let elapsed = now.position_ms as f32 / 1000.0;
         let length = length_ms as f32 / 1000.0;
-        let queue_pos = now.index;
         let _ = weak.upgrade_in_event_loop(move |app| {
             app.set_now_title(title.into());
             app.set_now_artist(artist.into());
@@ -452,11 +473,21 @@ async fn session(
                 .map(|(i, t)| track_data(t, i as i32))
                 .collect();
             history.reverse(); // most recent first
-            let vfd = if total > 0 {
-                format!("TRK {:>2}/{:<2}", queue_pos + 1, total)
+                               // "TRK  3/12  FLAC 986k 44.1kHz"
+            let mut vfd = if total > 0 {
+                format!("TRK {:>2}/{:<2}", now.index + 1, total)
             } else {
-                "--- / ---".to_string()
+                String::new()
             };
+            if !format_info.is_empty() {
+                if !vfd.is_empty() {
+                    vfd.push_str("  ");
+                }
+                vfd.push_str(&format_info);
+            }
+            if vfd.is_empty() {
+                vfd = "--- kbps   --.- kHz".to_string();
+            }
             let _ = weak.upgrade_in_event_loop(move |app| {
                 crate::ui_set_queue(&app, total, upnext, history);
                 app.set_vfd_info(vfd.into());
@@ -472,6 +503,17 @@ fn filename_stem(path: &str) -> String {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.to_string())
+}
+
+/// Codec label for the VFD, derived from the uri's file extension
+/// (query strings stripped for stream urls). Empty when unknown.
+fn codec_of(uri: &str) -> String {
+    let path = uri.split(['?', '#']).next().unwrap_or(uri);
+    std::path::Path::new(path)
+        .extension()
+        .map(|e| e.to_string_lossy().to_uppercase())
+        .filter(|e| e.len() <= 4 && e.chars().all(|c| c.is_ascii_alphanumeric()))
+        .unwrap_or_default()
 }
 
 fn track_data(t: &TrackProto, index: i32) -> TrackData {
@@ -624,6 +666,7 @@ async fn load_library(
             .map(|a| ArtistData {
                 id: a.id.clone(),
                 name: a.name.clone(),
+                picture: a.picture.clone(),
             })
             .collect(),
         tracks: tracks
@@ -651,6 +694,24 @@ async fn load_library(
             if let Some((w, h, rgba)) = fetch_thumb(&covers, &file, 320).await {
                 let _ = weak2.upgrade_in_event_loop(move |app| {
                     crate::ui_set_album_art(&app, idx, w, h, rgba);
+                });
+            }
+        }
+    });
+
+    // Artist pictures are full URLs (Rocksky CDN), fetched the same way.
+    let artist_pics: Vec<(usize, String)> = artists
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| !a.picture.is_empty())
+        .map(|(i, a)| (i, a.picture.clone()))
+        .collect();
+    let weak3 = weak.clone();
+    tokio::spawn(async move {
+        for (idx, url) in artist_pics {
+            if let Some((w, h, rgba)) = fetch_thumb("", &url, 96).await {
+                let _ = weak3.upgrade_in_event_loop(move |app| {
+                    crate::ui_set_artist_art(&app, idx, w, h, rgba);
                 });
             }
         }
@@ -1443,17 +1504,19 @@ async fn insert_track_ids(
 }
 
 /// Local clock: advances elapsed between polls and animates the VU meters
-/// (decorative — the daemon does not export PCM levels over gRPC).
+/// (decorative — the daemon does not export PCM levels over gRPC). Runs at
+/// 60 ms so the meters bounce like meters instead of crawling.
 async fn ticker(weak: Weak<AppWindow>) {
+    const TICK_S: f64 = 0.06;
     let mut phase: f64 = 0.0;
     loop {
-        tokio::time::sleep(Duration::from_millis(250)).await;
-        phase += 0.25;
+        tokio::time::sleep(Duration::from_millis((TICK_S * 1000.0) as u64)).await;
+        phase += TICK_S;
         let t = phase;
         let _ = weak.upgrade_in_event_loop(move |app| {
             if app.get_playing() {
                 let length = app.get_length_s();
-                let elapsed = (app.get_elapsed_s() + 0.25).min(length.max(0.0));
+                let elapsed = (app.get_elapsed_s() + TICK_S as f32).min(length.max(0.0));
                 app.set_elapsed_s(elapsed);
                 app.set_progress(if length > 0.0 { elapsed / length } else { 0.0 });
                 app.set_elapsed_text(format_time(elapsed as f64).into());
@@ -1462,8 +1525,8 @@ async fn ticker(weak: Weak<AppWindow>) {
                 app.set_vu_left(l.clamp(0.05, 1.0) as f32);
                 app.set_vu_right(r.clamp(0.05, 1.0) as f32);
             } else {
-                app.set_vu_left((app.get_vu_left() * 0.6).max(0.0));
-                app.set_vu_right((app.get_vu_right() * 0.6).max(0.0));
+                app.set_vu_left((app.get_vu_left() * 0.8).max(0.0));
+                app.set_vu_right((app.get_vu_right() * 0.8).max(0.0));
             }
         });
     }

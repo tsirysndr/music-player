@@ -1,5 +1,5 @@
 use crate::{
-    app::{ActiveBlock, App},
+    app::{ActiveBlock, App, RouteId},
     event::Key,
     network::IoEvent,
 };
@@ -77,6 +77,15 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         _ if key == app.user_config.keys.previous_track => {
             app.dispatch(IoEvent::PreviousTrack);
             app.dispatch(IoEvent::GetCurrentPlayback);
+        }
+        // Toggle the play-queue view.
+        _ if key == app.user_config.keys.show_queue => {
+            if app.get_current_route().id == RouteId::PlayQueue {
+                app.pop_navigation_stack();
+            } else {
+                app.dispatch(IoEvent::GetPlayQueue);
+                app.push_navigation_stack(RouteId::PlayQueue, ActiveBlock::PlayQueue);
+            }
         }
         _ if key == app.user_config.keys.back => {
             // Walk back through the navigation stack; exit once it is empty.

@@ -25,10 +25,15 @@ struct AlbumEntry {
     image: Option<slint::Image>,
 }
 
+struct ArtistEntry {
+    data: rpc::ArtistData,
+    image: Option<slint::Image>,
+}
+
 #[derive(Default)]
 struct UiState {
     albums: Vec<AlbumEntry>,
-    artists: Vec<rpc::ArtistData>,
+    artists: Vec<ArtistEntry>,
     tracks: Vec<rpc::TrackData>,
     liked: Vec<rpc::TrackData>,
     servers: Vec<servers::SavedServer>,
@@ -69,6 +74,15 @@ fn liked_ids_of(liked: &[rpc::TrackData]) -> std::collections::HashSet<String> {
     liked.iter().map(|t| t.id.clone()).collect()
 }
 
+fn artist_item(a: &ArtistEntry) -> ArtistItem {
+    ArtistItem {
+        id: a.data.id.clone().into(),
+        name: a.data.name.clone().into(),
+        art: a.image.clone().unwrap_or_default(),
+        has_art: a.image.is_some(),
+    }
+}
+
 fn album_item(a: &AlbumEntry) -> AlbumItem {
     AlbumItem {
         id: a.data.id.clone().into(),
@@ -92,19 +106,19 @@ pub fn ui_set_library(app: &AppWindow, data: rpc::LibraryData) {
                 image: None,
             })
             .collect();
-        st.artists = data.artists;
+        st.artists = data
+            .artists
+            .into_iter()
+            .map(|a| ArtistEntry {
+                data: a,
+                image: None,
+            })
+            .collect();
         st.tracks = data.tracks;
         st.liked = data.liked;
 
         let albums: Vec<AlbumItem> = st.albums.iter().map(album_item).collect();
-        let artists: Vec<ArtistItem> = st
-            .artists
-            .iter()
-            .map(|a| ArtistItem {
-                id: a.id.clone().into(),
-                name: a.name.clone().into(),
-            })
-            .collect();
+        let artists: Vec<ArtistItem> = st.artists.iter().map(artist_item).collect();
         let ids = liked_ids_of(&st.liked);
         let tracks: Vec<TrackItem> = st.tracks.iter().map(|t| track_item_with(t, &ids)).collect();
         let liked: Vec<TrackItem> = st.liked.iter().map(|t| track_item_with(t, &ids)).collect();
@@ -144,6 +158,23 @@ pub fn ui_set_album_art(app: &AppWindow, idx: usize, w: u32, h: u32, rgba: Vec<u
         detail.art = image;
         detail.has_art = true;
         app.set_detail_album(detail);
+    }
+}
+
+/// Called per fetched artist picture (Rocksky CDN).
+pub fn ui_set_artist_art(app: &AppWindow, idx: usize, w: u32, h: u32, rgba: Vec<u8>) {
+    let image = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
+    STATE.with(|s| {
+        let mut st = s.borrow_mut();
+        if let Some(entry) = st.artists.get_mut(idx) {
+            entry.image = Some(image.clone());
+        }
+    });
+    let model = app.get_artists();
+    if let Some(mut row) = model.row_data(idx) {
+        row.art = image;
+        row.has_art = true;
+        model.set_row_data(idx, row);
     }
 }
 
@@ -576,20 +607,122 @@ fn palette_results(query: &str) -> Vec<PaletteItem> {
         out.extend(
             st.artists
                 .iter()
-                .filter(|a| hit(&[&a.name]))
+                .filter(|a| hit(&[&a.data.name]))
                 .take(4)
                 .map(|a| PaletteItem {
                     kind: "artist".into(),
-                    id: a.id.clone().into(),
-                    title: a.name.clone().into(),
+                    id: a.data.id.clone().into(),
+                    title: a.data.name.clone().into(),
                     subtitle: "".into(),
                     index: -1,
-                    has_art: false,
-                    art: slint::Image::default(),
+                    has_art: a.image.is_some(),
+                    art: a.image.clone().unwrap_or_default(),
                 }),
         );
         out
     })
+}
+
+/// macOS Now Playing integration: publishes the current track + playback
+/// state to the system Now Playing center (Control Center, media keys,
+/// AirPods controls) and routes remote commands back into the app. Returns
+/// the repeating update timer — keep it alive for the app's lifetime.
+#[cfg(target_os = "macos")]
+fn setup_media_controls(
+    app: &AppWindow,
+    tx: tokio::sync::mpsc::UnboundedSender<rpc::Cmd>,
+) -> Option<slint::Timer> {
+    use souvlaki::{
+        MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition,
+        PlatformConfig, SeekDirection,
+    };
+    use std::time::Duration;
+
+    let mut controls = match MediaControls::new(PlatformConfig {
+        dbus_name: "music_player_desktop",
+        display_name: "Music Player",
+        hwnd: None,
+    }) {
+        Ok(controls) => controls,
+        Err(e) => {
+            tracing::warn!("Now Playing integration disabled: {e:?}");
+            return None;
+        }
+    };
+
+    {
+        let tx = tx.clone();
+        let app_weak = app.as_weak();
+        if let Err(e) = controls.attach(move |event| {
+            let elapsed_ms = app_weak
+                .upgrade()
+                .map(|app| (app.get_elapsed_s() * 1000.0) as u32)
+                .unwrap_or(0);
+            let cmd = match event {
+                MediaControlEvent::Play | MediaControlEvent::Pause | MediaControlEvent::Toggle => {
+                    Some(rpc::Cmd::PlayPause)
+                }
+                MediaControlEvent::Next => Some(rpc::Cmd::Next),
+                MediaControlEvent::Previous => Some(rpc::Cmd::Previous),
+                MediaControlEvent::SetPosition(MediaPosition(pos)) => {
+                    Some(rpc::Cmd::SeekMs(pos.as_millis() as u32))
+                }
+                MediaControlEvent::Seek(direction) => Some(rpc::Cmd::SeekMs(match direction {
+                    SeekDirection::Forward => elapsed_ms.saturating_add(5_000),
+                    SeekDirection::Backward => elapsed_ms.saturating_sub(5_000),
+                })),
+                MediaControlEvent::SeekBy(direction, by) => {
+                    let by = by.as_millis() as u32;
+                    Some(rpc::Cmd::SeekMs(match direction {
+                        SeekDirection::Forward => elapsed_ms.saturating_add(by),
+                        SeekDirection::Backward => elapsed_ms.saturating_sub(by),
+                    }))
+                }
+                _ => None,
+            };
+            if let Some(cmd) = cmd {
+                let _ = tx.send(cmd);
+            }
+        }) {
+            tracing::warn!("Now Playing integration disabled: {e:?}");
+            return None;
+        }
+    }
+
+    // Mirror the UI's now-playing state into the system center once a second.
+    let app_weak = app.as_weak();
+    let controls = std::cell::RefCell::new(controls);
+    let timer = slint::Timer::default();
+    timer.start(
+        slint::TimerMode::Repeated,
+        Duration::from_millis(1000),
+        move || {
+            let Some(app) = app_weak.upgrade() else {
+                return;
+            };
+            let mut controls = controls.borrow_mut();
+            if app.get_stopped() {
+                let _ = controls.set_playback(MediaPlayback::Stopped);
+                return;
+            }
+            let _ = controls.set_metadata(MediaMetadata {
+                title: Some(&app.get_now_title()),
+                artist: Some(&app.get_now_artist()),
+                album: None,
+                duration: Some(Duration::from_secs_f32(app.get_length_s().max(0.0))),
+                cover_url: None,
+            });
+            let progress = Some(MediaPosition(Duration::from_secs_f32(
+                app.get_elapsed_s().max(0.0),
+            )));
+            let _ = controls.set_playback(if app.get_playing() {
+                MediaPlayback::Playing { progress }
+            } else {
+                MediaPlayback::Paused { progress }
+            });
+        },
+    );
+    Some(timer)
 }
 
 /// On macOS: hide the titlebar strip but keep the native traffic-light
@@ -658,6 +791,10 @@ fn main() -> Result<(), slint::PlatformError> {
     // The worker retries until the (embedded or external) daemon answers.
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<rpc::Cmd>();
     rpc::start(app.as_weak(), rx);
+
+    // macOS Now Playing center (media keys, Control Center, AirPods).
+    #[cfg(target_os = "macos")]
+    let _media_controls_timer = setup_media_controls(&app, tx.clone());
 
     {
         let tx = tx.clone();

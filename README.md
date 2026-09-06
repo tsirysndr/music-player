@@ -89,11 +89,11 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - 🔎 **Instant full-text search** backed by SQLite FTS5, kept in sync automatically by database triggers
 - 🖥️ **Terminal UI** (ratatui) with an fzf-style fuzzy finder, neovim-inspired status line and `?` help overlay
 - 🌐 **Web UI** (React 18 + TanStack Query + Jotai) with live progress and seek/fast-forward
-- 🖱️ **Desktop app** built on Tauri 2
+- 🖱️ **Desktop apps** — a skinnable [Slint](https://slint.dev) app with an embedded daemon, and a Tauri 2 version
 - 📡 **gRPC + GraphQL APIs** (tonic 0.14, grpc-web enabled) for building your own clients
 - ☁️ **Browse & stream from Subsonic/Navidrome and Jellyfin servers**
 - 📻 **Cast to Chromecast and UPnP/DLNA renderers**, or control another music-player daemon
-- 🎧 **Rocksky scrobbling** — scrobble your plays to [Rocksky](https://rocksky.app) on the AT Protocol
+- 🎧 **Rocksky scrobbling** — scrobble your plays to [Rocksky](https://rocksky.app) on the [AT Protocol](https://atproto.com)
 - 🔌 Flexible **audio output**: system device (cpal), stdout, FIFO, Unix or TCP socket
 
 ## Installation
@@ -108,7 +108,31 @@ curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/insta
 curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | MUSIC_PLAYER_DESKTOP=1 sh
 ```
 
-Compiling from source, without Nix:
+Using [npm](https://www.npmjs.com/) (downloads the prebuilt binary from GitHub releases):
+
+```bash
+npm install -g @tsiry/music-player   # or: npx @tsiry/music-player
+# pin a specific release: MUSIC_PLAYER_VERSION=v0.2.0 npx @tsiry/music-player
+```
+
+Using [Homebrew](https://brew.sh/) (macOS/Linux):
+
+```bash
+brew install tsirysndr/tap/musicplayer
+```
+
+Using [Nix](https://nixos.org/) (macOS/Linux):
+
+```bash
+cachix use tsirysndr
+nix profile install --experimental-features "nix-command flakes" github:tsirysndr/music-player
+```
+
+Or download the latest release for your platform [here](https://github.com/tsirysndr/music-player/releases).
+
+### Compiling from source
+
+Without Nix:
 
 ```bash
 # Install dependencies
@@ -135,30 +159,6 @@ bun install && bun run build # build webui
 cd ../..
 cargo install --path .
 ```
-
-Using [npm](https://www.npmjs.com/) (downloads the prebuilt binary from GitHub releases):
-
-```bash
-npm install -g @tsiry/music-player   # or: npx @tsiry/music-player
-# pin a specific release: MUSIC_PLAYER_VERSION=v0.2.0 npx @tsiry/music-player
-```
-
-### macOS/Linux
-
-Using [Homebrew](https://brew.sh/):
-
-```bash
-brew install tsirysndr/tap/musicplayer
-```
-
-Using [Nix](https://nixos.org/):
-
-```bash
-cachix use tsirysndr
-nix profile install --experimental-features "nix-command flakes" github:tsirysndr/music-player
-```
-
-Or download the latest release for your platform [here](https://github.com/tsirysndr/music-player/releases).
 
 ## 📦 Downloads
 

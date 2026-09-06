@@ -725,6 +725,27 @@ fn setup_media_controls(
     Some(timer)
 }
 
+/// Sets the Dock icon at runtime from the bundled AppIcon.icns (the
+/// synthwave note; assets/icon.svg is the source). Only meaningful on macOS;
+/// a plain binary outside an .app bundle would otherwise show the generic
+/// executable icon.
+#[cfg(target_os = "macos")]
+fn set_dock_icon() {
+    use objc2::ClassType;
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::{MainThreadMarker, NSData};
+
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let bytes: &[u8] = include_bytes!("../assets/AppIcon.icns");
+    let data = NSData::with_bytes(bytes);
+    if let Some(img) = NSImage::initWithData(NSImage::alloc(), &data) {
+        let app = NSApplication::sharedApplication(mtm);
+        unsafe { app.setApplicationIconImage(Some(&img)) };
+    }
+}
+
 /// On macOS: hide the titlebar strip but keep the native traffic-light
 /// buttons floating over the sidebar (transparent titlebar + full-size
 /// content view). Must run before the first window is created.
@@ -756,7 +777,10 @@ fn main() -> Result<(), slint::PlatformError> {
     setup_backend();
     let app = AppWindow::new()?;
     #[cfg(target_os = "macos")]
-    app.set_titlebar_inset(24.0);
+    {
+        app.set_titlebar_inset(24.0);
+        set_dock_icon();
+    }
 
     // ── Skins ───────────────────────────────────────────────────────────────
     let skins = Rc::new(skin::load_all());

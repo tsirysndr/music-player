@@ -1,0 +1,115 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- music-player app icon: Apple-Music-style double quaver on a dark
+       synthwave chassis — neon magenta/cyan glow, perspective grid horizon. -->
+  <defs>
+    <clipPath id="squircle">
+      <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228"/>
+    </clipPath>
+
+    <radialGradient id="bg" cx="50%" cy="34%" r="85%">
+      <stop offset="0%" stop-color="#1b1332"/>
+      <stop offset="45%" stop-color="#120d22"/>
+      <stop offset="100%" stop-color="#080610"/>
+    </radialGradient>
+
+    <!-- continuous note gradient (userSpace so every part shares it) -->
+    <linearGradient id="note" gradientUnits="userSpaceOnUse" x1="512" y1="240" x2="512" y2="790">
+      <stop offset="0%"  stop-color="#00e5ff"/>
+      <stop offset="45%" stop-color="#7d6bff"/>
+      <stop offset="100%" stop-color="#ff2d95"/>
+    </linearGradient>
+
+    <linearGradient id="horizon" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1024" y2="0">
+      <stop offset="0%"   stop-color="#ff2d95" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#ff2d95"/>
+      <stop offset="100%" stop-color="#ff2d95" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="blurXL" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="55"/>
+    </filter>
+    <filter id="blurM" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="blurS" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <!-- chassis -->
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+
+    <!-- faint stars -->
+    <g fill="#ece7f5">
+      <circle cx="150" cy="150" r="3.2" opacity="0.30"/>
+      <circle cx="864" cy="122" r="2.4" opacity="0.25"/>
+      <circle cx="920" cy="330" r="3.0" opacity="0.22"/>
+      <circle cx="96"  cy="420" r="2.2" opacity="0.20"/>
+      <circle cx="250" cy="256" r="1.8" opacity="0.22"/>
+      <circle cx="790" cy="212" r="1.8" opacity="0.20"/>
+      <circle cx="530" cy="120" r="2.0" opacity="0.16"/>
+      <circle cx="170" cy="620" r="1.6" opacity="0.14"/>
+      <circle cx="880" cy="560" r="1.8" opacity="0.14"/>
+    </g>
+
+    <!-- perspective grid, vanishing at (512, 610) -->
+    <g stroke="#ff2d95" stroke-width="2.5" opacity="0.8">
+      <g opacity="0.16">
+        <line x1="512" y1="622" x2="-340"  y2="1120"/>
+        <line x1="512" y1="622" x2="-60"   y2="1120"/>
+        <line x1="512" y1="622" x2="200"   y2="1120"/>
+        <line x1="512" y1="622" x2="405"   y2="1120"/>
+        <line x1="512" y1="622" x2="512"   y2="1120"/>
+        <line x1="512" y1="622" x2="619"   y2="1120"/>
+        <line x1="512" y1="622" x2="824"   y2="1120"/>
+        <line x1="512" y1="622" x2="1084"  y2="1120"/>
+        <line x1="512" y1="622" x2="1364"  y2="1120"/>
+      </g>
+      <line x1="0" y1="648"  x2="1024" y2="648"  opacity="0.10"/>
+      <line x1="0" y1="690"  x2="1024" y2="690"  opacity="0.12"/>
+      <line x1="0" y1="748"  x2="1024" y2="748"  opacity="0.14"/>
+      <line x1="0" y1="826"  x2="1024" y2="826"  opacity="0.16"/>
+      <line x1="0" y1="922"  x2="1024" y2="922"  opacity="0.18"/>
+    </g>
+
+    <!-- horizon glow -->
+    <ellipse cx="512" cy="618" rx="560" ry="60" fill="#ff2d95" opacity="0.16" filter="url(#blurXL)"/>
+    <rect x="0" y="614" width="1024" height="6" fill="url(#horizon)" opacity="0.55" filter="url(#blurS)"/>
+
+    <!-- ── the note ─────────────────────────────────────────────────── -->
+    <!-- wide ambient glow -->
+    <g fill="url(#note)" opacity="0.55" filter="url(#blurXL)">
+      <path d="M452 296 L720 252 L720 344 L452 388 Z"/>
+      <rect x="452" y="340" width="44" height="370"/>
+      <rect x="676" y="296" width="44" height="370"/>
+      <ellipse cx="424" cy="708" rx="92" ry="68" transform="rotate(-21 424 708)"/>
+      <ellipse cx="648" cy="674" rx="92" ry="68" transform="rotate(-21 648 674)"/>
+    </g>
+    <!-- tight neon halo -->
+    <g fill="url(#note)" opacity="0.85" filter="url(#blurM)">
+      <path d="M452 296 L720 252 L720 344 L452 388 Z"/>
+      <rect x="452" y="340" width="44" height="370"/>
+      <rect x="676" y="296" width="44" height="370"/>
+      <ellipse cx="424" cy="708" rx="92" ry="68" transform="rotate(-21 424 708)"/>
+      <ellipse cx="648" cy="674" rx="92" ry="68" transform="rotate(-21 648 674)"/>
+    </g>
+    <!-- crisp body -->
+    <g fill="url(#note)">
+      <path d="M452 296 L720 252 L720 344 L452 388 Z"/>
+      <rect x="452" y="340" width="44" height="370"/>
+      <rect x="676" y="296" width="44" height="370"/>
+      <ellipse cx="424" cy="708" rx="92" ry="68" transform="rotate(-21 424 708)"/>
+      <ellipse cx="648" cy="674" rx="92" ry="68" transform="rotate(-21 648 674)"/>
+    </g>
+    <!-- white-hot core along the stems/beam for tube-light feel -->
+    <g fill="#ffffff" opacity="0.5" filter="url(#blurS)">
+      <path d="M462 318 L710 276 L710 300 L462 342 Z"/>
+      <rect x="466" y="352" width="14" height="348"/>
+      <rect x="690" y="308" width="14" height="348"/>
+    </g>
+
+    <!-- subtle top sheen on the chassis -->
+    <ellipse cx="512" cy="-120" rx="820" ry="300" fill="#ffffff" opacity="0.045" filter="url(#blurXL)"/>
+  </g>
+</svg>

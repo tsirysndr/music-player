@@ -15,6 +15,8 @@
 //! gRPC layer needs to route reads through a source, and it could not if a
 //! source needed the gRPC client.
 
+pub mod jellyfin;
+pub mod music_player;
 pub mod subsonic;
 
 use crate::ProviderRegistry;
@@ -25,7 +27,10 @@ use crate::ProviderRegistry;
 /// registry is shared by the gRPC server and the GraphQL schema, so the two
 /// cannot disagree about what a server is.
 pub fn register_builtin(registry: &mut ProviderRegistry) {
-    registry.register(subsonic::SubsonicFactory);
+    registry
+        .register(subsonic::SubsonicFactory)
+        .register(jellyfin::JellyfinFactory)
+        .register(music_player::MusicPlayerFactory);
 }
 
 /// A registry with the built-ins already in it.
@@ -42,9 +47,16 @@ mod tests {
     #[test]
     fn every_builtin_is_reachable_by_kind() {
         let registry = builtin_registry();
-        for kind in ["subsonic"] {
+        for kind in ["subsonic", "jellyfin", "music-player"] {
             assert!(registry.get(kind).is_some(), "{kind} is not registered");
         }
+    }
+
+    #[test]
+    fn a_peer_daemon_needs_no_credentials() {
+        let registry = builtin_registry();
+        assert!(!registry.get("music-player").unwrap().needs_credentials());
+        assert!(registry.get("subsonic").unwrap().needs_credentials());
     }
 
     /// Navidrome speaks the Subsonic API under its own name.

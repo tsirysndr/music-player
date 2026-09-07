@@ -8681,7 +8681,6 @@ dependencies = [
  "music-player-types",
  "serde",
  "serde_json",
- "surf",
  "tokio",
  "upnp-client",
  "url",

@@ -1,9 +1,7 @@
 use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
-use music_player_addons::{
-    chromecast::Chromecast, dlna::Dlna, jellyfin::Jellyfin, local::Local, Browsable, Player,
-};
-use music_player_provider::backends::subsonic::Subsonic;
+use music_player_addons::{chromecast::Chromecast, dlna::Dlna, local::Local, Browsable, Player};
+use music_player_provider::backends::{jellyfin::Jellyfin, subsonic::Subsonic};
 use music_player_settings::{read_settings, Settings};
 use music_player_types::types::Device;
 
@@ -101,7 +99,22 @@ pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browsable + Sen
             Ok(Some(Box::new(subsonic)))
         }
         "jellyfin" => {
-            let mut jellyfin: Jellyfin = device.clone().into();
+            let base_url = device
+                .base_url
+                .clone()
+                .unwrap_or_else(|| format!("http://{}:{}", device.host, device.port));
+            let settings = read_settings()
+                .ok()
+                .and_then(|config| config.try_deserialize::<Settings>().ok());
+            let (username, password) = settings
+                .map(|settings| {
+                    (
+                        settings.jellyfin_username.unwrap_or_default(),
+                        settings.jellyfin_password.unwrap_or_default(),
+                    )
+                })
+                .unwrap_or_default();
+            let mut jellyfin = Jellyfin::with_credentials(&base_url, &username, &password);
             jellyfin.connect().await?;
             Ok(Some(Box::new(jellyfin)))
         }

@@ -1,13 +1,11 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Search from "./Search";
 
-export default {
+const meta: Meta<typeof Search> = {
   title: "Components/Search",
   component: Search,
-} as ComponentMeta<typeof Search>;
+};
 
-const Template: ComponentStory<typeof Search> = (args: any) => (
-  <Search {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
+export const Default: StoryObj<typeof Search> = {};

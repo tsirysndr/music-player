@@ -1,7 +1,9 @@
 use anyhow::{Error, Ok};
 use music_player_server::api::music::v1alpha1::{
     playlist_service_client::PlaylistServiceClient, AddItemRequest, CreateRequest, DeleteRequest,
-    FindAllRequest, GetItemsRequest, GetPlaylistDetailsRequest, RemoveItemRequest, RenameRequest,
+    FindAllRequest, GetItemsRequest, GetPlaylistDetailsRequest, PreviewSmartPlaylistRequest,
+    PreviewSmartPlaylistResponse, RegenerateSmartPlaylistRequest, RemoveItemRequest, RenameRequest,
+    SmartPlaylist,
 };
 use music_player_types::types::{Playlist, Track};
 use tonic::transport::Channel;
@@ -62,9 +64,51 @@ impl PlaylistClient {
         let request = tonic::Request::new(CreateRequest {
             name: name.to_string(),
             tracks: vec![],
+            smart: None,
         });
         let response = self.client.create(request).await?;
         Ok(response.into_inner().id)
+    }
+
+    /// Create a smart playlist: the tracks come from `smart`'s RSQL filter and
+    /// are regenerated whenever the library changes.
+    pub async fn create_smart(
+        &mut self,
+        name: &str,
+        smart: SmartPlaylist,
+    ) -> Result<String, Error> {
+        let request = tonic::Request::new(CreateRequest {
+            name: name.to_string(),
+            tracks: vec![],
+            smart: Some(smart),
+        });
+        let response = self.client.create(request).await?;
+        Ok(response.into_inner().id)
+    }
+
+    /// Re-run a smart playlist's filter against the library as it is now.
+    /// Returns how many tracks it holds afterwards.
+    pub async fn regenerate_smart(&mut self, id: &str) -> Result<u32, Error> {
+        let request = tonic::Request::new(RegenerateSmartPlaylistRequest { id: id.to_string() });
+        Ok(self
+            .client
+            .regenerate_smart_playlist(request)
+            .await?
+            .into_inner()
+            .count)
+    }
+
+    /// What a filter would match, without saving anything.
+    pub async fn preview_smart(
+        &mut self,
+        smart: SmartPlaylist,
+    ) -> Result<PreviewSmartPlaylistResponse, Error> {
+        let request = tonic::Request::new(PreviewSmartPlaylistRequest { smart: Some(smart) });
+        Ok(self
+            .client
+            .preview_smart_playlist(request)
+            .await?
+            .into_inner())
     }
 
     pub async fn rename(&mut self, id: &str, name: &str) -> Result<(), Error> {

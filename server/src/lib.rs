@@ -12,6 +12,7 @@ pub mod history;
 pub mod library;
 pub mod media_controls;
 pub mod mixer;
+pub mod play_stats;
 pub mod playback;
 pub mod playlist;
 pub mod remote;

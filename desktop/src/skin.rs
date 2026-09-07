@@ -49,7 +49,39 @@ pub struct Colors {
     pub skeleton_bg: Option<String>,
     #[serde(default)]
     pub skeleton_fg: Option<String>,
+    /// Filter-box syntax colours. Optional like the skeleton tokens, so a skin
+    /// written before these existed keeps loading — each falls back to an
+    /// existing token of roughly the right weight (see `syntax_colors`).
+    #[serde(default)]
+    pub syntax_field: Option<String>,
+    #[serde(default)]
+    pub syntax_operator: Option<String>,
+    #[serde(default)]
+    pub syntax_value: Option<String>,
+    #[serde(default)]
+    pub syntax_logic: Option<String>,
+    #[serde(default)]
+    pub syntax_error: Option<String>,
     pub art_placeholder: String,
+}
+
+/// The filter-box syntax palette, with a fallback for each token a skin has
+/// not defined.
+///
+/// The fallbacks are chosen so an old skin still reads correctly rather than
+/// coming out monochrome: a field takes the accent, a value the display
+/// phosphor, and so on. Only the error colour is fixed — every skin's accent
+/// is a different hue, and half of them would make a mistake look deliberate.
+fn syntax_colors(c: &Colors) -> [Color; 5] {
+    let or =
+        |value: &Option<String>, fallback: &str| parse_hex(value.as_deref().unwrap_or(fallback));
+    [
+        or(&c.syntax_field, &c.accent),
+        or(&c.syntax_operator, &c.text_dim),
+        or(&c.syntax_value, &c.display_text),
+        or(&c.syntax_logic, &c.text_muted),
+        or(&c.syntax_error, "#d45769"),
+    ]
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -87,6 +119,12 @@ fn parse_hex(s: &str) -> Color {
 pub fn apply(skin: &Skin, app: &AppWindow) {
     let c = &skin.colors;
     let th = app.global::<Theme>();
+    let [field, operator, value, logic, error] = syntax_colors(c);
+    th.set_syntax_field(field);
+    th.set_syntax_operator(operator);
+    th.set_syntax_value(value);
+    th.set_syntax_logic(logic);
+    th.set_syntax_error(error);
     th.set_window_bg(parse_hex(&c.window_bg));
     th.set_panel_bg(parse_hex(&c.panel_bg));
     th.set_panel_raised(parse_hex(&c.panel_raised));

@@ -17,10 +17,10 @@ use music_player_tracklist::Tracklist;
 use rocksky_sdk::{AppView, ScrobbleInput};
 use tracing::{info, warn};
 
-const TICK: Duration = Duration::from_secs(1);
+pub(crate) const TICK: Duration = Duration::from_secs(1);
 
 /// Last.fm's rule: half the track, capped at 4 minutes.
-const SCROBBLE_CAP_MS: u32 = 4 * 60 * 1000;
+pub(crate) const SCROBBLE_CAP_MS: u32 = 4 * 60 * 1000;
 
 /// Back-off before retrying a scrobble the server rejected (offline, expired
 /// token…), so a failing submit doesn't retry every tick.
@@ -28,17 +28,18 @@ const RETRY_AFTER: Duration = Duration::from_secs(30);
 
 /// A position drop this large, landing near the start, means the track began
 /// again (repeat, or the same file queued twice) rather than a seek.
-const REPLAY_EPSILON_MS: u32 = 5_000;
+pub(crate) const REPLAY_EPSILON_MS: u32 = 5_000;
 
-struct Current {
-    key: String,
-    title: String,
-    artist: String,
-    album_artist: String,
-    album: String,
-    duration_ms: u32,
-    position_ms: u32,
-    track_number: Option<i32>,
+pub(crate) struct Current {
+    pub(crate) key: String,
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) artist: String,
+    pub(crate) album_artist: String,
+    pub(crate) album: String,
+    pub(crate) duration_ms: u32,
+    pub(crate) position_ms: u32,
+    pub(crate) track_number: Option<i32>,
 }
 
 fn token_path() -> PathBuf {
@@ -59,7 +60,7 @@ fn read_token() -> Option<String> {
         .map(String::from)
 }
 
-fn current_track(tracklist: &Arc<Mutex<Tracklist>>) -> Option<Current> {
+pub(crate) fn current_track(tracklist: &Arc<Mutex<Tracklist>>) -> Option<Current> {
     let (track, index, position_ms, is_playing) = {
         let tracklist = tracklist.lock().unwrap();
         let (track, index) = tracklist.current_track();
@@ -74,6 +75,7 @@ fn current_track(tracklist: &Arc<Mutex<Tracklist>>) -> Option<Current> {
         // Queue position plus title: a local file has no stable play id, and
         // the position alone would miss a repeat of the same index.
         key: format!("{index}\u{1}{}", track.title),
+        id: track.id.clone(),
         title: track.title.clone(),
         artist: track.artist.clone(),
         album_artist: track.album.artist.clone(),
@@ -84,7 +86,7 @@ fn current_track(tracklist: &Arc<Mutex<Tracklist>>) -> Option<Current> {
     })
 }
 
-fn unix_now() -> i64 {
+pub(crate) fn unix_now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -93,19 +95,19 @@ fn unix_now() -> i64 {
 
 /// Per-play bookkeeping. One instance lives in the loop.
 #[derive(Default)]
-struct Watcher {
-    key: Option<String>,
+pub(crate) struct Watcher {
+    pub(crate) key: Option<String>,
     /// Wall clock when this play started — the scrobble's `timestamp`.
-    started_at: i64,
+    pub(crate) started_at: i64,
     last_position_ms: u32,
     submitted: bool,
-    retry_after: Option<Instant>,
+    pub(crate) retry_after: Option<Instant>,
 }
 
 impl Watcher {
     /// Track identity/replay bookkeeping. Returns true when this tick is the
     /// one that crosses the scrobble threshold.
-    fn advance(&mut self, current: &Current) -> bool {
+    pub(crate) fn advance(&mut self, current: &Current) -> bool {
         let is_new = self.key.as_deref() != Some(current.key.as_str());
         // Repeat keeps the key but rewinds the clock: that is a new play, not
         // a seek backwards.

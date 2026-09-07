@@ -13,7 +13,7 @@ import AppStateSync from "./Components/AppStateSync";
 import RadioPage from "./Containers/Radio";
 import LikedPage from "./Containers/Liked";
 
-const hasNativeWrapper = !!process.env.REACT_APP_NATIVE_WRAPPER;
+const hasNativeWrapper = !!import.meta.env.VITE_NATIVE_WRAPPER;
 
 function GlobalShortcuts() {
   const navigate = useNavigate();

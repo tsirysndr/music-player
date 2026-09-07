@@ -1,0 +1,20 @@
+# Fetches synced lyrics from LRCLIB, a free, no-key lyrics API.
+
+id = "com.example.lyrics-provider"
+name = "LRCLIB Lyrics"
+version = "0.1.0"
+author = "music-player"
+description = "Synced (LRC) lyrics from lrclib.net"
+homepage = "https://lrclib.net"
+license = "MIT"
+topics = ["lyrics", "metadata"]
+readme = "README.md"
+
+entry = "plugin.wasm"
+capabilities = ["metadata"]
+
+[permissions]
+allowedHosts = ["lrclib.net"]
+libraryRead = false
+
+[permissions.config]

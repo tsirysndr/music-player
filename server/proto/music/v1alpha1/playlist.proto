@@ -8,6 +8,23 @@ import "objects/v1alpha1/playlist.proto";
 message CreateRequest {
   string name = 1;
   repeated metadata.v1alpha1.Track tracks = 2;
+  // Present for a smart playlist: the tracks are generated from this filter
+  // rather than taken from `tracks`, and regenerated whenever the library
+  // changes. Absent creates an ordinary hand-picked playlist.
+  optional SmartPlaylist smart = 3;
+}
+
+// A smart playlist's rule: an RSQL filter over the track fields, plus how to
+// order and cap the result.
+message SmartPlaylist {
+  // e.g. `genre==rock;year>2000`. Empty matches the whole library.
+  string filter = 1;
+  // A track field to order by, or `random`.
+  string sort_by = 2;
+  // `asc` or `desc`.
+  string sort_order = 3;
+  // Maximum tracks. 0 is unlimited.
+  uint32 limit = 4;
 }
 
 message CreateResponse {
@@ -116,6 +133,27 @@ message GetFolderDetailsResponse {
   repeated objects.v1alpha1.Playlist playlists = 3;
 }
 
+message RegenerateSmartPlaylistRequest {
+  string id = 1;
+}
+
+message RegenerateSmartPlaylistResponse {
+  uint32 count = 1;
+}
+
+message PreviewSmartPlaylistRequest {
+  SmartPlaylist smart = 1;
+}
+
+message PreviewSmartPlaylistResponse {
+  // How many tracks the filter matches.
+  uint32 count = 1;
+  // The first few, so a form can show what it caught.
+  repeated metadata.v1alpha1.Track tracks = 2;
+  // Why the filter did not compile; empty when it did.
+  string error = 3;
+}
+
 service PlaylistService {
   rpc Create(CreateRequest) returns (CreateResponse) {}
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
@@ -130,6 +168,13 @@ service PlaylistService {
   rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse) {}
   rpc RenameFolder(RenameFolderRequest) returns (RenameFolderResponse) {}
   rpc FindAllFolders(FindAllFoldersRequest) returns (FindAllFoldersResponse) {}
+  // Re-run a smart playlist's filter against the library as it is now.
+  rpc RegenerateSmartPlaylist(RegenerateSmartPlaylistRequest)
+      returns (RegenerateSmartPlaylistResponse) {}
+  // How many tracks a filter would match, without saving anything — what the
+  // "N tracks match" line under a filter box calls.
+  rpc PreviewSmartPlaylist(PreviewSmartPlaylistRequest)
+      returns (PreviewSmartPlaylistResponse) {}
   rpc GetFolderDetails(GetFolderDetailsRequest)
       returns (GetFolderDetailsResponse) {}
 }

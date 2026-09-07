@@ -1,0 +1,21 @@
+# Adds ext:mood and ext:era to the smart-playlist vocabulary.
+
+id = "com.example.mood-predicate"
+name = "Mood & Era"
+version = "0.1.0"
+author = "music-player"
+description = "Filter smart playlists by mood or decade: ext:mood==calm, ext:era==nineties"
+license = "MIT"
+topics = ["predicates", "smart-playlists"]
+readme = "README.md"
+
+entry = "plugin.wasm"
+capabilities = ["predicates"]
+
+[permissions]
+# `evaluate` runs once per candidate track, so this one answers from the track
+# it is handed and makes no request at all.
+allowedHosts = []
+libraryRead = false
+
+[permissions.config]

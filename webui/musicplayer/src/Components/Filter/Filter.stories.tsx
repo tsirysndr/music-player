@@ -1,16 +1,14 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Filter from "./Filter";
 
-export default {
+const meta: Meta<typeof Filter> = {
   title: "Components/Filter",
   component: Filter,
   argTypes: {
     onChange: { action: "onChange" },
   },
-} as ComponentMeta<typeof Filter>;
+};
 
-const Template: ComponentStory<typeof Filter> = (args: any) => (
-  <Filter {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
+export const Default: StoryObj<typeof Filter> = {};

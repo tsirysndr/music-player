@@ -1,13 +1,11 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Library from "./Library";
 
-export default {
+const meta: Meta<typeof Library> = {
   title: "Components/Library",
   component: Library,
-} as ComponentMeta<typeof Library>;
+};
 
-const Template: ComponentStory<typeof Library> = (args: any) => (
-  <Library {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
+export const Default: StoryObj<typeof Library> = {};

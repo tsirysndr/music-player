@@ -20,9 +20,11 @@ members = [
   "desktop",
   "discovery",
   "entity",
+  "extensions",
   "graphql",
   "migration",
   "playback",
+  "rsql",
   "scanner",
   "server",
   "settings",
@@ -93,6 +95,14 @@ version = "0.2.1"
 path = "types"
 version = "0.2.1"
 
+[dependencies.music-player-rsql]
+path = "rsql"
+version = "0.2.1"
+
+[dependencies.music-player-extensions]
+path = "extensions"
+version = "0.2.1"
+
 [dependencies.sea-orm-migration]
 features = [
   # Enable at least one `ASYNC_RUNTIME` and `DATABASE_DRIVER` feature if you want to run migration via CLI.
@@ -121,6 +131,7 @@ spinners = "4.1.0"
 tabled = "0.8.0"
 time = "0.3.36"
 tokio = {version = "1.21.0", features = ["full"]}
+tempfile = "3"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 ratatui = {version = "0.30", features = ["serde"]}

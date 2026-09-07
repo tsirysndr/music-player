@@ -8,6 +8,7 @@ use music_player_entity::{
     folder as folder_entity, playlist as playlist_entity,
     playlist_tracks as playlist_tracks_entity, track as track_entity,
 };
+use music_player_rsql::{QuerySpec, SortOrder as RsqlSortOrder};
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
@@ -97,6 +98,70 @@ impl PlaylistQuery {
         Ok(folder.into())
     }
 
+    /// What a smart-playlist filter would produce, without saving it.
+    ///
+    /// Cheap enough to call as the user types: it selects ids, then loads only
+    /// the handful it shows. A filter that does not compile comes back as an
+    /// error carrying the offset of the offending character.
+    async fn smart_playlist_preview(
+        &self,
+        ctx: &Context<'_>,
+        smart: SmartPlaylistInput,
+        #[graphql(default = 10)] sample: u32,
+    ) -> Result<SmartPlaylistPreview, Error> {
+        let db = ctx.data::<Database>().unwrap();
+        smart.validate()?;
+        let ids = music_player_storage::smart_playlist::matching_track_ids(
+            db.get_connection(),
+            &smart.spec(),
+        )
+        .await
+        .map_err(|e| Error::new(e.to_string()))?;
+        let count = ids.len() as u32;
+
+        let head: Vec<String> = ids.into_iter().take(sample as usize).collect();
+        let mut tracks: Vec<track_entity::Model> = if head.is_empty() {
+            Vec::new()
+        } else {
+            track_entity::Entity::find()
+                .filter(track_entity::Column::Id.is_in(head.clone()))
+                .all(db.get_connection())
+                .await?
+        };
+        // `is_in` returns rows in table order; the preview has to show them in
+        // the order the filter actually produced.
+        tracks.sort_by_key(|track| {
+            head.iter()
+                .position(|id| *id == track.id)
+                .unwrap_or(usize::MAX)
+        });
+
+        Ok(SmartPlaylistPreview {
+            count,
+            tracks: tracks.into_iter().map(Into::into).collect(),
+        })
+    }
+
+    /// Every field a smart-playlist filter may mention, so a form can offer a
+    /// picker rather than expecting the vocabulary to be memorised.
+    async fn rsql_fields(&self) -> Vec<RsqlField> {
+        music_player_rsql::TRACKS
+            .fields
+            .iter()
+            .map(|field| RsqlField {
+                name: field.name.to_owned(),
+                label: field.label.to_owned(),
+                kind: match field.kind {
+                    music_player_rsql::FieldKind::Text => "text",
+                    music_player_rsql::FieldKind::Integer => "integer",
+                    music_player_rsql::FieldKind::Boolean => "boolean",
+                    music_player_rsql::FieldKind::Timestamp => "timestamp",
+                }
+                .to_owned(),
+            })
+            .collect()
+    }
+
     async fn folders(&self, ctx: &Context<'_>) -> Result<Vec<Folder>, Error> {
         let db = ctx.data::<Database>().unwrap();
         folder_entity::Entity::find()
@@ -108,17 +173,82 @@ impl PlaylistQuery {
     }
 }
 
+/// The three things a smart playlist is: a filter, an order, and a cap.
+#[derive(Clone, Debug, InputObject)]
+pub struct SmartPlaylistInput {
+    /// RSQL over the track fields, e.g. `genre==rock;year>2000`. Empty matches
+    /// the whole library.
+    #[graphql(default)]
+    pub filter: String,
+    /// A track field to order by, or `random`.
+    pub sort_by: Option<String>,
+    /// `asc` or `desc`.
+    pub sort_order: Option<String>,
+    /// Maximum number of tracks. Absent or 0 is unlimited.
+    pub limit: Option<u32>,
+}
+
+impl SmartPlaylistInput {
+    pub fn spec(&self) -> QuerySpec {
+        QuerySpec {
+            filter: self.filter.clone(),
+            sort_by: self.sort_by.clone().filter(|s| !s.trim().is_empty()),
+            sort_order: match self.sort_order.as_deref() {
+                Some(value) if value.eq_ignore_ascii_case("desc") => RsqlSortOrder::Desc,
+                _ => RsqlSortOrder::Asc,
+            },
+            limit: self.limit,
+        }
+    }
+
+    /// Check the filter and sort compile, so a bad one is reported against the
+    /// form rather than stored and silently matching nothing.
+    fn validate(&self) -> Result<(), Error> {
+        music_player_rsql::build(&self.spec(), &music_player_rsql::TRACKS)
+            .map(|_| ())
+            .map_err(|e| Error::new(e.message).extend_with(|_, ext| ext.set("at", e.at as u32)))
+    }
+}
+
+/// What a filter would produce, without saving anything — the "142 tracks
+/// match" line under the filter box, plus the first few by name.
+#[derive(SimpleObject)]
+pub struct SmartPlaylistPreview {
+    /// How many tracks the filter matches.
+    pub count: u32,
+    /// The first handful, so the form can show what it caught.
+    pub tracks: Vec<Track>,
+}
+
+/// One filterable field, so a UI can offer a picker instead of making the user
+/// remember the vocabulary.
+#[derive(SimpleObject)]
+pub struct RsqlField {
+    /// The name to write in a filter.
+    pub name: String,
+    /// A human label.
+    pub label: String,
+    /// `text`, `integer`, `boolean` or `timestamp` — what values it accepts.
+    pub kind: String,
+}
+
 #[derive(Default)]
 pub struct PlaylistMutation;
 
 #[Object]
 impl PlaylistMutation {
+    /// Create a playlist.
+    ///
+    /// Passing `smart` makes it a smart playlist: the filter is validated and
+    /// the tracks generated immediately, so the caller gets back a playlist
+    /// that is already populated rather than an empty one to fill by hand.
     async fn create_playlist(
         &self,
         ctx: &Context<'_>,
         name: String,
         description: Option<String>,
         folder_id: Option<ID>,
+        smart: Option<SmartPlaylistInput>,
     ) -> Result<Playlist, Error> {
         let db = ctx.data::<Database>().unwrap();
         let mut folder: Option<folder_entity::Model> = None;
@@ -134,15 +264,34 @@ impl PlaylistMutation {
             }
             None => None,
         };
+        // Reject a filter that does not compile *before* creating anything —
+        // an empty playlist left behind by a typo is worse than an error.
+        if let Some(smart) = &smart {
+            smart.validate()?;
+        }
         let playlist = playlist_entity::ActiveModel {
             id: ActiveValue::set(cuid2()),
             name: ActiveValue::Set(name),
             description: ActiveValue::Set(description),
             folder_id: ActiveValue::Set(folder_id.clone()),
             created_at: ActiveValue::set(chrono::Utc::now()),
+            is_smart: ActiveValue::Set(smart.is_some()),
+            rsql: ActiveValue::Set(smart.as_ref().map(|s| s.filter.clone())),
+            sort_by: ActiveValue::Set(smart.as_ref().and_then(|s| s.sort_by.clone())),
+            sort_order: ActiveValue::Set(smart.as_ref().and_then(|s| s.sort_order.clone())),
+            max_tracks: ActiveValue::Set(smart.as_ref().and_then(|s| s.limit)),
+            refreshed_at: ActiveValue::Set(None),
         };
         match playlist.insert(db.get_connection()).await {
             Ok(playlist) => {
+                if smart.is_some() {
+                    music_player_storage::smart_playlist::regenerate(
+                        db.get_connection(),
+                        &playlist.id,
+                    )
+                    .await
+                    .map_err(|e| Error::new(e.to_string()))?;
+                }
                 if let Some(folder) = folder {
                     SimpleBroker::publish(FolderChanged {
                         folder: folder.into(),
@@ -159,6 +308,57 @@ impl PlaylistMutation {
             }
             Err(err) => Err(Error::new(err.to_string())),
         }
+    }
+
+    /// Change a smart playlist's filter and regenerate its tracks.
+    async fn update_smart_playlist(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        smart: SmartPlaylistInput,
+    ) -> Result<Playlist, Error> {
+        let db = ctx.data::<Database>().unwrap();
+        smart.validate()?;
+        let existing = playlist_entity::Entity::find_by_id(id.to_string())
+            .one(db.get_connection())
+            .await?
+            .ok_or_else(|| Error::new("Playlist not found"))?;
+        if !existing.is_smart {
+            return Err(Error::new("Not a smart playlist"));
+        }
+        playlist_entity::ActiveModel {
+            id: ActiveValue::Unchanged(id.to_string()),
+            rsql: ActiveValue::Set(Some(smart.filter.clone())),
+            sort_by: ActiveValue::Set(smart.sort_by.clone()),
+            sort_order: ActiveValue::Set(smart.sort_order.clone()),
+            max_tracks: ActiveValue::Set(smart.limit),
+            ..Default::default()
+        }
+        .update(db.get_connection())
+        .await?;
+        self.regenerate_smart_playlist(ctx, id).await
+    }
+
+    /// Re-run a smart playlist's filter against the library as it is now.
+    async fn regenerate_smart_playlist(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+    ) -> Result<Playlist, Error> {
+        let db = ctx.data::<Database>().unwrap();
+        music_player_storage::smart_playlist::regenerate(db.get_connection(), id.as_str())
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+        let playlist: Playlist = PlaylistRepository::new(db.get_connection())
+            .find(id.as_str())
+            .await?
+            .into();
+        SimpleBroker::publish(PlaylistChanged {
+            playlist: playlist.clone(),
+            mutation_type: MutationType::Updated,
+            track: None,
+        });
+        Ok(playlist)
     }
 
     async fn delete_playlist(&self, ctx: &Context<'_>, id: ID) -> Result<Playlist, Error> {

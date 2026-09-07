@@ -1,19 +1,16 @@
 import { linkTo } from "@storybook/addon-links";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import ArtistDetails from "./ArtistDetails";
 
-export default {
+const meta: Meta<typeof ArtistDetails> = {
   title: "Components/ArtistDetails",
   component: ArtistDetails,
-} as ComponentMeta<typeof ArtistDetails>;
+};
 
-const Template: ComponentStory<typeof ArtistDetails> = (args: any) => (
-  <ArtistDetails {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof ArtistDetails> = {
+  args: {
   artist: {
     name: "Daft Punk",
   },
@@ -62,4 +59,5 @@ Default.args = {
   ],
   onBack: linkTo("Components/Artists", "Default"),
   currentDevice: undefined,
+},
 };

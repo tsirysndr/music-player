@@ -1,0 +1,21 @@
+# Library reports, as commands in the UI.
+
+id = "com.example.library-commands"
+name = "Library Reports"
+version = "0.1.0"
+author = "music-player"
+description = "Summary, tracks-by-decade and never-played reports"
+license = "MIT"
+topics = ["commands", "reports", "library"]
+readme = "README.md"
+
+entry = "plugin.wasm"
+capabilities = ["commands"]
+
+[permissions]
+# No network: everything this does is local.
+allowedHosts = []
+# Reads tracks, albums, artists, playlists and saved radios.
+libraryRead = true
+
+[permissions.config]

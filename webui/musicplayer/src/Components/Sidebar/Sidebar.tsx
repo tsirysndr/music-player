@@ -2,6 +2,7 @@ import styled from "@emotion/styled";
 import { FC, useContext, useState } from "react";
 import Library from "../Library";
 import Playlists from "../Playlists";
+import type { SmartPlaylistRule } from "../Playlists/NewPlaylistModal";
 import Search from "../Search";
 import { PlugConnected } from "@styled-icons/fluentui-system-regular";
 import ConnectModal from "./ConnectModal";
@@ -93,7 +94,11 @@ export type SidebarProps = {
   folders: any[];
   playlists: any[];
   onCreateFolder: (name: string) => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
+  onCreatePlaylist: (
+    name: string,
+    description?: string,
+    smart?: SmartPlaylistRule,
+  ) => void;
   onDeleteFolder: (id: string) => void;
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;

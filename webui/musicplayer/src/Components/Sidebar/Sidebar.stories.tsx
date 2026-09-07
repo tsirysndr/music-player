@@ -1,18 +1,18 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Sidebar from "./Sidebar";
 
-export default {
+const meta: Meta<typeof Sidebar> = {
   title: "Components/Sidebar",
   component: Sidebar,
-} as ComponentMeta<typeof Sidebar>;
+};
 
-const Template: ComponentStory<typeof Sidebar> = (args: any) => (
-  <Sidebar {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({
+export const Default: StoryObj<typeof Sidebar> = {
+  args: {
   devices: [],
   currentDevice: undefined,
   connectToDevice: (_id: string) => {},
   disconnectFromDevice: () => {},
-});
+},
+};

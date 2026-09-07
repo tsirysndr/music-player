@@ -2,11 +2,17 @@ import gql from "graphql-tag";
 import { FOLDER_FRAGMENT, PLAYLIST_FRAGMENT } from "../Fragments";
 
 export const CREATE_PLAYLIST = gql`
-  mutation CreatePlaylist($name: String!, $description: String) {
-    createPlaylist(name: $name, description: $description) {
+  mutation CreatePlaylist(
+    $name: String!
+    $description: String
+    $smart: SmartPlaylistInput
+  ) {
+    createPlaylist(name: $name, description: $description, smart: $smart) {
       id
       name
       description
+      isSmart
+      rsql
     }
   }
 `;

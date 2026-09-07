@@ -1,0 +1,43 @@
+[package]
+authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
+description = "WebAssembly extensions for music player, powered by Extism"
+edition = "2021"
+license = "MIT"
+name = "music-player-extensions"
+repository = "https://github.com/tsirysndr/music-player"
+version = "0.2.1"
+
+[dependencies.music-player-entity]
+path = "../entity"
+version = "0.2.1"
+
+[dependencies.music-player-rsql]
+path = "../rsql"
+version = "0.2.1"
+
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.2.1"
+
+[dependencies.music-player-storage]
+path = "../storage"
+version = "0.2.1"
+
+[dependencies]
+anyhow = "1.0.67"
+chrono = "0.4"
+dirs = "4.0.0"
+extism = "1.30"
+reqwest = {version = "0.11", features = ["json", "rustls-tls"], default-features = false}
+sea-orm = {version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
+serde = {version = "1.0.145", features = ["derive"]}
+serde_json = "1.0.85"
+tempfile = "3"
+toml = "0.8"
+tokio = {version = "1.21.0", features = ["full"]}
+tracing = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+migration = {path = "../migration", package = "music-player-migration"}
+tempfile = "3"

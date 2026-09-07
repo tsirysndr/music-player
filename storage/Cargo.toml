@@ -20,6 +20,10 @@ version = "0.2.1"
 path = "../entity"
 version = "0.2.1"
 
+[dependencies.music-player-rsql]
+path = "../rsql"
+version = "0.2.1"
+
 [dependencies]
 itertools = "0.10.5"
 dirs = "4.0.0"

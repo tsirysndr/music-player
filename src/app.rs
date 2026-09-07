@@ -153,6 +153,8 @@ impl Default for SearchState {
 }
 
 pub struct App {
+    /// The smart-playlist form overlay. Swallows keys while `active`.
+    pub smart_playlist_form: crate::smart_playlist_form::SmartPlaylistForm,
     pub instant_since_last_current_playback_poll: Instant,
     pub size: Rect,
     navigation_stack: Vec<Route>,
@@ -202,6 +204,7 @@ impl App {
             show_help: false,
             help_scroll: 0,
             search: SearchState::default(),
+            smart_playlist_form: Default::default(),
             library_cache: None,
             server_addr: "localhost:5051".to_string(),
         }

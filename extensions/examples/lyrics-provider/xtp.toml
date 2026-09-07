@@ -1,0 +1,17 @@
+app_id = ""
+
+# This is where 'xtp plugin push' expects to find the wasm file after the build script has run.
+bin = "target/wasm32-wasip1/release/plugin.wasm"
+extension_point_id = ""
+name = "lyrics-provider"
+
+[scripts]
+
+  # xtp plugin build runs this script to generate the wasm file
+  build = "cargo build --release --target wasm32-wasip1"
+
+  # xtp plugin init runs this script to format the plugin code
+  format = "cargo fmt"
+
+  # xtp plugin init runs this script before running the format script
+  prepare = "bash prepare.sh"

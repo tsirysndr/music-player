@@ -1,27 +1,16 @@
 import { linkTo } from "@storybook/addon-links";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Artists from "./Artists";
 
-export default {
+const meta: Meta<typeof Artists> = {
   title: "Components/Artists",
   component: Artists,
-  argTypes: {
-    onPlay: { action: "play" },
-    onPause: { action: "pause" },
-    onNext: { action: "next" },
-    onPrevious: { action: "previous" },
-    onShuffle: { action: "shuffle" },
-    onRepeat: { action: "repeat" },
-  },
-} as ComponentMeta<typeof Artists>;
+};
 
-const Template: ComponentStory<typeof Artists> = (args: any) => (
-  <Artists {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof Artists> = {
+  args: {
   onClickArtist(artist) {
     linkTo("Components/ArtistDetails", "Default")();
   },
@@ -56,4 +45,5 @@ Default.args = {
     },
   ],
   currentCastDevice: undefined,
+},
 };

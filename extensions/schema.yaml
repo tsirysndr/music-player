@@ -1,0 +1,596 @@
+version: v1-draft
+exports:
+  on_track_played:
+    description: |
+      Called when a play crosses the scrobble threshold — half the track or
+      four minutes, whichever comes first. Requires the `events` capability.
+    input:
+      $ref: "#/components/schemas/PlayEvent"
+      contentType: application/json
+  on_track_skipped:
+    description: |
+      Called when a track is passed over before the play threshold.
+      Requires the `events` capability.
+    input:
+      $ref: "#/components/schemas/SkipEvent"
+      contentType: application/json
+  on_track_liked:
+    description: |
+      Called when a track is liked or unliked. Requires the `events` capability.
+    input:
+      $ref: "#/components/schemas/LikeEvent"
+      contentType: application/json
+  on_playlist_created:
+    description: |
+      Called when a playlist is created, smart or hand-picked.
+      Requires the `events` capability.
+    input:
+      $ref: "#/components/schemas/PlaylistEvent"
+      contentType: application/json
+  on_scan_completed:
+    description: |
+      Called when a library scan finishes. Requires the `events` capability.
+    input:
+      $ref: "#/components/schemas/ScanEvent"
+      contentType: application/json
+
+  get_metadata:
+    description: |
+      Supply metadata the player does not have for a track: lyrics, artwork,
+      a biography, genre tags. Return the fields you know and leave the rest
+      unset — the host takes the first non-empty answer across the enabled
+      providers. Requires the `metadata` capability.
+    input:
+      $ref: "#/components/schemas/MetadataRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/MetadataResponse"
+      contentType: application/json
+
+  commands:
+    description: |
+      List the actions this extension offers. Called once when the extension
+      loads. Requires the `commands` capability.
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/CommandSpec"
+      contentType: application/json
+  run_command:
+    description: |
+      Run one of the actions returned by `commands`.
+      Requires the `commands` capability.
+    input:
+      $ref: "#/components/schemas/CommandRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/CommandResponse"
+      contentType: application/json
+
+  predicates:
+    description: |
+      List the smart-playlist predicates this extension adds. They become
+      usable in filters as `ext:<name>`, e.g. `ext:mood==chill`.
+      Requires the `predicates` capability.
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/PredicateSpec"
+      contentType: application/json
+  evaluate:
+    description: |
+      Decide whether one track satisfies one predicate. Called per candidate
+      track while a smart playlist is generated, so keep it cheap.
+      Requires the `predicates` capability.
+    input:
+      $ref: "#/components/schemas/PredicateRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/PredicateResponse"
+      contentType: application/json
+
+  source_info:
+    description: |
+      Describe the media source this extension provides. Called once when the
+      extension loads. Requires the `source` capability.
+    output:
+      $ref: "#/components/schemas/SourceInfo"
+      contentType: application/json
+  list_albums:
+    description: |
+      Page through the source's albums. Requires the `source` capability.
+    input:
+      $ref: "#/components/schemas/BrowseRequest"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/SourceAlbum"
+      contentType: application/json
+  list_artists:
+    description: |
+      Page through the source's artists. Requires the `source` capability.
+    input:
+      $ref: "#/components/schemas/BrowseRequest"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/SourceArtist"
+      contentType: application/json
+  list_tracks:
+    description: |
+      Page through the source's tracks. Set `parentId` to list the tracks of
+      one album or playlist. Requires the `source` capability.
+    input:
+      $ref: "#/components/schemas/BrowseRequest"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/Track"
+      contentType: application/json
+  list_playlists:
+    description: |
+      Page through the source's playlists. Requires the `source` capability.
+    input:
+      $ref: "#/components/schemas/BrowseRequest"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/SourcePlaylist"
+      contentType: application/json
+  get_stream_url:
+    description: |
+      Resolve one of the source's track ids to something the player can
+      actually decode — a direct http(s) url. Called at play time rather than
+      while browsing, so a signed or expiring url stays fresh.
+      Requires the `source` capability.
+    input:
+      $ref: "#/components/schemas/StreamRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/StreamResponse"
+      contentType: application/json
+
+imports:
+  log:
+    description: |
+      Write a line to the host's log, prefixed with the extension id.
+    input:
+      type: string
+      contentType: text/plain; charset=utf-8
+  query_library:
+    description: |
+      Run an RSQL filter over the user's tracks and get back the matches.
+      Requires the `libraryRead` permission; without it the call returns an
+      empty list. Example filter: `genre==rock;year>2000`.
+    input:
+      $ref: "#/components/schemas/LibraryQuery"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/Track"
+      contentType: application/json
+  query_albums:
+    description: |
+      Run an RSQL filter over the user's albums. Fields: `title`, `artist`,
+      `year`, `cover`. Requires the `libraryRead` permission.
+    input:
+      $ref: "#/components/schemas/LibraryQuery"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/LibraryAlbum"
+      contentType: application/json
+  query_artists:
+    description: |
+      Run an RSQL filter over the user's artists. Fields: `name`.
+      Requires the `libraryRead` permission.
+    input:
+      $ref: "#/components/schemas/LibraryQuery"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/LibraryArtist"
+      contentType: application/json
+  query_playlists:
+    description: |
+      Run an RSQL filter over the user's playlists. Fields: `name`,
+      `description`, `smart`, `created`. Requires the `libraryRead` permission.
+    input:
+      $ref: "#/components/schemas/LibraryQuery"
+      contentType: application/json
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/LibraryPlaylist"
+      contentType: application/json
+  get_playlist_tracks:
+    description: |
+      The tracks of one playlist, in order. Requires the `libraryRead`
+      permission.
+    input:
+      type: string
+      contentType: text/plain; charset=utf-8
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/Track"
+      contentType: application/json
+  get_saved_radios:
+    description: |
+      The user's bookmarked radio stations. Requires the `libraryRead`
+      permission.
+    output:
+      type: array
+      items:
+        $ref: "#/components/schemas/SavedRadio"
+      contentType: application/json
+  get_config:
+    description: |
+      Read one of the config values declared in `plugin.json`. Returns an empty
+      string for a key that was not declared or has no value.
+    input:
+      type: string
+      contentType: text/plain; charset=utf-8
+    output:
+      type: string
+      contentType: text/plain; charset=utf-8
+
+components:
+  schemas:
+    Track:
+      description: A track as an extension sees it — the tags, not the internals.
+      properties:
+        id:
+          type: string
+          description: Stable library id.
+        title:
+          type: string
+        artist:
+          type: string
+        album:
+          type: string
+        albumArtist:
+          type: string
+        genre:
+          type: string
+        year:
+          type: integer
+          format: int32
+          nullable: true
+        trackNumber:
+          type: integer
+          format: int32
+          nullable: true
+        duration:
+          type: number
+          format: float
+          description: Length in seconds.
+        uri:
+          type: string
+          description: File path or stream url.
+
+    PlayEvent:
+      properties:
+        type:
+          type: string
+          description: Always `track_played`.
+        track:
+          $ref: "#/components/schemas/Track"
+        playedAt:
+          type: integer
+          format: int64
+          description: Unix seconds when the play started.
+        playCount:
+          type: integer
+          format: int32
+          description: How many times this track has now been played.
+
+    SkipEvent:
+      properties:
+        type:
+          type: string
+          description: Always `track_skipped`.
+        track:
+          $ref: "#/components/schemas/Track"
+        skippedAt:
+          type: integer
+          format: int64
+
+    LikeEvent:
+      properties:
+        type:
+          type: string
+          description: Always `track_liked`.
+        track:
+          $ref: "#/components/schemas/Track"
+        liked:
+          type: boolean
+          description: True when liked, false when the like was removed.
+
+    PlaylistEvent:
+      properties:
+        type:
+          type: string
+          description: Always `playlist_created`.
+        id:
+          type: string
+        name:
+          type: string
+        isSmart:
+          type: boolean
+
+    ScanEvent:
+      properties:
+        type:
+          type: string
+          description: Always `scan_completed`.
+        tracksAdded:
+          type: integer
+          format: int32
+        totalTracks:
+          type: integer
+          format: int32
+
+    MetadataRequest:
+      properties:
+        track:
+          $ref: "#/components/schemas/Track"
+
+    MetadataResponse:
+      description: |
+        Every field is optional. Fill in what you know; the host merges answers
+        from the enabled providers, first non-empty wins.
+      properties:
+        lyrics:
+          type: string
+          nullable: true
+          description: Plain text or LRC.
+        artworkUrl:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+          description: Artist biography.
+        genres:
+          type: array
+          items:
+            type: string
+          description: Genre tags this provider would apply.
+
+    CommandSpec:
+      properties:
+        name:
+          type: string
+          description: Identifier passed back to `run_command`.
+        title:
+          type: string
+          description: What the UI shows.
+        description:
+          type: string
+        needsTrack:
+          type: boolean
+          description: Whether the command wants the current track passed in.
+
+    CommandRequest:
+      properties:
+        name:
+          type: string
+        track:
+          $ref: "#/components/schemas/Track"
+          nullable: true
+        args:
+          type: string
+          description: Free-form JSON arguments from the caller.
+
+    CommandResponse:
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+          description: A line to show the user.
+        data:
+          type: string
+          description: Anything structured the caller wants back, as JSON.
+
+    PredicateSpec:
+      properties:
+        name:
+          type: string
+          description: The name used in a filter, e.g. `mood` for `ext:mood==chill`.
+        description:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+          description: Example values, shown in a picker.
+
+    PredicateRequest:
+      properties:
+        name:
+          type: string
+        op:
+          type: string
+          description: "The comparison written in the filter: ==, !=, >, >=, <, <=."
+        value:
+          type: string
+        track:
+          $ref: "#/components/schemas/Track"
+
+    PredicateResponse:
+      properties:
+        matches:
+          type: boolean
+
+    LibraryQuery:
+      properties:
+        filter:
+          type: string
+          description: RSQL over the track fields, e.g. `genre==rock;year>2000`.
+        limit:
+          type: integer
+          format: int32
+          description: Maximum rows to return. 0 or absent is unlimited.
+
+    LibraryAlbum:
+      description: An album in the user's own library.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        year:
+          type: integer
+          format: int32
+          nullable: true
+        cover:
+          type: string
+          description: Cover file name, resolvable through the player's cover route.
+
+    LibraryArtist:
+      description: An artist in the user's own library.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        image:
+          type: string
+
+    LibraryPlaylist:
+      description: A playlist in the user's own library.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        isSmart:
+          type: boolean
+        trackCount:
+          type: integer
+          format: int32
+
+    SavedRadio:
+      description: A radio station the user has bookmarked.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        streamUrl:
+          type: string
+        source:
+          type: string
+        genre:
+          type: string
+        country:
+          type: string
+        logo:
+          type: string
+        bitrate:
+          type: integer
+          format: int32
+
+    SourceInfo:
+      description: What kind of media source this extension provides.
+      properties:
+        name:
+          type: string
+          description: Shown in the source picker, e.g. "Bandcamp".
+        description:
+          type: string
+        requiresAuth:
+          type: boolean
+          description: |
+            Whether the source needs credentials. Declare the keys it reads
+            under `permissions.config` in the manifest.
+        supportsSearch:
+          type: boolean
+          description: Whether the `query` field of a browse request is honoured.
+
+    BrowseRequest:
+      properties:
+        parentId:
+          type: string
+          description: |
+            List the children of this album, artist or playlist. Empty lists
+            everything at the top level.
+        query:
+          type: string
+          description: Free-text search. Empty browses rather than searches.
+        offset:
+          type: integer
+          format: int32
+        limit:
+          type: integer
+          format: int32
+          description: Maximum items to return. 0 or absent means the host's default.
+
+    SourceAlbum:
+      properties:
+        id:
+          type: string
+          description: The source's own id, passed back as `parentId`.
+        title:
+          type: string
+        artist:
+          type: string
+        year:
+          type: integer
+          format: int32
+          nullable: true
+        coverUrl:
+          type: string
+
+    SourceArtist:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        imageUrl:
+          type: string
+
+    SourcePlaylist:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        trackCount:
+          type: integer
+          format: int32
+
+    StreamRequest:
+      properties:
+        trackId:
+          type: string
+          description: The source's own track id.
+
+    StreamResponse:
+      properties:
+        url:
+          type: string
+          description: A direct http(s) url the player can decode.
+        mimeType:
+          type: string
+        headers:
+          type: string
+          description: |
+            Extra request headers as a JSON object, for a source that needs an
+            Authorization header. Empty when none are needed.

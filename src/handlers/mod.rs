@@ -15,6 +15,7 @@ pub mod play_queue;
 pub mod playbar;
 pub mod playlist;
 pub mod search;
+pub mod smart_playlist;
 pub mod tracks;
 
 /// Handles a key press. Returns `true` when the application should exit.
@@ -36,6 +37,12 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         return false;
     }
 
+    // The smart-playlist form takes every key while it is up, so a stray `p`
+    // types into a field rather than pausing playback.
+    if app.smart_playlist_form.active {
+        smart_playlist::handler(key, app);
+        return false;
+    }
     // The fuzzy finder owns the keyboard while it is open.
     if app.search.active {
         search::handler(key, app);

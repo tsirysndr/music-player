@@ -1,4 +1,4 @@
-use music_player_entity::{playlist, playlist_tracks, track};
+use music_player_entity::{album, playlist, playlist_tracks, track};
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
@@ -13,11 +13,27 @@ use crate::api::{
         DeleteFolderRequest, DeleteFolderResponse, DeleteRequest, DeleteResponse,
         FindAllFoldersRequest, FindAllFoldersResponse, FindAllRequest, FindAllResponse,
         GetFolderDetailsRequest, GetFolderDetailsResponse, GetItemsRequest, GetItemsResponse,
-        GetPlaylistDetailsRequest, GetPlaylistDetailsResponse, RemoveItemRequest,
-        RemoveItemResponse, RenameFolderRequest, RenameFolderResponse, RenameRequest,
-        RenameResponse,
+        GetPlaylistDetailsRequest, GetPlaylistDetailsResponse, PreviewSmartPlaylistRequest,
+        PreviewSmartPlaylistResponse, RegenerateSmartPlaylistRequest,
+        RegenerateSmartPlaylistResponse, RemoveItemRequest, RemoveItemResponse,
+        RenameFolderRequest, RenameFolderResponse, RenameRequest, RenameResponse, SmartPlaylist,
     },
 };
+
+/// Turn the wire form of a smart playlist's rule into the query it stands for.
+fn spec_of(smart: &SmartPlaylist) -> music_player_rsql::QuerySpec {
+    music_player_rsql::QuerySpec {
+        filter: smart.filter.clone(),
+        sort_by: Some(smart.sort_by.clone()).filter(|s| !s.trim().is_empty()),
+        sort_order: if smart.sort_order.eq_ignore_ascii_case("desc") {
+            music_player_rsql::SortOrder::Desc
+        } else {
+            music_player_rsql::SortOrder::Asc
+        },
+        // 0 means unlimited on the wire; `None` is what the builder wants.
+        limit: Some(smart.limit).filter(|n| *n > 0),
+    }
+}
 
 pub struct Playlist {
     db: Database,
@@ -35,13 +51,56 @@ impl PlaylistService for Playlist {
         &self,
         request: tonic::Request<CreateRequest>,
     ) -> Result<tonic::Response<CreateResponse>, tonic::Status> {
+        let smart = request.get_ref().smart.clone();
+        // A filter that does not compile is rejected before anything is
+        // created: an empty playlist left behind by a typo is worse than an
+        // error the caller can show.
+        if let Some(smart) = &smart {
+            if let Err(e) = music_player_rsql::build(&spec_of(smart), &music_player_rsql::TRACKS) {
+                return Err(tonic::Status::invalid_argument(e.message));
+            }
+        }
         let item = playlist::ActiveModel {
             id: ActiveValue::set(Uuid::new_v4().to_string()),
             name: ActiveValue::set(request.get_ref().name.clone()),
+            created_at: ActiveValue::set(chrono::Utc::now()),
+            is_smart: ActiveValue::set(smart.is_some()),
+            rsql: ActiveValue::set(smart.as_ref().map(|s| s.filter.clone())),
+            sort_by: ActiveValue::set(
+                smart
+                    .as_ref()
+                    .map(|s| s.sort_by.clone())
+                    .filter(|s| !s.trim().is_empty()),
+            ),
+            sort_order: ActiveValue::set(
+                smart
+                    .as_ref()
+                    .map(|s| s.sort_order.clone())
+                    .filter(|s| !s.trim().is_empty()),
+            ),
+            max_tracks: ActiveValue::set(smart.as_ref().map(|s| s.limit).filter(|n| *n > 0)),
             ..Default::default()
         };
         match item.insert(self.db.get_connection()).await {
             Ok(saved) => {
+                // A smart playlist fills itself; the caller's `tracks` are
+                // ignored, so it comes back populated rather than empty.
+                if smart.is_some() {
+                    if let Err(e) = music_player_storage::smart_playlist::regenerate(
+                        self.db.get_connection(),
+                        &saved.id,
+                    )
+                    .await
+                    {
+                        return Err(tonic::Status::internal(e.to_string()));
+                    }
+                    return Ok(tonic::Response::new(CreateResponse {
+                        id: saved.id,
+                        name: saved.name,
+                        tracks: vec![],
+                        ..Default::default()
+                    }));
+                }
                 for track in request.get_ref().tracks.iter() {
                     let item = playlist_tracks::ActiveModel {
                         id: ActiveValue::set(Uuid::new_v4().to_string()),
@@ -219,6 +278,83 @@ impl PlaylistService for Playlist {
             .await
             .map_err(|_| tonic::Status::internal("Failed to get playlist"))?;
         Ok(tonic::Response::new(result.into()))
+    }
+
+    async fn regenerate_smart_playlist(
+        &self,
+        request: tonic::Request<RegenerateSmartPlaylistRequest>,
+    ) -> Result<tonic::Response<RegenerateSmartPlaylistResponse>, tonic::Status> {
+        let count = music_player_storage::smart_playlist::regenerate(
+            self.db.get_connection(),
+            &request.get_ref().id,
+        )
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        Ok(tonic::Response::new(RegenerateSmartPlaylistResponse {
+            count: count as u32,
+        }))
+    }
+
+    async fn preview_smart_playlist(
+        &self,
+        request: tonic::Request<PreviewSmartPlaylistRequest>,
+    ) -> Result<tonic::Response<PreviewSmartPlaylistResponse>, tonic::Status> {
+        /// How many matches to return in full, for the form to show.
+        const SAMPLE: usize = 10;
+
+        let Some(smart) = request.get_ref().smart.clone() else {
+            return Ok(tonic::Response::new(PreviewSmartPlaylistResponse::default()));
+        };
+        let spec = spec_of(&smart);
+
+        // A filter the user is still typing is expected to be invalid half the
+        // time, so that comes back as `error` rather than as a gRPC failure.
+        let ids = match music_player_storage::smart_playlist::matching_track_ids(
+            self.db.get_connection(),
+            &spec,
+        )
+        .await
+        {
+            Ok(ids) => ids,
+            Err(e) => {
+                return Ok(tonic::Response::new(PreviewSmartPlaylistResponse {
+                    error: e.to_string(),
+                    ..Default::default()
+                }))
+            }
+        };
+
+        let count = ids.len() as u32;
+        let head: Vec<String> = ids.into_iter().take(SAMPLE).collect();
+        let mut tracks = if head.is_empty() {
+            vec![]
+        } else {
+            track::Entity::find()
+                .filter(track::Column::Id.is_in(head.clone()))
+                .find_also_related(album::Entity)
+                .all(self.db.get_connection())
+                .await
+                .map_err(|e| tonic::Status::internal(e.to_string()))?
+                .into_iter()
+                .map(|(mut track, album)| {
+                    track.album = album.unwrap_or_default();
+                    track
+                })
+                .collect::<Vec<_>>()
+        };
+        // `is_in` returns table order; the preview has to show the order the
+        // filter actually produced.
+        tracks.sort_by_key(|track| {
+            head.iter()
+                .position(|id| *id == track.id)
+                .unwrap_or(usize::MAX)
+        });
+
+        Ok(tonic::Response::new(PreviewSmartPlaylistResponse {
+            count,
+            tracks: tracks.into_iter().map(Into::into).collect(),
+            error: String::new(),
+        }))
     }
 
     async fn create_folder(

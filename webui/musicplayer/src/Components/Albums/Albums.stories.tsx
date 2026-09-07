@@ -1,19 +1,13 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { linkTo } from "@storybook/addon-links";
 import Albums from "./Albums";
 
-export default {
+const meta: Meta<typeof Albums> = {
   title: "Components/Albums",
   component: Albums,
-  argTypes: {
-    onPlay: { action: "play" },
-    onPause: { action: "pause" },
-    onNext: { action: "next" },
-    onPrevious: { action: "previous" },
-    onShuffle: { action: "shuffle" },
-    onRepeat: { action: "repeat" },
-  },
-} as ComponentMeta<typeof Albums>;
+};
+
+export default meta;
 
 const albums = [
   {
@@ -74,16 +68,12 @@ const albums = [
   },
 ];
 
-const Template: ComponentStory<typeof Albums> = (args: any) => (
-  <Albums {...args} />
-);
-
-export const Default = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof Albums> = {
+  args: {
   albums,
   onClickAlbum(album) {
     linkTo("Components/AlbumDetails", "Default")();
   },
   currentCastDevice: undefined,
+},
 };

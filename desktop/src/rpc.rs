@@ -25,9 +25,9 @@ use music_player_server::api::music::v1alpha1::{
     GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
     GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest, GetVolumeRequest,
     LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest,
-    PlayTrackAtRequest, PreviousRequest, RemoveItemRequest, RemoveTrackAtRequest, RenameRequest,
-    SeekRequest, SetAudioSettingRequest, SetEqBandGainRequest, SetRepeatRequest, SetVolumeRequest,
-    ShuffleRequest,
+    PlayTrackAtRequest, PreviewSmartPlaylistRequest, PreviousRequest, RemoveItemRequest,
+    RemoveTrackAtRequest, RenameRequest, SeekRequest, SetAudioSettingRequest, SetEqBandGainRequest,
+    SetRepeatRequest, SetVolumeRequest, ShuffleRequest, SmartPlaylist as SmartPlaylistProto,
 };
 use music_player_types::types as mp_types;
 
@@ -74,6 +74,21 @@ pub enum Cmd {
     PlayDir(String),
     PlayDirAt(String, i32),
     OpenPlaylist(String),
+    /// Create a smart playlist, or convert nothing — the form only offers this
+    /// when creating.
+    SmartPlaylistCreate {
+        name: String,
+        rsql: String,
+        sort_by: String,
+        sort_order: String,
+        limit: u32,
+    },
+    /// Count what a filter would match, for the form's live preview.
+    SmartPlaylistPreview {
+        rsql: String,
+        sort_by: String,
+        limit: u32,
+    },
     PlaylistCreate {
         name: String,
         description: String,
@@ -1675,6 +1690,74 @@ async fn cmd_loop(
                     let tracks = playlist_tracks(&channel, &id).await?;
                     load_tracks(&channel, tracks, 0).await?;
                 }
+                Cmd::SmartPlaylistCreate {
+                    name,
+                    rsql,
+                    sort_by,
+                    sort_order,
+                    limit,
+                } => {
+                    let mut playlists = PlaylistServiceClient::new(channel.clone());
+                    let smart = SmartPlaylistProto {
+                        filter: rsql,
+                        sort_by,
+                        sort_order,
+                        limit,
+                    };
+                    match playlists
+                        .create(CreateRequest {
+                            name,
+                            tracks: vec![],
+                            smart: Some(smart),
+                        })
+                        .await
+                    {
+                        Ok(resp) => {
+                            let id = resp.into_inner().id;
+                            load_playlists(&channel, &weak).await;
+                            // A smart playlist arrives full, so it opens on its
+                            // tracks rather than on the picker.
+                            open_playlist(&channel, &weak, id, false).await?;
+                        }
+                        Err(status) => {
+                            let message = status.message().to_owned();
+                            let _ = weak.upgrade_in_event_loop(move |app| {
+                                app.set_pl_form_preview_error(message.into());
+                                app.set_show_playlist_form(true);
+                            });
+                        }
+                    }
+                }
+                Cmd::SmartPlaylistPreview {
+                    rsql,
+                    sort_by,
+                    limit,
+                } => {
+                    let mut playlists = PlaylistServiceClient::new(channel.clone());
+                    let preview = playlists
+                        .preview_smart_playlist(PreviewSmartPlaylistRequest {
+                            smart: Some(SmartPlaylistProto {
+                                filter: rsql,
+                                sort_by,
+                                sort_order: String::new(),
+                                limit,
+                            }),
+                        })
+                        .await;
+                    let (count, error) = match preview {
+                        Ok(resp) => {
+                            let resp = resp.into_inner();
+                            (resp.count as i32, resp.error)
+                        }
+                        Err(status) => (-1, status.message().to_owned()),
+                    };
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        app.set_pl_form_previewing(false);
+                        app.set_pl_form_preview_error(error.clone().into());
+                        // A filter that did not compile has no count to show.
+                        app.set_pl_form_preview_count(if error.is_empty() { count } else { -1 });
+                    });
+                }
                 Cmd::PlaylistCreate { name, description } => {
                     // The daemon's playlists have no description field; the
                     // name is what identifies them everywhere.
@@ -1684,6 +1767,7 @@ async fn cmd_loop(
                         .create(CreateRequest {
                             name,
                             tracks: vec![],
+                            smart: None,
                         })
                         .await?
                         .into_inner();

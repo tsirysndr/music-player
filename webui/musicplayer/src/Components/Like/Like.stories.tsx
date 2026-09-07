@@ -1,11 +1,11 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Like from "./Like";
 
-export default {
+const meta: Meta<typeof Like> = {
   title: "Components/Like",
   component: Like,
-} as ComponentMeta<typeof Like>;
+};
 
-const Template: ComponentStory<typeof Like> = (args: any) => <Like {...args} />;
+export default meta;
 
-export const Default = Template.bind({});
+export const Default: StoryObj<typeof Like> = {};

@@ -113,6 +113,14 @@ pub struct Settings {
     pub radio_browser_url: String,
     /// TuneIn OPML API base URL, without a trailing path.
     pub tunein_url: String,
+    /// Where to look for WebAssembly extensions, in order. Each entry is a
+    /// directory holding one subdirectory per extension. Empty falls back to
+    /// `<app dir>/extensions`; listing several lets a user keep their own
+    /// extensions apart from ones installed by a package manager.
+    ///
+    /// A `~` prefix and `$VAR` are expanded.
+    #[serde(default)]
+    pub extension_paths: Vec<String>,
     /// Base URL of a CORS/relay media proxy exposing `/api/stream?url=`.
     /// Used as the fallback for stations that refuse a direct connection —
     /// a bot wall in front of a station's `.pls` is common, and the proxy is
@@ -228,6 +236,8 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         radio_browser_url: DEFAULT_RADIO_BROWSER_URL.to_string(),
         tunein_url: DEFAULT_TUNEIN_URL.to_string(),
         media_proxy_url: DEFAULT_MEDIA_PROXY_URL.to_string(),
+        // Empty means "just the default under the app directory".
+        extension_paths: vec![],
         subsonic_url: Some("".to_string()),
         subsonic_username: Some("".to_string()),
         subsonic_password: Some("".to_string()),
@@ -279,6 +289,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("radio_browser_url", default_settings.radio_browser_url)?
         .set_default("tunein_url", default_settings.tunein_url)?
         .set_default("media_proxy_url", default_settings.media_proxy_url)?
+        .set_default("extension_paths", default_settings.extension_paths)?
         .set_default("subsonic_url", "")?
         .set_default("subsonic_username", "")?
         .set_default("subsonic_password", "")?

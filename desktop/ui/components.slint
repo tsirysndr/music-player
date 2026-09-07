@@ -1651,6 +1651,233 @@ export component FormField inherits VerticalLayout {
     }
 }
 
+// ── Filter box (smart playlists) ────────────────────────────────────────────
+
+/// One coloured run of a filter, as the Rust side classified it.
+export struct SyntaxRun {
+    text: string,
+    // 0 field, 1 unknown-field, 2 operator, 3 value, 4 logic, 5 error
+    kind: int,
+}
+
+/// One completion offer.
+export struct FilterSuggestion {
+    text: string,
+    hint: string,
+}
+
+/// A filter input that shows only the coloured text.
+///
+/// The `TextInput` is drawn transparent and the coloured runs are laid over it
+/// at the same metrics, so what the user sees is the highlight rather than a
+/// plain copy of it. Slint draws the caret in the text colour, so a
+/// transparent input has no visible caret either — this draws its own, at the
+/// width of the text before `cursor-position-byte-offset` as measured by a
+/// hidden Text in the same font.
+///
+/// Everything on both layers must match exactly — font, size, letter spacing,
+/// padding — or the colours drift away from the caret.
+export component FilterBox inherits VerticalLayout {
+    in property <string> label: "FILTER";
+    in property <string> placeholder: "genre==rock;year>2000";
+    in-out property <string> text <=> input.text;
+    /// The coloured runs, recomputed in Rust on every edit.
+    in property <[SyntaxRun]> runs: [];
+    /// The text before the caret. Rust slices it — Slint has no way to cut a
+    /// string at a byte offset — and it is what the caret's position measures.
+    in property <string> caret-prefix: "";
+    in property <[FilterSuggestion]> suggestions: [];
+    in property <int> selected: 0;
+    /// Bumped by Rust each time a suggestion is spliced in. Watched rather
+    /// than moving the caret on every text change, which would fight the user
+    /// whenever they edit anywhere but the end.
+    in property <int> caret-bump: 0;
+
+    callback edited(string);
+    callback committed(string);
+    /// The user picked a suggestion (by click or Enter).
+    callback accepted(string);
+    /// Move through the suggestion list.
+    callback move-selection(int);
+    /// The caret moved without the text changing — a click or an arrow key.
+    /// Rust answers by updating `caret-prefix`.
+    callback caret-moved(int);
+
+    // One place for the metrics both layers share.
+    property <length> pad: 10px;
+    property <length> glyph-size: 12px;
+
+    spacing: 5px;
+
+    // A completion always extends the filter, so the caret belongs at the end
+    // of what was just inserted — which for this single-line box is the end.
+    changed caret-bump => {
+        input.focus();
+        input.set-selection-offsets(input.text.character-count, input.text.character-count);
+    }
+
+    Text {
+        text: root.label;
+        color: Theme.text-muted;
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+    Rectangle {
+        height: 32px;
+        border-radius: Theme.control-radius;
+        background: Theme.panel-raised;
+        border-width: 1px;
+        border-color: input.has-focus ? Theme.accent : Theme.border;
+        clip: true;
+        animate border-color { duration: 120ms; }
+
+        // The coloured text. Drawn first, under the (invisible) input, so the
+        // input still receives clicks and keys.
+        HorizontalLayout {
+            x: root.pad;
+            width: parent.width - root.pad * 2;
+            alignment: start;
+            for run in root.runs : Text {
+                text: run.text;
+                font-size: root.glyph-size;
+                font-family: Theme.font-mono;
+                vertical-alignment: center;
+                height: 32px;
+                color: run.kind == 0 ? Theme.syntax-field
+                     : run.kind == 1 ? Theme.syntax-error
+                     : run.kind == 2 ? Theme.syntax-operator
+                     : run.kind == 3 ? Theme.syntax-value
+                     : run.kind == 4 ? Theme.syntax-logic
+                     : Theme.syntax-error;
+                // A mistyped field is the mistake people actually make, so it
+                // is weighted as well as coloured.
+                font-weight: run.kind == 1 || run.kind == 5 ? 700 : 400;
+            }
+        }
+
+        // Measures the text before the caret. Off-screen rather than
+        // `visible: false`, which would stop it being laid out at all.
+        caret-ruler := Text {
+            x: -10000px;
+            text: root.caret-prefix;
+            font-size: root.glyph-size;
+            font-family: Theme.font-mono;
+        }
+
+        // The caret. Slint would draw its own in the text colour, but the text
+        // is transparent, so this stands in for it.
+        if input.has-focus : Rectangle {
+            x: root.pad + caret-ruler.preferred-width;
+            y: 8px;
+            width: 1px;
+            height: 16px;
+            background: Theme.text;
+        }
+
+        HorizontalLayout {
+            padding-left: root.pad;
+            padding-right: root.pad;
+            input := TextInput {
+                // Invisible: the coloured layer beneath is what is read. The
+                // input still owns focus, selection and key handling.
+                color: transparent;
+                selection-background-color: Theme.selected-bg;
+                selection-foreground-color: Theme.text;
+                font-size: root.glyph-size;
+                font-family: Theme.font-mono;
+                vertical-alignment: center;
+                single-line: true;
+                edited => { root.edited(self.text); }
+                changed cursor-position-byte-offset => {
+                    root.caret-moved(self.cursor-position-byte-offset);
+                }
+                accepted => {
+                    if (root.suggestions.length > 0) {
+                        root.accepted(root.suggestions[
+                            clamp(root.selected, 0, root.suggestions.length - 1)].text);
+                    } else {
+                        root.committed(self.text);
+                    }
+                }
+                key-pressed(event) => {
+                    if (root.suggestions.length > 0 && event.text == Key.DownArrow) {
+                        root.move-selection(1);
+                        return accept;
+                    }
+                    if (root.suggestions.length > 0 && event.text == Key.UpArrow) {
+                        root.move-selection(-1);
+                        return accept;
+                    }
+                    if (root.suggestions.length > 0 && event.text == Key.Tab) {
+                        root.accepted(root.suggestions[
+                            clamp(root.selected, 0, root.suggestions.length - 1)].text);
+                        return accept;
+                    }
+                    reject
+                }
+                changed has-focus => {
+                    if (!self.has-focus) {
+                        root.committed(self.text);
+                    }
+                }
+            }
+        }
+
+        if input.text == "" && !input.has-focus : Text {
+            x: root.pad;
+            text: root.placeholder;
+            color: Theme.text-muted;
+            font-size: root.glyph-size;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+            height: parent.height;
+        }
+    }
+
+    if root.suggestions.length > 0 : Rectangle {
+        height: min(root.suggestions.length * 24px + 8px, 128px);
+        border-radius: Theme.control-radius;
+        background: Theme.panel-bg;
+        border-width: 1px;
+        border-color: Theme.border;
+        clip: true;
+        VerticalLayout {
+            padding: 4px;
+            for suggestion[i] in root.suggestions : Rectangle {
+                height: 24px;
+                border-radius: 4px;
+                background: i == root.selected
+                    ? Theme.selected-bg
+                    : (sug-touch.has-hover ? Theme.hover-bg : transparent);
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    spacing: 8px;
+                    Text {
+                        text: suggestion.text;
+                        color: i == root.selected ? Theme.accent : Theme.text;
+                        font-size: 11px;
+                        font-family: Theme.font-mono;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: suggestion.hint;
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        overflow: elide;
+                    }
+                }
+                sug-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.accepted(suggestion.text); }
+                }
+            }
+        }
+    }
+}
+
 export component ServerRow inherits Rectangle {
     in property <ServerItem> server;
     callback connect;

@@ -1,0 +1,32 @@
+# A media source backed by the Radio Browser directory.
+#
+# Copy this file as the starting point for your own source: the manifest is
+# what the host reads before it runs any of your code, so what you declare here
+# is exactly what you get.
+
+id = "fm.atradio.radio-browser"
+name = "Radio Browser"
+version = "0.1.0"
+author = "music-player"
+description = "Browse and play internet radio stations from the Radio Browser directory"
+homepage = "https://www.radio-browser.info"
+
+# Built by `cargo build --release --target wasm32-wasip1`, then copied here.
+entry = "plugin.wasm"
+
+# Only `source` — so the host never calls this module's other exports, even
+# though the generated bindings define them.
+capabilities = ["source"]
+
+[permissions]
+# The one host this extension may reach. Anything else is refused by the
+# sandbox, not by this extension's own good behaviour.
+allowedHosts = ["de1.api.radio-browser.info"]
+
+# No library access: a source reads its own catalogue, not yours.
+libraryRead = false
+
+[permissions.config]
+# Declared keys are the only ones `get_config` can see, and the only ones the
+# settings UI offers. Empty means "use the default in the code".
+apiUrl = ""

@@ -1,20 +1,15 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import ContextMenu from "./ContextMenu";
 
-export default {
+const meta: Meta<typeof ContextMenu> = {
   title: "Components/ContextMenu",
   component: ContextMenu,
-} as ComponentMeta<typeof ContextMenu>;
+};
 
-const Template: ComponentStory<typeof ContextMenu> = (args: any) => (
-  <ContextMenu {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
-
-export const NoAlbumCover = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof ContextMenu> = {
+  args: {
   liked: false,
   track: {
     title: "Drankin N Smokin",
@@ -23,13 +18,18 @@ Default.args = {
     cover:
       "https://resources.tidal.com/images/fe6787d5/4ba5/4d3e/8576/48943ee6a768/320x320.jpg",
   },
+},
 };
 
-NoAlbumCover.args = {
+export const NoAlbumCover: StoryObj<typeof ContextMenu> = {
+  args: {
   liked: false,
   track: {
     title: "Million Dollar Play",
     artist: "Future, Lil Uzi Vert",
     time: "2:47",
   },
+},
 };
+
+

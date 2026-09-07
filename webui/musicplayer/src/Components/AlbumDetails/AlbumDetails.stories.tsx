@@ -1,19 +1,16 @@
 import { linkTo } from "@storybook/addon-links";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import AlbumDetails from "./AlbumDetails";
 
-export default {
+const meta: Meta<typeof AlbumDetails> = {
   title: "Components/AlbumDetails",
   component: AlbumDetails,
-} as ComponentMeta<typeof AlbumDetails>;
+};
 
-const Template: ComponentStory<typeof AlbumDetails> = (args: any) => (
-  <AlbumDetails {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof AlbumDetails> = {
+  args: {
   album: {
     id: "4",
     title: "Pluto x Baby Pluto (Deluxe)",
@@ -193,4 +190,5 @@ Default.args = {
   },
   onBack: linkTo("Components/Albums", "Default"),
   nowPlaying: {},
+},
 };

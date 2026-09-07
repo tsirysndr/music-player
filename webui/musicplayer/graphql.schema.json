@@ -1302,7 +1302,7 @@
           },
           {
             "name": "createPlaylist",
-            "description": null,
+            "description": "Create a playlist.\n\nPassing `smart` makes it a smart playlist: the filter is validated and\nthe tracks generated immediately, so the caller gets back a playlist\nthat is already populated rather than an empty one to fill by hand.",
             "args": [
               {
                 "name": "name",
@@ -1335,6 +1335,92 @@
                   "kind": "SCALAR",
                   "name": "ID",
                   "ofType": null
+                },
+                "defaultValue": null
+              },
+              {
+                "name": "smart",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "SmartPlaylistInput",
+                  "ofType": null
+                },
+                "defaultValue": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Playlist",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "updateSmartPlaylist",
+            "description": "Change a smart playlist's filter and regenerate its tracks.",
+            "args": [
+              {
+                "name": "id",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              },
+              {
+                "name": "smart",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "SmartPlaylistInput",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Playlist",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "regenerateSmartPlaylist",
+            "description": "Re-run a smart playlist's filter against the library as it is now.",
+            "args": [
+              {
+                "name": "id",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  }
                 },
                 "defaultValue": null
               }
@@ -2495,6 +2581,70 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "isSmart",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "rsql",
+            "description": "The RSQL filter behind a smart playlist, e.g. `genre==rock;year>2000`.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sortBy",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sortOrder",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "maxTracks",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "inputFields": null,
@@ -3213,6 +3363,75 @@
             "deprecationReason": null
           },
           {
+            "name": "smartPlaylistPreview",
+            "description": "What a smart-playlist filter would produce, without saving it.\n\nCheap enough to call as the user types: it selects ids, then loads only\nthe handful it shows. A filter that does not compile comes back as an\nerror carrying the offset of the offending character.",
+            "args": [
+              {
+                "name": "smart",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "SmartPlaylistInput",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              },
+              {
+                "name": "sample",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": "10"
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "SmartPlaylistPreview",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "rsqlFields",
+            "description": "Every field a smart-playlist filter may mention, so a form can offer a\npicker rather than expecting the vocabulary to be memorised.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "RsqlField",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "folders",
             "description": null,
             "args": [],
@@ -3702,6 +3921,65 @@
       },
       {
         "kind": "OBJECT",
+        "name": "RsqlField",
+        "description": "One filterable field, so a UI can offer a picker instead of making the user\nremember the vocabulary.",
+        "fields": [
+          {
+            "name": "name",
+            "description": "The name to write in a filter.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "label",
+            "description": "A human label.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "kind",
+            "description": "`text`, `integer`, `boolean` or `timestamp` — what values it accepts.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "SearchResult",
         "description": null,
         "fields": [
@@ -3769,6 +4047,112 @@
                   "ofType": {
                     "kind": "OBJECT",
                     "name": "Album",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "SmartPlaylistInput",
+        "description": "The three things a smart playlist is: a filter, an order, and a cap.",
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "filter",
+            "description": "RSQL over the track fields, e.g. `genre==rock;year>2000`. Empty matches\nthe whole library.",
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "defaultValue": "\"\""
+          },
+          {
+            "name": "sortBy",
+            "description": "A track field to order by, or `random`.",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "defaultValue": null
+          },
+          {
+            "name": "sortOrder",
+            "description": "`asc` or `desc`.",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "defaultValue": null
+          },
+          {
+            "name": "limit",
+            "description": "Maximum number of tracks. Absent or 0 is unlimited.",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "defaultValue": null
+          }
+        ],
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "SmartPlaylistPreview",
+        "description": "What a filter would produce, without saving anything — the \"142 tracks\nmatch\" line under the filter box, plus the first few by name.",
+        "fields": [
+          {
+            "name": "count",
+            "description": "How many tracks the filter matches.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "tracks",
+            "description": "The first handful, so the form can show what it caught.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "Track",
                     "ofType": null
                   }
                 }
@@ -4640,7 +5024,22 @@
           {
             "name": "args",
             "description": null,
-            "args": [],
+            "args": [
+              {
+                "name": "includeDeprecated",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": "false"
+              }
+            ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
@@ -4911,7 +5310,22 @@
           {
             "name": "args",
             "description": null,
-            "args": [],
+            "args": [
+              {
+                "name": "includeDeprecated",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": "false"
+              }
+            ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
@@ -5042,6 +5456,34 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "isDeprecated",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "deprecationReason",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "inputFields": null,
@@ -5054,6 +5496,22 @@
         "name": "__Schema",
         "description": "A GraphQL Schema defines the capabilities of a GraphQL server. It exposes\nall available types and directives on the server, as well as the entry\npoints for query, mutation, and subscription operations.",
         "fields": [
+          {
+            "name": "description",
+            "description": "description of __Schema for newer graphiql introspection schema\nrequirements",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
           {
             "name": "types",
             "description": "A list of all types supported by this server.",
@@ -5306,7 +5764,22 @@
           {
             "name": "inputFields",
             "description": null,
-            "args": [],
+            "args": [
+              {
+                "name": "includeDeprecated",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": "false"
+              }
+            ],
             "type": {
               "kind": "LIST",
               "name": null,
@@ -5348,7 +5821,7 @@
             "deprecationReason": null
           },
           {
-            "name": "oneOf",
+            "name": "isOneOf",
             "description": null,
             "args": [],
             "type": {
@@ -5427,6 +5900,28 @@
     ],
     "directives": [
       {
+        "name": "deprecated",
+        "description": "Marks an element of a GraphQL schema as no longer supported.",
+        "locations": [
+          "FIELD_DEFINITION",
+          "ARGUMENT_DEFINITION",
+          "INPUT_FIELD_DEFINITION",
+          "ENUM_VALUE"
+        ],
+        "args": [
+          {
+            "name": "reason",
+            "description": "A reason for why it is deprecated, formatted using Markdown syntax",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "defaultValue": "\"No longer supported\""
+          }
+        ]
+      },
+      {
         "name": "include",
         "description": "Directs the executor to include this field or fragment only when the `if` argument is true.",
         "locations": [
@@ -5452,6 +5947,14 @@
         ]
       },
       {
+        "name": "oneOf",
+        "description": "Indicates that an Input Object is a OneOf Input Object (and thus requires exactly one of its field be provided)",
+        "locations": [
+          "INPUT_OBJECT"
+        ],
+        "args": []
+      },
+      {
         "name": "skip",
         "description": "Directs the executor to skip this field or fragment when the `if` argument is true.",
         "locations": [
@@ -5469,6 +5972,29 @@
               "ofType": {
                 "kind": "SCALAR",
                 "name": "Boolean",
+                "ofType": null
+              }
+            },
+            "defaultValue": null
+          }
+        ]
+      },
+      {
+        "name": "specifiedBy",
+        "description": "Provides a scalar specification URL for specifying the behavior of custom scalar types.",
+        "locations": [
+          "SCALAR"
+        ],
+        "args": [
+          {
+            "name": "url",
+            "description": "URL that specifies the behavior of this scalar.",
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               }
             },

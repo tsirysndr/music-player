@@ -104,6 +104,12 @@ export type FolderChanged = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  /**
+   * Add a station the user typed in themselves, after checking the url is
+   * actually a reachable stream. Signed in to atradio.fm, it is published as
+   * a `fm.atradio.station` record so it follows the account everywhere.
+   */
+  addRadioStation: RadioStation;
   addTrack: Array<Track>;
   addTrackToPlaylist: Playlist;
   addTracks: Scalars['Boolean']['output'];
@@ -111,6 +117,13 @@ export type Mutation = {
   connectToCastDevice: Device;
   connectToDevice: Device;
   createFolder: Folder;
+  /**
+   * Create a playlist.
+   *
+   * Passing `smart` makes it a smart playlist: the filter is validated and
+   * the tracks generated immediately, so the caller gets back a playlist
+   * that is already populated rather than an empty one to fill by hand.
+   */
   createPlaylist: Playlist;
   deleteFolder: Folder;
   deletePlaylist: Playlist;
@@ -130,18 +143,39 @@ export type Mutation = {
   playArtistTracks: Scalars['Boolean']['output'];
   playNext: Scalars['Boolean']['output'];
   playPlaylist: Scalars['Boolean']['output'];
+  playRadio: Scalars['Boolean']['output'];
   playTrackAt: Scalars['Boolean']['output'];
   previous: Scalars['Boolean']['output'];
+  /** Re-run a smart playlist's filter against the library as it is now. */
+  regenerateSmartPlaylist: Playlist;
+  removeSavedRadio: Scalars['Boolean']['output'];
   removeTrack: Scalars['Boolean']['output'];
   removeTrackFromPlaylist: Playlist;
   renameFolder: Folder;
   renamePlaylist: Playlist;
+  saveRadio: Scalars['Boolean']['output'];
   scan: Scalars['Boolean']['output'];
   seek: Scalars['Boolean']['output'];
   setMute: Scalars['Boolean']['output'];
   setVolume: Scalars['Boolean']['output'];
   shuffle: Scalars['Boolean']['output'];
   stop: Scalars['Boolean']['output'];
+  /**
+   * Bookmark or unbookmark whatever station is playing, and report the new
+   * state — what the heart in the miniplayer needs.
+   *
+   * The station is rebuilt from the queued track rather than taken from the
+   * caller, so the miniplayer can toggle a bookmark without having to know
+   * where the station came from (it may be playing from a previous session).
+   */
+  toggleCurrentRadioBookmark: Scalars['Boolean']['output'];
+  /** Change a smart playlist's filter and regenerate its tracks. */
+  updateSmartPlaylist: Playlist;
+};
+
+
+export type MutationAddRadioStationArgs = {
+  station: NewRadioStationInput;
 };
 
 
@@ -180,6 +214,7 @@ export type MutationCreatePlaylistArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   folderId?: InputMaybe<Scalars['ID']['input']>;
   name: Scalars['String']['input'];
+  smart?: InputMaybe<SmartPlaylistInput>;
 };
 
 
@@ -237,8 +272,23 @@ export type MutationPlayPlaylistArgs = {
 };
 
 
+export type MutationPlayRadioArgs = {
+  station: RadioStationInput;
+};
+
+
 export type MutationPlayTrackAtArgs = {
   position: Scalars['Int']['input'];
+};
+
+
+export type MutationRegenerateSmartPlaylistArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationRemoveSavedRadioArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -265,6 +315,11 @@ export type MutationRenamePlaylistArgs = {
 };
 
 
+export type MutationSaveRadioArgs = {
+  station: RadioStationInput;
+};
+
+
 export type MutationSeekArgs = {
   position: Scalars['Int']['input'];
 };
@@ -279,6 +334,12 @@ export type MutationSetVolumeArgs = {
   volume: Scalars['Int']['input'];
 };
 
+
+export type MutationUpdateSmartPlaylistArgs = {
+  id: Scalars['ID']['input'];
+  smart: SmartPlaylistInput;
+};
+
 export enum MutationType {
   Cleared = 'CLEARED',
   Created = 'CREATED',
@@ -287,6 +348,18 @@ export enum MutationType {
   Renamed = 'RENAMED',
   Updated = 'UPDATED'
 }
+
+/**
+ * The fields the "add station" form collects. The id is derived from the
+ * stream url (or handed out by atradio once published), so it is not asked for.
+ */
+export type NewRadioStationInput = {
+  country?: Scalars['String']['input'];
+  genre?: Scalars['String']['input'];
+  logo?: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  streamUrl: Scalars['String']['input'];
+};
 
 export type PlayerState = {
   __typename?: 'PlayerState';
@@ -299,7 +372,13 @@ export type Playlist = {
   __typename?: 'Playlist';
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
+  isSmart: Scalars['Boolean']['output'];
+  maxTracks?: Maybe<Scalars['Int']['output']>;
   name: Scalars['String']['output'];
+  /** The RSQL filter behind a smart playlist, e.g. `genre==rock;year>2000`. */
+  rsql?: Maybe<Scalars['String']['output']>;
+  sortBy?: Maybe<Scalars['String']['output']>;
+  sortOrder?: Maybe<Scalars['String']['output']>;
   tracks: Array<Track>;
 };
 
@@ -321,6 +400,8 @@ export type Query = {
   albums: Array<Album>;
   artist: Artist;
   artists: Array<Artist>;
+  /** Check a stream url before the "add station" form saves it. */
+  checkRadioStream: StreamCheck;
   connectedCastDevice: Device;
   connectedDevice: Device;
   currentlyPlayingSong: CurrentlyPlayingSong;
@@ -333,13 +414,41 @@ export type Query = {
   getRandom: Scalars['Boolean']['output'];
   getRepeat: Scalars['Boolean']['output'];
   getVolume: Scalars['Int']['output'];
+  /**
+   * Tracks the user liked on Rocksky that exist in the local library.
+   *
+   * The likes come from their atproto repo (see
+   * `music_player_storage::rocksky_likes`); only the ones matched to a local
+   * file have a track to return, so an unmatched like is simply absent.
+   */
+  likedTracks: Array<Track>;
   listCastDevices: Array<Device>;
   listDevices: Array<Device>;
   mainPlaylists: Array<Playlist>;
   playlist: Playlist;
   playlists: Array<Playlist>;
+  /**
+   * The user's own stations — the ones added by hand here, on atradio.fm, or
+   * on another device. A subset of the bookmarks, told apart by their source.
+   */
+  radioStations: Array<RadioStation>;
+  radios: Array<RadioStation>;
   recentPlaylists: Array<Playlist>;
+  /**
+   * Every field a smart-playlist filter may mention, so a form can offer a
+   * picker rather than expecting the vocabulary to be memorised.
+   */
+  rsqlFields: Array<RsqlField>;
+  savedRadios: Array<RadioStation>;
   search: SearchResult;
+  /**
+   * What a smart-playlist filter would produce, without saving it.
+   *
+   * Cheap enough to call as the user types: it selects ids, then loads only
+   * the handful it shows. A filter that does not compile comes back as an
+   * error carrying the offset of the offending character.
+   */
+  smartPlaylistPreview: SmartPlaylistPreview;
   track: Track;
   tracklistTracks: Tracklist;
   tracks: Array<Track>;
@@ -370,8 +479,19 @@ export type QueryArtistsArgs = {
 };
 
 
+export type QueryCheckRadioStreamArgs = {
+  url: Scalars['String']['input'];
+};
+
+
 export type QueryFolderArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QueryLikedTracksArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -385,8 +505,20 @@ export type QueryPlaylistArgs = {
 };
 
 
+export type QueryRadiosArgs = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  query?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QuerySearchArgs = {
   keyword: Scalars['String']['input'];
+};
+
+
+export type QuerySmartPlaylistPreviewArgs = {
+  sample?: Scalars['Int']['input'];
+  smart: SmartPlaylistInput;
 };
 
 
@@ -401,11 +533,91 @@ export type QueryTracksArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type RadioStation = {
+  __typename?: 'RadioStation';
+  bitrate: Scalars['Int']['output'];
+  country: Scalars['String']['output'];
+  genre: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  logo: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  streamUrl: Scalars['String']['output'];
+};
+
+export type RadioStationInput = {
+  bitrate: Scalars['Int']['input'];
+  country: Scalars['String']['input'];
+  genre: Scalars['String']['input'];
+  id: Scalars['String']['input'];
+  logo: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  source: Scalars['String']['input'];
+  streamUrl: Scalars['String']['input'];
+};
+
+/**
+ * One filterable field, so a UI can offer a picker instead of making the user
+ * remember the vocabulary.
+ */
+export type RsqlField = {
+  __typename?: 'RsqlField';
+  /** `text`, `integer`, `boolean` or `timestamp` — what values it accepts. */
+  kind: Scalars['String']['output'];
+  /** A human label. */
+  label: Scalars['String']['output'];
+  /** The name to write in a filter. */
+  name: Scalars['String']['output'];
+};
+
 export type SearchResult = {
   __typename?: 'SearchResult';
   albums: Array<Album>;
   artists: Array<Artist>;
   tracks: Array<Track>;
+};
+
+/** The three things a smart playlist is: a filter, an order, and a cap. */
+export type SmartPlaylistInput = {
+  /**
+   * RSQL over the track fields, e.g. `genre==rock;year>2000`. Empty matches
+   * the whole library.
+   */
+  filter?: Scalars['String']['input'];
+  /** Maximum number of tracks. Absent or 0 is unlimited. */
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  /** A track field to order by, or `random`. */
+  sortBy?: InputMaybe<Scalars['String']['input']>;
+  /** `asc` or `desc`. */
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
+};
+
+/**
+ * What a filter would produce, without saving anything — the "142 tracks
+ * match" line under the filter box, plus the first few by name.
+ */
+export type SmartPlaylistPreview = {
+  __typename?: 'SmartPlaylistPreview';
+  /** How many tracks the filter matches. */
+  count: Scalars['Int']['output'];
+  /** The first handful, so the form can show what it caught. */
+  tracks: Array<Track>;
+};
+
+/**
+ * The verdict on a stream url, so the form can say what is wrong before the
+ * station is saved — and fill itself in from the station's own ICY headers
+ * when it is right.
+ */
+export type StreamCheck = {
+  __typename?: 'StreamCheck';
+  bitrate: Scalars['Int']['output'];
+  codec: Scalars['String']['output'];
+  error: Scalars['String']['output'];
+  genre: Scalars['String']['output'];
+  homepage: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  ok: Scalars['Boolean']['output'];
 };
 
 export type Subscription = {
@@ -652,10 +864,11 @@ export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscripti
 export type CreatePlaylistMutationVariables = Exact<{
   name: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  smart?: InputMaybe<SmartPlaylistInput>;
 }>;
 
 
-export type CreatePlaylistMutation = { __typename?: 'Mutation', createPlaylist: { __typename?: 'Playlist', id: string, name: string, description?: string | null } };
+export type CreatePlaylistMutation = { __typename?: 'Mutation', createPlaylist: { __typename?: 'Playlist', id: string, name: string, description?: string | null, isSmart: boolean, rsql?: string | null } };
 
 export type DeletePlaylistMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1833,11 +2046,13 @@ export const CurrentlyPlayingSongChangedDocument = `
 }
     ${TrackFragmentFragmentDoc}`;
 export const CreatePlaylistDocument = `
-    mutation CreatePlaylist($name: String!, $description: String) {
-  createPlaylist(name: $name, description: $description) {
+    mutation CreatePlaylist($name: String!, $description: String, $smart: SmartPlaylistInput) {
+  createPlaylist(name: $name, description: $description, smart: $smart) {
     id
     name
     description
+    isSmart
+    rsql
   }
 }
     `;

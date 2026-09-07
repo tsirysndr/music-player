@@ -12,6 +12,7 @@ pub mod playlist_tracks;
 pub mod rocksky_like;
 pub mod saved_radio;
 pub mod track;
+pub mod track_stats;
 
 pub mod select_result {
     use music_player_types::types::{Album, Artist, Track};

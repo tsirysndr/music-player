@@ -13,6 +13,7 @@ pub mod repo_sync;
 pub mod rocksky;
 pub mod rocksky_likes;
 pub mod searcher;
+pub mod smart_playlist;
 
 pub mod repo;
 

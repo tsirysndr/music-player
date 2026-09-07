@@ -8,7 +8,7 @@ import {
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
     DetailRow, BrowseItem, ServerItem, FormField, ServerRow, BrowseRow,
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
-    RadioSkeletonList, RadioFilterBox, MarqueeText
+    RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -108,6 +108,30 @@ export component AppWindow inherits Window {
     in-out property <string> pl-form-id: ""; // empty = create
     in-out property <string> pl-form-name: "";
     in-out property <string> pl-form-desc: "";
+    /// A smart playlist fills itself from a filter instead of from tracks the
+    /// user picks, so turning this on replaces the track picker with the rule
+    /// fields below.
+    in-out property <bool> pl-form-smart: false;
+    in-out property <string> pl-form-rsql: "";
+    in-out property <string> pl-form-sort-by: "";
+    in-out property <string> pl-form-sort-order: "asc";
+    in-out property <string> pl-form-limit: "";
+    /// Live preview of what the filter matches, refreshed as it is typed.
+    in-out property <int> pl-form-preview-count: -1;
+    in-out property <string> pl-form-preview-error: "";
+    in-out property <bool> pl-form-previewing: false;
+    /// Track fields a filter may mention, as one line of hint text under the
+    /// filter box. Built in Rust from the daemon's field list.
+    in-out property <string> rsql-hint: "";
+    /// The filter, coloured by role. Recomputed in Rust on every edit.
+    in-out property <[SyntaxRun]> rsql-runs: [];
+    in-out property <[FilterSuggestion]> rsql-suggestions: [];
+    in-out property <int> rsql-suggestion-index: 0;
+    /// Bumped after a completion is spliced in, so the box moves its caret.
+    in-out property <int> rsql-caret-bump: 0;
+    /// The filter text before the caret, sliced in Rust. The box measures it
+    /// to place its own caret — Slint draws none for a transparent input.
+    in-out property <string> rsql-caret-prefix: "";
     in-out property <bool> show-track-picker: false;
     in-out property <[PaletteItem]> picker-results: [];
     in-out property <bool> show-playlist-picker: false;
@@ -198,6 +222,15 @@ export component AppWindow inherits Window {
     callback playlist-play(string);
     callback playlist-delete(string);
     callback playlist-form-submit(string, string, string); // id ("" = create), name, desc
+    // id ("" = create), name, desc, rsql, sort-by, sort-order, limit
+    callback smart-playlist-submit(string, string, string, string, string, string, string);
+    callback smart-playlist-preview(string, string, string); // rsql, sort-by, limit
+    /// The filter changed: recompute the colouring and the suggestions.
+    callback rsql-edited(string);
+    /// A suggestion was accepted; Rust splices it in and hands back the result.
+    callback rsql-accept(string);
+    /// The caret moved without an edit; Rust re-slices the prefix.
+    callback rsql-caret-moved(int);
     callback playlist-remove-track(string); // track id
     callback picker-query(string);
     callback plpicker-query(string);
@@ -232,6 +265,47 @@ export component AppWindow inherits Window {
 
     forward-focus: main-focus;
 
+    // ── Focus ───────────────────────────────────────────────────────────────
+    //
+    // Every overlay here contains a TextInput, and while one is open that input
+    // holds the keyboard. Closing the overlay destroys it — and unless focus is
+    // handed back explicitly, nothing has it and every global shortcut stops
+    // working until the user clicks something.
+    //
+    // Restoring focus at each dismissal site was the previous approach and it
+    // did not hold: there are dozens of them (buttons, backdrops, Escape, and
+    // the Rust side), and the ones that were missed are why shortcuts worked
+    // only sometimes. Watching the flags themselves covers every path, including
+    // ones added later.
+    changed show-playlist-form => { root.reclaim-focus(); }
+    changed show-server-form => { root.reclaim-focus(); }
+    changed show-add-station => { root.reclaim-focus(); }
+    changed show-radio-search => { root.reclaim-focus(); }
+    changed show-track-picker => { root.reclaim-focus(); }
+    changed show-playlist-picker => { root.reclaim-focus(); }
+    changed show-palette => { root.reclaim-focus(); }
+    changed show-server-switcher => { root.reclaim-focus(); }
+    changed show-confirm-delete => { root.reclaim-focus(); }
+    changed show-help => { root.reclaim-focus(); }
+    changed show-audio => { root.reclaim-focus(); }
+
+    /// Give the keyboard back to the main scope, unless another overlay is
+    /// still open — closing one of two stacked overlays must not steal focus
+    /// from the one underneath.
+    function reclaim-focus() {
+        if (!root.show-playlist-form
+            && !root.show-server-form
+            && !root.show-add-station
+            && !root.show-radio-search
+            && !root.show-track-picker
+            && !root.show-playlist-picker
+            && !root.show-palette
+            && !root.show-server-switcher
+            && !root.show-confirm-delete) {
+            main-focus.focus();
+        }
+    }
+
     public function open-palette() {
         root.show-palette = true;
         root.palette-sel = 0;
@@ -257,6 +331,32 @@ export component AppWindow inherits Window {
         if (root.radio-filter != "") {
             root.set-radio-filter("");
         }
+    }
+
+    /// Open the playlist form. An empty id creates; anything else edits.
+    ///
+    /// Also clears the smart-playlist fields, so the form never opens carrying
+    /// the rule from whatever was edited last.
+    public function open-playlist-form(id: string, name: string, desc: string) {
+        root.pl-form-id = id;
+        root.pl-form-name = name;
+        root.pl-form-desc = desc;
+        root.pl-form-smart = false;
+        root.pl-form-rsql = "";
+        root.pl-form-sort-by = "";
+        root.pl-form-sort-order = "asc";
+        root.pl-form-limit = "";
+        root.pl-form-preview-count = -1;
+        root.pl-form-preview-error = "";
+        root.pl-form-previewing = false;
+        root.show-playlist-form = true;
+    }
+
+    /// Ask the daemon what the current filter would match. Cheap enough to run
+    /// as the user types — it counts ids, it does not build the playlist.
+    public function refresh-smart-preview() {
+        root.pl-form-previewing = true;
+        root.smart-playlist-preview(root.pl-form-rsql, root.pl-form-sort-by, root.pl-form-limit);
     }
 
     public function open-add-station() {
@@ -390,6 +490,14 @@ export component AppWindow inherits Window {
             }
             if (event.text == "b") {
                 root.show-sidebar = !root.show-sidebar;
+                return accept;
+            }
+            if (event.text == "n") {
+                // New playlist, from anywhere. Lands on the playlists tab so
+                // the result is visible once it is created.
+                root.current-tab = 5;
+                root.show-detail = false;
+                root.open-playlist-form("", "", "");
                 return accept;
             }
             if (event.text == Key.Escape) {
@@ -779,10 +887,7 @@ export component AppWindow inherits Window {
                             newpl-touch := TouchArea {
                                 mouse-cursor: pointer;
                                 clicked => {
-                                    root.pl-form-id = "";
-                                    root.pl-form-name = "";
-                                    root.pl-form-desc = "";
-                                    root.show-playlist-form = true;
+                                    root.open-playlist-form("", "", "");
                                 }
                             }
                         }
@@ -799,10 +904,7 @@ export component AppWindow inherits Window {
                                 open => { root.playlists-open(pl.id); }
                                 play => { root.playlist-play(pl.id); }
                                 edit => {
-                                    root.pl-form-id = pl.id;
-                                    root.pl-form-name = pl.name;
-                                    root.pl-form-desc = pl.description;
-                                    root.show-playlist-form = true;
+                                    root.open-playlist-form(pl.id, pl.name, pl.description);
                                 }
                                 delete => {
                                     root.confirm-delete-id = pl.id;
@@ -869,10 +971,10 @@ export component AppWindow inherits Window {
                             icon-size: 15px;
                             y: (parent.height - self.height) / 2;
                             clicked => {
-                                root.pl-form-id = root.pl-detail.id;
-                                root.pl-form-name = root.pl-detail.name;
-                                root.pl-form-desc = root.pl-detail.description;
-                                root.show-playlist-form = true;
+                                root.open-playlist-form(
+                                    root.pl-detail.id,
+                                    root.pl-detail.name,
+                                    root.pl-detail.description);
                             }
                         }
                         PlayPauseButton {
@@ -2742,6 +2844,117 @@ export component AppWindow inherits Window {
                     label: "DESCRIPTION (OPTIONAL)";
                     text <=> root.pl-form-desc;
                 }
+
+                // Only offered when creating: turning an existing hand-picked
+                // playlist into a generated one would silently discard the
+                // tracks in it.
+                if root.pl-form-id == "" : HorizontalLayout {
+                    spacing: 10px;
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+                        horizontal-stretch: 1;
+                        Text {
+                            text: "Smart playlist";
+                            color: Theme.text;
+                            font-size: 12px;
+                            font-weight: 600;
+                        }
+                        Text {
+                            text: "Fills itself from a filter, and keeps itself up to date";
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    Toggle {
+                        checked: root.pl-form-smart;
+                        y: (parent.height - self.height) / 2;
+                        toggled => {
+                            root.pl-form-smart = !root.pl-form-smart;
+                            if (root.pl-form-smart && root.pl-form-rsql != "") {
+                                root.refresh-smart-preview();
+                            }
+                        }
+                    }
+                }
+
+                if root.pl-form-smart : FilterBox {
+                    text <=> root.pl-form-rsql;
+                    runs: root.rsql-runs;
+                    suggestions: root.rsql-suggestions;
+                    selected: root.rsql-suggestion-index;
+                    caret-bump: root.rsql-caret-bump;
+                    caret-prefix: root.rsql-caret-prefix;
+                    // Colouring and suggestions are local and cheap, so they
+                    // update on every keystroke. The match count is a round
+                    // trip, so it waits for the field to be left.
+                    edited(value) => {
+                        root.pl-form-preview-count = -1;
+                        root.pl-form-preview-error = "";
+                        root.rsql-edited(value);
+                    }
+                    committed(value) => { root.refresh-smart-preview(); }
+                    accepted(suggestion) => { root.rsql-accept(suggestion); }
+                    caret-moved(offset) => { root.rsql-caret-moved(offset); }
+                    move-selection(delta) => {
+                        root.rsql-suggestion-index = clamp(
+                            root.rsql-suggestion-index + delta,
+                            0,
+                            max(0, root.rsql-suggestions.length - 1));
+                    }
+                }
+                if root.pl-form-smart : Text {
+                    text: root.pl-form-previewing
+                        ? "Checking…"
+                        : (root.pl-form-preview-error != ""
+                            ? root.pl-form-preview-error
+                            : (root.pl-form-preview-count < 0
+                                ? root.rsql-hint
+                                : (root.pl-form-preview-count == 1
+                                    ? "1 track matches"
+                                    : root.pl-form-preview-count + " tracks match")));
+                    color: root.pl-form-preview-error != "" ? #d45769 : Theme.text-muted;
+                    font-size: 10px;
+                    wrap: word-wrap;
+                }
+                if root.pl-form-smart : HorizontalLayout {
+                    spacing: 12px;
+                    FormField {
+                        label: "SORT BY";
+                        placeholder: "e.g. playcount, random";
+                        horizontal-stretch: 1;
+                        text <=> root.pl-form-sort-by;
+                        committed(value) => { root.refresh-smart-preview(); }
+                    }
+                    FormField {
+                        label: "LIMIT";
+                        placeholder: "0 = all";
+                        horizontal-stretch: 1;
+                        text <=> root.pl-form-limit;
+                        committed(value) => { root.refresh-smart-preview(); }
+                    }
+                }
+                if root.pl-form-smart : HorizontalLayout {
+                    spacing: 10px;
+                    Text {
+                        text: "ORDER";
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        letter-spacing: 1px;
+                        vertical-alignment: center;
+                    }
+                    Dropdown {
+                        options: ["Ascending", "Descending"];
+                        current: root.pl-form-sort-order == "desc" ? 1 : 0;
+                        menu-width: 150px;
+                        selected(i) => {
+                            self.current = i;
+                            root.pl-form-sort-order = i == 1 ? "desc" : "asc";
+                        }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                }
                 HorizontalLayout {
                     padding-top: 4px;
                     spacing: 10px;
@@ -2782,7 +2995,18 @@ export component AppWindow inherits Window {
                             mouse-cursor: pointer;
                             clicked => {
                                 if (root.pl-form-name != "") {
-                                    root.playlist-form-submit(root.pl-form-id, root.pl-form-name, root.pl-form-desc);
+                                    if (root.pl-form-smart) {
+                                        root.smart-playlist-submit(
+                                            root.pl-form-id,
+                                            root.pl-form-name,
+                                            root.pl-form-desc,
+                                            root.pl-form-rsql,
+                                            root.pl-form-sort-by,
+                                            root.pl-form-sort-order,
+                                            root.pl-form-limit);
+                                    } else {
+                                        root.playlist-form-submit(root.pl-form-id, root.pl-form-name, root.pl-form-desc);
+                                    }
                                     root.show-playlist-form = false;
                                 }
                             }
@@ -3255,6 +3479,7 @@ export component AppWindow inherits Window {
                 }
                 HelpRow { keys: "/"; label: "Search library"; }
                 HelpRow { keys: "r"; label: "Search internet radio"; }
+                HelpRow { keys: "n"; label: "New playlist"; }
                 HelpRow { keys: "space"; label: "Play / pause"; }
                 HelpRow { keys: "up / down"; label: "Navigate search results"; }
                 HelpRow { keys: "enter"; label: "Play selection"; }

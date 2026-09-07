@@ -1,26 +1,26 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
+    // Vite transpiles and targets modern browsers itself; TypeScript only
+    // typechecks here (`noEmit`), so the target just has to be new enough not
+    // to downlevel anything the checker then complains about.
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    // `bundler` is the resolution Vite actually performs: extensionless
+    // imports, package `exports` maps, no Node-style directory walking.
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
+    "allowJs": true,
+    "types": ["vite/client", "vite-plugin-svgr/client"]
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src", "vite.config.ts"]
 }

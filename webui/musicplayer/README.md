@@ -53,3 +53,43 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Development
+
+The build moved from create-react-app to [Vite](https://vite.dev) in September
+2026. Two consumers pin the output shape, so both are set explicitly in
+`vite.config.ts`:
+
+- `webui/src/lib.rs` embeds `musicplayer/build/` with `rust-embed`, so the
+  output directory is `build/`, not Vite's default `dist/`.
+- `src-tauri/tauri.conf.json` sets `devUrl: "http://localhost:3000"`, so the
+  dev server uses port 3000 with `strictPort` — silently moving to 3001 would
+  leave Tauri pointing at nothing.
+
+```sh
+bun install
+bun run dev              # http://localhost:3000
+bun run build            # typecheck, then bundle into build/
+bun run storybook        # component workshop on :6007
+bun run graphql:generate # regenerate typed hooks (see below)
+```
+
+Environment variables use Vite's `VITE_` prefix and `import.meta.env`, not
+`REACT_APP_` / `process.env`:
+
+| Variable              | Effect                                    |
+| --------------------- | ----------------------------------------- |
+| `VITE_NATIVE_WRAPPER` | Set to `tauri` when building inside Tauri |
+| `VITE_API_URL`        | GraphQL endpoint in development           |
+
+### Regenerating the GraphQL hooks
+
+`src/Hooks/GraphQL.tsx` is generated from `graphql.schema.json`. Refresh that
+from the Rust schema — no running daemon needed, and it matches the working
+tree rather than whatever binary happens to be listening:
+
+```sh
+cargo run --release -p music-player-graphql --example dump_schema \
+    -- webui/musicplayer/graphql.schema.json
+bun run graphql:generate
+```

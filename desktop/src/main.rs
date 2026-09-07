@@ -558,6 +558,70 @@ pub fn ui_set_liked(app: &AppWindow, liked: Vec<rpc::TrackData>) {
     });
 }
 
+/// The text before a byte offset, clamped to a character boundary.
+///
+/// Slint reports the caret as a byte offset and cannot slice a string, so the
+/// prefix is cut here; the box measures it to place its caret. A filter with
+/// multi-byte characters would otherwise panic on a mid-character offset.
+fn caret_prefix(text: &str, offset: usize) -> String {
+    let mut at = offset.min(text.len());
+    while at > 0 && !text.is_char_boundary(at) {
+        at -= 1;
+    }
+    text[..at].to_string()
+}
+
+/// Recompute the filter's colouring and suggestions, and push both to the UI.
+///
+/// Both come from the rsql crate, so the desktop, the TUI and the web colour
+/// and complete identically.
+pub fn ui_set_rsql_editor(app: &AppWindow, filter: &str, caret: usize) {
+    use music_player_rsql::{Kind, TRACKS};
+
+    let runs: Vec<SyntaxRun> = music_player_rsql::highlight(filter, &TRACKS)
+        .into_iter()
+        .map(|span| SyntaxRun {
+            text: span.text(filter).into(),
+            // Mirrors the `kind ==` ladder in components.slint.
+            kind: match span.kind {
+                Kind::Field => 0,
+                Kind::UnknownField => 1,
+                Kind::Operator => 2,
+                Kind::Value | Kind::Quoted => 3,
+                Kind::Logic | Kind::Paren => 4,
+                Kind::Error => 5,
+                // Whitespace carries no colour but must still be drawn, or the
+                // echo line would run its words together.
+                Kind::Space => 4,
+            },
+        })
+        .collect();
+    app.set_rsql_runs(ModelRc::new(VecModel::from(runs)));
+
+    let completion = music_player_rsql::complete(filter, caret, &TRACKS);
+    let suggestions: Vec<FilterSuggestion> = completion
+        .suggestions
+        .into_iter()
+        // A long list is a wall rather than a help; the top few are what a
+        // picker can show without covering the form.
+        .take(6)
+        .map(|suggestion| FilterSuggestion {
+            text: suggestion.text.into(),
+            hint: suggestion.hint.into(),
+        })
+        .collect();
+    app.set_rsql_suggestion_index(0);
+    app.set_rsql_suggestions(ModelRc::new(VecModel::from(suggestions)));
+    app.set_rsql_caret_prefix(caret_prefix(filter, caret).into());
+}
+
+/// A limit the user typed. Anything that is not a number reads as "no limit",
+/// which is also what an empty box means — a half-typed value must not silently
+/// cap the playlist at something arbitrary.
+fn parse_limit(raw: &str) -> u32 {
+    raw.trim().parse::<u32>().unwrap_or(0)
+}
+
 pub fn is_liked(id: &str) -> bool {
     STATE.with(|s| s.borrow().liked.iter().any(|t| t.id == id))
 }
@@ -1291,6 +1355,76 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             };
             let _ = tx.send(cmd);
+        });
+    }
+    // Colouring and completion are local and cheap — no round trip — so they
+    // run on every keystroke, unlike the match count.
+    {
+        let app_weak = app.as_weak();
+        app.on_rsql_edited(move |filter| {
+            if let Some(app) = app_weak.upgrade() {
+                ui_set_rsql_editor(&app, &filter, filter.len());
+            }
+        });
+    }
+    {
+        let app_weak = app.as_weak();
+        app.on_rsql_caret_moved(move |offset| {
+            if let Some(app) = app_weak.upgrade() {
+                let filter = app.get_pl_form_rsql().to_string();
+                app.set_rsql_caret_prefix(caret_prefix(&filter, offset as usize).into());
+            }
+        });
+    }
+    {
+        let app_weak = app.as_weak();
+        app.on_rsql_accept(move |suggestion| {
+            let Some(app) = app_weak.upgrade() else {
+                return;
+            };
+            let filter = app.get_pl_form_rsql().to_string();
+            // The caret is at the end: the Slint TextInput is single-line and
+            // the form only ever appends, so completing from the end is the
+            // only case that arises.
+            let completion =
+                music_player_rsql::complete(&filter, filter.len(), &music_player_rsql::TRACKS);
+            let (updated, caret) = completion.apply(&filter, suggestion.as_str());
+            app.set_pl_form_rsql(updated.clone().into());
+            ui_set_rsql_editor(&app, &updated, caret);
+            // Tell the box to put the caret after what was just inserted.
+            app.set_rsql_caret_bump(app.get_rsql_caret_bump() + 1);
+        });
+    }
+
+    // The filter vocabulary is fixed at build time, so the hint is set once
+    // rather than fetched.
+    app.set_rsql_hint(
+        format!(
+            "Fields: {}",
+            music_player_rsql::TRACKS.field_names().join(", ")
+        )
+        .into(),
+    );
+    {
+        let tx = tx.clone();
+        app.on_smart_playlist_submit(move |_id, name, _desc, rsql, sort_by, sort_order, limit| {
+            let _ = tx.send(rpc::Cmd::SmartPlaylistCreate {
+                name: name.into(),
+                rsql: rsql.into(),
+                sort_by: sort_by.into(),
+                sort_order: sort_order.into(),
+                limit: parse_limit(&limit),
+            });
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_smart_playlist_preview(move |rsql, sort_by, limit| {
+            let _ = tx.send(rpc::Cmd::SmartPlaylistPreview {
+                rsql: rsql.into(),
+                sort_by: sort_by.into(),
+                limit: parse_limit(&limit),
+            });
         });
     }
     {

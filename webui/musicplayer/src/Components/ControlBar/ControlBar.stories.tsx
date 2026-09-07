@@ -1,7 +1,7 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import ControlBar from "./ControlBar";
 
-export default {
+const meta: Meta<typeof ControlBar> = {
   title: "Components/ControlBar",
   component: ControlBar,
   argTypes: {
@@ -14,15 +14,12 @@ export default {
     onRemoveTrackAt: { action: "removeTrackAt" },
     onPlayTrackAt: { action: "playTrackAt" },
   },
-} as ComponentMeta<typeof ControlBar>;
+};
 
-const Template: ComponentStory<typeof ControlBar> = (args: any) => (
-  <ControlBar {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof ControlBar> = {
+  args: {
   nowPlaying: {
     title: "Otherside",
     artist: "Red Hot Chilli Peppers",
@@ -77,6 +74,7 @@ Default.args = {
       artistId: "052dcb0741a91da6d26a35600ec46cd9",
     },
   ],
+},
 };
 
-export const NotPlaying = Template.bind({});
+export const NotPlaying: StoryObj<typeof ControlBar> = {};

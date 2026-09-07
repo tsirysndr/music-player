@@ -48,9 +48,11 @@ use tungstenite::Message;
 mod app;
 mod args;
 mod event;
+mod extension;
 mod handlers;
 mod network;
 mod scan;
+mod smart_playlist_form;
 mod ui;
 mod user_config;
 
@@ -175,6 +177,78 @@ A simple music player written in Rust — single binary, zero dependency"#,
         .subcommand(Command::new("devices").about("List all `music-player` devices on the network"))
         .subcommand(
             Command::new("reset").about("Reset the database and clear the config directory"),
+        )
+        .subcommand(
+            Command::new("extension")
+                .alias("ext")
+                .about("Create, list and install WebAssembly extensions")
+                .subcommand(
+                    Command::new("init")
+                        .alias("new")
+                        .about("Scaffold a new extension")
+                        .arg(arg!(<id> "Extension id, e.g. com.example.lyrics"))
+                        .arg(
+                            Arg::new("name")
+                                .long("name")
+                                .short('n')
+                                .help("Display name (defaults to the last part of the id)"),
+                        )
+                        .arg(
+                            Arg::new("capabilities")
+                                .long("capabilities")
+                                .short('c')
+                                .default_value("events")
+                                .help(
+                                    "Comma-separated: events, metadata, commands, \
+                                     predicates, source",
+                                ),
+                        )
+                        .arg(
+                            Arg::new("language")
+                                .long("language")
+                                .short('l')
+                                .default_value("rust")
+                                .help("rust, go, typescript, python, csharp, zig or cpp"),
+                        )
+                        .arg(
+                            Arg::new("path")
+                                .long("path")
+                                .short('p')
+                                .help("Where to write it (defaults to the name)"),
+                        ),
+                )
+                .arg_required_else_help(true)
+                .subcommand(
+                    Command::new("list")
+                        .alias("ls")
+                        .about("List installed extensions"),
+                )
+                .subcommand(
+                    Command::new("uninstall")
+                        .aliases(["remove", "rm"])
+                        .about("Remove an installed extension")
+                        .arg(arg!(<id> "Extension id, as shown by `extension list`"))
+                        .arg(
+                            Arg::new("yes")
+                                .long("yes")
+                                .short('y')
+                                .help("Do not ask for confirmation")
+                                .action(clap::ArgAction::SetTrue),
+                        ),
+                )
+                .subcommand(
+                    Command::new("install")
+                        .alias("add")
+                        .about("Install an extension from a url")
+                        .arg(arg!(<url> "Url of a .wasm, or of a plugin.toml/plugin.json"))
+                        .arg(
+                            Arg::new("capabilities")
+                                .long("capabilities")
+                                .short('c')
+                                .default_value("")
+                                .help("Required for a bare .wasm, which carries no manifest"),
+                        ),
+                ),
         )
         .arg(
             Arg::new("force-car-sync")
@@ -327,6 +401,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if mode == "server" {
         register_services();
         music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
+        // Local play counts: unlike scrobbling these need no account, and the
+        // smart playlists filter on them.
+        music_player_server::play_stats::spawn(Arc::clone(&tracklist));
         music_player_server::atproto_sync::spawn(Arc::clone(&tracklist));
         music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
         // MPRIS media controls (Linux only; no-op elsewhere).

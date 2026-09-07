@@ -88,7 +88,7 @@ async fn save_songs(db: &Database, songs: &[Song]) -> Result<(), Error> {
             item.insert(&txn).await?;
         }
 
-        let item: track::ActiveModel = song.try_into().unwrap();
+        let mut item: track::ActiveModel = song.try_into().unwrap();
         let id = format!(
             "{:x}",
             md5::compute(song.uri.as_deref().unwrap_or_default())
@@ -96,6 +96,11 @@ async fn save_songs(db: &Database, songs: &[Song]) -> Result<(), Error> {
         if track::Entity::find_by_id(id).one(&txn).await?.is_some() {
             // Re-scanning must repair metadata and album associations, not
             // merely ignore an existing primary key.
+            //
+            // `created_at` is the exception: it records when the track was
+            // first seen, so restamping it here would make every "added in the
+            // last week" smart playlist list the whole library after a rescan.
+            item.created_at = ActiveValue::NotSet;
             item.update(&txn).await?;
         } else {
             item.insert(&txn).await?;
@@ -179,6 +184,12 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     // must not fail the scan either.
     if let Err(e) = update_artist_pictures(&db).await {
         tracing::warn!("artist picture update failed: {e}");
+    }
+    // Every stored filter now has different answers — tracks arrived, tracks
+    // left — so the smart playlists are stale until they are re-run.
+    if let Err(e) = music_player_storage::smart_playlist::regenerate_all(db.get_connection()).await
+    {
+        tracing::warn!("smart playlist refresh failed: {e}");
     }
     Ok(songs)
 }

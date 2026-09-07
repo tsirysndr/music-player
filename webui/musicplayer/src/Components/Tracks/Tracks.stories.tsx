@@ -1,26 +1,15 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Tracks from "./Tracks";
 
-export default {
+const meta: Meta<typeof Tracks> = {
   title: "Components/Tracks",
   component: Tracks,
-  argTypes: {
-    onPlay: { action: "play" },
-    onPause: { action: "pause" },
-    onNext: { action: "next" },
-    onPrevious: { action: "previous" },
-    onShuffle: { action: "shuffle" },
-    onRepeat: { action: "repeat" },
-  },
-} as ComponentMeta<typeof Tracks>;
+};
 
-const Template: ComponentStory<typeof Tracks> = (args: any) => (
-  <Tracks {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
-
-Default.args = {
+export const Default: StoryObj<typeof Tracks> = {
+  args: {
   tracks: [
     {
       title: "Otherside",
@@ -37,4 +26,5 @@ Default.args = {
   ],
   nowPlaying: {},
   currentCastDevice: undefined,
+},
 };

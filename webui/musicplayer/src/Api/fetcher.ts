@@ -1,9 +1,9 @@
 export const isTauri = (): boolean =>
-  process.env.REACT_APP_NATIVE_WRAPPER === "tauri";
+  import.meta.env.VITE_NATIVE_WRAPPER === "tauri";
 
 export const getApiUrl = (): string =>
-  process.env.NODE_ENV === "development"
-    ? process.env.REACT_APP_API_URL || "http://localhost:3001/graphql"
+  import.meta.env.DEV
+    ? import.meta.env.VITE_API_URL || "http://localhost:3001/graphql"
     : // eslint-disable-next-line no-restricted-globals
       `${origin}/graphql`;
 

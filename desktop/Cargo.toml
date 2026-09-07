@@ -63,6 +63,10 @@ version = "0.2.1"
 path = "../types"
 version = "0.2.1"
 
+[dependencies.music-player-rsql]
+path = "../rsql"
+version = "0.2.1"
+
 [dependencies]
 anyhow = "1.0.67"
 dirs = "4.0.0"

@@ -47,6 +47,15 @@ export global Theme {
 
     // Misc
     in-out property <color> art-placeholder: #201a33;
+
+    // ── Filter-box syntax ───────────────────────────────────────────────────
+    // Skins may override each of these; `skin.rs` fills in a sensible fallback
+    // from the existing tokens for any a skin leaves out.
+    in-out property <color> syntax-field: #ff2d95;
+    in-out property <color> syntax-operator: #a99fc2;
+    in-out property <color> syntax-value: #00e5ff;
+    in-out property <color> syntax-logic: #5f5878;
+    in-out property <color> syntax-error: #d45769;
     in-out property <length> radius: 12px;
     in-out property <length> control-radius: 8px;
     in-out property <string> font-ui: "Space Grotesk";

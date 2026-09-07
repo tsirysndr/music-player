@@ -1,13 +1,11 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Playlists from "./Playlists";
 
-export default {
+const meta: Meta<typeof Playlists> = {
   title: "Components/Playlists",
   component: Playlists,
-} as ComponentMeta<typeof Playlists>;
+};
 
-const Template: ComponentStory<typeof Playlists> = (args: any) => (
-  <Playlists {...args} />
-);
+export default meta;
 
-export const Default = Template.bind({});
+export const Default: StoryObj<typeof Playlists> = {};

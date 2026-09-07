@@ -27,6 +27,9 @@ pub struct Model {
     /// has been linked to the user's atproto repo. Optional: unmatched tracks
     /// and libraries with no linked account leave it null.
     pub aturi: Option<String>,
+    /// When the scanner first saw this file. Null for tracks that were already
+    /// in the library before the column existed.
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     #[sea_orm(ignore)]
     pub artists: Vec<artist::Model>,
     #[sea_orm(ignore)]
@@ -146,6 +149,10 @@ impl From<&Song> for ActiveModel {
             // Preserved across rescans: the atproto link is set by the likes
             // importer, not by the scanner.
             aturi: ActiveValue::NotSet,
+            // Stamped once, when the scanner first inserts the row. A rescan
+            // must not move it, or "recently added" would list the whole
+            // library after every scan.
+            created_at: ActiveValue::Set(Some(chrono::Utc::now())),
         }
     }
 }

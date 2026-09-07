@@ -35,7 +35,9 @@ const SidebarWithData: FC<SidebarProps> = (props) => {
       folders={folders}
       playlists={mainPlaylists}
       onCreateFolder={(name) => createFolder({ name })}
-      onCreatePlaylist={(name) => createPlaylist({ name })}
+      onCreatePlaylist={(name, description, smart) =>
+        createPlaylist({ name, description, smart })
+      }
       onDeleteFolder={(id) => deleteFolder({ id })}
       onDeletePlaylist={(id) => deletePlaylist({ id })}
       onEditFolder={(id, name) => renameFolder({ id, name })}

@@ -1,0 +1,24 @@
+# Posts every play to a webhook — the shape a scrobbler takes.
+
+id = "com.example.scrobble-logger"
+name = "Scrobble Logger"
+version = "0.1.0"
+author = "music-player"
+description = "Posts each play to a webhook (ListenBrainz, Maloja, Discord, your own)"
+license = "MIT"
+topics = ["scrobbling", "events", "webhook"]
+readme = "README.md"
+
+entry = "plugin.wasm"
+capabilities = ["events"]
+
+[permissions]
+# Replace with your own endpoint's host. The sandbox refuses everything else.
+allowedHosts = ["api.listenbrainz.org"]
+libraryRead = false
+
+[permissions.config]
+# Where to POST each play. Empty means the extension does nothing.
+webhookUrl = ""
+# Optional bearer token, for endpoints that want one.
+token = ""

@@ -27,6 +27,13 @@ meter_high      = "#e04b3a"
 meter_off       = "#1e1e22"
 skeleton_bg     = "#1d1d21"
 skeleton_fg     = "#2b2b32"
+# Filter-box syntax (smart playlists). Each is optional; music-player falls
+# back to this skin's accent/text/display tokens for anything left out.
+syntax_field    = "#ff8f2b"
+syntax_operator = "#a09a8e"
+syntax_value    = "#4fd8e0"
+syntax_logic    = "#c8a25a"
+syntax_error    = "#e5484d"
 art_placeholder = "#222228"
 
 [metrics]

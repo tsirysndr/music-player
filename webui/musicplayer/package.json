@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
+    "@hookform/resolvers": "^5",
     "@n8tb1t/use-scroll-position": "^2.0.3",
     "@styled-icons/bootstrap": "^10.46.0",
     "@styled-icons/evaicons-outline": "^10.46.0",
@@ -36,7 +37,6 @@
     "react-infinite-scroll-component": "^6.1.0",
     "react-lazy-load-image-component": "1.5.6",
     "react-router-dom": "^6.4.2",
-    "react-scripts": "5.0.1",
     "react-scrollbars-custom": "^4.1.1",
     "react-virtualized-auto-sizer": "^1.0.11",
     "react-window": "^1.8.8",
@@ -45,20 +45,21 @@
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0",
     "subscriptions-transport-ws": "^0.11.0",
-    "typescript": "^4.8.3",
-    "web-vitals": "^2.1.4"
+    "typescript": "^7",
+    "web-vitals": "^2.1.4",
+    "zod": "^4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "vite",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
     "tauri": "tauri",
-    "build": "cross-env CI=false react-scripts build",
-    "tauri:build": "cross-env CI=false  BROWSER=none REACT_APP_NATIVE_WRAPPER=tauri react-scripts build",
-    "tauri:dev": "cross-env BROWSER=none REACT_APP_NATIVE_WRAPPER=tauri react-scripts start",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "storybook": "start-storybook -p 6007 -s public",
-    "build-storybook": "build-storybook -s public",
-    "graphql:generate": "graphql-codegen --config codegen.yml"
+    "tauri:dev": "cross-env VITE_NATIVE_WRAPPER=tauri vite",
+    "tauri:build": "cross-env VITE_NATIVE_WRAPPER=tauri vite build",
+    "graphql:generate": "graphql-codegen --config codegen.yml",
+    "storybook": "storybook dev -p 6007",
+    "build-storybook": "storybook build"
   },
   "eslintConfig": {
     "extends": [
@@ -90,28 +91,23 @@
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.0",
-    "@tauri-apps/cli": "^2.11.0",
     "@graphql-codegen/introspection": "^4.0.0",
     "@graphql-codegen/typescript": "^4.1.0",
     "@graphql-codegen/typescript-operations": "^4.2.0",
     "@graphql-codegen/typescript-react-query": "^6.1.0",
-    "@storybook/addon-actions": "^6.5.16",
-    "@storybook/addon-essentials": "^6.5.16",
-    "@storybook/addon-interactions": "^6.5.16",
-    "@storybook/addon-links": "^6.5.16",
-    "@storybook/builder-webpack5": "^6.5.16",
-    "@storybook/manager-webpack5": "^6.5.16",
-    "@storybook/node-logger": "^6.5.16",
-    "@storybook/preset-create-react-app": "^4.1.2",
-    "@storybook/react": "^6.5.16",
-    "@storybook/testing-library": "^0.0.13",
+    "@storybook/addon-links": "^10.6.0",
+    "@storybook/react-vite": "^10.6.0",
+    "@tauri-apps/cli": "^2.11.0",
+    "@types/lodash": "^4.17.25",
     "@types/react-custom-scrollbars": "^4.0.10",
     "@types/react-lazy-load-image-component": "1.5.2",
-    "babel-plugin-named-exports-order": "^0.0.2",
+    "@vitejs/plugin-react": "^6.1.1",
     "cross-env": "^7.0.3",
     "msw": "^0.47.4",
-    "msw-storybook-addon": "^1.6.3",
     "prop-types": "^15.8.1",
-    "webpack": "^5.75.0"
-  }
+    "storybook": "^10.6.0",
+    "vite": "^8.2.2",
+    "vite-plugin-svgr": "^5.2.0"
+  },
+  "type": "module"
 }

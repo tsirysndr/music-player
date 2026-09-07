@@ -5,7 +5,7 @@ let coversDir = "";
 
 export const resourceUriResolver = {
   async initializeForNativeWrapper(): Promise<void> {
-    if (process.env.REACT_APP_NATIVE_WRAPPER !== "tauri") return;
+    if (import.meta.env.VITE_NATIVE_WRAPPER !== "tauri") return;
     const { path } = window.__TAURI__;
     const appDataDir = await path.appDataDir();
     coversDir = await path.join(appDataDir, "covers");
@@ -14,7 +14,7 @@ export const resourceUriResolver = {
   },
   resolve(path: string | undefined): string | undefined {
     if (!path) return path;
-    if (process.env.REACT_APP_NATIVE_WRAPPER !== "tauri") {
+    if (import.meta.env.VITE_NATIVE_WRAPPER !== "tauri") {
       if (_.startsWith(_.replace(path, /^\/covers\//, ""), "http")) {
         return _.replace(path, /^\/covers\//, "");
       }

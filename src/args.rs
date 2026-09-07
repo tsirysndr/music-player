@@ -54,7 +54,36 @@ pub async fn parse_args(matches: ArgMatches) -> CmdResult {
         Some(("connect", m)) => connect(m),
         Some(("devices", _)) => devices().await,
         Some(("reset", _)) => reset(),
+        Some(("extension", m)) => extension(m).await,
         // No subcommand: the caller starts the daemon or the TUI.
+        _ => Err("No subcommand found".into()),
+    }
+}
+
+/// `extension …` — scaffold, list and install WebAssembly extensions.
+async fn extension(matches: &ArgMatches) -> CmdResult {
+    match matches.subcommand() {
+        Some(("init", m)) => {
+            crate::extension::init(
+                m.get_one::<String>("id").unwrap(),
+                m.get_one::<String>("name").map(String::as_str),
+                m.get_one::<String>("capabilities").unwrap(),
+                m.get_one::<String>("language").unwrap(),
+                m.get_one::<String>("path").map(String::as_str),
+            )
+            .await
+        }
+        Some(("list", _)) => crate::extension::list().await,
+        Some(("uninstall", m)) => {
+            crate::extension::uninstall(m.get_one::<String>("id").unwrap(), m.get_flag("yes")).await
+        }
+        Some(("install", m)) => {
+            crate::extension::install(
+                m.get_one::<String>("url").unwrap(),
+                m.get_one::<String>("capabilities").unwrap(),
+            )
+            .await
+        }
         _ => Err("No subcommand found".into()),
     }
 }

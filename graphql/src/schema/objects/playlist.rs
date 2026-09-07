@@ -10,6 +10,13 @@ pub struct Playlist {
     pub name: String,
     pub description: Option<String>,
     pub tracks: Vec<Track>,
+    /// A smart playlist refills itself from `rsql` rather than holding a
+    /// hand-picked list. Everything else about it behaves the same.
+    pub is_smart: bool,
+    pub rsql: Option<String>,
+    pub sort_by: Option<String>,
+    pub sort_order: Option<String>,
+    pub max_tracks: Option<u32>,
 }
 
 #[Object]
@@ -29,6 +36,27 @@ impl Playlist {
     async fn tracks(&self) -> &Vec<Track> {
         &self.tracks
     }
+
+    async fn is_smart(&self) -> bool {
+        self.is_smart
+    }
+
+    /// The RSQL filter behind a smart playlist, e.g. `genre==rock;year>2000`.
+    async fn rsql(&self) -> &Option<String> {
+        &self.rsql
+    }
+
+    async fn sort_by(&self) -> &Option<String> {
+        &self.sort_by
+    }
+
+    async fn sort_order(&self) -> &Option<String> {
+        &self.sort_order
+    }
+
+    async fn max_tracks(&self) -> Option<u32> {
+        self.max_tracks
+    }
 }
 
 impl From<Model> for Playlist {
@@ -38,6 +66,11 @@ impl From<Model> for Playlist {
             name: model.name,
             description: model.description,
             tracks: model.tracks.into_iter().map(Track::from).collect(),
+            is_smart: model.is_smart,
+            rsql: model.rsql,
+            sort_by: model.sort_by,
+            sort_order: model.sort_order,
+            max_tracks: model.max_tracks,
         }
     }
 }
@@ -52,6 +85,9 @@ impl From<Vec<select_result::PlaylistTrack>> for Playlist {
             name: result[0].name.clone(),
             description: result[0].description.clone(),
             tracks: result.into_iter().map(Track::from).collect(),
+            // The joined row carries no playlist columns beyond these three;
+            // callers that need the smart fields read the playlist row itself.
+            ..Default::default()
         }
     }
 }
@@ -63,6 +99,9 @@ impl From<PlaylistType> for Playlist {
             name: playlist.name,
             description: playlist.description,
             tracks: playlist.tracks.into_iter().map(Into::into).collect(),
+            // A playlist from a remote source (Subsonic, Jellyfin, DLNA) is
+            // never smart — those servers have no notion of one.
+            ..Default::default()
         }
     }
 }

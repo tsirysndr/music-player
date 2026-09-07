@@ -4,6 +4,7 @@ use music_player_client::{
     tracklist::TracklistClient,
 };
 use music_player_server::api::metadata::v1alpha1::{Album, Track};
+use music_player_server::api::music::v1alpha1::SmartPlaylist;
 use music_player_settings::{read_settings, Settings};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
@@ -36,6 +37,33 @@ pub enum IoEvent {
     LoadSearchIndex,
     /// Fetch the next page of a paged browse collection and append it.
     LoadMore(PagedCollection),
+    /// Create a smart playlist from the form's rule.
+    CreateSmartPlaylist {
+        name: String,
+        filter: String,
+        sort_by: String,
+        sort_order: String,
+        limit: u32,
+    },
+    /// Count what a filter would match, for the form's status line.
+    PreviewSmartPlaylist {
+        filter: String,
+        sort_by: String,
+        limit: u32,
+    },
+}
+
+/// Strip tonic's framing off a status message so the form shows the reason,
+/// not the transport. A gRPC error reads like
+/// `status: InvalidArgument, message: "unknown field 'x'", details: …`.
+fn clean_status(raw: &str) -> String {
+    if let Some(start) = raw.find("message: \"") {
+        let rest = &raw[start + 10..];
+        if let Some(end) = rest.find('"') {
+            return rest[..end].to_string();
+        }
+    }
+    raw.to_string()
 }
 
 pub struct Network<'a> {
@@ -86,7 +114,90 @@ impl<'a> Network<'a> {
             IoEvent::PlayPlaylist(id) => self.play_playlist(id).await,
             IoEvent::LoadSearchIndex => self.load_search_index().await,
             IoEvent::LoadMore(collection) => self.load_more(collection).await,
+            IoEvent::CreateSmartPlaylist {
+                name,
+                filter,
+                sort_by,
+                sort_order,
+                limit,
+            } => {
+                self.create_smart_playlist(name, filter, sort_by, sort_order, limit)
+                    .await
+            }
+            IoEvent::PreviewSmartPlaylist {
+                filter,
+                sort_by,
+                limit,
+            } => self.preview_smart_playlist(filter, sort_by, limit).await,
         }
+    }
+
+    /// Create a smart playlist and land on it. A filter the daemon rejects
+    /// leaves the form open with the reason, so the user can fix it in place.
+    async fn create_smart_playlist(
+        &mut self,
+        name: String,
+        filter: String,
+        sort_by: String,
+        sort_order: String,
+        limit: u32,
+    ) -> Result<(), Error> {
+        let smart = SmartPlaylist {
+            filter,
+            sort_by,
+            sort_order,
+            limit,
+        };
+        match self.playlist.create_smart(&name, smart).await {
+            Ok(_) => {
+                let mut app = self.app.lock().await;
+                app.smart_playlist_form.submitting = false;
+                app.smart_playlist_form.close();
+                drop(app);
+                self.get_playlists().await?;
+            }
+            Err(e) => {
+                let mut app = self.app.lock().await;
+                app.smart_playlist_form.submitting = false;
+                app.smart_playlist_form.error = clean_status(&e.to_string());
+            }
+        }
+        Ok(())
+    }
+
+    /// What the form's filter would match. An invalid filter comes back as the
+    /// reason rather than as an error — it is invalid for most of the time it
+    /// is being typed.
+    async fn preview_smart_playlist(
+        &mut self,
+        filter: String,
+        sort_by: String,
+        limit: u32,
+    ) -> Result<(), Error> {
+        let smart = SmartPlaylist {
+            filter,
+            sort_by,
+            sort_order: String::new(),
+            limit,
+        };
+        let result = self.playlist.preview_smart(smart).await;
+        let mut app = self.app.lock().await;
+        app.smart_playlist_form.previewing = false;
+        match result {
+            Ok(preview) if preview.error.is_empty() => {
+                app.smart_playlist_form.preview_count = Some(preview.count);
+                app.smart_playlist_form.error.clear();
+            }
+            Ok(preview) => {
+                app.smart_playlist_form.preview_count = None;
+                app.smart_playlist_form.error = clean_status(&preview.error);
+            }
+            Err(e) => {
+                app.smart_playlist_form.preview_count = None;
+                app.smart_playlist_form.error = clean_status(&e.to_string());
+            }
+        }
+        Ok(())
     }
 
     async fn play_track(&mut self, track_id: String) -> Result<(), Error> {

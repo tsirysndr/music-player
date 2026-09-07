@@ -1,3 +1,4 @@
+import type { SmartPlaylistRule } from "./NewPlaylistModal";
 import styled from "@emotion/styled";
 import { StatefulMenu } from "baseui/menu";
 import { StatefulPopover, Popover } from "baseui/popover";
@@ -247,7 +248,11 @@ export type PlaylistsProps = {
   playlists?: any[];
   folders?: any[];
   onCreateFolder: (name: string) => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
+  onCreatePlaylist: (
+    name: string,
+    description?: string,
+    smart?: SmartPlaylistRule,
+  ) => void;
   onDeleteFolder: (id: string) => void;
   onDeletePlaylist: (id: string) => void;
   onEditFolder: (id: string, name: string) => void;

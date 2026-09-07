@@ -43,12 +43,6 @@ export struct DetailRow {
     track: TrackItem,
 }
 
-export struct BrowseItem {
-    name: string,
-    path: string,
-    is-dir: bool,
-}
-
 export struct PlaylistItem {
     id: string,
     name: string,
@@ -57,9 +51,11 @@ export struct PlaylistItem {
 }
 
 export struct ServerItem {
-    kind: string, // "subsonic" | "jellyfin"
+    kind: string, // "subsonic" | "jellyfin" | "music-player" | ...
     name: string,
     url: string,
+    /// The provider the library is currently read from.
+    connected: bool,
 }
 
 export struct StationItem {
@@ -2012,7 +2008,8 @@ export component ServerRow inherits Rectangle {
 
     height: 56px;
     border-radius: Theme.control-radius;
-    background: touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
+    background: root.server.connected ? Theme.selected-bg
+        : touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
 
     touch := TouchArea {
         clicked => { root.connect(); }
@@ -2055,7 +2052,14 @@ export component ServerRow inherits Rectangle {
             opacity: touch.has-hover ? 1 : 0.35;
             clicked => { root.delete(); }
         }
-        IconButton {
+        if root.server.connected : Text {
+            text: "Connected";
+            color: Theme.accent;
+            font-size: 11px;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+        if !root.server.connected : IconButton {
             icon: Icons.plug-connected;
             icon-size: 16px;
             accented: true;
@@ -2065,55 +2069,6 @@ export component ServerRow inherits Rectangle {
     }
 }
 
-export component BrowseRow inherits Rectangle {
-    in property <BrowseItem> item;
-    callback open;
-    callback play;
-
-    height: 44px;
-    border-radius: Theme.control-radius;
-    background: touch.has-hover ? Theme.hover-bg : transparent;
-
-    touch := TouchArea {
-        clicked => {
-            if (root.item.is-dir) {
-                root.open();
-            } else {
-                root.play();
-            }
-        }
-        mouse-cursor: pointer;
-    }
-
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 10px;
-        spacing: 12px;
-        Image {
-            source: root.item.is-dir ? Icons.folder : Icons.music;
-            colorize: root.item.is-dir ? Theme.accent : Theme.text-dim;
-            width: 16px;
-            height: 16px;
-            y: (parent.height - self.height) / 2;
-        }
-        Text {
-            text: root.item.name;
-            color: Theme.text;
-            font-size: 13px;
-            font-family: Theme.font-ui;
-            vertical-alignment: center;
-            overflow: elide;
-            horizontal-stretch: 1;
-        }
-        if root.item.is-dir : IconButton {
-            icon: Icons.play;
-            icon-size: 14px;
-            y: (parent.height - self.height) / 2;
-            opacity: touch.has-hover ? 1 : 0.35;
-            clicked => { root.play(); }
-        }
-    }
-}
 
 // ── Playlists ───────────────────────────────────────────────────────────────
 

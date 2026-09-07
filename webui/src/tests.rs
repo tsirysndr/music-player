@@ -33,7 +33,14 @@ async fn start_webui() {
             .enable_all()
             .build()
             .unwrap();
-        rt.block_on(async { super::start_webui(cmd_tx, tracklist).await })
+        rt.block_on(async {
+            let mut registry = music_player_provider::ProviderRegistry::new();
+            music_player_provider::register_builtin(&mut registry);
+            let providers = std::sync::Arc::new(music_player_provider::ProviderState::new(
+                std::sync::Arc::new(registry),
+            ));
+            super::start_webui(cmd_tx, tracklist, providers).await
+        })
             .unwrap();
     });
 

@@ -39,8 +39,6 @@ struct UiState {
     tracks: Vec<rpc::TrackData>,
     liked: Vec<rpc::TrackData>,
     servers: Vec<servers::SavedServer>,
-    /// Browse navigation stack of (title, path); top = current level.
-    browse_stack: Vec<(String, String)>,
     playlists: Vec<rpc::PlaylistData>,
     discovered: Vec<(String, String, u16)>,
     switcher_query: String,
@@ -482,48 +480,28 @@ pub fn ui_show_artist_detail(app: &AppWindow, id: &str) {
 
 // ── Remote servers / browsing ───────────────────────────────────────────────
 
-fn server_item(s: &servers::SavedServer) -> ServerItem {
+fn server_item(s: &servers::SavedServer, connected_url: &str) -> ServerItem {
     ServerItem {
         kind: s.kind.clone().into(),
         name: s.name.clone().into(),
         url: s.url.clone().into(),
+        // Matched on url rather than name: the url is what identifies a
+        // server, and two saved rows can share a name.
+        connected: !connected_url.is_empty()
+            && s.url.trim_end_matches('/') == connected_url.trim_end_matches('/'),
     }
 }
 
-fn refresh_servers_model(app: &AppWindow) {
-    let items: Vec<ServerItem> =
-        STATE.with(|s| s.borrow().servers.iter().map(server_item).collect());
-    app.set_servers(ModelRc::new(VecModel::from(items)));
-}
-
-/// Called from the rpc worker when a browse level has been fetched.
-pub fn ui_browse_opened(
-    app: &AppWindow,
-    title: String,
-    path: String,
-    entries: Vec<rpc::BrowseEntryData>,
-    push: bool,
-) {
-    STATE.with(|s| {
-        let mut st = s.borrow_mut();
-        if push {
-            st.browse_stack.push((title, path));
-        }
-        let crumbs: Vec<&str> = st.browse_stack.iter().map(|(t, _)| t.as_str()).collect();
-        app.set_browse_title(crumbs.join("  ›  ").into());
+pub fn refresh_servers_model(app: &AppWindow) {
+    let connected = app.get_provider_url().to_string();
+    let items: Vec<ServerItem> = STATE.with(|s| {
+        s.borrow()
+            .servers
+            .iter()
+            .map(|server| server_item(server, &connected))
+            .collect()
     });
-    let items: Vec<BrowseItem> = entries
-        .iter()
-        .map(|e| BrowseItem {
-            name: e.name.clone().into(),
-            path: e.path.clone().into(),
-            is_dir: e.is_dir,
-        })
-        .collect();
-    app.set_browse_entries(ModelRc::new(VecModel::from(items)));
-    app.set_browse_loading(false);
-    app.set_browse_error("".into());
-    app.set_browsing(true);
+    app.set_servers(ModelRc::new(VecModel::from(items)));
 }
 
 /// Called from the rpc worker with the daemon's audio settings snapshot.
@@ -1373,16 +1351,12 @@ fn main() -> Result<(), slint::PlatformError> {
                 .strip_prefix("srv:")
                 .and_then(|i| i.parse::<usize>().ok())
             {
-                // Saved Subsonic / Jellyfin server → open the browse flow.
-                let srv = STATE.with(|s| {
-                    let mut st = s.borrow_mut();
-                    st.browse_stack.clear();
-                    st.servers.get(idx).cloned()
-                });
+                // A saved server: connect to it. Every library screen
+                // follows the connection, so there is nowhere to navigate to.
+                let srv = STATE.with(|s| s.borrow().servers.get(idx).cloned());
                 if let Some(srv) = srv {
                     app.set_current_tab(4);
-                    app.set_browse_error("".into());
-                    app.set_browse_loading(true);
+                    app.set_server_error("".into());
                     let _ = tx.send(rpc::Cmd::ConnectServer(srv));
                 }
             }
@@ -1656,65 +1630,10 @@ fn main() -> Result<(), slint::PlatformError> {
         let app_weak = app.as_weak();
         app.on_server_connect(move |idx| {
             let app = app_weak.unwrap();
-            let srv = STATE.with(|s| {
-                let mut st = s.borrow_mut();
-                st.browse_stack.clear();
-                st.servers.get(idx as usize).cloned()
-            });
+            let srv = STATE.with(|s| s.borrow().servers.get(idx as usize).cloned());
             if let Some(srv) = srv {
-                app.set_browse_loading(true);
+                app.set_server_error("".into());
                 let _ = tx.send(rpc::Cmd::ConnectServer(srv));
-            }
-        });
-    }
-    {
-        let tx = tx.clone();
-        app.on_browse_open(move |path, title| {
-            let _ = tx.send(rpc::Cmd::Browse {
-                title: title.into(),
-                path: path.into(),
-                push: true,
-            });
-        });
-    }
-    {
-        let tx = tx.clone();
-        app.on_browse_play_dir(move |path| {
-            let _ = tx.send(rpc::Cmd::PlayDir(path.into()));
-        });
-    }
-    {
-        let tx = tx.clone();
-        app.on_browse_play_at(move |idx| {
-            let dir = STATE.with(|s| s.borrow().browse_stack.last().map(|(_, p)| p.clone()));
-            if let Some(dir) = dir {
-                let _ = tx.send(rpc::Cmd::PlayDirAt(dir, idx));
-            }
-        });
-    }
-    {
-        let tx = tx.clone();
-        let app_weak = app.as_weak();
-        app.on_browse_back(move || {
-            let app = app_weak.unwrap();
-            let target = STATE.with(|s| {
-                let mut st = s.borrow_mut();
-                st.browse_stack.pop();
-                st.browse_stack.last().cloned()
-            });
-            match target {
-                Some((title, path)) => {
-                    app.set_browse_loading(true);
-                    let _ = tx.send(rpc::Cmd::Browse {
-                        title,
-                        path,
-                        push: false,
-                    });
-                }
-                None => {
-                    app.set_browsing(false);
-                    app.set_browse_entries(ModelRc::new(VecModel::from(Vec::<BrowseItem>::new())));
-                }
             }
         });
     }

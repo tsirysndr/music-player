@@ -35,6 +35,13 @@ pub async fn setup_schema() -> (
     let devices = scan_devices().await.unwrap();
     let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
     let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
+    // No provider is connected, so every resolver takes its local-library
+    // branch — which is what these tests are about.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+    };
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
@@ -60,6 +67,7 @@ pub async fn setup_schema() -> (
         .data(Arc::clone(&devices))
         .data(Arc::clone(&current_device))
         .data(Arc::clone(&source_device))
+        .data(Arc::clone(&providers))
         .data(Arc::clone(&receiver_device))
         .data(Arc::clone(&searcher))
         .finish(),

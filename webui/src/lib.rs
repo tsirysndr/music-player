@@ -22,6 +22,7 @@ use music_player_graphql::{
     MusicPlayerSchema,
 };
 use music_player_playback::player::PlayerCommand;
+use music_player_provider::ProviderState;
 use music_player_settings::{get_application_directory, read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
@@ -128,6 +129,9 @@ async fn dist(path: web::Path<String>) -> impl Responder {
 pub async fn start_webui(
     cmd_tx: Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>,
     tracklist: Arc<std::sync::Mutex<Tracklist>>,
+    // Where the library screens read from. Shared with the gRPC server so the
+    // two API surfaces cannot disagree about which server is current.
+    providers: Arc<ProviderState>,
 ) -> std::io::Result<()> {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
@@ -153,6 +157,7 @@ pub async fn start_webui(
     .data(current_device)
     .data(source_device)
     .data(receiver_device)
+    .data(Arc::clone(&providers))
     .data(searcher)
     .finish();
     println!("Starting webui at {}", addr.bright_green());

@@ -1,9 +1,6 @@
-use std::sync::Arc;
-
 use async_graphql::*;
 use cuid::cuid2;
 use futures_util::Stream;
-use music_player_addons::CurrentSourceDevice;
 use music_player_entity::{
     folder as folder_entity, playlist as playlist_entity,
     playlist_tracks as playlist_tracks_entity, track as track_entity,
@@ -13,10 +10,10 @@ use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder,
 };
-use tokio::sync::Mutex;
 
 use crate::simple_broker::SimpleBroker;
 
+use super::provider;
 use super::{
     objects::{folder::Folder, playlist::Playlist, track::Track},
     MutationType,
@@ -28,17 +25,16 @@ pub struct PlaylistQuery;
 #[Object]
 impl PlaylistQuery {
     async fn playlist(&self, ctx: &Context<'_>, id: ID) -> Result<Playlist, Error> {
-        let db = ctx.data::<Database>().unwrap();
-
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
-
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let result = source.playlist(&id).await?;
-            return Ok(result.into());
+        if let Some(current) = provider::connected(ctx).await {
+            let playlist = current
+                .provider
+                .playlist(&id)
+                .await
+                .map_err(provider::err)?;
+            return Ok(provider::decorate(playlist, &current.config).into());
         }
 
+        let db = ctx.data::<Database>().unwrap();
         let result = PlaylistRepository::new(db.get_connection())
             .find(id.as_str())
             .await?;
@@ -46,18 +42,27 @@ impl PlaylistQuery {
         Ok(result.into())
     }
 
-    async fn playlists(&self, ctx: &Context<'_>) -> Result<Vec<Playlist>, Error> {
-        let db = ctx.data::<Database>().unwrap();
-
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
-
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let result = source.playlists(0, 10).await?;
-            return Ok(result.into_iter().map(Into::into).collect());
+    async fn playlists(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Playlist>, Error> {
+        if let Some(current) = provider::connected(ctx).await {
+            let playlists = current
+                .provider
+                // Was hardcoded to the first ten, which silently hid the rest
+                // of a remote server's playlists.
+                .playlists(provider::page(offset, limit))
+                .await
+                .map_err(provider::err)?;
+            return Ok(provider::decorate_all(playlists, &current.config)
+                .into_iter()
+                .map(Into::into)
+                .collect());
         }
 
+        let db = ctx.data::<Database>().unwrap();
         PlaylistRepository::new(db.get_connection())
             .find_all()
             .await

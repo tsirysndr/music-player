@@ -13,6 +13,7 @@ use self::{
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
     playlist::{PlaylistMutation, PlaylistQuery, PlaylistSubscription},
     radio::{RadioMutation, RadioQuery},
+    servers::{ServersMutation, ServersQuery},
     tracklist::{TracklistMutation, TracklistQuery, TracklistSubscription},
 };
 
@@ -28,6 +29,7 @@ pub mod playback;
 pub mod provider;
 pub mod playlist;
 pub mod radio;
+pub mod servers;
 pub mod tracklist;
 
 #[derive(MergedObject, Default)]
@@ -40,6 +42,7 @@ pub struct Query(
     TracklistQuery,
     RadioQuery,
     ExtensionsQuery,
+    ServersQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -52,6 +55,7 @@ pub struct Mutation(
     TracklistMutation,
     RadioMutation,
     ExtensionsMutation,
+    ServersMutation,
 );
 
 #[derive(MergedSubscription, Default)]

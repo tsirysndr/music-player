@@ -204,8 +204,18 @@ fn boot() {
         });
     }
 
+    // One provider registry, shared by the gRPC and GraphQL surfaces so both
+    // route library reads through the same connected server.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        std::sync::Arc::new(music_player_provider::ProviderState::new(
+            std::sync::Arc::new(registry),
+        ))
+    };
+
     // Webui (GraphQL + /covers/ album art) — parks this thread forever.
-    if let Err(e) = runtime.block_on(start_webui(cmd_tx, tracklist)) {
+    if let Err(e) = runtime.block_on(start_webui(cmd_tx, tracklist, providers)) {
         tracing::error!("webui failed: {e}");
     }
 }

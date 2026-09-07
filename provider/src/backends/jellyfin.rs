@@ -19,11 +19,6 @@ const TICKS_PER_SECOND: f64 = 10_000_000.0;
 
 /// Jellyfin source addon.
 pub struct Jellyfin {
-    name: String,
-    version: String,
-    author: String,
-    description: String,
-    enabled: bool,
     base_url: String,
     username: String,
     password: String,
@@ -35,11 +30,6 @@ pub struct Jellyfin {
 impl Jellyfin {
     pub fn new() -> Self {
         Self {
-            name: "Jellyfin".to_string(),
-            version: "0.1.0".to_string(),
-            author: "Tsiry Sandratraina".to_string(),
-            description: "Jellyfin addon".to_string(),
-            enabled: true,
             base_url: "".to_string(),
             username: "".to_string(),
             password: "".to_string(),

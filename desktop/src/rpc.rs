@@ -15,7 +15,6 @@ use tonic::transport::{Channel, Endpoint};
 
 use crate::AppWindow;
 
-use music_player_addons::{jellyfin::Jellyfin, subsonic::Subsonic, Browsable};
 use music_player_server::api::metadata::v1alpha1::Track as TrackProto;
 use music_player_server::api::music::v1alpha1::{
     library_service_client::LibraryServiceClient, mixer_service_client::MixerServiceClient,
@@ -30,7 +29,6 @@ use music_player_server::api::music::v1alpha1::{
     SetMuteRequest, SetRepeatRequest, SetVolumeRequest, ShuffleRequest,
     SmartPlaylist as SmartPlaylistProto,
 };
-use music_player_types::types as mp_types;
 
 use crate::likes;
 use crate::servers::SavedServer;
@@ -71,13 +69,6 @@ pub enum Cmd {
     AudioSet(String, i32),
     EqBandSet(usize, i32),
     ConnectServer(SavedServer),
-    Browse {
-        title: String,
-        path: String,
-        push: bool,
-    },
-    PlayDir(String),
-    PlayDirAt(String, i32),
     OpenPlaylist(String),
     /// Create a smart playlist, or convert nothing — the form only offers this
     /// when creating.
@@ -201,13 +192,6 @@ pub struct PlaylistData {
     pub track_count: i64,
 }
 
-#[derive(Clone, Debug)]
-pub struct BrowseEntryData {
-    pub name: String,
-    pub path: String,
-    pub is_dir: bool,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LibraryData {
     pub albums: Vec<AlbumData>,
@@ -254,6 +238,9 @@ pub struct AudioSettingsData {
 pub struct Endpoints {
     pub covers: String,
     pub display: String,
+    /// The daemon's GraphQL endpoint. Saved servers and the current provider
+    /// live there, not over gRPC.
+    pub graphql: String,
 }
 
 /// The daemon the app is currently pointed at. Starts from the env overrides
@@ -306,6 +293,7 @@ pub fn endpoints() -> Endpoints {
     Endpoints {
         covers: format!("http://{host}:{http_port}/covers/"),
         display: format!("{host}:{grpc_port}"),
+        graphql: format!("http://{host}:{http_port}/graphql"),
     }
 }
 
@@ -322,18 +310,11 @@ struct FullTrack {
     artist: String,
 }
 
-/// Live connection to a saved Subsonic/Jellyfin server.
-enum RemoteSource {
-    Subsonic(Subsonic),
-    Jellyfin(Jellyfin),
-}
-
 #[derive(Default)]
 struct WorkerState {
     tracks: Vec<FullTrack>,
     liked: HashSet<String>,
     playing: bool,
-    remote: Option<RemoteSource>,
     radios: HashMap<String, crate::radio::Station>,
 }
 
@@ -1209,212 +1190,84 @@ async fn open_album(
     let _ = weak.upgrade_in_event_loop(move |app| crate::ui_show_album_detail(&app, detail));
 }
 
-// ── Remote server browsing (Subsonic / Jellyfin via music-player-addons) ────
+// ── Providers (remote servers the library is read from) ─────────────────────
 
-impl RemoteSource {
-    fn as_browsable(&mut self) -> &mut (dyn Browsable + Send) {
-        match self {
-            RemoteSource::Subsonic(c) => c,
-            RemoteSource::Jellyfin(c) => c,
-        }
-    }
-}
-
-async fn connect_server(srv: &SavedServer) -> Result<RemoteSource, String> {
-    match srv.kind.as_str() {
-        "jellyfin" => {
-            let mut client = Jellyfin::with_credentials(&srv.url, &srv.username, &srv.password);
-            client
-                .connect()
-                .await
-                .map_err(|e| format!("Jellyfin login failed: {e}"))?;
-            Ok(RemoteSource::Jellyfin(client))
-        }
-        _ => {
-            let mut client = Subsonic::with_credentials(&srv.url, &srv.username, &srv.password);
-            client
-                .connect()
-                .await
-                .map_err(|e| format!("Subsonic login failed: {e}"))?;
-            Ok(RemoteSource::Subsonic(client))
-        }
-    }
-}
-
-fn browse_track_entry(i: usize, t: &mp_types::Track) -> BrowseEntryData {
-    let number = t.track_number.unwrap_or((i + 1) as u32);
-    BrowseEntryData {
-        name: format!("{number:>2}  {}", t.title),
-        path: format!("track:{i}"),
-        is_dir: false,
-    }
-}
-
-/// Lists one browse level. Paths: "root", "albums", "artists", "playlists",
-/// "album:<id>", "artist:<id>", "playlist:<id>".
-async fn browse_entries(
-    source: &mut RemoteSource,
-    path: &str,
-) -> Result<Vec<BrowseEntryData>, String> {
-    let client = source.as_browsable();
-    let entries = match path {
-        "root" => vec![
-            BrowseEntryData {
-                name: "Albums".into(),
-                path: "albums".into(),
-                is_dir: true,
-            },
-            BrowseEntryData {
-                name: "Artists".into(),
-                path: "artists".into(),
-                is_dir: true,
-            },
-            BrowseEntryData {
-                name: "Playlists".into(),
-                path: "playlists".into(),
-                is_dir: true,
-            },
-        ],
-        "albums" => client
-            .albums(None, 0, PAGE)
-            .await
-            .map_err(|e| e.to_string())?
-            .iter()
-            .map(|a| BrowseEntryData {
-                name: if a.artist.is_empty() {
-                    a.title.clone()
-                } else {
-                    format!("{} — {}", a.title, a.artist)
-                },
-                path: format!("album:{}", a.id),
-                is_dir: true,
-            })
-            .collect(),
-        "artists" => client
-            .artists(None, 0, PAGE)
-            .await
-            .map_err(|e| e.to_string())?
-            .iter()
-            .map(|a| BrowseEntryData {
-                name: a.name.clone(),
-                path: format!("artist:{}", a.id),
-                is_dir: true,
-            })
-            .collect(),
-        "playlists" => client
-            .playlists(0, PAGE)
-            .await
-            .map_err(|e| e.to_string())?
-            .iter()
-            .map(|p| BrowseEntryData {
-                name: p.name.clone(),
-                path: format!("playlist:{}", p.id),
-                is_dir: true,
-            })
-            .collect(),
-        _ if path.starts_with("album:") => client
-            .album(&path["album:".len()..])
-            .await
-            .map_err(|e| e.to_string())?
-            .tracks
-            .iter()
-            .enumerate()
-            .map(|(i, t)| browse_track_entry(i, t))
-            .collect(),
-        _ if path.starts_with("artist:") => client
-            .artist(&path["artist:".len()..])
-            .await
-            .map_err(|e| e.to_string())?
-            .albums
-            .iter()
-            .map(|a| BrowseEntryData {
-                name: a.title.clone(),
-                path: format!("album:{}", a.id),
-                is_dir: true,
-            })
-            .collect(),
-        _ if path.starts_with("playlist:") => client
-            .playlist(&path["playlist:".len()..])
-            .await
-            .map_err(|e| e.to_string())?
-            .tracks
-            .iter()
-            .enumerate()
-            .map(|(i, t)| browse_track_entry(i, t))
-            .collect(),
-        other => return Err(format!("unknown browse path: {other}")),
-    };
-    Ok(entries)
-}
-
-/// The playable tracks behind a browse dir (album:/playlist:/artist:).
-async fn dir_tracks(source: &mut RemoteSource, path: &str) -> Result<Vec<mp_types::Track>, String> {
-    let client = source.as_browsable();
-    if let Some(id) = path.strip_prefix("album:") {
-        return Ok(client.album(id).await.map_err(|e| e.to_string())?.tracks);
-    }
-    if let Some(id) = path.strip_prefix("playlist:") {
-        return Ok(client.playlist(id).await.map_err(|e| e.to_string())?.tracks);
-    }
-    if let Some(id) = path.strip_prefix("artist:") {
-        let albums = client.artist(id).await.map_err(|e| e.to_string())?.albums;
-        let mut out = Vec::new();
-        for album in albums {
-            let client = source.as_browsable();
-            out.extend(
-                client
-                    .album(&album.id)
-                    .await
-                    .map_err(|e| e.to_string())?
-                    .tracks,
-            );
-        }
-        return Ok(out);
-    }
-    Err(format!("not a playable dir: {path}"))
-}
-
-/// Stream-URL tracks → daemon tracklist. The album must be present — the
-/// daemon's LoadTracks conversion requires it.
-fn to_proto_tracks(tracks: Vec<mp_types::Track>) -> Vec<TrackProto> {
-    tracks
-        .into_iter()
-        .map(|mut t| {
-            if t.album.is_none() {
-                t.album = Some(mp_types::Album {
-                    id: format!("{:x}", md5::compute(&t.title)),
-                    title: "Unknown".to_string(),
-                    ..Default::default()
-                });
-            }
-            t.into()
-        })
-        .collect()
-}
-
-async fn browse_into(
-    state: &Arc<Mutex<WorkerState>>,
+/// Save a server with the daemon and make it the current provider.
+///
+/// Connecting is all this does. Every library screen reads through whatever
+/// the daemon has current, so there is nothing to navigate to — and nothing
+/// here touches playback, which keeps going across a switch.
+async fn connect_provider(
     weak: &Weak<AppWindow>,
-    title: String,
-    path: String,
-    push: bool,
-) -> Result<(), String> {
-    let mut st = state.lock().await;
-    let Some(source) = st.remote.as_mut() else {
-        return Err("no server connected".into());
-    };
-    let mut entries = browse_entries(source, &path).await?;
-    // Directory levels sort by name; track levels keep album order.
-    if entries.iter().all(|e| e.is_dir) {
-        entries.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    }
+    server: &SavedServer,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    const ADD: &str = r#"mutation($input: ServerInput!) { addServer(input: $input) { id } }"#;
+    const CONNECT: &str =
+        r#"mutation($id: ID!) { connectToServer(id: $id) { id name url kind } }"#;
+
+    let added = graphql(
+        ADD,
+        serde_json::json!({
+            "input": {
+                "kind": server.kind,
+                "name": server.name,
+                "url": server.url,
+                "username": server.username,
+                "password": server.password,
+            }
+        }),
+    )
+    .await?;
+    let id = added["addServer"]["id"]
+        .as_str()
+        .ok_or("the daemon did not return a server id")?
+        .to_string();
+
+    let connected = graphql(CONNECT, serde_json::json!({ "id": id })).await?;
+    let name = connected["connectToServer"]["name"]
+        .as_str()
+        .unwrap_or(&server.name)
+        .to_string();
+    let url = connected["connectToServer"]["url"]
+        .as_str()
+        .unwrap_or(&server.url)
+        .to_string();
+
     let _ = weak.upgrade_in_event_loop(move |app| {
-        crate::ui_browse_opened(&app, title, path, entries, push);
+        app.set_server_error("".into());
+        app.set_provider_name(name.into());
+        app.set_provider_url(url.into());
+        crate::refresh_servers_model(&app);
     });
     Ok(())
 }
 
-// ── Server discovery (mDNS) ─────────────────────────────────────────────────
+/// One GraphQL round trip to the daemon, with its in-body errors surfaced.
+async fn graphql(
+    query: &str,
+    variables: serde_json::Value,
+) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
+    let response = http()
+        .post(endpoints().graphql)
+        .json(&serde_json::json!({ "query": query, "variables": variables }))
+        .send()
+        .await?;
+    let body: serde_json::Value = response.json().await?;
+    // GraphQL answers 200 even when it failed; the errors array is the only
+    // thing that says so.
+    if let Some(errors) = body.get("errors").and_then(|e| e.as_array()) {
+        if let Some(first) = errors.first() {
+            let message = first
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("the daemon refused the request");
+            return Err(message.into());
+        }
+    }
+    body.get("data")
+        .cloned()
+        .ok_or_else(|| "the daemon returned no data".into())
+}
 
 /// Browses `_music-player._tcp.local.` for ~2.5 s and returns
 /// (name, host, port) per resolved gRPC peer (deduped). Peers that resolve
@@ -2016,59 +1869,26 @@ async fn cmd_loop(
                     }
                 }
                 Cmd::ConnectServer(srv) => {
-                    let name = srv.name.clone();
-                    match connect_server(&srv).await {
-                        Ok(source) => {
-                            state.lock().await.remote = Some(source);
-                            if let Err(e) =
-                                browse_into(&state, &weak, name, "root".into(), true).await
-                            {
-                                let _ = weak.upgrade_in_event_loop(move |app| {
-                                    app.set_browse_loading(false);
-                                    app.set_browse_error(e.into());
-                                });
+                    // Connecting is now the daemon's job: it makes the server
+                    // the current provider and every library screen follows,
+                    // rather than the desktop opening a browse view of its own.
+                    match connect_provider(&weak, &srv).await {
+                        Ok(()) => {
+                            // The daemon is pointed somewhere else now, and
+                            // every library screen reads through it — so they
+                            // all need re-fetching. Playback is untouched.
+                            let ep = endpoints();
+                            if let Err(e) = load_library(&channel, &ep, &weak, &state).await {
+                                tracing::warn!("reloading the library failed: {e}");
                             }
+                            load_playlists(&channel, &weak).await;
                         }
                         Err(e) => {
+                            let message = e.to_string();
                             let _ = weak.upgrade_in_event_loop(move |app| {
-                                app.set_browse_loading(false);
-                                app.set_browse_error(e.into());
+                                app.set_server_error(message.into());
                             });
                         }
-                    }
-                }
-                Cmd::Browse { title, path, push } => {
-                    if let Err(e) = browse_into(&state, &weak, title, path, push).await {
-                        let _ = weak.upgrade_in_event_loop(move |app| {
-                            app.set_browse_loading(false);
-                            app.set_browse_error(e.into());
-                        });
-                    }
-                }
-                Cmd::PlayDir(path) => {
-                    let tracks = {
-                        let mut st = state.lock().await;
-                        match st.remote.as_mut() {
-                            Some(source) => dir_tracks(source, &path).await,
-                            None => Err("no server connected".into()),
-                        }
-                    };
-                    match tracks {
-                        Ok(tracks) => load_tracks(&channel, to_proto_tracks(tracks), 0).await?,
-                        Err(e) => tracing::warn!("play dir failed: {e}"),
-                    }
-                }
-                Cmd::PlayDirAt(path, idx) => {
-                    let tracks = {
-                        let mut st = state.lock().await;
-                        match st.remote.as_mut() {
-                            Some(source) => dir_tracks(source, &path).await,
-                            None => Err("no server connected".into()),
-                        }
-                    };
-                    match tracks {
-                        Ok(tracks) => load_tracks(&channel, to_proto_tracks(tracks), idx).await?,
-                        Err(e) => tracing::warn!("play dir failed: {e}"),
                     }
                 }
             }

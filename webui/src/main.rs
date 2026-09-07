@@ -17,5 +17,14 @@ async fn main() -> std::io::Result<()> {
     let _db = Database::new().await;
     let (_, _) = Player::new(move |_| {}, cloned_cmd_tx, cloned_cmd_rx, cloned_tracklist);
     env::set_var("MUSIC_PLAYER_HTTP_PORT", "3001");
-    start_webui(cmd_tx, tracklist).await
+    // One provider registry, shared by every API surface so they cannot
+    // disagree about which server the library screens are reading from.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        std::sync::Arc::new(music_player_provider::ProviderState::new(
+            std::sync::Arc::new(registry),
+        ))
+    };
+    start_webui(cmd_tx, tracklist, providers).await
 }

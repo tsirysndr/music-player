@@ -22,7 +22,7 @@ use tokio::sync::RwLock;
 #[derive(Clone)]
 pub struct ConnectedProvider {
     pub config: ProviderConfig,
-    pub source: Arc<dyn MusicProvider>,
+    pub provider: Arc<dyn MusicProvider>,
 }
 
 // Hand-written: `dyn MusicProvider` is not `Debug`, and the config is the part
@@ -93,7 +93,10 @@ impl ProviderState {
         let source = self.registry.connect(&config).await?;
         source.ping().await?;
 
-        let connected = ConnectedProvider { config, source };
+        let connected = ConnectedProvider {
+            config,
+            provider: source,
+        };
         *self.current.write().await = Some(connected.clone());
         tracing::info!(
             kind = connected.config.kind,

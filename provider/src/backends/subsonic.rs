@@ -19,11 +19,6 @@ const CLIENT_NAME: &str = "music-player";
 
 /// Subsonic (Navidrome, Airsonic, gonic, ...) source addon.
 pub struct Subsonic {
-    name: String,
-    version: String,
-    author: String,
-    description: String,
-    enabled: bool,
     base_url: String,
     username: String,
     password: String,
@@ -36,11 +31,6 @@ impl Subsonic {
     pub fn new() -> Self {
         let salt = generate_salt();
         Self {
-            name: "Subsonic".to_string(),
-            version: "0.1.0".to_string(),
-            author: "Tsiry Sandratraina".to_string(),
-            description: "Subsonic/Navidrome addon".to_string(),
-            enabled: true,
             base_url: "".to_string(),
             username: "".to_string(),
             password: "".to_string(),

@@ -398,6 +398,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let peer_map_ws = Arc::clone(&peer_map);
 
+    // One provider registry, one piece of state, shared by the gRPC server and
+    // the web/GraphQL server. Both API surfaces route library reads through it,
+    // so they cannot disagree about which server the screens are showing.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+    };
+    // Refuse to use ourselves as a provider: with gRPC reads routed through
+    // one, that would recurse until something ran out.
+    if let Ok(config) = read_settings() {
+        if let Ok(settings) = config.try_deserialize::<Settings>() {
+            let port = settings.http_port as u16;
+            for host in ["127.0.0.1", "localhost", "::1"] {
+                providers.add_own_address(host, port).await;
+            }
+        }
+    }
+    let providers_webui = Arc::clone(&providers);
+
     if mode == "server" {
         register_services();
         music_player_server::scrobbler::spawn(Arc::clone(&tracklist));
@@ -449,7 +469,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
-        start_webui(cmd_tx_webui, tracklist_webui).await?;
+        start_webui(cmd_tx_webui, tracklist_webui, providers_webui).await?;
         return Ok(());
     }
 

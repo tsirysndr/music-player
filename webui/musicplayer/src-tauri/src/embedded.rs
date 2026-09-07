@@ -169,7 +169,17 @@ fn boot() {
         }
     });
 
-    if let Err(error) = runtime.block_on(start_webui(cmd_tx, tracklist)) {
+    // One provider registry, shared by every API surface so they cannot
+    // disagree about which server the library screens are reading from.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        std::sync::Arc::new(music_player_provider::ProviderState::new(
+            std::sync::Arc::new(registry),
+        ))
+    };
+
+    if let Err(error) = runtime.block_on(start_webui(cmd_tx, tracklist, providers)) {
         tracing::error!("embedded web UI failed: {error}");
     }
 }

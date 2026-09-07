@@ -11,6 +11,10 @@ version = "0.2.1"
 name = "music-player-desktop"
 path = "src/main.rs"
 
+[dependencies.music-player-provider]
+path = "../provider"
+version = "0.2.1"
+
 [dependencies.music-player-server]
 path = "../server"
 version = "0.2.1"

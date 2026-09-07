@@ -7,7 +7,6 @@
 //! of the time it is being typed, so neither [`highlight`] nor [`complete`]
 //! ever fails — they describe what is there, including the broken parts.
 
-use crate::lexer::Comparison;
 use crate::schema::Schema;
 
 /// What a run of characters is, for colouring.
@@ -237,34 +236,22 @@ fn expects_value(spans: &[Span]) -> bool {
     }
 }
 
-/// Whether the innermost open paren directly followed an operator, making it a
-/// value list rather than a group. The comma means different things in each.
+/// Whether the last paren directly followed an operator, making it a value
+/// list rather than a group. The comma means different things in each.
+///
+/// `Kind::Paren` does not say which paren it is, so unlike the lexer's
+/// [`crate::lexer`] equivalent this cannot track nesting depth — it answers for
+/// the last paren of either kind. That is right for the shapes a filter box
+/// sees while it is being typed, and highlighting is forgiving by design.
 fn opens_value_list(spans: &[Span]) -> bool {
-    let mut depth = 0usize;
-    for index in (0..spans.len()).rev() {
-        let span = &spans[index];
-        if span.kind != Kind::Paren {
-            continue;
-        }
-        // Only the paren character itself is in this span.
-        let is_close = span.end - span.start == 1;
-        match () {
-            _ if is_close => {}
-            _ => {}
-        }
-        // Distinguish by looking at the source is not possible here, so the
-        // caller passes the input; see `in_value_list`.
-        let _ = depth;
-        depth = 0;
-        return index > 0
-            && spans[..index]
-                .iter()
-                .rev()
-                .find(|s| s.kind != Kind::Space)
-                .map(|s| s.kind == Kind::Operator)
-                .unwrap_or(false);
-    }
-    false
+    let Some(index) = spans.iter().rposition(|span| span.kind == Kind::Paren) else {
+        return false;
+    };
+    spans[..index]
+        .iter()
+        .rev()
+        .find(|span| span.kind != Kind::Space)
+        .is_some_and(|span| span.kind == Kind::Operator)
 }
 
 fn in_value_list(spans: &[Span]) -> bool {

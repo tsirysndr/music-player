@@ -60,6 +60,9 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         _ if key == app.user_config.keys.search => {
             app.open_search();
         }
+        _ if key == app.user_config.keys.new_smart_playlist => {
+            app.smart_playlist_form.open();
+        }
         // `=` and `_` are the unshifted faces of `+` and `-` on most layouts,
         // so both reach the same place rather than only the shifted one.
         _ if key == app.user_config.keys.decrease_volume || key == Key::Char('_') => {

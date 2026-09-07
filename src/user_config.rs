@@ -150,6 +150,7 @@ pub struct KeyBindings {
     pub help: Key,
     pub add_item_to_queue: Key,
     pub show_queue: Key,
+    pub new_smart_playlist: Key,
 }
 
 #[derive(Clone)]
@@ -182,6 +183,9 @@ impl UserConfig {
                 help: Key::Char('?'),
                 add_item_to_queue: Key::Char('z'),
                 show_queue: Key::Char('u'),
+                // Capital, so it cannot be confused with `s`-prefixed motions
+                // and does not collide with anything a list handler wants.
+                new_smart_playlist: Key::Char('S'),
             },
             behavior: BehaviorConfig {
                 enable_text_emphasis: true,

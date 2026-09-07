@@ -3,12 +3,7 @@
 //! Mirrors the fuzzy finder's overlay: while the form is up it takes every key,
 //! so a stray `p` types into a field rather than pausing playback.
 
-use crate::{
-    app::App,
-    event::Key,
-    network::IoEvent,
-    smart_playlist_form::{Field, Order},
-};
+use crate::{app::App, event::Key, network::IoEvent, smart_playlist_form::Field};
 
 pub fn handler(key: Key, app: &mut App) {
     match key {
@@ -75,10 +70,7 @@ fn submit(app: &mut App) {
         name: app.smart_playlist_form.name.trim().to_string(),
         filter: app.smart_playlist_form.filter.clone(),
         sort_by: app.smart_playlist_form.sort_by.clone(),
-        sort_order: match app.smart_playlist_form.order {
-            Order::Asc => "asc".to_string(),
-            Order::Desc => "desc".to_string(),
-        },
+        sort_order: app.smart_playlist_form.order.as_str().to_string(),
         limit: app.smart_playlist_form.limit_value(),
     });
 }

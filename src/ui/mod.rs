@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{ActiveBlock, App, Pagination, RouteId, SearchScope, LIBRARY_OPTIONS};
+use crate::smart_playlist_form::Field;
 
 use self::util::{
     centered_rect, centered_rect_absolute, display_track_progress, get_color, get_percentage_width,
@@ -84,6 +85,10 @@ pub fn draw_main_layout(f: &mut Frame, app: &App) {
 
     if app.search.active {
         draw_search_overlay(f, app);
+    }
+
+    if app.smart_playlist_form.active {
+        draw_smart_playlist_overlay(f, app);
     }
 
     if app.show_help {
@@ -767,6 +772,14 @@ pub fn draw_status_line(f: &mut Frame, app: &App, layout_chunk: Rect) {
 pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
     let hints: &[(&str, &str)] = if app.show_help {
         &[("?/q/esc", "close"), ("j/k", "scroll")]
+    } else if app.smart_playlist_form.active {
+        &[
+            ("esc", "cancel"),
+            ("tab", "next field"),
+            ("C-o", "order"),
+            ("C-u", "clear"),
+            ("enter", "check/create"),
+        ]
     } else if app.search.active {
         &[
             ("esc", "close"),
@@ -786,6 +799,7 @@ pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
             (">", "+5s"),
             ("+/-", "volume"),
             ("m", "mute"),
+            ("S", "smart playlist"),
             ("z", "queue"),
             ("u", "play queue"),
             ("q", "back/quit"),
@@ -1016,6 +1030,145 @@ pub fn draw_help_overlay(f: &mut Frame, app: &App) {
     f.render_widget(paragraph, area);
 }
 
+/// The smart-playlist form: four fields, a live match count under the filter,
+/// and the sort order on a line of its own because it is toggled rather than
+/// typed.
+pub fn draw_smart_playlist_overlay(f: &mut Frame, app: &App) {
+    let theme = app.user_config.theme;
+    let form = &app.smart_playlist_form;
+    let area = centered_rect_absolute(64, 13, f.area());
+    if area.width < 24 || area.height < 8 {
+        return;
+    }
+
+    f.render_widget(Clear, area);
+
+    let title_style = Style::default()
+        .fg(theme.active)
+        .add_modifier(Modifier::BOLD);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(Span::styled(" New smart playlist ", title_style))
+        .border_style(Style::default().fg(theme.active));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    if inner.height < 6 {
+        return;
+    }
+
+    // A row per field, then the status line, a blank, the order and the hint.
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .split(inner);
+
+    const LABEL_WIDTH: usize = 8;
+    let mut caret: Option<Position> = None;
+
+    for (index, field) in Field::ALL.iter().enumerate() {
+        let focused = form.focus == *field;
+        let value = form.value(*field);
+        // An empty field shows what it expects rather than nothing at all.
+        let (text, text_style) = if value.is_empty() {
+            (
+                field.placeholder().to_string(),
+                Style::default().fg(theme.inactive),
+            )
+        } else {
+            (value.to_string(), Style::default().fg(theme.text))
+        };
+        let label_style = if focused {
+            Style::default()
+                .fg(theme.active)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(theme.inactive)
+        };
+        let line = Line::from(vec![
+            Span::styled(
+                format!(" {:>width$}  ", field.label(), width = LABEL_WIDTH),
+                label_style,
+            ),
+            Span::styled(text, text_style),
+        ]);
+        f.render_widget(Paragraph::new(line), rows[index]);
+
+        if focused {
+            // Placed past the typed value, not the placeholder — the
+            // placeholder is a hint, not content the caret sits in.
+            let column = rows[index].x + (LABEL_WIDTH + 3) as u16 + value.chars().count() as u16;
+            caret = Some(Position::new(
+                column.min(rows[index].right().saturating_sub(1)),
+                rows[index].y,
+            ));
+        }
+    }
+
+    // Whatever the filter is doing: checking, why it will not compile, how
+    // many tracks it matches, or the vocabulary when nothing is known yet.
+    let status_style = if form.error.is_empty() {
+        Style::default().fg(theme.inactive)
+    } else {
+        Style::default().fg(theme.statusline_search)
+    };
+    f.render_widget(
+        Paragraph::new(Line::from(Span::styled(
+            format!(
+                " {:>width$}  {}",
+                "",
+                form.status_line(),
+                width = LABEL_WIDTH
+            ),
+            status_style,
+        ))),
+        rows[4],
+    );
+
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled(
+                format!(" {:>width$}  ", "Order", width = LABEL_WIDTH),
+                Style::default().fg(theme.inactive),
+            ),
+            Span::styled(form.order.label(), Style::default().fg(theme.text)),
+            Span::styled("  (Ctrl-o)", Style::default().fg(theme.inactive)),
+        ])),
+        rows[5],
+    );
+
+    let hint = if form.submitting {
+        "  Creating…".to_string()
+    } else {
+        format!(
+            "  Tab next · Ctrl-o order · Ctrl-u clear · Enter {} · Esc cancel",
+            if form.focus == Field::Filter {
+                "check"
+            } else {
+                "create"
+            }
+        )
+    };
+    f.render_widget(
+        Paragraph::new(Line::from(Span::styled(
+            hint,
+            Style::default().fg(theme.hint),
+        ))),
+        rows[6],
+    );
+
+    if let Some(position) = caret {
+        f.set_cursor_position(position);
+    }
+}
+
 /// All keybindings, grouped by category. Used by the `?` help dialog.
 pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
     vec![
@@ -1051,6 +1204,17 @@ pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> 
                 ("m", "Mute / unmute"),
                 ("z", "Add selected track to the queue"),
                 ("u", "Toggle the play-queue view"),
+            ],
+        ),
+        (
+            "Smart playlists",
+            vec![
+                ("S", "New smart playlist"),
+                ("Tab / Up / Down", "Move between fields"),
+                ("Ctrl-o", "Flip the sort order"),
+                ("Ctrl-u", "Clear the focused field"),
+                ("Enter", "On the filter: count matches. Elsewhere: create"),
+                ("Esc", "Cancel"),
             ],
         ),
         (

@@ -55,9 +55,9 @@ version = "0.2.1"
 ctor = "0.1.26"
 
 [dependencies]
-async-graphql = "4.0.15"
+async-graphql = "7.2.1"
 tide = "0.16.0"
-async-graphql-tide = "4.0.15"
+async-graphql-tide = "7.2.1"
 tokio = { version = "1.21.0", features = ["full"] }
 md5 = "0.7.0"
 sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }

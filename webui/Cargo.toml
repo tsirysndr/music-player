@@ -57,18 +57,18 @@ sea-orm = {version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"]
 surf = {version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
 
 [dependencies]
-actix-cors = "0.6.3"
-actix-files = "0.6.2"
-actix-web = "4.9.0"
-async-graphql = "4.0.15"
-async-graphql-actix-web = "4.0.15"
+actix-cors = "0.7.2"
+actix-files = "0.7.0"
+actix-web = "4.15.0"
+async-graphql = "7.2.1"
+async-graphql-actix-web = "7.2.1"
 dirs = "4.0.0"
 futures = "0.3.28"
 futures-util = "0.3.25"
 mime = "0.3.16"
 mime_guess = "2.0.4"
 owo-colors = "3.5.0"
-rust-embed = {version = "6.4.1", features = ["debug-embed", "actix"]}
+rust-embed = {version = "8.12.0", features = ["debug-embed", "actix"]}
 sea-orm = {version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 serde = {version = "1.0.145", features = ["serde_derive"]}
 serde_derive = "1.0.145"

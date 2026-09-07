@@ -96,12 +96,14 @@ const ServerRow = ({
         <span className="text-[11px] font-semibold text-accent">Playing</span>
       ) : (
         // A span, not an `IconButton`: the whole row is already the button,
-        // and nesting one inside another is invalid.
+        // and nesting one inside another is invalid. The glyph is a plug, not
+        // a play triangle — the row connects to a server, it does not start it
+        // playing.
         <span
           aria-hidden="true"
           className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-full"
         >
-          <Icons.play size={15} className="text-accent" />
+          <Icons.connect size={16} className="text-accent" />
         </span>
       )}
     </button>

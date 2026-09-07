@@ -20,6 +20,8 @@ export type TrackRowItem = {
   duration: string;
   /** Metadata track number; album views show this instead of the position. */
   trackNumber?: number | null;
+  /** Which disc it sits on. Only meaningful on a multi-disc album. */
+  discNumber?: number | null;
   liked?: boolean;
 };
 

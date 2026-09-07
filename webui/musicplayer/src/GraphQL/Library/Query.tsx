@@ -77,6 +77,7 @@ export const GET_ALBUM = gql`
       tracks {
         id
         trackNumber
+        discNumber
         title
         artist
         artists {
@@ -84,6 +85,7 @@ export const GET_ALBUM = gql`
           name
         }
         duration
+        uri
       }
     }
   }

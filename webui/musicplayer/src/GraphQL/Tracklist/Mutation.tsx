@@ -45,3 +45,9 @@ export const PLAY_NEXT = gql`
     playNext(id: $trackId)
   }
 `;
+
+export const ADD_TRACKS = gql`
+  mutation AddTracks($tracks: [TrackInput!]!) {
+    addTracks(tracks: $tracks)
+  }
+`;

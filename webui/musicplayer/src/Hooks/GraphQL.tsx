@@ -992,7 +992,7 @@ export type GetAlbumQueryVariables = Exact<{
 }>;
 
 
-export type GetAlbumQuery = { __typename?: 'Query', album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }> }> } };
+export type GetAlbumQuery = { __typename?: 'Query', album: { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null, tracks: Array<{ __typename?: 'Track', id: string, trackNumber?: number | null, discNumber: number, title: string, artist: string, duration?: number | null, uri: string, artists: Array<{ __typename?: 'Artist', id: string, name: string }> }> } };
 
 export type SearchQueryVariables = Exact<{
   keyword: Scalars['String']['input'];
@@ -1235,6 +1235,13 @@ export type PlayNextMutationVariables = Exact<{
 
 
 export type PlayNextMutation = { __typename?: 'Mutation', playNext: boolean };
+
+export type AddTracksMutationVariables = Exact<{
+  tracks: Array<TrackInput> | TrackInput;
+}>;
+
+
+export type AddTracksMutation = { __typename?: 'Mutation', addTracks: boolean };
 
 export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2089,6 +2096,7 @@ export const GetAlbumDocument = `
     tracks {
       id
       trackNumber
+      discNumber
       title
       artist
       artists {
@@ -2096,6 +2104,7 @@ export const GetAlbumDocument = `
         name
       }
       duration
+      uri
     }
   }
 }
@@ -3270,6 +3279,30 @@ usePlayNextMutation.getKey = () => ['PlayNext'];
 
 
 usePlayNextMutation.fetcher = (variables: PlayNextMutationVariables, options?: RequestInit['headers']) => fetcher<PlayNextMutation, PlayNextMutationVariables>(PlayNextDocument, variables, options);
+
+export const AddTracksDocument = `
+    mutation AddTracks($tracks: [TrackInput!]!) {
+  addTracks(tracks: $tracks)
+}
+    `;
+
+export const useAddTracksMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<AddTracksMutation, TError, AddTracksMutationVariables, TContext>) => {
+    
+    return useMutation<AddTracksMutation, TError, AddTracksMutationVariables, TContext>(
+      {
+    mutationKey: ['AddTracks'],
+    mutationFn: (variables?: AddTracksMutationVariables) => fetcher<AddTracksMutation, AddTracksMutationVariables>(AddTracksDocument, variables)(),
+    ...options
+  }
+    )};
+
+useAddTracksMutation.getKey = () => ['AddTracks'];
+
+
+useAddTracksMutation.fetcher = (variables: AddTracksMutationVariables, options?: RequestInit['headers']) => fetcher<AddTracksMutation, AddTracksMutationVariables>(AddTracksDocument, variables, options);
 
 export const GetTracklistDocument = `
     query GetTracklist {

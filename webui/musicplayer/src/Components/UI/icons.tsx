@@ -4,8 +4,7 @@
  * Almost every glyph *is* the desktop's own SVG: `desktopIcons.tsx` is
  * generated from `desktop/assets/icons/*.svg`, the same files the Slint client
  * embeds, so the two clients cannot drift onto different marks. Tabler fills in
- * only what the desktop has no icon for — the device speaker, the plug, the
- * tick.
+ * only what the desktop has no icon for — the device speaker and the tick.
  *
  * Keeping the desktop's names means a component ported from Slint asks for the
  * same icon here as it does there: `Icons.listMusic` is `Icons.list-music`.
@@ -13,7 +12,6 @@
 import {
   IconCheck,
   IconDeviceSpeaker,
-  IconPlugConnected,
 } from "@tabler/icons-react";
 import { DESKTOP_ICONS } from "./desktopIcons";
 import type { IconComponent } from "./iconTypes";
@@ -60,7 +58,7 @@ export const Icons = {
 
   // ── Tabler, for what the desktop has no glyph for ───────────────────────
   device: IconDeviceSpeaker,
-  connect: IconPlugConnected,
+  connect: DESKTOP_ICONS.plugConnected,
   check: IconCheck,
 } satisfies Record<string, IconComponent>;
 

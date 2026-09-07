@@ -173,6 +173,11 @@ impl From<types::Track> for Track {
             uri: track.uri,
             duration: track.duration,
             track_number: track.track_number,
+            // Carried, not defaulted: a remote source is the only thing that
+            // knows an album spans two discs — the local schema has no column
+            // for it — and dropping it here is what left the web client unable
+            // to group by disc at all.
+            disc_number: track.disc_number,
             artist: track.artist,
             album: match track.album.clone() {
                 Some(album) => album.into(),

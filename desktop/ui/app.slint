@@ -1121,33 +1121,11 @@ export component AppWindow inherits Window {
                         width: parent.width;
                         spacing: 8px;
 
-                        for srv[i] in root.servers : ServerRow {
-                            server: srv;
-                            connect => {
-                                root.browse-error = "";
-                                root.browse-loading = true;
-                                root.server-connect(i);
-                            }
-                            delete => { root.server-delete(i); }
-                        }
-                        if root.servers.length == 0 : Text {
-                            text: "No servers yet — add a Subsonic/Navidrome or Jellyfin server below.";
-                            color: Theme.text-muted;
-                            font-size: 12px;
-                        }
-                        if root.browse-error != "" : Text {
-                            text: root.browse-error;
-                            color: Theme.meter-high;
-                            font-size: 12px;
-                        }
-                        if root.browse-loading : Text {
-                            text: "Connecting…";
-                            color: Theme.text-dim;
-                            font-size: 12px;
-                        }
-
-                        Rectangle { height: 10px; }
+                        // Above the list, not below it: with a screen's worth
+                        // of servers the button would be off the bottom, and
+                        // adding one is the reason to come here with none.
                         HorizontalLayout {
+                            padding-bottom: 2px;
                             add-srv-btn := Rectangle {
                                 width: 130px;
                                 height: 34px;
@@ -1177,6 +1155,31 @@ export component AppWindow inherits Window {
                                 }
                             }
                             Rectangle { horizontal-stretch: 1; }
+                        }
+
+                        for srv[i] in root.servers : ServerRow {
+                            server: srv;
+                            connect => {
+                                root.browse-error = "";
+                                root.browse-loading = true;
+                                root.server-connect(i);
+                            }
+                            delete => { root.server-delete(i); }
+                        }
+                        if root.servers.length == 0 : Text {
+                            text: "No servers yet — add a Subsonic/Navidrome or Jellyfin server above.";
+                            color: Theme.text-muted;
+                            font-size: 12px;
+                        }
+                        if root.browse-error != "" : Text {
+                            text: root.browse-error;
+                            color: Theme.meter-high;
+                            font-size: 12px;
+                        }
+                        if root.browse-loading : Text {
+                            text: "Connecting…";
+                            color: Theme.text-dim;
+                            font-size: 12px;
                         }
                     }
                 }

@@ -456,6 +456,29 @@ export const Playlist: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => 
   </svg>
 );
 
+/** `desktop/assets/icons/plug-connected.svg` */
+export const PlugConnected: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M7 12l5 5l-1.5 1.5a3.536 3.536 0 1 1 -5 -5z" />
+    <path d="M17 12l-5 -5l1.5 -1.5a3.536 3.536 0 1 1 5 5z" />
+    <path d="M3 21l2.5 -2.5" />
+    <path d="M18.5 5.5l2.5 -2.5" />
+    <path d="M10 11l-2 2" />
+    <path d="M13 14l-2 2" />
+  </svg>
+);
+
 /** `desktop/assets/icons/prev.svg` */
 export const Prev: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
   <svg
@@ -707,6 +730,7 @@ export const DESKTOP_ICONS = {
   pencil: Pencil,
   play: Play,
   playlist: Playlist,
+  plugConnected: PlugConnected,
   prev: Prev,
   refresh: Refresh,
   repeat: Repeat,

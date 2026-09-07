@@ -13,6 +13,7 @@ pub mod radio_stream;
 pub mod repo_sync;
 pub mod rocksky;
 pub mod rocksky_likes;
+pub mod saved_servers;
 pub mod searcher;
 pub mod smart_playlist;
 

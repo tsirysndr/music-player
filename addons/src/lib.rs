@@ -26,6 +26,11 @@ pub trait LyricsAddon {
 }
 
 #[async_trait]
+/// The old browsing trait, kept only for the Slint desktop's browse screens.
+///
+/// Superseded by [`music_player_provider::MusicProvider`]: the blanket impl below
+/// adapts any source to it, so nothing implements this directly any more. It
+/// goes when the browse screens do.
 pub trait Browsable {
     async fn albums(
         &mut self,
@@ -51,6 +56,91 @@ pub trait Browsable {
     async fn track(&mut self, id: &str) -> Result<Track, Error>;
     async fn playlist(&mut self, id: &str) -> Result<Playlist, Error>;
     fn device_ip(&self) -> String;
+}
+
+#[async_trait]
+impl<T: music_player_provider::MusicProvider> Browsable for T {
+    async fn albums(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Album>, Error> {
+        music_player_provider::MusicProvider::albums(
+            self,
+            filter.as_deref(),
+            music_player_provider::Page::new(offset, limit),
+        )
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn artists(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Artist>, Error> {
+        music_player_provider::MusicProvider::artists(
+            self,
+            filter.as_deref(),
+            music_player_provider::Page::new(offset, limit),
+        )
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn tracks(
+        &mut self,
+        filter: Option<String>,
+        offset: i32,
+        limit: i32,
+    ) -> Result<Vec<Track>, Error> {
+        music_player_provider::MusicProvider::tracks(
+            self,
+            filter.as_deref(),
+            music_player_provider::Page::new(offset, limit),
+        )
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn playlists(&mut self, offset: i32, limit: i32) -> Result<Vec<Playlist>, Error> {
+        music_player_provider::MusicProvider::playlists(
+            self,
+            music_player_provider::Page::new(offset, limit),
+        )
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn album(&mut self, id: &str) -> Result<Album, Error> {
+        music_player_provider::MusicProvider::album(self, id)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn artist(&mut self, id: &str) -> Result<Artist, Error> {
+        music_player_provider::MusicProvider::artist(self, id)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn track(&mut self, id: &str) -> Result<Track, Error> {
+        music_player_provider::MusicProvider::track(self, id)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
+        music_player_provider::MusicProvider::playlist(self, id)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))
+    }
+
+    fn device_ip(&self) -> String {
+        music_player_provider::MusicProvider::host(self).to_string()
+    }
 }
 
 #[async_trait]

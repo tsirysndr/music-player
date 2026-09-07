@@ -1,9 +1,10 @@
 use anyhow::Error;
 use async_graphql::{Enum, MergedObject, MergedSubscription};
 use music_player_addons::{
-    chromecast::Chromecast, dlna::Dlna, jellyfin::Jellyfin, local::Local, subsonic::Subsonic,
-    Browsable, Player,
+    chromecast::Chromecast, dlna::Dlna, jellyfin::Jellyfin, local::Local, Browsable, Player,
 };
+use music_player_provider::backends::subsonic::Subsonic;
+use music_player_settings::{read_settings, Settings};
 use music_player_types::types::Device;
 
 use self::{
@@ -26,6 +27,7 @@ pub mod library;
 pub mod mixer;
 pub mod objects;
 pub mod playback;
+pub mod provider;
 pub mod playlist;
 pub mod radio;
 pub mod tracklist;
@@ -75,7 +77,26 @@ pub enum MutationType {
 pub async fn connect_to(device: Device) -> Result<Option<Box<dyn Browsable + Send>>, Error> {
     match device.app.as_str() {
         "subsonic" => {
-            let mut subsonic: Subsonic = device.clone().into();
+            // Credentials come from the saved-server row now, not from
+            // `settings.toml`. This path is the last caller that still has
+            // only a `Device`; it goes when `connect_to_device` moves onto
+            // `ProviderState`.
+            let base_url = device
+                .base_url
+                .clone()
+                .unwrap_or_else(|| format!("http://{}:{}", device.host, device.port));
+            let settings = read_settings()
+                .ok()
+                .and_then(|config| config.try_deserialize::<Settings>().ok());
+            let (username, password) = settings
+                .map(|settings| {
+                    (
+                        settings.subsonic_username.unwrap_or_default(),
+                        settings.subsonic_password.unwrap_or_default(),
+                    )
+                })
+                .unwrap_or_default();
+            let mut subsonic = Subsonic::with_credentials(&base_url, &username, &password);
             subsonic.connect().await?;
             Ok(Some(Box::new(subsonic)))
         }

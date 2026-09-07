@@ -8675,6 +8675,7 @@ dependencies = [
  "local-ip-addr",
  "md5",
  "music-player-client",
+ "music-player-provider",
  "music-player-settings",
  "music-player-tracklist",
  "music-player-types",
@@ -8828,6 +8829,7 @@ dependencies = [
  "music-player-extensions",
  "music-player-migration",
  "music-player-playback",
+ "music-player-provider",
  "music-player-rsql",
  "music-player-scanner",
  "music-player-settings",
@@ -8872,6 +8874,21 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "music-player-provider"
+version = "0.2.1"
+dependencies = [
+ "async-trait",
+ "md5",
+ "music-player-types",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]

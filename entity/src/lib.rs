@@ -12,6 +12,7 @@ pub mod playlist;
 pub mod playlist_tracks;
 pub mod rocksky_like;
 pub mod saved_radio;
+pub mod saved_server;
 pub mod track;
 pub mod track_stats;
 

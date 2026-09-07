@@ -16,6 +16,7 @@ mod m20260906_000003_add_aturi_and_rocksky_likes;
 mod m20260906_000004_create_atproto_repo_sync;
 mod m20260907_000001_smart_playlists;
 mod m20260907_000002_create_extension;
+mod m20260908_000001_create_saved_server;
 
 /// Create the database file if needed and bring the schema up to date,
 /// without going through the sea-orm migration CLI (which parses argv).
@@ -50,6 +51,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260906_000004_create_atproto_repo_sync::Migration),
             Box::new(m20260907_000001_smart_playlists::Migration),
             Box::new(m20260907_000002_create_extension::Migration),
+            Box::new(m20260908_000001_create_saved_server::Migration),
         ]
     }
 }

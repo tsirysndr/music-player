@@ -309,6 +309,13 @@ impl From<Device> for Local {
 }
 
 impl Local {
+    /// Point at a peer daemon's gRPC endpoint before connecting.
+    pub fn set_endpoint(&mut self, host: &str, port: u16) {
+        self.host = host.to_owned();
+        self.ip = host.to_owned();
+        self.port = port;
+    }
+
     pub async fn connect(&mut self) -> Result<(), Error> {
         let client = Client {
             library: LibraryClient::new(self.host.clone(), self.port).await?,

@@ -12,6 +12,10 @@ description = "The addons for the music player"
 path = "../types"
 version = "0.2.1"
 
+[dependencies.music-player-provider]
+path = "../provider"
+version = "0.2.1"
+
 [dependencies.music-player-client]
 path = "../client"
 version = "0.2.1"

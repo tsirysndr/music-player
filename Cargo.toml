@@ -28,6 +28,7 @@ members = [
   "scanner",
   "server",
   "settings",
+  "provider",
   "storage",
   "tracklist",
   "types",

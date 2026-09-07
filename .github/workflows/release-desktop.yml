@@ -1,7 +1,10 @@
 name: release-desktop
+# DISABLED: the Slint desktop client (release-slint-desktop.yml) now ships the
+# macOS and Linux desktop assets. This workflow no longer runs on release; it
+# is kept for manual dispatch only, in case a Tauri build is needed again.
+# Note: it was the sole producer of the Windows MSI, so releases currently
+# ship no Windows desktop asset until a Slint Windows leg exists.
 on:
-  release:
-    types: [created]
   workflow_dispatch:
     inputs:
       tag:

@@ -1,5 +1,13 @@
 /target
 .vscode
+
+# Packaging outputs (dist/package-linux.sh, dist/package-macos.sh)
+/dist/build/
+/dist/rpmbuild/
+/dist/*.deb
+/dist/*.rpm
+/dist/*.dmg
+/dist/*.sha256
 development.sqlite3
 node_modules/
 vendor/

@@ -1,51 +1,59 @@
 import { FC } from "react";
-import AlbumDetails from "./AlbumDetails";
+import { useNavigate, useParams } from "react-router-dom";
 import { useGetAlbumQuery } from "../../Hooks/GraphQL";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import { useNavigate, useParams } from "react-router-dom";
+import AlbumDetails from "./AlbumDetails";
 
 const AlbumDetailsWithData: FC = () => {
   const params = useParams();
-  const { data, isLoading: loading } = useGetAlbumQuery({
-    id: params.id!,
-  });
-
+  const { data, isLoading: loading } = useGetAlbumQuery({ id: params.id! });
   const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
   const { nowPlaying, playAlbum, playNext } = usePlayback();
-  const album =
-    !loading && data
-      ? {
-          ...data.album,
-          tracks: data.album.tracks.map((track, index) => ({
-            "#": track.trackNumber,
-            id: track.id,
-            title: track.title,
-            artist: track.artists.map((artist) => artist.name).join(", "),
-            time: formatTime(track.duration! * 1000),
-            artistId: track.artists[0].id,
-            albumId: data.album.id,
-            index,
-          })),
-        }
-      : { tracks: [] };
-  const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
+  const { isLiked, toggleLike } = useLikes();
+  const { recentPlaylists, addTrackToPlaylist } = usePlaylist();
+
+  const album = data?.album && {
+    id: data.album.id,
+    title: data.album.title,
+    artist: data.album.artist,
+    year: data.album.year,
+    cover: data.album.cover ? `/covers/${data.album.cover}` : undefined,
+    meta:
+      data.album.tracks.length === 1
+        ? "1 track"
+        : `${data.album.tracks.length} tracks`,
+    tracks: data.album.tracks.map((track) => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artists.map((artist) => artist.name).join(", "),
+      artistId: track.artists[0]?.id,
+      album: data.album.title,
+      albumId: data.album.id,
+      trackNumber: track.trackNumber,
+      duration: formatTime((track.duration ?? 0) * 1000),
+      liked: isLiked(track.id),
+    })),
+  };
+
   return (
     <AlbumDetails
-      onBack={() => navigate(-1)}
       album={album}
-      nowPlaying={nowPlaying}
+      loading={loading}
+      currentTrackId={nowPlaying?.isPlaying ? nowPlaying.id : undefined}
+      recentPlaylists={recentPlaylists}
+      onBack={() => navigate(-1)}
       onPlayAlbum={(albumId, shuffle, position) =>
         playAlbum({ albumId, position, shuffle })
       }
       onPlayNext={(trackId) => playNext({ trackId })}
-      onCreatePlaylist={(name) => createPlaylist({ name })}
+      onToggleLike={toggleLike}
       onAddTrackToPlaylist={(playlistId, trackId) =>
         addTrackToPlaylist({ playlistId, trackId })
       }
-      recentPlaylists={recentPlaylists}
     />
   );
 };

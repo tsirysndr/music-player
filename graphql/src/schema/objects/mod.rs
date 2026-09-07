@@ -2,6 +2,7 @@ pub mod album;
 pub mod artist;
 pub mod current_track;
 pub mod device;
+pub mod extension;
 pub mod folder;
 pub mod lyrics;
 pub mod player_state;

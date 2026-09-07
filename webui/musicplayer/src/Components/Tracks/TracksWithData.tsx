@@ -1,17 +1,17 @@
-import { FC, useMemo, useState } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
-import Tracks from "./Tracks";
+import { FC, useMemo, useState } from "react";
 import { GetTracksQuery, useInfiniteGetTracksQuery } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import { resourceUriResolver } from "../../ResourceUriResolver";
+import { usePlayTrack } from "../../Hooks/usePlayTrack";
+import Tracks from "./Tracks";
 
 const PAGE_SIZE = 100;
 
 const TracksWithData: FC = () => {
-  const [filter, setFilter] = useState<string | undefined>(undefined);
+  const [filter, setFilter] = useState("");
   const {
     data,
     isLoading: loading,
@@ -19,7 +19,7 @@ const TracksWithData: FC = () => {
     isFetchingNextPage,
     fetchNextPage,
   } = useInfiniteGetTracksQuery(
-    { filter, limit: PAGE_SIZE },
+    { filter: filter || undefined, limit: PAGE_SIZE },
     {
       initialPageParam: { offset: 0 },
       getNextPageParam: (lastPage: GetTracksQuery, allPages: GetTracksQuery[]) =>
@@ -31,50 +31,44 @@ const TracksWithData: FC = () => {
   );
   const { formatTime } = useTimeFormat();
   const { nowPlaying, playNext } = usePlayback();
-  const { currentCastDevice } = useDevices();
+  const playTrack = usePlayTrack();
+  const { isLiked, toggleLike } = useLikes();
+  const { recentPlaylists, addTrackToPlaylist } = usePlaylist();
+
   const tracks = useMemo(
-    () => (!loading && data ? data.pages.flatMap((page) => page.tracks) : []),
-    [loading, data]
-  );
-  const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
-
-  const onFilter = (filter: string) => {
-    setFilter(filter.length > 0 ? filter : undefined);
-  };
-
-  const onLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage({ cancelRefetch: false });
-    }
-  };
-
-  return (
-    <Tracks
-      tracks={tracks.map((track) => ({
+    () =>
+      (data?.pages.flatMap((page) => page.tracks) ?? []).map((track) => ({
         id: track.id,
         title: track.title,
         artist: track.artist,
+        artistId: track.artists[0]?.id,
         album: track.album.title,
-        time: formatTime(track.duration! * 1000),
-        cover: track.album.cover
-          ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
-          : undefined,
-        artistId: track.artists[0].id,
         albumId: track.album.id,
-      }))}
-      nowPlaying={nowPlaying}
-      onPlayTrack={(id, position) => {}}
+        duration: formatTime((track.duration ?? 0) * 1000),
+        liked: isLiked(track.id),
+      })),
+    [data, formatTime, isLiked]
+  );
+
+  return (
+    <Tracks
+      tracks={tracks}
+      loading={loading}
+      currentTrackId={nowPlaying?.isPlaying ? nowPlaying.id : undefined}
+      filter={filter}
+      recentPlaylists={recentPlaylists}
+      onFilter={setFilter}
+      onPlayTrack={(id) => playTrack(id)}
       onPlayNext={(trackId) => playNext({ trackId })}
-      onCreatePlaylist={(name, description) =>
-        createPlaylist({ name, description })
-      }
+      onToggleLike={toggleLike}
       onAddTrackToPlaylist={(playlistId, trackId) =>
         addTrackToPlaylist({ playlistId, trackId })
       }
-      recentPlaylists={recentPlaylists}
-      currentCastDevice={currentCastDevice}
-      onFilter={onFilter}
-      onLoadMore={onLoadMore}
+      onLoadMore={() => {
+        if (hasNextPage && !isFetchingNextPage) {
+          fetchNextPage({ cancelRefetch: false });
+        }
+      }}
       hasMore={!!hasNextPage}
     />
   );

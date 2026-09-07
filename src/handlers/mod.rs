@@ -60,11 +60,16 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         _ if key == app.user_config.keys.search => {
             app.open_search();
         }
-        _ if key == app.user_config.keys.decrease_volume => {
+        // `=` and `_` are the unshifted faces of `+` and `-` on most layouts,
+        // so both reach the same place rather than only the shifted one.
+        _ if key == app.user_config.keys.decrease_volume || key == Key::Char('_') => {
             app.decrease_volume();
         }
-        _ if key == app.user_config.keys.increase_volume => {
+        _ if key == app.user_config.keys.increase_volume || key == Key::Char('=') => {
             app.increase_volume();
+        }
+        _ if key == app.user_config.keys.toggle_mute => {
+            app.toggle_mute();
         }
         // Press space to toggle playback
         _ if key == app.user_config.keys.toggle_playback => {

@@ -1,38 +1,39 @@
 import { FC } from "react";
-import { useParams } from "react-router-dom";
-import Folder from "./Folder";
+import { useNavigate, useParams } from "react-router-dom";
 import { useGetFolderQuery } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
+import Folder from "./Folder";
 
 const FolderWithData: FC = () => {
   const params = useParams();
-  const { data } = useGetFolderQuery({
-    id: params.id!,
-  });
-
-  const { playNext } = usePlayback();
-  const { currentCastDevice } = useDevices();
-  const { playlists, mainPlaylists, createPlaylist, movePlaylistsToFolder } =
-    usePlaylist();
-
-  const onFilter = (value: string) => {};
+  const { data, isLoading: loading } = useGetFolderQuery({ id: params.id! });
+  const navigate = useNavigate();
+  const { playPlaylist } = usePlayback();
+  const { playlists, movePlaylistsToFolder } = usePlaylist();
 
   return (
     <Folder
-      onPlayNext={(trackId) => playNext({ trackId })}
-      playlists={playlists}
-      mainPlaylists={mainPlaylists}
-      onCreatePlaylist={(name, description) =>
-        createPlaylist({ name, description })
+      folder={
+        data?.folder && {
+          id: data.folder.id,
+          name: data.folder.name,
+          playlists: data.folder.playlists.map((playlist) => ({
+            id: playlist.id,
+            name: playlist.name,
+            description: playlist.description,
+          })),
+        }
       }
+      loading={loading}
+      allPlaylists={playlists}
+      onBack={() => navigate(-1)}
       onMovePlaylists={(playlistIds, folderId) =>
         movePlaylistsToFolder({ playlistIds, folderId })
       }
-      folder={data?.folder}
-      currentCastDevice={currentCastDevice}
-      onFilter={onFilter}
+      onPlayPlaylist={(playlistId) =>
+        playPlaylist({ playlistId, shuffle: false })
+      }
     />
   );
 };

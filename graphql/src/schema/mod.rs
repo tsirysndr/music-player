@@ -8,6 +8,7 @@ use music_player_types::types::Device;
 
 use self::{
     devices::{DevicesMutation, DevicesQuery, DevicesSubscription},
+    extensions::{ExtensionsMutation, ExtensionsQuery},
     library::{LibraryMutation, LibraryQuery},
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
@@ -19,6 +20,7 @@ use self::{
 pub mod addons;
 pub mod core;
 pub mod devices;
+pub mod extensions;
 pub mod history;
 pub mod library;
 pub mod mixer;
@@ -37,6 +39,7 @@ pub struct Query(
     PlaylistQuery,
     TracklistQuery,
     RadioQuery,
+    ExtensionsQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -48,6 +51,7 @@ pub struct Mutation(
     PlaylistMutation,
     TracklistMutation,
     RadioMutation,
+    ExtensionsMutation,
 );
 
 #[derive(MergedSubscription, Default)]

@@ -1,70 +1,64 @@
 import { FC } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import ArtistDetails from "./ArtistDetails";
 import { useGetArtistQuery } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import { resourceUriResolver } from "../../ResourceUriResolver";
+import ArtistDetails from "./ArtistDetails";
 
 const ArtistDetailsWithData: FC = () => {
   const params = useParams();
-  const { data, isLoading: loading } = useGetArtistQuery({
-    id: params.id!,
-  });
-
-  const { formatTime } = useTimeFormat();
+  const { data, isLoading: loading } = useGetArtistQuery({ id: params.id! });
   const navigate = useNavigate();
-  const { playArtistTracks, playNext } = usePlayback();
-  const { currentCastDevice } = useDevices();
-  const artist = !loading && data ? data.artist : {};
-  const tracks =
-    !loading && data
-      ? data.artist.songs.map((track, index) => ({
-          id: track.id,
-          title: track.title,
-          artist: track.artist,
-          album: track.album.title,
-          time: formatTime(track.duration! * 1000),
-          cover: track.album.cover
-            ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
-            : undefined,
-          artistId: track.artists[0].id,
-          albumId: track.album.id,
-          index,
-        }))
-      : [];
-  const albums =
-    !loading && data
-      ? data.artist.albums.map((album) => ({
-          id: album.id,
-          title: album.title,
-          artist: album.artist,
-          cover: album.cover
-            ? resourceUriResolver.resolve(`/covers/${album.cover}`)
-            : undefined,
-        }))
-      : [];
-  const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
+  const { formatTime } = useTimeFormat();
+  const { nowPlaying, playArtistTracks, playAlbum, playNext } = usePlayback();
+  const { isLiked, toggleLike } = useLikes();
+  const { recentPlaylists, addTrackToPlaylist } = usePlaylist();
+
+  const artist = data?.artist && {
+    id: data.artist.id,
+    name: data.artist.name,
+    picture: data.artist.picture,
+  };
+
+  const albums = (data?.artist.albums ?? []).map((album) => ({
+    id: album.id,
+    title: album.title,
+    artist: album.artist,
+    year: album.year,
+    cover: album.cover ? `/covers/${album.cover}` : undefined,
+  }));
+
+  const tracks = (data?.artist.songs ?? []).map((track) => ({
+    id: track.id,
+    title: track.title,
+    artist: track.artist,
+    artistId: track.artists[0]?.id,
+    album: track.album.title,
+    albumId: track.album.id,
+    duration: formatTime((track.duration ?? 0) * 1000),
+    liked: isLiked(track.id),
+  }));
+
   return (
     <ArtistDetails
-      onBack={() => navigate(-1)}
       artist={artist}
-      tracks={tracks}
       albums={albums}
-      onPlayArtistTracks={(artistId, shuffle, position) =>
+      tracks={tracks}
+      loading={loading}
+      currentTrackId={nowPlaying?.isPlaying ? nowPlaying.id : undefined}
+      recentPlaylists={recentPlaylists}
+      onBack={() => navigate(-1)}
+      onPlayArtist={(artistId, shuffle, position) =>
         playArtistTracks({ artistId, position, shuffle })
       }
+      onPlayAlbum={(albumId, shuffle) => playAlbum({ albumId, shuffle })}
       onPlayNext={(trackId) => playNext({ trackId })}
-      onCreatePlaylist={(name, description) =>
-        createPlaylist({ name, description })
-      }
+      onToggleLike={toggleLike}
       onAddTrackToPlaylist={(playlistId, trackId) =>
         addTrackToPlaylist({ playlistId, trackId })
       }
-      recentPlaylists={recentPlaylists}
-      currentCastDevice={currentCastDevice}
     />
   );
 };

@@ -1,18 +1,20 @@
-import styled from "@emotion/styled";
-import { useTheme } from "@emotion/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "baseui/input";
-import { Modal, ModalHeader, ModalBody, ModalFooter } from "baseui/modal";
-import { Textarea } from "baseui/textarea";
-import { Checkbox } from "baseui/checkbox";
-import { Select } from "baseui/select";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import Button from "../../Button";
+import { fetcher } from "../../../Api/fetcher";
 import RsqlEditor from "../../RsqlEditor";
 import { FIELDS } from "../../RsqlEditor/fields";
-import { fetcher } from "../../../Api/fetcher";
+import {
+  Button,
+  Dialog,
+  Icons,
+  Select,
+  TextAreaField,
+  TextField,
+  Toggle,
+  cn,
+} from "../../UI";
 
 /**
  * The form's shape. A smart playlist needs nothing beyond a name — an empty
@@ -31,7 +33,7 @@ const schema = z.object({
     .refine((value) => value === "" || /^\d+$/.test(value), "Must be a number")
     .refine(
       (value) => value === "" || Number(value) <= 10000,
-      "That is more tracks than a playlist should hold",
+      "That is more tracks than a playlist should hold"
     ),
 });
 
@@ -50,59 +52,9 @@ export type NewPlaylistModalProps = {
   onCreatePlaylist: (
     name: string,
     description?: string,
-    smart?: SmartPlaylistRule,
+    smart?: SmartPlaylistRule
   ) => void;
 };
-
-const Field = styled.div`
-  margin-bottom: 16px;
-`;
-
-const Label = styled.div`
-  font-size: 12px;
-  color: ${(props) => props.theme.colors.secondaryText};
-  margin-bottom: 6px;
-`;
-
-const FieldError = styled.div`
-  color: #d45769;
-  font-size: 12px;
-  margin-top: 5px;
-`;
-
-const Status = styled.div<{ tone: "ok" | "error" | "muted" }>`
-  font-size: 12px;
-  margin-top: 6px;
-  min-height: 16px;
-  color: ${(props) =>
-    props.tone === "error"
-      ? "#d45769"
-      : props.tone === "ok"
-      ? "#2f9e6e"
-      : props.theme.colors.secondaryText};
-`;
-
-const Row = styled.div`
-  display: flex;
-  gap: 12px;
-
-  & > * {
-    flex: 1;
-  }
-`;
-
-const SmartRow = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin: 4px 0 18px;
-`;
-
-const SmartHint = styled.div`
-  font-size: 12px;
-  color: ${(props) => props.theme.colors.secondaryText};
-  margin-top: 2px;
-`;
 
 /**
  * The readable part of whatever the fetcher threw. A GraphQL error arrives as
@@ -118,46 +70,24 @@ function errorMessage(thrown: unknown): string {
 }
 
 const SORT_OPTIONS = [
-  { id: "", label: "Library order" },
-  { id: "random", label: "Random" },
-  ...FIELDS.map((field) => ({ id: field.name, label: field.label })),
+  { value: "", label: "Library order" },
+  { value: "random", label: "Random" },
+  ...FIELDS.map((field) => ({ value: field.name, label: field.label })),
 ];
 
-const inputOverrides = (theme: any) => ({
-  Root: {
-    style: ({ $isFocused }: { $isFocused: boolean }) => ({
-      borderTopWidth: "0px !important",
-      borderLeftWidth: "0px !important",
-      borderRightWidth: "0px !important",
-      borderBottomWidth: "1px !important",
-      borderBottomLeftRadius: "0px !important",
-      borderBottomRightRadius: "0px !important",
-      borderBottomColor: $isFocused
-        ? "rgb(171, 40, 252)"
-        : "rgba(118, 118, 118, 0.189)",
-    }),
-  },
-  Input: {
-    style: {
-      backgroundColor: theme.colors.popoverBackground,
-      fontSize: "14px",
-      paddingLeft: "0px !important",
-      paddingRight: "0px !important",
-    },
-  },
-  InputContainer: {
-    style: { backgroundColor: theme.colors.popoverBackground },
-  },
-});
+const ORDER_OPTIONS = [
+  { value: "asc", label: "Ascending" },
+  { value: "desc", label: "Descending" },
+];
 
 const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
   onClose,
   isOpen,
   onCreatePlaylist,
 }) => {
-  const theme = useTheme();
   const {
     control,
+    register,
     handleSubmit,
     reset,
     watch,
@@ -205,7 +135,7 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
             sortOrder,
             limit: limit ? Number(limit) : null,
           },
-        },
+        }
       )();
       if (id !== previewId.current) return;
       setPreview({
@@ -246,10 +176,9 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
             sortOrder: values.sortOrder,
             limit: values.limit ? Number(values.limit) : undefined,
           }
-        : undefined,
+        : undefined
     );
-    onClose();
-    reset();
+    close();
   };
 
   const close = () => {
@@ -261,79 +190,79 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
   const status = preview.loading
     ? { tone: "muted" as const, text: "Checking…" }
     : preview.error
-    ? { tone: "error" as const, text: preview.error }
-    : preview.count === null
-    ? {
-        tone: "muted" as const,
-        text: `Fields: ${FIELDS.map((f) => f.name).join(", ")}`,
-      }
-    : {
-        tone: "ok" as const,
-        text:
-          preview.count === 1
-            ? "1 track matches"
-            : `${preview.count} tracks match`,
-      };
+      ? { tone: "error" as const, text: preview.error }
+      : preview.count === null
+        ? {
+            tone: "muted" as const,
+            text: `Fields: ${FIELDS.map((f) => f.name).join(", ")}`,
+          }
+        : {
+            tone: "ok" as const,
+            text:
+              preview.count === 1
+                ? "1 track matches"
+                : `${preview.count} tracks match`,
+          };
 
   return (
-    <Modal onClose={close} isOpen={isOpen}>
-      <ModalHeader>Create new playlist</ModalHeader>
-      <ModalBody>
-        <Field>
-          <Controller
-            control={control}
-            name="name"
-            render={({ field }) => (
-              <Input
-                {...field}
-                placeholder="Give your playlist a title"
-                overrides={inputOverrides(theme)}
-              />
-            )}
-          />
-          {errors.name && <FieldError>{errors.name.message}</FieldError>}
-        </Field>
+    <Dialog
+      isOpen={isOpen}
+      onClose={close}
+      title="Create new playlist"
+      icon={Icons.playlist}
+      footer={
+        <>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit(submit)}>Create playlist</Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={handleSubmit(submit)}
+        className="flex flex-col gap-4 pb-1"
+      >
+        <TextField
+          label="NAME"
+          autoFocus
+          placeholder="Give your playlist a title"
+          error={errors.name?.message}
+          {...register("name")}
+        />
+        <TextAreaField
+          label="DESCRIPTION"
+          placeholder="Write a description"
+          {...register("description")}
+        />
 
-        <Field>
-          <Controller
-            control={control}
-            name="description"
-            render={({ field }) => (
-              <Textarea
-                {...field}
-                placeholder="Write a description"
-                overrides={inputOverrides(theme)}
-              />
-            )}
-          />
-        </Field>
-
-        <SmartRow>
-          <Controller
-            control={control}
-            name="smart"
-            render={({ field: { value, onChange, ...rest } }) => (
-              <Checkbox
-                {...rest}
+        <Controller
+          control={control}
+          name="smart"
+          render={({ field: { value, onChange } }) => (
+            <div className="flex items-start gap-3">
+              <Toggle
                 checked={value}
-                onChange={(e) => onChange(e.currentTarget.checked)}
-              >
-                Smart playlist
-              </Checkbox>
-            )}
-          />
-        </SmartRow>
-        {!smart && (
-          <SmartHint style={{ marginTop: -14, marginBottom: 14 }}>
-            A smart playlist fills itself from a filter, and keeps itself up to
-            date as your library changes.
-          </SmartHint>
-        )}
+                label="Smart playlist"
+                onChange={onChange}
+              />
+              <div>
+                <p className="text-[13px] text-fg">Smart playlist</p>
+                <p className="mt-[2px] text-[11px] text-muted">
+                  Fills itself from a filter, and keeps itself up to date as
+                  your library changes.
+                </p>
+              </div>
+            </div>
+          )}
+        />
 
         {smart && (
           <>
-            <Field>
-              <Label>Filter</Label>
+            <div>
+              <p className="mb-[5px] text-[10px] tracking-[1px] text-muted">
+                FILTER
+              </p>
               <Controller
                 control={control}
                 name="filter"
@@ -346,72 +275,46 @@ const NewPlaylistModal: FC<NewPlaylistModalProps> = ({
                   />
                 )}
               />
-              <Status tone={status.tone}>{status.text}</Status>
-            </Field>
+              <p
+                className={cn(
+                  "mt-[6px] min-h-4 text-[11px]",
+                  status.tone === "error"
+                    ? "text-syntax-error"
+                    : status.tone === "ok"
+                      ? "text-meter-low"
+                      : "text-muted"
+                )}
+              >
+                {status.text}
+              </p>
+            </div>
 
-            <Row>
-              <Field>
-                <Label>Sort by</Label>
-                <Controller
-                  control={control}
-                  name="sortBy"
-                  render={({ field: { value, onChange } }) => (
-                    <Select
-                      options={SORT_OPTIONS}
-                      value={SORT_OPTIONS.filter((o) => o.id === value)}
-                      onChange={({ value: selected }) =>
-                        onChange(selected[0]?.id ?? "")
-                      }
-                      clearable={false}
-                      searchable={false}
-                    />
-                  )}
-                />
-              </Field>
-              <Field>
-                <Label>Order</Label>
-                <Controller
-                  control={control}
-                  name="sortOrder"
-                  render={({ field: { value, onChange } }) => (
-                    <Select
-                      options={[
-                        { id: "asc", label: "Ascending" },
-                        { id: "desc", label: "Descending" },
-                      ]}
-                      value={[{ id: value, label: value === "desc" ? "Descending" : "Ascending" }]}
-                      onChange={({ value: selected }) =>
-                        onChange(selected[0]?.id ?? "asc")
-                      }
-                      clearable={false}
-                      searchable={false}
-                    />
-                  )}
-                />
-              </Field>
-              <Field>
-                <Label>Limit</Label>
-                <Controller
-                  control={control}
-                  name="limit"
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="0 = all"
-                      overrides={inputOverrides(theme)}
-                    />
-                  )}
-                />
-                {errors.limit && <FieldError>{errors.limit.message}</FieldError>}
-              </Field>
-            </Row>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Select
+                label="SORT BY"
+                options={SORT_OPTIONS}
+                className="flex-1"
+                {...register("sortBy")}
+              />
+              <Select
+                label="ORDER"
+                options={ORDER_OPTIONS}
+                className="flex-1"
+                {...register("sortOrder")}
+              />
+              <TextField
+                label="LIMIT"
+                placeholder="0 = all"
+                inputMode="numeric"
+                className="flex-1"
+                error={errors.limit?.message}
+                {...register("limit")}
+              />
+            </div>
           </>
         )}
-      </ModalBody>
-      <ModalFooter>
-        <Button onClick={handleSubmit(submit)}>Create New</Button>
-      </ModalFooter>
-    </Modal>
+      </form>
+    </Dialog>
   );
 };
 

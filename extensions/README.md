@@ -308,6 +308,26 @@ extension_paths = [
 from the first, so a local copy shadows a system one. The download cache is
 always searched last.
 
+## Switching one off
+
+Every extension is on until you say otherwise. The flag lives in the
+`extension` table of the music-player database, keyed by manifest id, and only
+what you have actually changed is stored — an extension with no row is enabled,
+so dropping a new one in works without a second step.
+
+Toggle it from the **Extensions** view in the web UI or the Slint desktop app.
+Both also have a rescan button, which picks up an extension added or removed on
+disk and drops the stored flags for anything no longer there.
+
+Switching one off takes effect the next time the daemon starts. Unloading a
+WebAssembly module mid-session would pull the ground out from under whatever
+happens to be in the middle of a call into it, so a module that is already
+running keeps running.
+
+Nothing else about an extension is stored: its name, version, capabilities and
+permissions are read from the manifest on disk every time, because that is what
+changes when one is upgraded.
+
 ---
 
 ## Writing one

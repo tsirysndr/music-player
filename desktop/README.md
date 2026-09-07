@@ -69,6 +69,16 @@ UIs (neon accents).
   help.
 - **VFD display** — jetAudio-style readout with elapsed time, queue position
   (`TRK 3/12`), codec, bitrate, sample rate and animated LED VU meters.
+- **Extensions** — the Extensions tab lists every installed WebAssembly
+  extension with its version, what it plugs into, and what it asked to reach
+  (network hosts, library access). Switch one on or off from its row, narrow
+  the list with the All/Enabled/Disabled chips or the search box, and rescan
+  for anything added or removed on disk while the app is open. It reads the
+  manifests rather than loading the modules, so opening the tab costs a
+  directory walk; the enabled flag lives in the `extension` table and is shared
+  with the daemon and the web UI. A module already loaded keeps running until
+  the daemon next starts. Installing and scaffolding stay with
+  `music-player extension`.
 - **Skins** — five bundled (`Synthwave` default, `Late Night`, `Neutron`,
   `Lunar`, `Porcelain`); click the SKIN entry in the sidebar (or press `s`)
   to cycle. The choice persists in the music-player config directory
@@ -84,6 +94,7 @@ UIs (neon accents).
 | `s`         | Cycle skin                    |
 | `q`         | Show / hide the play queue    |
 | `b`         | Show / hide the sidebar       |
+| `f`         | Fullscreen player (while playing) |
 | `↑` / `↓`   | Navigate search results       |
 | `enter`     | Play selection                |
 | `esc`       | Close dialog / go back        |
@@ -176,12 +187,14 @@ ui/app.slint         window, sidebar, views, player bar, overlays (palette,
                      server browser)
 ui/components.slint  IconButton, PlayPauseButton, SlideBar, MeterStrip,
                      VfdDisplay, AlbumCard, TrackRow, EqBandSlider, Knob,
-                     Toggle, Dropdown, ServerRow, BrowseRow, …
+                     Toggle, Dropdown, ServerRow, BrowseRow, ExtensionRow, …
 ui/theme.slint       Theme global — every visual token, overwritten per skin
 ui/icons.slint       Icons global — Lucide-style SVGs (assets/icons)
 src/main.rs          UI-thread state (thread_local), callbacks, skin cycling
 src/rpc.rs           tokio worker: tonic clients, 1 s status/queue polling,
                      command loop, Subsonic/Jellyfin browsing
+src/extensions.rs    manifest-only scan of the installed extensions, and the
+                     search over them (no module is instantiated)
 src/servers.rs       saved remote servers (desktop_servers.json)
 src/skin.rs          skin TOML loading + Theme application + persistence
 src/daemon.rs        embedded daemon boot (mirrors src/main.rs server mode)

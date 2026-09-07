@@ -7,6 +7,7 @@ use sea_orm::{sea_query, ConnectOptions, ConnectionTrait, DatabaseConnection};
 
 pub mod atproto;
 pub mod atradio;
+pub mod extension_state;
 pub mod radio_resolve;
 pub mod radio_stream;
 pub mod repo_sync;

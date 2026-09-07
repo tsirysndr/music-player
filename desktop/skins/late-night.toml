@@ -41,5 +41,5 @@ radius         = 10.0
 control_radius = 7.0
 
 [fonts]
-ui   = "Space Grotesk"
+ui   = "Roboto Mono"
 mono = "JetBrains Mono"

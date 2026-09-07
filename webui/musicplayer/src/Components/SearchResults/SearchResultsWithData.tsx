@@ -1,87 +1,69 @@
-import { useEffect, useMemo, FC } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import SearchResults from "./SearchResults";
-import { useDevices } from "../../Hooks/useDevices";
+import { FC, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
+import { usePlayTrack } from "../../Hooks/usePlayTrack";
 import { useSearch } from "../../Hooks/useSearch";
+import SearchResults from "./SearchResults";
 
 const SearchResultsWithData: FC = () => {
-  const navigate = useNavigate();
   const { formatTime } = useTimeFormat();
-  const { currentDevice, currentCastDevice } = useDevices();
-  const {
-    nowPlaying,
-    nextTracks,
-    previousTracks,
-    playNext,
-    playTrackAt,
-    removeTrackAt,
-    playPlaylist,
-  } = usePlayback();
-  const {
-    folders,
-    recentPlaylists,
-    mainPlaylists,
-    createFolder,
-    createPlaylist,
-    addTrackToPlaylist,
-    deleteFolder,
-    deletePlaylist,
-    renameFolder,
-    renamePlaylist,
-  } = usePlaylist();
-  const [params] = useSearchParams();
-  const { onSearch, results } = useSearch();
-  const q = useMemo(() => params.get("q"), [params]);
+  const { nowPlaying, playNext, playAlbum, playArtistTracks } = usePlayback();
+  const playTrack = usePlayTrack();
+  const { isLiked, toggleLike } = useLikes();
+  const { recentPlaylists, addTrackToPlaylist } = usePlaylist();
+  const [params, setParams] = useSearchParams();
+  const { onSearch, query, results } = useSearch();
 
+  // The query lives in the url, so a search survives a reload and can be
+  // shared; the atom follows it rather than the other way round.
+  const q = params.get("q") ?? "";
   useEffect(() => {
-    if (q && q !== null) {
-      onSearch(q);
-    }
+    if (q !== query) onSearch(q);
+    // `onSearch` is a fresh closure on every render, so depending on it here
+    // would re-run the search forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   return (
     <SearchResults
-      tracks={results.tracks.map((x) => ({
-        ...x,
-        time: formatTime(x.duration * 1000),
+      query={q}
+      tracks={results.tracks.map((track) => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        artistId: track.artistId,
+        album: track.album,
+        albumId: track.albumId,
+        duration: formatTime((track.duration ?? 0) * 1000),
+        liked: isLiked(track.id),
       }))}
-      albums={results.albums}
-      artists={results.artists}
-      onClickAlbum={({ id }) => navigate(`/albums/${id}`)}
-      onClickArtist={({ id }) => navigate(`/artists/${id}`)}
-      onClickLibraryItem={(item) => navigate(`/${item}`)}
-      nowPlaying={nowPlaying}
-      onPlayTrack={(id, position) => {}}
-      nextTracks={nextTracks}
-      previousTracks={previousTracks}
-      onPlayNext={(trackId) => playNext({ trackId })}
-      onPlayTrackAt={(position) => playTrackAt({ position })}
-      onRemoveTrackAt={(position) => removeTrackAt({ position })}
-      onSearch={onSearch}
-      folders={folders}
-      playlists={mainPlaylists}
-      onCreateFolder={(name) => createFolder({ name })}
-      onCreatePlaylist={(name, description) =>
-        createPlaylist({ name, description })
-      }
-      onDeleteFolder={(id) => deleteFolder({ id })}
-      onDeletePlaylist={(id) => deletePlaylist({ id })}
-      onEditFolder={(id, name) => renameFolder({ id, name })}
-      onEditPlaylist={(id, name, description) =>
-        renamePlaylist({ id, name })
-      }
-      onAddTrackToPlaylist={(playlistId, trackId) =>
-        addTrackToPlaylist({ trackId, playlistId })
-      }
-      onPlayPlaylist={(playlistId, shuffle, position) =>
-        playPlaylist({ playlistId, position, shuffle })
-      }
+      albums={results.albums.map((album) => ({
+        id: album.id,
+        title: album.title,
+        artist: album.artist,
+        cover: album.cover,
+      }))}
+      artists={results.artists.map((artist) => ({
+        id: artist.id,
+        name: artist.name,
+        picture: artist.picture,
+      }))}
+      currentTrackId={nowPlaying?.isPlaying ? nowPlaying.id : undefined}
       recentPlaylists={recentPlaylists}
-      currentDevice={currentDevice}
-      currentCastDevice={currentCastDevice}
+      onSearch={(next) =>
+        setParams(next ? { q: next } : {}, { replace: true })
+      }
+      onPlayTrack={(id) => playTrack(id)}
+      onPlayNext={(trackId) => playNext({ trackId })}
+      onToggleLike={toggleLike}
+      onAddTrackToPlaylist={(playlistId, trackId) =>
+        addTrackToPlaylist({ playlistId, trackId })
+      }
+      onPlayAlbum={(albumId, shuffle) => playAlbum({ albumId, shuffle })}
+      onPlayArtist={(artistId) => playArtistTracks({ artistId, shuffle: false })}
     />
   );
 };

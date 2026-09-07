@@ -1,15 +1,14 @@
-import { useTheme } from "@emotion/react";
-import { Input } from "baseui/input";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
-} from "baseui/modal";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FC } from "react";
-import { Controller, useForm } from "react-hook-form";
-import Button from "../../Button";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button, Dialog, Icons, TextField } from "../../UI";
+
+const schema = z.object({
+  name: z.string().trim().min(1, "Give your folder a name"),
+});
+
+type FormValues = z.infer<typeof schema>;
 
 export type NewFolderModalProps = {
   isOpen: boolean;
@@ -22,67 +21,52 @@ const NewFolderModal: FC<NewFolderModalProps> = ({
   isOpen,
   onCreateFolder,
 }) => {
-  const theme = useTheme();
-  const { control, handleSubmit, reset } = useForm();
-  const _onCreateFolder = (data: any) => {
-    onCreateFolder(data.name);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: "" },
+  });
+
+  const close = () => {
     onClose();
     reset();
   };
-  const _onClose = () => {
-    onClose();
-    reset();
+
+  const submit = (values: FormValues) => {
+    onCreateFolder(values.name.trim());
+    close();
   };
+
   return (
-    <Modal onClose={_onClose} isOpen={isOpen}>
-      <ModalHeader>Create Folder</ModalHeader>
-      <ModalBody>
-        <Controller
-          name="name"
-          rules={{ required: true }}
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              value={value}
-              onBlur={onBlur}
-              onChange={onChange}
-              placeholder="Give your folder a name"
-              overrides={{
-                Root: {
-                  style: ({ $isFocused }) => ({
-                    borderTopWidth: "0px !important",
-                    borderLeftWidth: "0px !important",
-                    borderRightWidth: "0px !important",
-                    borderBottomWidth: "1px !important",
-                    borderBottomLeftRadius: "0px !important",
-                    borderBottomRightRadius: "0px !important",
-                    borderBottomColor: $isFocused
-                      ? "rgb(171, 40, 252)"
-                      : "rgba(118, 118, 118, 0.189)",
-                  }),
-                },
-                Input: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                    fontSize: "14px",
-                    paddingLeft: "0px !important",
-                    paddingRight: "0px !important",
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                  },
-                },
-              }}
-            />
-          )}
+    <Dialog
+      isOpen={isOpen}
+      onClose={close}
+      title="Create folder"
+      icon={Icons.folder}
+      width={420}
+      footer={
+        <>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit(submit)}>Create folder</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(submit)} className="pb-1">
+        <TextField
+          label="NAME"
+          autoFocus
+          placeholder="Give your folder a name"
+          error={errors.name?.message}
+          {...register("name")}
         />
-      </ModalBody>
-      <ModalFooter>
-        <Button onClick={handleSubmit(_onCreateFolder)}>Create Folder</Button>
-      </ModalFooter>
-    </Modal>
+      </form>
+    </Dialog>
   );
 };
 

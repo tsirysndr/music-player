@@ -731,7 +731,14 @@ pub fn draw_status_line(f: &mut Frame, app: &App, layout_chunk: Rect) {
         None => "-:--/-:--".to_string(),
     };
 
-    let right = format!(" {}  vol {}%  shuf:off rep:off ", time, app.volume);
+    let volume = if app.muted {
+        // The level is kept on the daemon, so the number would be a lie —
+        // say muted instead.
+        "vol muted".to_string()
+    } else {
+        format!("vol {}%", app.volume)
+    };
+    let right = format!(" {}  {}  shuf:off rep:off ", time, volume);
     let addr = format!(" {} ", app.server_addr);
     let right_width = (right.chars().count() + addr.chars().count()) as u16;
 
@@ -778,6 +785,7 @@ pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
             ("<", "-5s"),
             (">", "+5s"),
             ("+/-", "volume"),
+            ("m", "mute"),
             ("z", "queue"),
             ("u", "play queue"),
             ("q", "back/quit"),
@@ -1039,7 +1047,8 @@ pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> 
                 ("p", "Previous track"),
                 ("<", "Seek backwards 5s"),
                 (">", "Seek forwards 5s"),
-                ("+ / -", "Volume up / down"),
+                ("+ / - (or = / _)", "Volume up / down"),
+                ("m", "Mute / unmute"),
                 ("z", "Add selected track to the queue"),
                 ("u", "Toggle the play-queue view"),
             ],

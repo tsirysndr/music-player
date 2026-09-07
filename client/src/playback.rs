@@ -3,8 +3,9 @@ use music_player_server::api::{
     metadata::v1alpha1::Track,
     music::v1alpha1::{
         mixer_service_client::MixerServiceClient, playback_service_client::PlaybackServiceClient,
-        GetCurrentlyPlayingSongRequest, GetVolumeRequest, NextRequest, PauseRequest, PlayRequest,
-        PreviousRequest, SeekRequest, SetVolumeRequest, StopRequest,
+        GetCurrentlyPlayingSongRequest, GetMuteRequest, GetVolumeRequest, NextRequest,
+        PauseRequest, PlayRequest, PreviousRequest, SeekRequest, SetMuteRequest, SetVolumeRequest,
+        StopRequest,
     },
 };
 use tonic::transport::Channel;
@@ -67,6 +68,20 @@ impl PlaybackClient {
         let request = tonic::Request::new(GetVolumeRequest {});
         let response = self.mixer.get_volume(request).await?;
         Ok(response.into_inner().volume)
+    }
+
+    /// Mute is separate from volume on purpose: the daemon keeps the level it
+    /// was at, so unmuting restores it rather than guessing.
+    pub async fn set_mute(&mut self, mute: bool) -> Result<(), Error> {
+        let request = tonic::Request::new(SetMuteRequest { mute });
+        self.mixer.set_mute(request).await?;
+        Ok(())
+    }
+
+    pub async fn get_mute(&mut self) -> Result<bool, Error> {
+        let request = tonic::Request::new(GetMuteRequest {});
+        let response = self.mixer.get_mute(request).await?;
+        Ok(response.into_inner().mute)
     }
 
     pub async fn current(&mut self) -> Result<(Option<Track>, u32, u32, bool), Error> {

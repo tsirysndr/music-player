@@ -1,42 +1,29 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import AlbumsPage from "./Containers/Albums";
-import ArtistsPage from "./Containers/Artists";
-import TracksPage from "./Containers/Tracks";
-import AlbumDetailsPage from "./Containers/AlbumDetails";
-import ArtistDetailsPage from "./Containers/ArtistDetails";
-import SearchPage from "./Containers/Search";
-import PlaylistPage from "./Containers/Playlist";
-import FolderPage from "./Containers/Folder";
 import { useEffect, useState } from "react";
-import { resourceUriResolver } from "./ResourceUriResolver";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AppStateSync from "./Components/AppStateSync";
-import RadioPage from "./Containers/Radio";
+import AlbumDetailsPage from "./Containers/AlbumDetails";
+import AlbumsPage from "./Containers/Albums";
+import ArtistDetailsPage from "./Containers/ArtistDetails";
+import ArtistsPage from "./Containers/Artists";
+import ExtensionsPage from "./Containers/Extensions";
+import FolderPage from "./Containers/Folder";
 import LikedPage from "./Containers/Liked";
+import PlaylistPage from "./Containers/Playlist";
+import PlaylistsPage from "./Containers/Playlists";
+import RadioPage from "./Containers/Radio";
+import SearchPage from "./Containers/Search";
+import ServersPage from "./Containers/Servers";
+import TracksPage from "./Containers/Tracks";
+import { resourceUriResolver } from "./ResourceUriResolver";
 
 const hasNativeWrapper = !!import.meta.env.VITE_NATIVE_WRAPPER;
-
-function GlobalShortcuts() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (event.key.toLowerCase() === "r" && target?.tagName !== "INPUT" && target?.tagName !== "TEXTAREA") {
-        event.preventDefault();
-        navigate("/radio?search=1");
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
-  return null;
-}
 
 function App() {
   const [ready, setReady] = useState(!hasNativeWrapper);
   useEffect(() => {
     async function initializeForNativeWrapper() {
       if (!ready) {
-        await resourceUriResolver.initializeForNativeWrapper()
+        await resourceUriResolver.initializeForNativeWrapper();
         setReady(true);
       }
     }
@@ -45,7 +32,6 @@ function App() {
   if (!ready) return null;
   return (
     <BrowserRouter>
-      <GlobalShortcuts />
       <AppStateSync />
       <Routes>
         <Route path="/" element={<TracksPage />} />
@@ -56,9 +42,12 @@ function App() {
         <Route path="/artists/:id" element={<ArtistDetailsPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/folders/:id" element={<FolderPage />} />
+        <Route path="/playlists" element={<PlaylistsPage />} />
         <Route path="/playlists/:id" element={<PlaylistPage />} />
         <Route path="/liked" element={<LikedPage />} />
         <Route path="/radio" element={<RadioPage />} />
+        <Route path="/extensions" element={<ExtensionsPage />} />
+        <Route path="/servers" element={<ServersPage />} />
       </Routes>
     </BrowserRouter>
   );

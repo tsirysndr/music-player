@@ -1,253 +1,116 @@
-import styled from "@emotion/styled";
 import { FC } from "react";
-import Button from "../Button";
-import ControlBar from "../ControlBar";
-import ArrowBack from "../Icons/ArrowBack";
-import Play from "../Icons/Play";
-import Shuffle from "../Icons/Shuffle";
-import PlaylistIcon from "../Icons/PlaylistAlt";
-import MainContent from "../MainContent";
-import Sidebar from "../Sidebar";
-import TracksTable from "../TracksTable";
-import { useTimeFormat } from "../../Hooks/useFormat";
-import { resourceUriResolver } from "../../ResourceUriResolver";
-import { Device } from "../../Types/Device";
-import { useTheme } from "@emotion/react";
-import ListeningOn from "../ListeningOn";
+import { AppShell } from "../Layout";
+import {
+  EmptyState,
+  IconButton,
+  Icons,
+  PlayPauseButton,
+  TrackListHeader,
+  TrackRow,
+  TrackSkeletonList,
+  type PlaylistOption,
+  type TrackRowItem,
+} from "../UI";
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: row;
-  background-color: ${(props) => props.theme.colors.background};
-`;
-
-const Content = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
-const BackButton = styled.button`
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  width: 30px;
-  border-radius: 15px;
-  background-color: ${(props) => props.theme.colors.backButton};
-  margin-left: 26px;
-  margin-bottom: 46px;
-  position: absolute;
-  z-index: 1;
-`;
-
-const Scrollable = styled.div`
-  height: calc(100vh - 100px);
-  overflow-y: auto;
-`;
-
-const Artist = styled.div`
-  font-family: RockfordSansBold;
-  font-size: 32px;
-  margin-top: 94px;
-  margin-left: 26px;
-  margin-bottom: 40px;
-`;
-
-const Buttons = styled.div`
-  display: flex;
-  flex-direction: row;
-  margin-top: 26px;
-`;
-
-const Separator = styled.div`
-  width: 26px;
-`;
-
-const Label = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-`;
-
-const Icon = styled.div`
-  margin-top: 6px;
-`;
-
-const NoCover = styled.div`
-  height: 240px;
-  width: 240px;
-  border-radius: 5px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #ddaefb14;
-`;
-const Title = styled.div`
-  font-family: RockfordSansBold;
-  font-size: 32px;
-  color: ${(props) => props.theme.colors.text};
-`;
-const Placeholder = styled.div`
-  font-family: RockfordSansRegular;
-  text-align: center;
-  color: rgb(45, 44, 44);
-  margin-top: 50px;
-`;
-
-const PlaylistDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-  margin-left: 26px;
-  height: 240px;
-`;
-
-const PlaylistDetailsWrapper = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: center;
-`;
-
-const Header = styled.div`
-  display: flex;
-  flex-direction: row;
-  margin-top: 90px;
-  margin-left: 16px;
-`;
+export type PlaylistDetail = {
+  id: string;
+  name: string;
+  description?: string | null;
+  tracks: TrackRowItem[];
+};
 
 export type PlaylistProps = {
-  playlist: any;
+  playlist?: PlaylistDetail;
+  loading?: boolean;
+  currentTrackId?: string;
+  recentPlaylists: PlaylistOption[];
   onBack: () => void;
-  nowPlaying: any;
-  onPlayNext: (id: string) => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
+  onPlayPlaylist: (id: string, shuffle: boolean, position?: number) => void;
+  onPlayNext: (trackId: string) => void;
+  onToggleLike: (trackId: string) => void;
+  /** Removal is by position — the daemon's mutation takes an index, and a
+      playlist may legitimately hold the same track twice. */
+  onRemoveTrack: (position: number) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
-  recentPlaylists: any[];
-  currentCastDevice?: Device;
 };
 
-const Playlist: FC<PlaylistProps> = (props) => {
-  const {
-    onBack,
-    onPlayNext,
-    onCreatePlaylist,
-    onAddTrackToPlaylist,
-    onPlayPlaylist,
-    nowPlaying,
-    playlist,
-    recentPlaylists,
-    currentCastDevice,
-  } = props;
-  const { formatTime } = useTimeFormat();
-  const tracks =
-    (playlist?.tracks || []).map((track: any) => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      album: track.albumTitle,
-      time: formatTime(track.duration! * 1000),
-      cover: track.cover
-        ? resourceUriResolver.resolve(`/covers/${track.cover}`)
-        : undefined,
-      artistId: track.artistId,
-      albumId: track.albumId,
-    })) || [];
-  const theme = useTheme();
-  return (
-    <>
-      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
-      <Container>
-        <Sidebar active="artists" />
-        <Content>
-          <ControlBar />
-          <MainContent displayHeader={false}>
-            <Scrollable>
-              <BackButton onClick={onBack}>
-                <div style={{ marginTop: 2 }}>
-                  <ArrowBack color={theme.colors.text} />
-                </div>
-              </BackButton>
-              <Header>
-                <NoCover>
-                  <PlaylistIcon
-                    size={48}
-                    color="#ab28fc"
-                    style={{ marginRight: -38, marginTop: 38 }}
-                  />
-                </NoCover>
-                <PlaylistDetails>
-                  <PlaylistDetailsWrapper>
-                    <Title>{playlist.name}</Title>
-                  </PlaylistDetailsWrapper>
-                  <Buttons>
-                    <Button
-                      onClick={() => onPlayPlaylist(playlist.id, false)}
-                      kind="primary"
-                      disabled={!tracks.length}
-                    >
-                      <Label>
-                        <Icon>
-                          <Play small color="#fff" />
-                        </Icon>
-                        <div style={{ marginLeft: 7 }}>Play</div>
-                      </Label>
-                    </Button>
-                    <Separator />
-                    <Button
-                      onClick={() => onPlayPlaylist(playlist.id, true)}
-                      kind="secondary"
-                      disabled={!tracks.length}
-                    >
-                      <Label>
-                        <Shuffle color="#ab28fc" />
-                        <div style={{ marginLeft: 7 }}>Shuffle</div>
-                      </Label>
-                    </Button>
-                  </Buttons>
-                </PlaylistDetails>
-              </Header>
-              {tracks.length === 0 && (
-                <Placeholder>
-                  Start building your playlist with tracks by tapping on ‘Add to
-                  playlist’ in the option menu.
-                </Placeholder>
-              )}
-              {tracks.length > 0 && (
-                <TracksTable
-                  tracks={tracks}
-                  currentTrackId={nowPlaying.id}
-                  isPlaying={nowPlaying.isPlaying}
-                  header={["Title", "Artist", "Album", "Time"]}
-                  maxHeight={"initial"}
-                  onPlayTrack={(id, position) =>
-                    onPlayPlaylist(id, false, position)
+const trackLabel = (count: number) =>
+  count === 1 ? "1 track" : `${count} tracks`;
+
+/** The desktop's playlist detail view. */
+const Playlist: FC<PlaylistProps> = ({
+  playlist,
+  loading,
+  currentTrackId,
+  recentPlaylists,
+  onBack,
+  onPlayPlaylist,
+  onPlayNext,
+  onToggleLike,
+  onRemoveTrack,
+  onAddTrackToPlaylist,
+}) => (
+  <AppShell title={playlist?.name ?? "Playlist"} onBack={onBack}>
+    {loading || !playlist ? (
+      <TrackSkeletonList rows={10} />
+    ) : (
+      <>
+        <div className="flex items-center gap-[10px] pb-3">
+          <Icons.playlist size={22} className="shrink-0 text-accent" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-bold text-fg">
+              {playlist.name}
+            </h2>
+            <p className="truncate text-[11px] text-dim">
+              {playlist.description
+                ? `${playlist.description} · ${trackLabel(playlist.tracks.length)}`
+                : trackLabel(playlist.tracks.length)}
+            </p>
+          </div>
+          <IconButton
+            icon={Icons.shuffle}
+            iconSize={17}
+            aria-label="Shuffle playlist"
+            onClick={() => onPlayPlaylist(playlist.id, true)}
+          />
+          <PlayPauseButton
+            aria-label="Play playlist"
+            onClick={() => onPlayPlaylist(playlist.id, false)}
+          />
+        </div>
+
+        {playlist.tracks.length === 0 ? (
+          <EmptyState
+            icon={Icons.playlist}
+            title="Empty playlist"
+            hint="Add tracks from the library with the “…” menu on any row."
+          />
+        ) : (
+          <>
+            <TrackListHeader />
+            <div className="flex flex-col">
+              {playlist.tracks.map((track, index) => (
+                <TrackRow
+                  key={`${track.id}-${index}`}
+                  track={track}
+                  index={index}
+                  current={track.id === currentTrackId}
+                  playlists={recentPlaylists}
+                  onPlay={() => onPlayPlaylist(playlist.id, false, index)}
+                  onLike={() => onToggleLike(track.id)}
+                  onPlayNext={() => onPlayNext(track.id)}
+                  onRemove={() => onRemoveTrack(index)}
+                  onAddToPlaylist={(playlistId) =>
+                    onAddTrackToPlaylist(playlistId, track.id)
                   }
-                  onPlayNext={onPlayNext}
-                  onCreatePlaylist={onCreatePlaylist}
-                  recentPlaylists={recentPlaylists}
-                  onAddTrackToPlaylist={onAddTrackToPlaylist}
                 />
-              )}
-            </Scrollable>
-          </MainContent>
-        </Content>
-      </Container>
-    </>
-  );
-};
-
-Playlist.defaultProps = {
-  playlist: {
-    name: "Playlist",
-  },
-};
+              ))}
+            </div>
+          </>
+        )}
+      </>
+    )}
+  </AppShell>
+);
 
 export default Playlist;

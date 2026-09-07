@@ -1,62 +1,22 @@
-import { Modal, ModalHeader, ModalBody, ModalFooter } from "baseui/modal";
-import { FC, useState } from "react";
-import Button from "../Button";
-import Search from "../Search";
-import { ListItem, ListItemLabel } from "baseui/list";
-import { Checkbox } from "baseui/checkbox";
-
-export type PlaylistItemProps = {
-  playlist: {
-    id: string;
-    name: string;
-  };
-  onSelected: (id: string) => void;
-  onDeselected: (id: string) => void;
-};
-
-const PlaylistItem: FC<PlaylistItemProps> = ({
-  playlist,
-  onSelected,
-  onDeselected,
-}) => {
-  const [checked, setChecked] = useState(false);
-  const { name } = playlist;
-  return (
-    <ListItem
-      endEnhancer={(props) => (
-        <Checkbox
-          checked={checked}
-          onChange={(e) => {
-            setChecked(e.target.checked);
-            if (e.target.checked) {
-              onSelected(playlist.id);
-              return;
-            }
-            onDeselected(playlist.id);
-          }}
-        ></Checkbox>
-      )}
-      overrides={{
-        Content: {
-          style: () => ({
-            borderBottomWidth: "0px !important",
-          }),
-        },
-      }}
-    >
-      <ListItemLabel>{name}</ListItemLabel>
-    </ListItem>
-  );
-};
+import { FC, useMemo, useState } from "react";
+import {
+  Button,
+  Dialog,
+  EmptyState,
+  FilterBox,
+  Icons,
+  cn,
+} from "../UI";
 
 export type MovePlaylistsModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onMovePlaylists: (playlistIds: string[], folderId: string) => void;
-  playlists: any[];
+  playlists: { id: string; name: string }[];
   folderId: string;
 };
 
+/** Pick playlists to move into this folder. */
 const MovePlaylistsModal: FC<MovePlaylistsModalProps> = ({
   isOpen,
   onClose,
@@ -64,35 +24,98 @@ const MovePlaylistsModal: FC<MovePlaylistsModalProps> = ({
   playlists,
   folderId,
 }) => {
-  const [selectedPlaylists, setSelectedPlaylists] = useState<string[]>([]);
-  const _onMovePlaylists = () => {
-    onMovePlaylists(selectedPlaylists, folderId);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [filter, setFilter] = useState("");
+
+  const rows = useMemo(() => {
+    const needle = filter.trim().toLowerCase();
+    return needle
+      ? playlists.filter((playlist) =>
+          playlist.name.toLowerCase().includes(needle)
+        )
+      : playlists;
+  }, [playlists, filter]);
+
+  const close = () => {
     onClose();
+    setSelected([]);
+    setFilter("");
   };
-  const onSelected = (id: string) => {
-    setSelectedPlaylists([...selectedPlaylists, id]);
-  };
-  const onDeselected = (id: string) => {
-    setSelectedPlaylists(selectedPlaylists.filter((p) => p !== id));
-  };
+
   return (
-    <Modal onClose={onClose} isOpen={isOpen}>
-      <ModalHeader>Move Playlists</ModalHeader>
-      <ModalBody>
-        <Search onSearch={(q) => {}} height="40px" width="100%" />
-        {playlists.map((item: any) => (
-          <PlaylistItem
-            key={item.id}
-            playlist={item}
-            onSelected={onSelected}
-            onDeselected={onDeselected}
-          />
-        ))}
-      </ModalBody>
-      <ModalFooter>
-        <Button onClick={_onMovePlaylists}>Move Playlists</Button>
-      </ModalFooter>
-    </Modal>
+    <Dialog
+      isOpen={isOpen}
+      onClose={close}
+      title="Move playlists"
+      icon={Icons.folder}
+      footer={
+        <>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+          <Button
+            disabled={selected.length === 0}
+            onClick={() => {
+              onMovePlaylists(selected, folderId);
+              close();
+            }}
+          >
+            {selected.length === 1
+              ? "Move 1 playlist"
+              : `Move ${selected.length} playlists`}
+          </Button>
+        </>
+      }
+    >
+      <FilterBox
+        value={filter}
+        placeholder="Filter playlists…"
+        className="mb-2"
+        onChange={setFilter}
+      />
+      {rows.length === 0 ? (
+        <EmptyState icon={Icons.playlist} title="No playlists to move" />
+      ) : (
+        <ul className="flex flex-col gap-1 pb-1">
+          {rows.map((playlist) => {
+            const checked = selected.includes(playlist.id);
+            return (
+              <li key={playlist.id}>
+                <button
+                  type="button"
+                  aria-pressed={checked}
+                  onClick={() =>
+                    setSelected((current) =>
+                      checked
+                        ? current.filter((id) => id !== playlist.id)
+                        : [...current, playlist.id]
+                    )
+                  }
+                  className={cn(
+                    "flex h-11 w-full items-center gap-3 rounded-control px-3 text-left",
+                    checked ? "bg-selected" : "hover:bg-hover"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid size-[18px] shrink-0 place-items-center rounded border",
+                      checked
+                        ? "border-accent bg-accent text-on-accent"
+                        : "border-line"
+                    )}
+                  >
+                    {checked && <Icons.check size={12} stroke={3} />}
+                  </span>
+                  <span className="truncate text-[13px] text-fg">
+                    {playlist.name}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Dialog>
   );
 };
 

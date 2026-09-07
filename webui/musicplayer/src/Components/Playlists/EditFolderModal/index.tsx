@@ -1,17 +1,17 @@
-import { useTheme } from "@emotion/react";
-import { Input } from "baseui/input";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
-} from "baseui/modal";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FC, useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button, Dialog, Icons, TextField } from "../../UI";
+
+const schema = z.object({
+  name: z.string().trim().min(1, "Give your folder a name"),
+});
+
+type FormValues = z.infer<typeof schema>;
 
 export type EditFolderModalProps = {
-  folder?: any;
+  folder?: { id: string; name: string };
   isOpen: boolean;
   onClose: () => void;
   onEditFolder: (id: string, name: string) => void;
@@ -23,83 +23,58 @@ const EditFolderModal: FC<EditFolderModalProps> = ({
   isOpen,
   onEditFolder,
 }) => {
-  const theme = useTheme();
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      name: folder?.name,
-    },
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: "" },
   });
-  const _onEditFolder = (data: any) => {
-    onEditFolder(folder.id, data.name);
-    onClose();
-    reset();
-  };
-  const _onClose = () => {
-    onClose();
-    reset();
-  };
-  useEffect(() => {
-    reset({
-      name: folder?.name,
-    });
-  }, [folder, reset]);
-  return (
-    <Modal onClose={_onClose} isOpen={isOpen}>
-      <ModalHeader>Edit Folder</ModalHeader>
-      <ModalBody>
-        <Controller
-          name="name"
-          rules={{ required: true }}
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              value={value}
-              onBlur={onBlur}
-              onChange={onChange}
-              placeholder="Give your folder a name"
-              overrides={{
-                Root: {
-                  style: ({ $isFocused }) => ({
-                    borderTopWidth: "0px !important",
-                    borderLeftWidth: "0px !important",
-                    borderRightWidth: "0px !important",
-                    borderBottomWidth: "1px !important",
-                    borderBottomLeftRadius: "0px !important",
-                    borderBottomRightRadius: "0px !important",
-                    borderBottomColor: $isFocused
-                      ? "rgb(171, 40, 252)"
-                      : "rgba(118, 118, 118, 0.189)",
-                  }),
-                },
-                Input: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                    fontSize: "14px",
-                    paddingLeft: "0px !important",
-                    paddingRight: "0px !important",
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                  },
-                },
-              }}
-            />
-          )}
-        />
-      </ModalBody>
-      <ModalFooter>
-        <ModalButton onClick={handleSubmit(_onEditFolder)}>Save</ModalButton>
-      </ModalFooter>
-    </Modal>
-  );
-};
 
-EditFolderModal.defaultProps = {
-  folder: {
-    name: "",
-  },
+  useEffect(() => {
+    reset({ name: folder?.name ?? "" });
+  }, [folder, reset]);
+
+  const close = () => {
+    onClose();
+    reset();
+  };
+
+  const submit = (values: FormValues) => {
+    if (!folder) return;
+    onEditFolder(folder.id, values.name.trim());
+    close();
+  };
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={close}
+      title="Edit folder"
+      icon={Icons.folder}
+      width={420}
+      footer={
+        <>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit(submit)}>Save</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(submit)} className="pb-1">
+        <TextField
+          label="NAME"
+          autoFocus
+          placeholder="Give your folder a name"
+          error={errors.name?.message}
+          {...register("name")}
+        />
+      </form>
+    </Dialog>
+  );
 };
 
 export default EditFolderModal;

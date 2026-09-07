@@ -3,7 +3,10 @@
 // The defaults below mirror skins/synthwave.toml so the slint live-preview
 // looks right without the Rust side.
 
-import "../assets/fonts/SpaceGrotesk.ttf";
+// Roboto Mono carries the interface; JetBrains Mono is kept for the places
+// that read as a readout rather than as prose — the VFD, timecodes, ids and
+// the filter editor. The web client embeds the same two.
+import "../assets/fonts/RobotoMono.ttf";
 import "../assets/fonts/JetBrainsMono.ttf";
 
 export global Theme {
@@ -58,6 +61,6 @@ export global Theme {
     in-out property <color> syntax-error: #d45769;
     in-out property <length> radius: 12px;
     in-out property <length> control-radius: 8px;
-    in-out property <string> font-ui: "Space Grotesk";
+    in-out property <string> font-ui: "Roboto Mono";
     in-out property <string> font-mono: "JetBrains Mono";
 }

@@ -14,6 +14,7 @@
 //! See `extensions/examples/` for one worked example per capability.
 
 pub mod abi;
+pub mod catalog;
 pub mod host;
 pub mod install;
 pub mod library;
@@ -21,6 +22,7 @@ pub mod manifest;
 pub mod registry;
 
 pub use abi::{Event, TrackInfo};
+pub use catalog::{installed, Installed, Status};
 pub use host::{Extension, HostContext, LibraryAccess};
 pub use install::{cache_dir, install_from_url, search_paths};
 pub use library::Library;

@@ -1,38 +1,56 @@
 import { FC } from "react";
-import Playlist from "./Playlist";
+import { useNavigate, useParams } from "react-router-dom";
 import { useGetPlaylistQuery } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
+import { useTimeFormat } from "../../Hooks/useFormat";
+import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import { useNavigate, useParams } from "react-router-dom";
+import Playlist from "./Playlist";
 
 const PlaylistWithData: FC = () => {
   const params = useParams();
-  const { data } = useGetPlaylistQuery({
-    id: params.id!,
-  });
+  const { data, isLoading: loading } = useGetPlaylistQuery({ id: params.id! });
   const navigate = useNavigate();
-  const { currentCastDevice } = useDevices();
+  const { formatTime } = useTimeFormat();
   const { nowPlaying, playNext, playPlaylist } = usePlayback();
+  const { isLiked, toggleLike } = useLikes();
+  const { recentPlaylists, addTrackToPlaylist, removeTrackFromPlaylist } =
+    usePlaylist();
 
-  const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
+  const playlist = data?.playlist && {
+    id: data.playlist.id,
+    name: data.playlist.name,
+    description: data.playlist.description,
+    tracks: data.playlist.tracks.map((track) => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      artistId: track.artistId,
+      album: track.albumTitle,
+      albumId: track.albumId,
+      duration: formatTime((track.duration ?? 0) * 1000),
+      liked: isLiked(track.id),
+    })),
+  };
+
   return (
     <Playlist
+      playlist={playlist}
+      loading={loading}
+      currentTrackId={nowPlaying?.isPlaying ? nowPlaying.id : undefined}
+      recentPlaylists={recentPlaylists}
       onBack={() => navigate(-1)}
-      nowPlaying={nowPlaying}
-      onPlayNext={(trackId) => playNext({ trackId })}
-      onCreatePlaylist={(name, description) =>
-        createPlaylist({ name, description })
-      }
-      onAddTrackToPlaylist={(playlistId, trackId) =>
-        addTrackToPlaylist({ trackId, playlistId })
-      }
       onPlayPlaylist={(playlistId, shuffle, position) =>
         playPlaylist({ playlistId, position, shuffle })
       }
-      playlist={data?.playlist}
-      recentPlaylists={recentPlaylists}
-      currentCastDevice={currentCastDevice}
+      onPlayNext={(trackId) => playNext({ trackId })}
+      onToggleLike={toggleLike}
+      onRemoveTrack={(position) =>
+        removeTrackFromPlaylist({ playlistId: params.id!, position })
+      }
+      onAddTrackToPlaylist={(playlistId, trackId) =>
+        addTrackToPlaylist({ playlistId, trackId })
+      }
     />
   );
 };

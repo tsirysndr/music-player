@@ -1,0 +1,195 @@
+/*
+ * Skins, ported one-for-one from `desktop/skins/*.toml`.
+ *
+ * The Slint client writes these tokens into its `Theme` global at runtime
+ * (see `desktop/src/skin.rs`); the web client sets the same names as CSS
+ * custom properties on `<html data-skin="…">`. Both clients therefore render
+ * from a single palette definition, and adding a skin means adding one block
+ * here and one .toml there.
+ *
+ * Keep the token names identical to the Slint ones minus the `--` prefix:
+ * `window_bg` → `--window-bg`. Anything that drifts stops the two UIs from
+ * looking the same, which is the whole point of this file.
+ */
+
+/* Late Night — the default, as on the desktop. */
+:root,
+[data-skin="late-night"] {
+  --window-bg: #0c0c0d;
+  --panel-bg: #151517;
+  --panel-raised: #1d1d21;
+  --sidebar-bg: #101012;
+  --display-bg: #0a1416;
+  --display-glow: #14667440;
+  --display-text: #4fd8e0;
+  --display-dim: #24565c;
+  --accent: #ff8f2b;
+  --accent-hover: #ffa952;
+  --on-accent: #16110a;
+  --text: #e8e3da;
+  --text-dim: #a09a8e;
+  --text-muted: #5f5c55;
+  --border: #26262b;
+  --hover-bg: #ffffff0d;
+  --selected-bg: #ff8f2b1a;
+  --slider-track: #2a2a30;
+  --meter-low: #4bb543;
+  --meter-mid: #ffb02b;
+  --meter-high: #e04b3a;
+  --meter-off: #1e1e22;
+  --skeleton-bg: #1d1d21;
+  --skeleton-fg: #2b2b32;
+  --syntax-field: #ff8f2b;
+  --syntax-operator: #a09a8e;
+  --syntax-value: #4fd8e0;
+  --syntax-logic: #c8a25a;
+  --syntax-error: #e5484d;
+  --art-placeholder: #222228;
+  --radius: 10px;
+  --control-radius: 7px;
+  color-scheme: dark;
+}
+
+[data-skin="synthwave"] {
+  --window-bg: #0d0b14;
+  --panel-bg: #151122;
+  --panel-raised: #1e182f;
+  --sidebar-bg: #100d1a;
+  --display-bg: #0a0f1e;
+  --display-glow: #00e5ff40;
+  --display-text: #00e5ff;
+  --display-dim: #1e5f6e;
+  --accent: #ff2d95;
+  --accent-hover: #ff5cab;
+  --on-accent: #1c0713;
+  --text: #ece7f5;
+  --text-dim: #a99fc2;
+  --text-muted: #5f5878;
+  --border: #251e3a;
+  --hover-bg: #ffffff0f;
+  --selected-bg: #ff2d951f;
+  --slider-track: #2a2344;
+  --meter-low: #00e5ff;
+  --meter-mid: #c355ff;
+  --meter-high: #ff2d95;
+  --meter-off: #1c172c;
+  --skeleton-bg: #1d1830;
+  --skeleton-fg: #2c2547;
+  --syntax-field: #ff2d95;
+  --syntax-operator: #a99fc2;
+  --syntax-value: #00e5ff;
+  --syntax-logic: #c355ff;
+  --syntax-error: #ff4d6d;
+  --art-placeholder: #201a33;
+  --radius: 12px;
+  --control-radius: 8px;
+  color-scheme: dark;
+}
+
+[data-skin="neutron"] {
+  --window-bg: #191c21;
+  --panel-bg: #21252c;
+  --panel-raised: #2a2f38;
+  --sidebar-bg: #1d2026;
+  --display-bg: #141a12;
+  --display-glow: #a1ce4d40;
+  --display-text: #a1ce4d;
+  --display-dim: #50663a;
+  --accent: #ff8800;
+  --accent-hover: #ffa033;
+  --on-accent: #1a1206;
+  --text: #dfe3e8;
+  --text-dim: #9aa3ad;
+  --text-muted: #5d646d;
+  --border: #31363f;
+  --hover-bg: #ffffff10;
+  --selected-bg: #ff880022;
+  --slider-track: #343a44;
+  --meter-low: #a1ce4d;
+  --meter-mid: #ffb02b;
+  --meter-high: #ff5544;
+  --meter-off: #282d35;
+  --skeleton-bg: #2a2f38;
+  --skeleton-fg: #363d48;
+  --syntax-field: #ff8800;
+  --syntax-operator: #9aa3ad;
+  --syntax-value: #a1ce4d;
+  --syntax-logic: #5aa9e6;
+  --syntax-error: #e5484d;
+  --art-placeholder: #2c313a;
+  --radius: 6px;
+  --control-radius: 4px;
+  color-scheme: dark;
+}
+
+[data-skin="lunar"] {
+  --window-bg: #232527;
+  --panel-bg: #2b2d30;
+  --panel-raised: #35383c;
+  --sidebar-bg: #26282b;
+  --display-bg: #1a1712;
+  --display-glow: #ffb00040;
+  --display-text: #ffb000;
+  --display-dim: #7a5f2a;
+  --accent: #ffb000;
+  --accent-hover: #ffc233;
+  --on-accent: #1f1708;
+  --text: #e6e6e4;
+  --text-dim: #a8a8a4;
+  --text-muted: #6c6c68;
+  --border: #3c3f43;
+  --hover-bg: #ffffff0e;
+  --selected-bg: #ffb0001e;
+  --slider-track: #43464b;
+  --meter-low: #ffb000;
+  --meter-mid: #ffb000;
+  --meter-high: #ff6a3a;
+  --meter-off: #333538;
+  --skeleton-bg: #35383c;
+  --skeleton-fg: #43464b;
+  --syntax-field: #ffb000;
+  --syntax-operator: #a8a8a4;
+  --syntax-value: #8fd97a;
+  --syntax-logic: #d6a75c;
+  --syntax-error: #e5484d;
+  --art-placeholder: #3a3d41;
+  --radius: 8px;
+  --control-radius: 6px;
+  color-scheme: dark;
+}
+
+[data-skin="porcelain"] {
+  --window-bg: #f2f3f5;
+  --panel-bg: #e7e9ec;
+  --panel-raised: #dde0e4;
+  --sidebar-bg: #eceef1;
+  --display-bg: #dfe8ee;
+  --display-glow: #1d5f8a40;
+  --display-text: #155e86;
+  --display-dim: #7fa4b8;
+  --accent: #0e7bd1;
+  --accent-hover: #2b91e0;
+  --on-accent: #f4f9fd;
+  --text: #23272d;
+  --text-dim: #5b6470;
+  --text-muted: #9aa2ac;
+  --border: #d0d4da;
+  --hover-bg: #00000009;
+  --selected-bg: #0e7bd11a;
+  --slider-track: #cfd4da;
+  --meter-low: #2f9e44;
+  --meter-mid: #f59f00;
+  --meter-high: #e03131;
+  --meter-off: #d6dade;
+  --skeleton-bg: #e0e3e7;
+  --skeleton-fg: #f1f3f5;
+  --syntax-field: #0e7bd1;
+  --syntax-operator: #5b6470;
+  --syntax-value: #166534;
+  --syntax-logic: #7c3aed;
+  --syntax-error: #b42318;
+  --art-placeholder: #d9dde2;
+  --radius: 10px;
+  --control-radius: 7px;
+  color-scheme: light;
+}

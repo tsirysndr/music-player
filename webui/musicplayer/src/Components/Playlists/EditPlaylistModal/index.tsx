@@ -1,18 +1,18 @@
-import { Input } from "baseui/input";
-import { Textarea } from "baseui/textarea";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
-} from "baseui/modal";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FC, useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { useTheme } from "@emotion/react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button, Dialog, Icons, TextAreaField, TextField } from "../../UI";
+
+const schema = z.object({
+  name: z.string().trim().min(1, "Give your playlist a name"),
+  description: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof schema>;
 
 export type EditPlaylistModalProps = {
-  playlist?: any;
+  playlist?: { id: string; name: string; description?: string | null };
   isOpen: boolean;
   onClose: () => void;
   onEditPlaylist: (id: string, name: string, description?: string) => void;
@@ -24,124 +24,70 @@ const EditPlaylistModal: FC<EditPlaylistModalProps> = ({
   isOpen,
   onEditPlaylist,
 }) => {
-  const theme = useTheme();
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      name: playlist?.name,
-      description: playlist?.description,
-    },
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: "", description: "" },
   });
-  const _onEditPlaylist = (data: any) => {
-    onEditPlaylist(playlist.id, data.name, data.description);
-    onClose();
-    reset();
-  };
-  const _onClose = () => {
-    onClose();
-    reset();
-  };
+
+  // The modal is mounted before a playlist is chosen, so the defaults have to
+  // be pushed in when one arrives rather than read once at mount.
   useEffect(() => {
     reset({
-      name: playlist?.name,
-      description: playlist?.description,
+      name: playlist?.name ?? "",
+      description: playlist?.description ?? "",
     });
   }, [playlist, reset]);
-  return (
-    <Modal onClose={_onClose} isOpen={isOpen}>
-      <ModalHeader>Edit playlist</ModalHeader>
-      <ModalBody>
-        <Controller
-          control={control}
-          name="name"
-          rules={{ required: true }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              value={value}
-              onBlur={onBlur}
-              onChange={onChange}
-              placeholder="Give your playlist a title"
-              overrides={{
-                Root: {
-                  style: ({ $isFocused }) => ({
-                    borderTopWidth: "0px !important",
-                    borderLeftWidth: "0px !important",
-                    borderRightWidth: "0px !important",
-                    borderBottomWidth: "1px !important",
-                    borderBottomLeftRadius: "0px !important",
-                    borderBottomRightRadius: "0px !important",
-                    borderBottomColor: $isFocused
-                      ? "rgb(171, 40, 252)"
-                      : "rgba(118, 118, 118, 0.189)",
-                    marginBottom: "15px",
-                  }),
-                },
-                Input: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                    fontSize: "14px",
-                    paddingLeft: "0px !important",
-                    paddingRight: "0px !important",
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                  },
-                },
-              }}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="description"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Textarea
-              value={value}
-              onBlur={onBlur}
-              onChange={onChange}
-              placeholder="Write a description"
-              overrides={{
-                Root: {
-                  style: ({ $isFocused }) => ({
-                    borderTopWidth: "0px !important",
-                    borderLeftWidth: "0px !important",
-                    borderRightWidth: "0px !important",
-                    borderBottomWidth: "1px !important",
-                    borderBottomLeftRadius: "0px !important",
-                    borderBottomRightRadius: "0px !important",
-                    borderBottomColor: $isFocused
-                      ? "rgb(171, 40, 252)"
-                      : "rgba(118, 118, 118, 0.189)",
-                  }),
-                },
-                Input: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                    fontSize: "14px",
-                    paddingLeft: "0px !important",
-                    paddingRight: "0px !important",
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    backgroundColor: theme.colors.popoverBackground,
-                  },
-                },
-              }}
-            />
-          )}
-        />
-      </ModalBody>
-      <ModalFooter>
-        <ModalButton onClick={handleSubmit(_onEditPlaylist)}>Save</ModalButton>
-      </ModalFooter>
-    </Modal>
-  );
-};
 
-EditPlaylistModal.defaultProps = {
-  playlist: {},
+  const close = () => {
+    onClose();
+    reset();
+  };
+
+  const submit = (values: FormValues) => {
+    if (!playlist) return;
+    onEditPlaylist(playlist.id, values.name.trim(), values.description);
+    close();
+  };
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={close}
+      title="Edit playlist"
+      icon={Icons.pencil}
+      footer={
+        <>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit(submit)}>Save</Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={handleSubmit(submit)}
+        className="flex flex-col gap-4 pb-1"
+      >
+        <TextField
+          label="NAME"
+          autoFocus
+          placeholder="Give your playlist a title"
+          error={errors.name?.message}
+          {...register("name")}
+        />
+        <TextAreaField
+          label="DESCRIPTION"
+          placeholder="Write a description"
+          {...register("description")}
+        />
+      </form>
+    </Dialog>
+  );
 };
 
 export default EditPlaylistModal;

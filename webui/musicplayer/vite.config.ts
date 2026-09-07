@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
@@ -13,7 +14,7 @@ import svgr from "vite-plugin-svgr";
  * dev server stays on port 3000. Changing either means changing them too.
  */
 export default defineConfig({
-  plugins: [react(), svgr()],
+  plugins: [tailwindcss(), react(), svgr()],
   server: {
     port: 3000,
     // Fail loudly rather than silently moving to 3001, which Tauri's devUrl

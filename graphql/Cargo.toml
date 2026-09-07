@@ -59,6 +59,10 @@ ctor = "0.1.26"
 path = "../rsql"
 version = "0.2.1"
 
+[dependencies.music-player-extensions]
+path = "../extensions"
+version = "0.2.1"
+
 [dependencies]
 async-graphql = "7.2.1"
 tide = "0.16.0"

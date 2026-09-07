@@ -12,6 +12,7 @@ use music_player_extensions::manifest::MANIFEST_FILES;
 use music_player_extensions::manifest::{Capability, Permissions};
 use music_player_extensions::{install_from_url, search_paths, Manifest, Registry};
 use music_player_settings::{get_application_directory, read_settings, Settings};
+use music_player_storage::extension_state;
 use owo_colors::OwoColorize;
 
 type CmdResult = Result<(), Box<dyn std::error::Error>>;
@@ -183,14 +184,13 @@ pub async fn list() -> CmdResult {
     }
     println!();
 
-    // Nothing is enabled or configured from here: this is a report of what the
-    // daemon would load, not a second source of truth.
-    let registry = Registry::load_all(
-        &paths,
-        &Default::default(),
-        &Default::default(),
-        Default::default(),
-    );
+    // The stored enabled flags are read, so an extension switched off in either
+    // UI reports as disabled here rather than as loaded. Nothing is *written*
+    // from this command: it is a report of what the daemon would load, not a
+    // second source of truth.
+    let db = music_player_storage::shared().await;
+    let enabled = extension_state::enabled_map(db.get_connection()).await;
+    let registry = Registry::load_all(&paths, &enabled, &Default::default(), Default::default());
     if registry.is_empty() {
         println!("No extensions installed.");
         println!(
@@ -531,7 +531,6 @@ mod tests {
             logo: String::new(),
             topics: Vec::new(),
             readme: String::new(),
-            readme: String::new(),
             entry: "plugin.wasm".into(),
             capabilities: vec![Capability::Metadata, Capability::Source],
             permissions: Permissions::default(),
@@ -562,7 +561,6 @@ mod tests {
             license: String::new(),
             logo: String::new(),
             topics: Vec::new(),
-            readme: String::new(),
             readme: String::new(),
             entry: "plugin.wasm".into(),
             capabilities: vec![Capability::Predicates],

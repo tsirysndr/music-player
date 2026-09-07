@@ -24,3 +24,14 @@ export const playbackPositionAtom = atom(
   (get, set, positionMs: number) =>
     set(nowPlayingAtom, { ...get(nowPlayingAtom), progress: positionMs })
 );
+
+/**
+ * The daemon's mixer level, 0..1, and whether it is muted.
+ *
+ * Shared rather than owned by the player bar: the `+`/`-`/`m` shortcuts in
+ * `AppShell` drive the same level the knob does.
+ */
+export const volumeAtom = atom(1);
+export const mutedAtom = atom(false);
+/** Guards the one-time read, so two mounts do not both fetch it. */
+export const volumeLoadedAtom = atom(false);

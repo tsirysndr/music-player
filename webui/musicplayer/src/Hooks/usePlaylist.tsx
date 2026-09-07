@@ -24,8 +24,10 @@ import {
   useGetRecentPlaylistsQuery,
   useMovePlaylistsToFolderMutation,
   useMovePlaylistToFolderMutation,
+  useRemoveTrackFromPlaylistMutation,
   useRenameFolderMutation,
   useRenamePlaylistMutation,
+  type RemoveTrackFromPlaylistMutationVariables,
 } from "./GraphQL";
 
 export const usePlaylist = () => {
@@ -85,6 +87,9 @@ export const usePlaylist = () => {
   const renameFolderMutation = useRenameFolderMutation({
     onSuccess: invalidatePlaylists,
   });
+  const removeTrackFromPlaylistMutation = useRemoveTrackFromPlaylistMutation({
+    onSuccess: invalidatePlaylists,
+  });
 
   const playlists = playlistsData?.playlists || [];
   const folders = foldersData?.folders || [];
@@ -125,5 +130,8 @@ export const usePlaylist = () => {
       renamePlaylistMutation.mutateAsync(variables),
     renameFolder: (variables: RenameFolderMutationVariables) =>
       renameFolderMutation.mutateAsync(variables),
+    removeTrackFromPlaylist: (
+      variables: RemoveTrackFromPlaylistMutationVariables
+    ) => removeTrackFromPlaylistMutation.mutateAsync(variables),
   };
 };

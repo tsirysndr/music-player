@@ -20,7 +20,6 @@
 //! usual shape — can be installed by pasting a link. A URL pointing at a
 //! manifest instead installs the module it names.
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Error};

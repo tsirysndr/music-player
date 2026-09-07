@@ -1,119 +1,169 @@
-import styled from "@emotion/styled";
 import { FC, useState } from "react";
-import { Track } from "../../Types";
-import ControlBar from "../ControlBar";
-import Sidebar from "../Sidebar";
-import { Tabs, Tab } from "baseui/tabs-motion";
-import Tracks from "./Tracks";
-import Albums from "./Albums";
-import Artists from "./Artists";
-import Playlists from "./Playlists";
-import { Device } from "../../Types/Device";
-import ListeningOn from "../ListeningOn";
+import { AppShell } from "../Layout";
+import {
+  AlbumCard,
+  ArtistRow,
+  EmptyState,
+  FilterBox,
+  Icons,
+  TrackListHeader,
+  TrackRow,
+  cn,
+  type AlbumCardItem,
+  type ArtistRowItem,
+  type PlaylistOption,
+  type TrackRowItem,
+} from "../UI";
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: row;
-  background-color: ${(props) => props.theme.colors.background};
-`;
-
-const Content = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
-const Results = styled.div`
-  overflow-y: auto;
-  height: calc(100vh - 146px);
-`;
+type Tab = "tracks" | "albums" | "artists";
 
 export type SearchResultsProps = {
-  tracks: any[];
-  albums: any[];
-  artists: any[];
-  onClickAlbum: (album: any) => void;
-  onClickArtist: (artist: any) => void;
-  onClickLibraryItem: (item: string) => void;
-  nowPlaying: any;
-  onPlayTrack: (id: string, postion?: number) => void;
-  nextTracks: Track[];
-  previousTracks: Track[];
-  onPlayNext: (id: string) => void;
-  onPlayTrackAt: (position: number) => void;
-  onRemoveTrackAt: (position: number) => void;
+  query: string;
+  tracks: TrackRowItem[];
+  albums: AlbumCardItem[];
+  artists: ArtistRowItem[];
+  currentTrackId?: string;
+  recentPlaylists: PlaylistOption[];
   onSearch: (query: string) => void;
-  folders: any[];
-  playlists: any[];
-  onCreateFolder: (name: string) => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
-  onDeleteFolder: (id: string) => void;
-  onDeletePlaylist: (id: string) => void;
-  onEditFolder: (id: string, name: string) => void;
-  onEditPlaylist: (id: string, name: string, description?: string) => void;
+  onPlayTrack: (id: string) => void;
+  onPlayNext: (id: string) => void;
+  onToggleLike: (id: string) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  onPlayPlaylist: (
-    playlistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
-  recentPlaylists: any[];
-  currentDevice?: Device;
-  currentCastDevice?: Device;
+  onPlayAlbum: (id: string, shuffle: boolean) => void;
+  onPlayArtist: (id: string) => void;
 };
 
-const SearchResults: FC<SearchResultsProps> = (props) => {
-  const [activeKey, setActiveKey] = useState<React.Key>(0);
-  const { currentCastDevice } = props;
+/**
+ * Library search. The desktop opens a command palette over the window; on the
+ * web this is a page, so the query survives a reload and can be linked to.
+ */
+const SearchResults: FC<SearchResultsProps> = ({
+  query,
+  tracks,
+  albums,
+  artists,
+  currentTrackId,
+  recentPlaylists,
+  onSearch,
+  onPlayTrack,
+  onPlayNext,
+  onToggleLike,
+  onAddTrackToPlaylist,
+  onPlayAlbum,
+  onPlayArtist,
+}) => {
+  const [tab, setTab] = useState<Tab>("tracks");
+
+  const counts: Record<Tab, number> = {
+    tracks: tracks.length,
+    albums: albums.length,
+    artists: artists.length,
+  };
+  const total = counts.tracks + counts.albums + counts.artists;
+
   return (
-    <>
-      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
-      <Container>
-        <Sidebar active={""} />
-        <Content>
-          <ControlBar />
-          <div>
-            <Tabs
-              activeKey={activeKey}
-              onChange={({ activeKey }) => setActiveKey(activeKey)}
-              overrides={{
-                TabList: {
-                  style: {
-                    marginLeft: "26px",
-                    marginRight: "26px",
-                  },
-                },
-                TabBorder: {
-                  style: {
-                    marginLeft: "26px",
-                    marginRight: "26px",
-                  },
-                },
-              }}
-            >
-              <Tab title="Tracks">
-                <Results>
-                  <Tracks {...props} />
-                </Results>
-              </Tab>
-              <Tab title="Albums">
-                <Results>
-                  <Albums {...props} />
-                </Results>
-              </Tab>
-              <Tab title="Artists">
-                <Results>
-                  <Artists {...props} />
-                </Results>
-              </Tab>
-              <Tab title="Playlists">
-                <Playlists />
-              </Tab>
-            </Tabs>
+    <AppShell title="Search">
+      {/* Not in the header: the header names where you are, and this is the
+          page's own control. */}
+      <FilterBox
+        value={query}
+        placeholder="Search your library…"
+        autoFocus
+        className="mb-4 w-full sm:max-w-[420px]"
+        aria-label="Search your library"
+        onChange={onSearch}
+      />
+
+      {query.trim() === "" ? (
+        <EmptyState
+          icon={Icons.search}
+          title="Search your library"
+          hint="Tracks, albums and artists. Press / from anywhere to get back here."
+        />
+      ) : total === 0 ? (
+        <EmptyState icon={Icons.search} title={`Nothing matches “${query}”`} />
+      ) : (
+        <>
+          <div className="mb-4 flex gap-2 border-b border-line">
+            {(["tracks", "albums", "artists"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTab(value)}
+                className={cn(
+                  "-mb-px border-b-2 px-3 pb-2 text-xs font-semibold capitalize transition-colors",
+                  tab === value
+                    ? "border-accent text-accent"
+                    : "border-transparent text-dim hover:text-fg"
+                )}
+              >
+                {value}
+                <span className="ml-[6px] font-mono text-[10px] text-muted">
+                  {counts[value]}
+                </span>
+              </button>
+            ))}
           </div>
-        </Content>
-      </Container>
-    </>
+
+          {tab === "tracks" &&
+            (tracks.length === 0 ? (
+              <EmptyState icon={Icons.music} title="No matching tracks" />
+            ) : (
+              <>
+                <TrackListHeader />
+                <div className="flex flex-col">
+                  {tracks.map((track, index) => (
+                    <TrackRow
+                      key={track.id}
+                      track={track}
+                      index={index}
+                      current={track.id === currentTrackId}
+                      playlists={recentPlaylists}
+                      onPlay={() => onPlayTrack(track.id)}
+                      onLike={() => onToggleLike(track.id)}
+                      onPlayNext={() => onPlayNext(track.id)}
+                      onAddToPlaylist={(playlistId) =>
+                        onAddTrackToPlaylist(playlistId, track.id)
+                      }
+                    />
+                  ))}
+                </div>
+              </>
+            ))}
+
+          {tab === "albums" &&
+            (albums.length === 0 ? (
+              <EmptyState icon={Icons.disc} title="No matching albums" />
+            ) : (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                {albums.map((album) => (
+                  <AlbumCard
+                    key={album.id}
+                    album={album}
+                    onPlay={() => onPlayAlbum(album.id, false)}
+                    onShufflePlay={() => onPlayAlbum(album.id, true)}
+                  />
+                ))}
+              </div>
+            ))}
+
+          {tab === "artists" &&
+            (artists.length === 0 ? (
+              <EmptyState icon={Icons.artist} title="No matching artists" />
+            ) : (
+              <div className="flex flex-col">
+                {artists.map((artist) => (
+                  <ArtistRow
+                    key={artist.id}
+                    artist={artist}
+                    onPlay={() => onPlayArtist(artist.id)}
+                  />
+                ))}
+              </div>
+            ))}
+        </>
+      )}
+    </AppShell>
   );
 };
 

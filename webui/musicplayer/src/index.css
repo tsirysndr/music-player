@@ -1,124 +1,153 @@
+/*
+ * The web client's entry stylesheet.
+ *
+ * `@heroui/styles` pulls in Tailwind itself, so this is the only place
+ * Tailwind is imported. Everything visual after that comes from the skin
+ * tokens in `styles/skins.css`, which mirror the Slint client's `Theme`
+ * global — so `bg-panel` here and `Theme.panel-bg` there are the same colour.
+ */
 
+@import "@heroui/styles";
+/* The UI face. Variable, so every weight the design system asks for comes out
+   of one file — the desktop client embeds the same family. */
+@import "@fontsource-variable/roboto-mono";
+@import "./styles/skins.css";
+
+/* HeroUI's class strings live in its compiled JS, so Tailwind has to be told
+   to scan them or half its components come out unstyled. */
+@source "../node_modules/@heroui/react/dist";
+
+/* JetBrains Mono is kept for the places that read as a readout rather than as
+   prose: the VFD display, timecodes, ids, the filter editor. Roboto Mono
+   carries everything else. Both are what `desktop/ui/theme.slint` embeds. */
 @font-face {
-  font-family: 'RockfordSansLight';
-  src: local('RockfordSansLight'), url(./Assets/fonts/RockfordSans-Light.otf) format('opentype');
+  font-family: "JetBrains Mono";
+  src: url(./Assets/fonts/JetBrainsMono.ttf) format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
 }
 
-@font-face {
-  font-family: 'RockfordSansRegular';
-  src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-Regular.otf) format('opentype');
+@theme inline {
+  --color-window: var(--window-bg);
+  --color-panel: var(--panel-bg);
+  --color-raised: var(--panel-raised);
+  --color-sidebar: var(--sidebar-bg);
+  --color-display: var(--display-bg);
+  --color-display-glow: var(--display-glow);
+  --color-display-text: var(--display-text);
+  --color-display-dim: var(--display-dim);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-fg: var(--text);
+  --color-dim: var(--text-dim);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-hover: var(--hover-bg);
+  --color-selected: var(--selected-bg);
+  --color-track: var(--slider-track);
+  --color-meter-low: var(--meter-low);
+  --color-meter-mid: var(--meter-mid);
+  --color-meter-high: var(--meter-high);
+  --color-meter-off: var(--meter-off);
+  --color-skeleton: var(--skeleton-bg);
+  --color-skeleton-fg: var(--skeleton-fg);
+  --color-art: var(--art-placeholder);
+  --color-syntax-field: var(--syntax-field);
+  --color-syntax-operator: var(--syntax-operator);
+  --color-syntax-value: var(--syntax-value);
+  --color-syntax-logic: var(--syntax-logic);
+  --color-syntax-error: var(--syntax-error);
+
+  --radius-skin: var(--radius);
+  --radius-control: var(--control-radius);
+
+  --font-ui: "Roboto Mono Variable", "Roboto Mono", ui-monospace,
+    SFMono-Regular, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@font-face {
-  font-family: 'RockfordSansMedium';
-  src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-Medium.otf) format('opentype');
+@layer base {
+  /* The player bar's height. The full-player canvas stops short of it, so the
+     miniplayer stays visible and translucent underneath — as on the desktop,
+     where `full-player` is `parent.height - 92px` tall. Both need the same
+     number, and a sibling cannot read a variable set on the other. */
+  :root {
+    --player-bar-height: 76px;
+  }
+
+  @media (min-width: 64rem) {
+    :root {
+      --player-bar-height: 92px;
+    }
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    background-color: var(--window-bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Slint draws no focus ring; the web client marks focus on the element
+     itself (an accent border on inputs, a tinted row) rather than with a
+     browser outline that would not match any skin. */
+  *:focus {
+    outline: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
-@font-face {
-  font-family: 'RockfordSansBold';
-    font-weight: 900;
-    src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-Bold.otf) format('opentype');
+/* The content-loader shimmer. Outside a layer so it is always available to
+   the inline `animation` the skeleton components set. */
+@keyframes skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
-@font-face {
-  font-family: 'RockfordSansExtraBold';
-    font-weight: 900;
-    src: local('RockfordSans'), url(./Assets/fonts/RockfordSans-ExtraBold.otf) format('opentype');
+@layer utilities {
+  /* Thin, skin-coloured scrollbars — Slint's ListView has no visible track,
+     so a default chrome scrollbar is the loudest thing on the page. */
+  .scrollbar-skin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--slider-track) transparent;
+  }
+
+  .scrollbar-skin::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-skin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-skin::-webkit-scrollbar-thumb {
+    background-color: var(--slider-track);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  .scrollbar-skin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted);
+    background-clip: content-box;
+  }
 }
-
-body {
-  margin: 0;
-  font-family: RockfordSansRegular, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-y: hidden;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
-[data-baseweb="modal"] {
-  z-index: 1;
-}
-
-*:focus {outline:none !important}
-
-.play {
-  display: none;
-}
-
-.floating-play {
-  display: none;
-  position: absolute;
-  left: 40px;
-}
-
-tr:hover td div .play {
-  cursor: pointer;
-  display: block;
-}
-
-tr:hover td div .floating-play {
-  cursor: pointer;
-  display: block;
-}
-
-
-tr:hover td div .tracknumber {
- display: none;
-}
-
-tr:hover td div .album-cover {
-  opacity: 0.4;
- }
-
-tr:hover td div button {
-  color: #000;
- }
-
- tr td div div {
-  overflow: hidden;
-  text-overflow: ellipsis;
- }
-
- a {
-    color: initial;
-    text-decoration: initial;
- }
-
- a:hover {
-  text-decoration: underline;
- }
-
- .album-cover-container {
-  position: relative;
- }
-
- .album-cover-container .floating-play {
-  display: none;
-  position: absolute;
-  left: 19px;
-  top: 12px;
- }
-
- .album-cover-container:hover .floating-play {
-  display: block;
- }
-
- .album-cover-container:hover img {
-  opacity: 0.4;
- }
-
- [data-baseweb="tab-panel"] {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
- }
-
- .connect-list li:hover {
-  border-radius: 5px;
-  cursor: pointer;
- }

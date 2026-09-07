@@ -2,7 +2,11 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { resourceUriResolver } from "../ResourceUriResolver";
-import { nowPlayingAtom, playbackIndexAtom } from "../State";
+import {
+  nowPlayingAtom,
+  playbackIndexAtom,
+  serverConnectedAtom,
+} from "../State";
 import {
   CurrentlyPlayingSongChangedDocument,
   CurrentlyPlayingSongChangedSubscription,
@@ -27,9 +31,16 @@ export const usePlaybackSync = () => {
   const setPlaybackIndex = useSetAtom(playbackIndexAtom);
   const queryClient = useQueryClient();
 
-  const { data: playback } = useCurrentlyPlayingSongQuery(undefined, {
+  const setConnected = useSetAtom(serverConnectedAtom);
+
+  const { data: playback, isError } = useCurrentlyPlayingSongQuery(undefined, {
     refetchInterval: 5000,
   });
+
+  // The 5s poll doubles as the heartbeat behind the sidebar's status dot.
+  useEffect(() => {
+    setConnected(!isError);
+  }, [isError, setConnected]);
 
   useEffect(() => {
     if (!playback?.currentlyPlayingSong) {

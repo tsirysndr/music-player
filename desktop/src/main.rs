@@ -8,6 +8,7 @@
 //! upgrade_in_event_loop.
 
 mod daemon;
+mod extensions;
 mod likes;
 mod radio;
 mod rpc;
@@ -52,6 +53,9 @@ struct UiState {
     /// The unfiltered station list currently on screen, so the quick filter
     /// can re-render without another request.
     radios: Vec<rpc::StationData>,
+    /// Every installed extension, as last scanned. Filtering re-renders from
+    /// here rather than walking the directories again on each keystroke.
+    extensions: Vec<extensions::Extension>,
 }
 
 thread_local! {
@@ -204,6 +208,49 @@ pub fn ui_set_now_art(app: &AppWindow, w: u32, h: u32, rgba: Vec<u8>) {
         ));
     }
     app.set_now_has_art(true);
+}
+
+/// Store a freshly scanned extension list and render it through the filter.
+///
+/// The scan reads the manifests *and* the enabled flags out of the database,
+/// so it runs on the tokio worker like every other query; this is the UI-thread
+/// half that receives the result.
+pub fn ui_set_extensions(app: &AppWindow, extensions: Vec<extensions::Extension>) {
+    STATE.with(|s| s.borrow_mut().extensions = extensions);
+    app.set_extensions_loading(false);
+    ui_render_extensions(app);
+}
+
+/// Push the stored extension list through the search filter and onto the UI.
+pub fn ui_render_extensions(app: &AppWindow) {
+    let filter = app.get_extension_filter().to_lowercase();
+    // 0 all, 1 enabled, 2 disabled — the quick-filter chips above the list.
+    let state_filter = app.get_extension_state_filter();
+    let rows = STATE.with(|s| {
+        s.borrow()
+            .extensions
+            .iter()
+            .filter(|extension| extension.matches(&filter))
+            .filter(|extension| match state_filter {
+                1 => extension.enabled,
+                2 => !extension.enabled,
+                _ => true,
+            })
+            .map(|extension| ExtensionItem {
+                id: extension.id.clone().into(),
+                name: extension.name.clone().into(),
+                version: extension.version.clone().into(),
+                author: extension.author.clone().into(),
+                description: extension.description.clone().into(),
+                capabilities: extension.capabilities.clone().into(),
+                hosts: extension.hosts.clone().into(),
+                library_read: extension.library_read,
+                enabled: extension.enabled,
+                error: extension.error.clone().into(),
+            })
+            .collect::<Vec<_>>()
+    });
+    app.set_extensions(ModelRc::new(VecModel::from(rows)));
 }
 
 pub fn ui_set_radios(app: &AppWindow, radios: Vec<rpc::StationData>) {
@@ -378,6 +425,59 @@ pub fn ui_show_album_detail(app: &AppWindow, detail: rpc::AlbumDetailData) {
     app.set_detail_label(detail.label.into());
     app.set_detail_tracks(ModelRc::new(VecModel::from(rows)));
     app.set_show_detail(true);
+}
+
+/// Fills the artist page from what the library already holds.
+///
+/// No round trip: the albums and tracks are already cached on the UI thread by
+/// `ui_set_library`, and the daemon has no artist-detail call to make anyway.
+/// The id is `md5(name)` server-side, so a bare name is accepted too — the
+/// palette and the artists list reach this by different routes.
+pub fn ui_show_artist_detail(app: &AppWindow, id: &str) {
+    let Some((artist, albums, tracks)) = STATE.with(|s| {
+        let st = s.borrow();
+        let entry = st
+            .artists
+            .iter()
+            .find(|a| a.data.id == id || a.data.name == id)?;
+        let name = entry.data.name.clone();
+        let albums: Vec<AlbumItem> = st
+            .albums
+            .iter()
+            .filter(|a| a.data.artist == name)
+            .map(album_item)
+            .collect();
+        let ids = liked_ids_of(&st.liked);
+        // Re-indexed from zero: the row's `index` is the position handed back
+        // to `play-artist-at`, and that list is this one, not the library.
+        let tracks: Vec<TrackItem> = st
+            .tracks
+            .iter()
+            .filter(|t| t.artist == name)
+            .enumerate()
+            .map(|(i, t)| {
+                let mut item = track_item_with(t, &ids);
+                item.index = i as i32;
+                item
+            })
+            .collect();
+        Some((artist_item(entry), albums, tracks))
+    }) else {
+        return;
+    };
+
+    let meta = format!(
+        "{} {} · {} {}",
+        albums.len(),
+        if albums.len() == 1 { "album" } else { "albums" },
+        tracks.len(),
+        if tracks.len() == 1 { "song" } else { "songs" },
+    );
+    app.set_artist_detail(artist);
+    app.set_artist_detail_meta(meta.into());
+    app.set_artist_detail_albums(ModelRc::new(VecModel::from(albums)));
+    app.set_artist_detail_tracks(ModelRc::new(VecModel::from(tracks)));
+    app.set_show_artist(true);
 }
 
 // ── Remote servers / browsing ───────────────────────────────────────────────
@@ -1083,6 +1183,12 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        app.on_set_mute(move |mute| {
+            let _ = tx.send(rpc::Cmd::SetMute(mute));
+        });
+    }
+    {
+        let tx = tx.clone();
         app.on_play_album(move |id| {
             let _ = tx.send(rpc::Cmd::PlayAlbum(id.into()));
         });
@@ -1097,6 +1203,18 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_play_album_track(move |id, pos| {
             let _ = tx.send(rpc::Cmd::PlayAlbumAt(id.into(), pos));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_play_artist_shuffled(move |id| {
+            let _ = tx.send(rpc::Cmd::PlayArtistShuffled(id.into()));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_play_artist_at(move |id, pos| {
+            let _ = tx.send(rpc::Cmd::PlayArtistAt(id.into(), pos));
         });
     }
     {
@@ -1609,21 +1727,34 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        let app_weak = app.as_weak();
         app.on_palette_activate(move |item| {
-            let cmd = match item.kind.as_str() {
-                "track" => rpc::Cmd::PlayAllAt(item.index),
-                "album" => rpc::Cmd::PlayAlbum(item.id.into()),
-                "playlist" => rpc::Cmd::PlaySavedPlaylist(item.id.into()),
-                _ => rpc::Cmd::PlayArtist(item.id.into()),
-            };
-            let _ = tx.send(cmd);
+            // Albums and artists open their page rather than playing: opening
+            // one is what a search result is for, and the play button is right
+            // there once you land. Tracks and playlists still play — there is
+            // no page for them to open.
+            match item.kind.as_str() {
+                "album" => {
+                    let _ = tx.send(rpc::Cmd::OpenAlbum(item.id.into()));
+                }
+                "artist" => {
+                    let app = app_weak.unwrap();
+                    ui_show_artist_detail(&app, &item.id);
+                }
+                "playlist" => {
+                    let _ = tx.send(rpc::Cmd::PlaySavedPlaylist(item.id.into()));
+                }
+                _ => {
+                    let _ = tx.send(rpc::Cmd::PlayAllAt(item.index));
+                }
+            }
         });
     }
     {
         let app_weak = app.as_weak();
-        app.on_open_artist(move |name| {
+        app.on_open_artist(move |id| {
             let app = app_weak.unwrap();
-            app.invoke_open_palette_with(name);
+            ui_show_artist_detail(&app, &id);
         });
     }
     {
@@ -1670,6 +1801,29 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_radio_stations(move || {
             let _ = tx.send(rpc::Cmd::RadioStations);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_extensions_refresh(move || {
+            let _ = tx.send(rpc::Cmd::ExtensionsRescan);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_extension_set_enabled(move |id, enabled| {
+            let _ = tx.send(rpc::Cmd::ExtensionSetEnabled {
+                id: id.into(),
+                enabled,
+            });
+        });
+    }
+    {
+        let app_weak = app.as_weak();
+        app.on_extension_filter_changed(move |_| {
+            if let Some(app) = app_weak.upgrade() {
+                ui_render_extensions(&app);
+            }
         });
     }
     {

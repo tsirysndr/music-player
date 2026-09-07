@@ -1,23 +1,5 @@
-import styled from "@emotion/styled";
-import { KIND } from "baseui/button";
-import {
-  Modal,
-  ModalBody,
-  ModalFooter as DefaultModalFooter,
-  ModalHeader,
-} from "baseui/modal";
 import { FC } from "react";
-import Button from "../../Button";
-
-const Separator = styled.div`
-  width: 10px;
-`;
-
-const ModalFooter = styled(DefaultModalFooter)`
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-`;
+import { Button, Dialog, Icons } from "../../UI";
 
 export type DeleteConfirmationModalProps = {
   isOpen: boolean;
@@ -27,26 +9,43 @@ export type DeleteConfirmationModalProps = {
   message: string;
 };
 
-const DeleteConfirmationModal: FC<DeleteConfirmationModalProps> = (props) => {
-  const { isOpen, onClose, onDelete, title, message } = props;
-  const _onClose = () => {
-    onClose();
-  };
-  return (
-    <Modal onClose={_onClose} isOpen={isOpen}>
-      <ModalHeader>{title}</ModalHeader>
-      <ModalBody>{message}</ModalBody>
-      <ModalFooter>
-        <Button kind={KIND.primary} onClick={onDelete}>
-          Delete
-        </Button>
-        <Separator />
-        <Button kind={KIND.secondary} onClick={_onClose}>
+/**
+ * Destructive confirmation. Not dismissable on a backdrop click — a stray
+ * click outside a delete dialog should not be the thing that decides it.
+ */
+const DeleteConfirmationModal: FC<DeleteConfirmationModalProps> = ({
+  isOpen,
+  onClose,
+  onDelete,
+  title,
+  message,
+}) => (
+  <Dialog
+    isOpen={isOpen}
+    onClose={onClose}
+    title={title}
+    icon={Icons.trash}
+    width={420}
+    isDismissable={false}
+    footer={
+      <>
+        <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-      </ModalFooter>
-    </Modal>
-  );
-};
+        <Button
+          variant="danger"
+          onClick={() => {
+            onDelete();
+            onClose();
+          }}
+        >
+          Delete
+        </Button>
+      </>
+    }
+  >
+    <p className="pb-2 text-[13px] text-dim">{message}</p>
+  </Dialog>
+);
 
 export default DeleteConfirmationModal;

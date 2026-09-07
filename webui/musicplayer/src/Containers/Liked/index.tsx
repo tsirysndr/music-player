@@ -1,18 +1,21 @@
-import styled from "@emotion/styled";
-import { useTheme } from "@emotion/react";
 import { useEffect, useMemo, useState } from "react";
-import ContentLoader from "react-content-loader";
-import ControlBar from "../../Components/ControlBar";
-import MainContent from "../../Components/MainContent";
-import Sidebar from "../../Components/Sidebar";
-import TracksTable from "../../Components/TracksTable";
 import { fetcher } from "../../Api/fetcher";
-import { useDevices } from "../../Hooks/useDevices";
+import { AppShell } from "../../Components/Layout";
+import {
+  EmptyState,
+  IconButton,
+  Icons,
+  PageToolbar,
+  PlayPauseButton,
+  TrackListHeader,
+  TrackRow,
+  TrackSkeletonList,
+} from "../../Components/UI";
 import { useTimeFormat } from "../../Hooks/useFormat";
+import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { usePlaylist } from "../../Hooks/usePlaylist";
-import ListeningOn from "../../Components/ListeningOn";
-import { resourceUriResolver } from "../../ResourceUriResolver";
+import { usePlayTrack } from "../../Hooks/usePlayTrack";
 
 type LikedTrack = {
   id: string;
@@ -21,62 +24,6 @@ type LikedTrack = {
   duration?: number;
   artists: { id: string }[];
   album: { id: string; title: string; cover?: string };
-};
-
-// index.css pins `body { overflow-y: hidden }`, so the whole page scrolls here
-// rather than an inner pane.
-const Container = styled.div`
-  display: flex;
-  flex-direction: row;
-  height: 100vh;
-  overflow-y: auto;
-  background-color: ${(props) => props.theme.colors.background};
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-`;
-
-const Content = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-`;
-
-const Message = styled.div`
-  padding: 24px 26px;
-  color: ${(props) => props.theme.colors.secondaryText};
-`;
-
-const LoaderWrapper = styled.div`
-  padding: 0 26px;
-`;
-
-/// Skeleton rows, in the theme's loader colors like everywhere else.
-const TracksLoader = () => {
-  const theme = useTheme();
-  return (
-    <LoaderWrapper>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <ContentLoader
-          key={i}
-          speed={1.6}
-          width="100%"
-          height={44}
-          viewBox="0 0 900 44"
-          backgroundColor={theme.colors.loaderBackground}
-          foregroundColor={theme.colors.loaderForeground}
-        >
-          <rect x="0" y="14" rx="4" ry="4" width="38%" height="14" />
-          <rect x="45%" y="14" rx="4" ry="4" width="22%" height="14" />
-          <rect x="72%" y="14" rx="4" ry="4" width="18%" height="14" />
-        </ContentLoader>
-      ))}
-    </LoaderWrapper>
-  );
 };
 
 const query = `query($offset:Int,$limit:Int){
@@ -99,8 +46,9 @@ export default function LikedPage() {
   const [filter, setFilter] = useState("");
   const { formatTime } = useTimeFormat();
   const { nowPlaying, playNext } = usePlayback();
-  const { currentCastDevice } = useDevices();
-  const { recentPlaylists, createPlaylist, addTrackToPlaylist } = usePlaylist();
+  const playTrack = usePlayTrack();
+  const { isLiked, toggleLike } = useLikes();
+  const { recentPlaylists, addTrackToPlaylist } = usePlaylist();
 
   useEffect(() => {
     let active = true;
@@ -110,7 +58,9 @@ export default function LikedPage() {
       })
       .catch((e) => {
         if (active)
-          setError(e instanceof Error ? e.message : "Unable to load liked songs");
+          setError(
+            e instanceof Error ? e.message : "Unable to load liked songs"
+          );
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -134,56 +84,87 @@ export default function LikedPage() {
         id: track.id,
         title: track.title,
         artist: track.artist,
-        album: track.album.title,
-        time: formatTime((track.duration || 0) * 1000),
-        cover: track.album.cover
-          ? resourceUriResolver.resolve(`/covers/${track.album.cover}`)
-          : undefined,
         artistId: track.artists[0]?.id,
+        album: track.album.title,
         albumId: track.album.id,
+        duration: formatTime((track.duration || 0) * 1000),
+        liked: isLiked(track.id),
       }));
-  }, [tracks, filter, formatTime]);
+  }, [tracks, filter, formatTime, isLiked]);
+
+  const playAll = (shuffle: boolean) => {
+    if (rows.length === 0) return;
+    const pick = shuffle ? Math.floor(Math.random() * rows.length) : 0;
+    playTrack(rows[pick].id);
+  };
 
   return (
-    <>
-      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
-      <Container>
-        <Sidebar active="liked" />
-        <Content>
-          <ControlBar />
-          <MainContent
-              title="Liked"
-              placeholder="Filter Liked"
-              displayHeader={!loading && !error && tracks.length > 0}
-              onFilter={setFilter}
-            >
-            {loading && <TracksLoader />}
-            {!loading && error && <Message>{error}</Message>}
-            {!loading && !error && rows.length === 0 && (
-              <Message>
-                No liked song yet. Songs you like on Rocksky show up here once
-                they match a track in your library.
-              </Message>
-            )}
-            {!loading && !error && rows.length > 0 && (
-              <TracksTable
-                tracks={rows}
-                currentTrackId={nowPlaying.id}
-                isPlaying={nowPlaying.isPlaying}
-                onPlayTrack={() => {}}
-                onPlayNext={(trackId: string) => playNext({ trackId })}
-                onCreatePlaylist={(name: string, description?: string) =>
-                  createPlaylist({ name, description })
+    <AppShell>
+      <PageToolbar
+        filter={filter}
+        filterPlaceholder="Filter liked…"
+        onFilter={tracks.length > 0 ? setFilter : undefined}
+      >
+        {rows.length > 0 && (
+          <div className="flex items-center gap-2">
+            <IconButton
+              icon={Icons.shuffle}
+              iconSize={16}
+              size={38}
+              aria-label="Shuffle liked tracks"
+              onClick={() => playAll(true)}
+            />
+            <PlayPauseButton
+              size={38}
+              aria-label="Play liked tracks"
+              onClick={() => playAll(false)}
+            />
+          </div>
+        )}
+      </PageToolbar>
+
+      {loading ? (
+        <TrackSkeletonList rows={8} />
+      ) : error ? (
+        <EmptyState
+          icon={Icons.heartOutline}
+          title="Unable to load liked songs"
+          hint={error}
+        />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={Icons.heartOutline}
+          title={filter ? `Nothing matches “${filter}”` : "No liked song yet"}
+          hint={
+            filter
+              ? undefined
+              : "Songs you like on Rocksky show up here once they match a track in your library."
+          }
+        />
+      ) : (
+        <>
+          <TrackListHeader />
+          <div className="flex flex-col">
+            {rows.map((track, index) => (
+              <TrackRow
+                key={track.id}
+                track={track}
+                index={index}
+                current={
+                  nowPlaying?.isPlaying && track.id === nowPlaying.id
                 }
-                recentPlaylists={recentPlaylists}
-                onAddTrackToPlaylist={(playlistId: string, trackId: string) =>
-                  addTrackToPlaylist({ playlistId, trackId })
+                playlists={recentPlaylists}
+                onPlay={() => playTrack(track.id)}
+                onLike={() => toggleLike(track.id)}
+                onPlayNext={() => playNext({ trackId: track.id })}
+                onAddToPlaylist={(playlistId) =>
+                  addTrackToPlaylist({ playlistId, trackId: track.id })
                 }
               />
-            )}
-          </MainContent>
-        </Content>
-      </Container>
-    </>
+            ))}
+          </div>
+        </>
+      )}
+    </AppShell>
   );
 }

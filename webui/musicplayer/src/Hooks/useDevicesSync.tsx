@@ -1,4 +1,4 @@
-import { useSnackbar } from "baseui/snackbar";
+import { toast } from "@heroui/react";
 import _ from "lodash";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,7 +29,6 @@ import { useGraphQLSubscription } from "./useGraphQLSubscription";
  */
 export const useDevicesSync = () => {
   const navigate = useNavigate();
-  const { enqueue } = useSnackbar();
   const setDevices = useSetAtom(devicesAtom);
   const setCastDevices = useSetAtom(castDevicesAtom);
   const setCurrentDevice = useSetAtom(currentDeviceAtom);
@@ -71,9 +70,7 @@ export const useDevicesSync = () => {
     OnDeviceConnectedDocument,
     undefined,
     (deviceConnectedData) => {
-      enqueue({
-        message: `Connected to ${deviceConnectedData.onConnected.name}`,
-      });
+      toast.success(`Connected to ${deviceConnectedData.onConnected.name}`);
       if (deviceConnectedData.onConnected.app === "chromecast") {
         setCurrentCastDevice({
           id: deviceConnectedData.onConnected.id,
@@ -103,9 +100,7 @@ export const useDevicesSync = () => {
     OnDeviceDisconnectedDocument,
     undefined,
     (deviceDisconnectedData) => {
-      enqueue({
-        message: `Disconnected from ${deviceDisconnectedData.onDisconnected.name}`,
-      });
+      toast(`Disconnected from ${deviceDisconnectedData.onDisconnected.name}`);
       refetch().catch((e) => console.error(e));
       setCurrentDevice(undefined);
       navigate(0);

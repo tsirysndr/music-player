@@ -1,0 +1,65 @@
+name: webui tests
+
+# Only when the web client changes: the suite is entirely front-end, so a
+# Rust-only commit has nothing here to break. The workflow file itself is in
+# the filter so a change to this file is checked by the run it describes.
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "webui/musicplayer/**"
+      - ".github/workflows/webui-tests.yml"
+  pull_request:
+    branches: ["master"]
+    paths:
+      - "webui/musicplayer/**"
+      - ".github/workflows/webui-tests.yml"
+  workflow_dispatch:
+
+# A new push supersedes whatever was running for the same ref.
+concurrency:
+  group: webui-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Typecheck, test and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webui/musicplayer
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        # `--frozen-lockfile` so a drifted lockfile fails here rather than
+        # silently resolving to something the developer never ran against.
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      - name: Run tests
+        run: bun run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: webui/musicplayer/coverage/lcov.info
+          flags: webui
+          token: ${{ secrets.CODECOV_TOKEN }}
+        # The Rust job already gates the merge; a coverage upload failing
+        # (a fork PR has no token) should not turn the run red.
+        continue-on-error: true
+
+      # The daemon embeds `build/` with rust-embed, so a bundle that does not
+      # build is a broken daemon, not just a broken front end.
+      - name: Build
+        run: bunx vite build
+
+      - name: Build Storybook
+        run: bunx storybook build

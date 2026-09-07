@@ -72,6 +72,22 @@ export struct StationItem {
     bookmarked: bool,
 }
 
+export struct ExtensionItem {
+    id: string,
+    name: string,
+    version: string,
+    author: string,
+    description: string,
+    /// The capabilities, already joined for display, e.g. "metadata, source".
+    capabilities: string,
+    /// Hosts it may reach, joined; empty means it has no network at all.
+    hosts: string,
+    library-read: bool,
+    enabled: bool,
+    /// Set when the extension is installed but its module would not load.
+    error: string,
+}
+
 export struct PaletteItem {
     kind: string, // "track" | "album" | "artist"
     id: string,
@@ -90,12 +106,13 @@ export component CtxMenuItem inherits Rectangle {
     callback clicked;
 
     height: 30px;
-    border-radius: 6px;
+    // Square: the highlight is meant to fill the panel's inner width, and a
+    // rounded one inside an already-rounded panel reads as a second border.
     background: touch.has-hover ? Theme.hover-bg : transparent;
 
     HorizontalLayout {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding-left: 8px;
+        padding-right: 8px;
         spacing: 10px;
         Image {
             source: root.icon;
@@ -667,11 +684,14 @@ export component AlbumCard inherits Rectangle {
                 source: root.album.art;
                 image-fit: cover;
             }
+            // Scaled to the art box rather than fixed: a card is ~180px on a
+            // wide window and half that on a narrow one, and one number
+            // cannot be right for both.
             if !root.album.has-art : Image {
                 source: Icons.disc;
                 colorize: Theme.text-muted;
-                width: 36px;
-                height: 36px;
+                width: parent.width * 0.38;
+                height: self.width;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
             }
@@ -759,7 +779,7 @@ export component AlbumCard inherits Rectangle {
             drop-shadow-blur: 18px;
 
             VerticalLayout {
-                padding: 6px;
+                padding: 4px;
                 CtxMenuItem {
                     icon: Icons.play;
                     label: "Play";
@@ -987,7 +1007,7 @@ export component TrackRow inherits Rectangle {
             drop-shadow-blur: 18px;
 
             VerticalLayout {
-                padding: 6px;
+                padding: 4px;
                 CtxMenuItem {
                     icon: Icons.play;
                     label: "Play next";
@@ -1066,8 +1086,8 @@ export component ArtistRow inherits Rectangle {
             if !root.artist.has-art : Image {
                 source: Icons.artist;
                 colorize: Theme.text-muted;
-                width: 18px;
-                height: 18px;
+                width: parent.width * 0.5;
+                height: self.width;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
             }
@@ -1339,10 +1359,9 @@ export component Dropdown inherits Rectangle {
             drop-shadow-blur: 18px;
 
             VerticalLayout {
-                padding: 6px;
+                padding: 4px;
                 for opt[i] in root.options : Rectangle {
                     height: 30px;
-                    border-radius: 6px;
                     background: i == root.current ? Theme.selected-bg
                         : opt-touch.has-hover ? Theme.hover-bg : transparent;
                     HorizontalLayout {
@@ -1874,6 +1893,114 @@ export component FilterBox inherits VerticalLayout {
                     clicked => { root.accepted(suggestion.text); }
                 }
             }
+        }
+    }
+}
+
+// ── Extensions ──────────────────────────────────────────────────────────────
+
+/// One installed WebAssembly extension.
+///
+/// The permission line is the point of the row: a module gets nothing by
+/// default, so what it asked for is what a user needs to see before deciding
+/// to leave it enabled.
+export component ExtensionRow inherits Rectangle {
+    in property <ExtensionItem> extension;
+    /// The user flipped the switch. The new state is what they asked for, not
+    /// what is stored — the row waits for the rescan to confirm it.
+    callback toggled(bool);
+
+    height: root.extension.error != "" ? 108px : 92px;
+    border-radius: Theme.control-radius;
+    background: Theme.panel-bg;
+
+    VerticalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        spacing: 6px;
+
+        HorizontalLayout {
+            spacing: 10px;
+            height: 22px;
+            Image {
+                source: Icons.extension;
+                colorize: root.extension.enabled ? Theme.accent : Theme.text-muted;
+                width: 16px;
+                height: 16px;
+                y: (parent.height - self.height) / 2;
+            }
+            Text {
+                text: root.extension.name;
+                color: Theme.text;
+                font-size: 13px;
+                font-weight: 600;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+            if root.extension.version != "" : Text {
+                text: "v" + root.extension.version;
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-family: Theme.font-mono;
+                vertical-alignment: center;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Text {
+                text: root.extension.enabled ? "Enabled" : "Disabled";
+                color: root.extension.enabled ? Theme.accent : Theme.text-muted;
+                font-size: 10px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            Toggle {
+                checked: root.extension.enabled;
+                y: (parent.height - self.height) / 2;
+                toggled => { root.toggled(!root.extension.enabled); }
+            }
+        }
+
+        Text {
+            text: root.extension.description != ""
+                ? root.extension.description
+                : root.extension.id;
+            color: Theme.text-dim;
+            font-size: 11px;
+            overflow: elide;
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+            Text {
+                text: root.extension.capabilities;
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-family: Theme.font-mono;
+                overflow: elide;
+            }
+            if root.extension.library-read : Text {
+                text: "· reads library";
+                color: Theme.text-muted;
+                font-size: 10px;
+                overflow: elide;
+            }
+            if root.extension.hosts != "" : Text {
+                text: "· " + root.extension.hosts;
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-family: Theme.font-mono;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+            Rectangle { horizontal-stretch: 1; }
+        }
+
+        if root.extension.error != "" : Text {
+            text: root.extension.error;
+            color: Theme.syntax-error;
+            font-size: 10px;
+            overflow: elide;
         }
     }
 }

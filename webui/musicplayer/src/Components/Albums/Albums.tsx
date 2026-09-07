@@ -1,212 +1,76 @@
-import styled from "@emotion/styled";
-import { FC, useMemo } from "react";
-import { useCover } from "../../Hooks/useCover";
-import ControlBar from "../ControlBar";
-import MainContent from "../MainContent";
-import Sidebar from "../Sidebar";
-import AlbumIcon from "../Icons/AlbumCover";
-import { Device } from "../../Types/Device";
-import ListeningOn from "../ListeningOn";
-import { FixedSizeGrid as Grid } from "react-window";
-import { LazyLoadImage } from "react-lazy-load-image-component";
-
-const Container = styled.div`
-  display: flex;
-  flex-direction: row;
-  background-color: ${(props) => props.theme.colors.background};
-`;
-
-const Content = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
-const AlbumCover = styled(LazyLoadImage)`
-  height: 220px;
-  width: 220px;
-  border-radius: 3px;
-  cursor: pointer;
-`;
-
-const NoAlbumCover = styled.div`
-  height: 220px;
-  width: 220px;
-  border-radius: 3px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #ddaefb14;
-`;
-
-const Wrapper = styled.div`
-  margin-top: 34px;
-  margin-left: 10px;
-`;
-
-const Artist = styled.div`
-  color: #828282;
-  margin-bottom: 56px;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-`;
-
-const Title = styled.div`
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-  color: ${(props) => props.theme.colors.text};
-`;
-
-const Scrollable = styled.div`
-  height: calc(100vh - 100px);
-  overflow-y: auto;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-`;
+import { FC } from "react";
+import { AppShell } from "../Layout";
+import {
+  AlbumCard,
+  AlbumSkeletonGrid,
+  EmptyState,
+  Icons,
+  LoadMore,
+  PageToolbar,
+  type AlbumCardItem,
+} from "../UI";
 
 export type AlbumsProps = {
-  albums: any[];
-  onClickAlbum: (album: any) => void;
-  currentCastDevice?: Device;
+  albums: AlbumCardItem[];
+  loading?: boolean;
+  filter: string;
   onFilter: (filter: string) => void;
+  onPlayAlbum: (id: string) => void;
+  onShuffleAlbum: (id: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
 };
 
-export type AlbumProps = {
-  onClick: (item: any) => void;
-  album: any;
-  currentCastDevice?: Device;
-};
+/**
+ * The desktop's albums grid. The desktop sizes its cells at ~196px and packs
+ * as many as fit; the same intent here is a responsive grid, so a phone gets
+ * two columns and a wide window six.
+ */
+const Albums: FC<AlbumsProps> = ({
+  albums,
+  loading,
+  filter,
+  onFilter,
+  onPlayAlbum,
+  onShuffleAlbum,
+  onLoadMore,
+  hasMore,
+}) => (
+  <AppShell>
+    <PageToolbar
+      filter={filter}
+      filterPlaceholder="Filter albums…"
+      onFilter={onFilter}
+    />
 
-const Album: FC<AlbumProps> = ({ onClick, album }) => {
-  const { cover } = useCover(album.cover);
-  return (
-    <>
-      {cover && (
-        <AlbumCover
-          src={cover}
-          onClick={() => onClick(album)}
-          placeholder={
-            <NoAlbumCover>
-              <AlbumIcon />
-            </NoAlbumCover>
-          }
-        />
-      )}
-      {!cover && (
-        <NoAlbumCover onClick={() => onClick(album)}>
-          <AlbumIcon />
-        </NoAlbumCover>
-      )}
-      <Title onClick={() => onClick(album)}>{album.title}</Title>
-      <Artist>{album.artist}</Artist>
-    </>
-  );
-};
-
-const Albums: FC<AlbumsProps> = (props) => {
-  const { albums, onClickAlbum, currentCastDevice, onFilter, onLoadMore, hasMore } =
-    props;
-
-  const vh = (percent: number) => {
-    const h = Math.max(
-      document.documentElement.clientHeight,
-      window.innerHeight || 0
-    );
-    return (percent * h) / 100;
-  };
-
-  const vw = (percent: number) => {
-    const w = Math.max(
-      document.documentElement.clientWidth,
-      window.innerWidth || 0
-    );
-    return (percent * w) / 100;
-  };
-
-  const columnCount = Math.floor((vw(100) - 284) / 247);
-  // convert albums array to matrix of 4 columns using reduce
-  const data = useMemo(
-    () =>
-      albums.reduce((resultArray, item, index) => {
-        const chunkIndex = Math.floor(index / columnCount);
-        if (!resultArray[chunkIndex]) {
-          resultArray[chunkIndex] = []; // start a new chunk
+    {loading && albums.length === 0 ? (
+      <AlbumSkeletonGrid />
+    ) : albums.length === 0 ? (
+      <EmptyState
+        icon={Icons.disc}
+        title={filter ? `Nothing matches “${filter}”` : "No albums yet"}
+        hint={
+          filter
+            ? undefined
+            : "Scan a folder with `music-player scan` and they will show up here."
         }
-        resultArray[chunkIndex].push(item);
-        return resultArray;
-      }, []),
-    [albums, columnCount]
-  );
-
-  const Cell = ({ rowIndex, columnIndex, style }: any) => (
-    <>
-      {data[rowIndex][columnIndex] && (
-        <div style={style}>
-          <Album onClick={onClickAlbum} album={data[rowIndex][columnIndex]} />
+      />
+    ) : (
+      <>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          {albums.map((album) => (
+            <AlbumCard
+              key={album.id}
+              album={album}
+              onPlay={() => onPlayAlbum(album.id)}
+              onShufflePlay={() => onShuffleAlbum(album.id)}
+            />
+          ))}
         </div>
-      )}
-    </>
-  );
-
-  return (
-    <>
-      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
-      <Container>
-        <Sidebar active="albums" />
-        <Content>
-          <ControlBar />
-          <Scrollable>
-            <MainContent
-              title="Albums"
-              placeholder="Filter Albums"
-              onFilter={onFilter}
-            >
-              <Wrapper>
-                <Grid
-                  columnCount={columnCount}
-                  columnWidth={247}
-                  rowCount={data.length}
-                  rowHeight={319}
-                  height={Math.max(
-                    Math.min(data.length, 3) * 319,
-                    vh(100) - 100
-                  )}
-                  width={vw(100) - 300}
-                  onItemsRendered={({ visibleRowStopIndex }) => {
-                    if (
-                      hasMore &&
-                      onLoadMore &&
-                      visibleRowStopIndex >= data.length - 2
-                    ) {
-                      onLoadMore();
-                    }
-                  }}
-                >
-                  {Cell}
-                </Grid>
-              </Wrapper>
-            </MainContent>
-          </Scrollable>
-        </Content>
-      </Container>
-    </>
-  );
-};
-
-Albums.defaultProps = {
-  albums: [],
-};
+        <LoadMore hasMore={hasMore} onLoadMore={onLoadMore} />
+      </>
+    )}
+  </AppShell>
+);
 
 export default Albums;

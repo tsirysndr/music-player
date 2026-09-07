@@ -44,10 +44,6 @@
 </p>
 
 <p style="margin-top: 20px; margin-bottom: 50px;">
-<img src="./preview.png" width="100%" />
-</p>
-
-<p style="margin-top: 20px; margin-bottom: 50px;">
 <img src="./preview-tui.png" width="100%" />
 </p>
 
@@ -89,7 +85,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - 🎵 **Rockbox playback engine** — 40+ formats (MP3, FLAC, Vorbis, Opus, MP4/AAC/ALAC, WavPack, APE, WMA, chiptunes, …) with the Rockbox DSP chain (EQ presets, crossfade, ReplayGain)
 - 🔎 **Instant full-text search** backed by SQLite FTS5, kept in sync automatically by database triggers
 - 🖥️ **Terminal UI** (ratatui) with an fzf-style fuzzy finder, neovim-inspired status line and `?` help overlay
-- 🌐 **Web UI** (React 18 + TanStack Query + Jotai) with live progress and seek/fast-forward
+- 🌐 **Web UI** (React 18 + Tailwind v4 + HeroUI) — the same skins, fonts and components as the Slint desktop app, responsive down to a phone
 - 🖱️ **Desktop apps** — a skinnable [Slint](https://slint.dev) app with an embedded daemon, and a Tauri 2 version
 - 📡 **gRPC + GraphQL APIs** (tonic 0.14, grpc-web enabled) for building your own clients
 - ☁️ **Browse & stream from Subsonic/Navidrome and Jellyfin servers**
@@ -263,20 +259,46 @@ Run `music-player` while a daemon is running (or connect to a remote one with `m
 
 Main keys:
 
-| Key | Action |
-| --- | --- |
-| `?` | Help overlay with all keybindings |
-| `/` | Fuzzy search (Tab switches Tracks/Albums/Artists scope) |
-| `Space` | Play / pause |
-| `n` / `p` | Next / previous track |
-| `<` / `>` | Seek −5s / +5s |
-| `+` / `-` | Volume up / down |
-| `z` | Add selected track to the queue |
-| `q` / `Esc` | Back / quit |
+| Key         | Action                                                  |
+| ----------- | ------------------------------------------------------- |
+| `?`         | Help overlay with all keybindings                       |
+| `/`         | Fuzzy search (Tab switches Tracks/Albums/Artists scope) |
+| `Space`     | Play / pause                                            |
+| `n` / `p`   | Next / previous track                                   |
+| `<` / `>`   | Seek −5s / +5s                                          |
+| `+` / `-`   | Volume up / down (`=` / `_` work unshifted)             |
+| `m`         | Mute / unmute                                           |
+| `z`         | Add selected track to the queue                         |
+| `q` / `Esc` | Back / quit                                             |
 
 ## Web UI & Desktop
 
-The web UI is served by the daemon at [http://localhost:5053](http://localhost:5053) — React 18, TanStack Query and Jotai, with live playback position (GraphQL subscriptions) and a seekable progress bar.
+The web UI is served by the daemon at [http://localhost:5053](http://localhost:5053) — React 19, TanStack Query and Jotai, with live playback position (GraphQL subscriptions) and a seekable progress bar.
+
+It is a port of the Slint desktop UI rather than a separate design: the same
+five skins, the same two fonts, and React versions of the desktop's own
+components down to the VFD readout, the LED level meters and the rotary volume
+knob. Pick a skin from the sidebar, as on the desktop. Below a laptop width the
+sidebar becomes a bottom tab bar and the player bar drops to the essentials.
+See [`webui/musicplayer/README.md`](webui/musicplayer/README.md) for how the
+design system is put together.
+
+Both the Slint desktop and the web UI answer to the same keys:
+
+| Key       | Action                                        |
+| --------- | --------------------------------------------- |
+| `/`       | Global search (`⌘K` / `Ctrl-K` in the web UI) |
+| `r`       | Internet radio                                |
+| `Space`   | Play / pause (desktop)                        |
+| `+` / `-` | Volume up / down (`=` / `_` work unshifted)   |
+| `m`       | Mute / unmute                                 |
+| `e`       | Audio settings (EQ, ReplayGain, crossfade)    |
+| `q`       | Show / hide the play queue                    |
+| `b`       | Show / hide the sidebar                       |
+| `f`       | Fullscreen player (while something plays)     |
+| `s`       | Cycle skin                                    |
+| `Esc`     | Close dialog / go back                        |
+| `?`       | Help overlay (desktop)                        |
 
 The desktop app wraps the same UI with [Tauri 2](https://v2.tauri.app):
 
@@ -389,11 +411,11 @@ The session file is shared with the [atradio](https://atradio.fm) CLI, so signin
 
 **What syncs.**
 
-| | |
-|---|---|
-| **Radio bookmarks** | `fm.atradio.favorite` records are imported into your local bookmarks on startup, and bookmarking a station writes the record to your PDS (unbookmarking deletes it). Bookmarks that only existed locally are pushed up. |
-| **Liked songs** | `app.rocksky.like` records are imported, then matched against your library on title + artist + album (case-insensitive, indexed). A match links the track to the song record through the new `aturi` column on `track` / `album` / `artist`. A like whose file isn't in the library yet is kept and re-matched after the next scan. |
-| **Listening status** | While a station plays, it is published as your `fm.atradio.actor.status` record, written straight to your PDS; the record is deleted when playback stops. |
+|                      |                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Radio bookmarks**  | `fm.atradio.favorite` records are imported into your local bookmarks on startup, and bookmarking a station writes the record to your PDS (unbookmarking deletes it). Bookmarks that only existed locally are pushed up.                                                                                                             |
+| **Liked songs**      | `app.rocksky.like` records are imported, then matched against your library on title + artist + album (case-insensitive, indexed). A match links the track to the song record through the new `aturi` column on `track` / `album` / `artist`. A like whose file isn't in the library yet is kept and re-matched after the next scan. |
+| **Listening status** | While a station plays, it is published as your `fm.atradio.actor.status` record, written straight to your PDS; the record is deleted when playback stops.                                                                                                                                                                           |
 
 **How it reads and stays in sync.** The initial import downloads your repo once as a CAR archive (`com.atproto.sync.getRepo`) and walks its Merkle Search Tree, so one request covers every collection — `listRecords` is the fallback. After that the daemon subscribes to several public Jetstream instances at once and de-duplicates events by repo revision, so a like or bookmark added on another device shows up here within seconds without depending on any single instance staying up.
 

@@ -8,7 +8,8 @@ import {
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
     DetailRow, BrowseItem, ServerItem, FormField, ServerRow, BrowseRow,
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
-    RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion
+    RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion,
+    ExtensionItem, ExtensionRow
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -66,6 +67,9 @@ export component AppWindow inherits Window {
     in-out property <float> vu-left: 0;
     in-out property <float> vu-right: 0;
     in-out property <float> volume: 0.75;
+    // Muted at the daemon, which keeps `volume` — unmuting restores the level
+    // rather than guessing one.
+    in-out property <bool> muted: false;
     in-out property <bool> shuffle: false;
     in-out property <int> repeat-mode: 0; // 0 off, 1 all, 2 one
 
@@ -76,6 +80,13 @@ export component AppWindow inherits Window {
     in-out property <string> detail-meta: "";
     in-out property <string> detail-label: "";
     in-out property <[DetailRow]> detail-tracks: [];
+    // Artist detail — the same shape as the album detail, one level up: the
+    // artist's albums as a grid and every one of their songs below it.
+    in-out property <bool> show-artist: false;
+    in-out property <ArtistItem> artist-detail;
+    in-out property <string> artist-detail-meta: "";
+    in-out property <[AlbumItem]> artist-detail-albums: [];
+    in-out property <[TrackItem]> artist-detail-tracks: [];
     // ── Audio settings (firmware units; see rpc.rs AudioSettingsData) ───────
     in-out property <bool> show-audio: false;
     in-out property <bool> eq-enabled: false;
@@ -172,6 +183,16 @@ export component AppWindow inherits Window {
     in-out property <bool> show-sidebar: true;
     in-out property <bool> show-full-player: false;
 
+    // ── Extensions ─────────────────────────────────────────────────────────
+    in-out property <[ExtensionItem]> extensions: [];
+    /// Search over the installed extensions, filtered on the Rust side so it
+    /// can reach the fields the row does not show (topics, id).
+    in-out property <string> extension-filter: "";
+    in-out property <bool> extensions-loading: true;
+    /// Quick filter by state: 0 all, 1 enabled, 2 disabled. Applied on the
+    /// Rust side alongside the text search.
+    in-out property <int> extension-state-filter: 0;
+
     // ── Internet radio ─────────────────────────────────────────────────────
     in-out property <[StationItem]> radios: [];
     in-out property <int> radio-tab: 0; // 0 search/categories, 1 bookmarks, 2 own stations
@@ -201,6 +222,22 @@ export component AppWindow inherits Window {
     callback previous();
     callback seek(float);
     callback set-volume(float);
+    callback set-mute(bool);
+
+    /// Nudge the volume by `delta` and unmute: asking for a level is asking to
+    /// hear it.
+    public function bump-volume(delta: float) {
+        root.volume = clamp(root.volume + delta, 0.0, 1.0);
+        if (root.muted) {
+            root.muted = false;
+            root.set-mute(false);
+        }
+        root.set-volume(root.volume);
+    }
+    public function toggle-mute() {
+        root.muted = !root.muted;
+        root.set-mute(root.muted);
+    }
     callback play-album(string);
     callback play-album-shuffled(string);
     callback toggle-shuffle();
@@ -208,6 +245,8 @@ export component AppWindow inherits Window {
     callback open-album(string);
     callback play-album-track(string, int);
     callback play-artist(string);
+    callback play-artist-shuffled(string);
+    callback play-artist-at(string, int);
     callback open-artist(string);
     callback play-track-at(int);
     callback play-liked-at(int);
@@ -253,6 +292,12 @@ export component AppWindow inherits Window {
     callback queue-clear();
     callback queue-remove(int);
     callback cycle-skin();
+    /// Re-scan the extension directories and re-apply the filter.
+    callback extensions-refresh();
+    callback extension-filter-changed(string);
+    /// Switch one on or off. The row does not change until the rescan that
+    /// follows confirms it.
+    callback extension-set-enabled(string, bool);
     callback radio-search(string);
     callback radio-browse(string);
     callback radio-bookmarks();
@@ -492,11 +537,34 @@ export component AppWindow inherits Window {
                 root.show-sidebar = !root.show-sidebar;
                 return accept;
             }
+            // `=` and `_` are the unshifted faces of `+` and `-` on most
+            // layouts, so both reach the same place.
+            if (event.text == "+" || event.text == "=") {
+                root.bump-volume(0.05);
+                return accept;
+            }
+            if (event.text == "-" || event.text == "_") {
+                root.bump-volume(-0.05);
+                return accept;
+            }
+            if (event.text == "m") {
+                root.toggle-mute();
+                return accept;
+            }
+            if (event.text == "f") {
+                // The full player is a canvas for the current track's art and
+                // title; with nothing playing there is nothing to show, so the
+                // key does nothing rather than opening an empty one.
+                if (!root.stopped && root.now-title != "") {
+                    root.show-full-player = !root.show-full-player;
+                }
+                return accept;
+            }
             if (event.text == "n") {
                 // New playlist, from anywhere. Lands on the playlists tab so
                 // the result is visible once it is created.
                 root.current-tab = 5;
-                root.show-detail = false;
+                root.show-detail = false; root.show-artist = false;
                 root.open-playlist-form("", "", "");
                 return accept;
             }
@@ -532,6 +600,8 @@ export component AppWindow inherits Window {
                     root.show-queue = false;
                 } else if (root.show-detail) {
                     root.show-detail = false;
+                } else if (root.show-artist) {
+                    root.show-artist = false;
                 } else if (root.browsing && root.current-tab == 4) {
                     root.browse-back();
                 } else if (root.pl-detail-open && root.current-tab == 5) {
@@ -572,11 +642,16 @@ export component AppWindow inherits Window {
                         y: (parent.height - self.height) / 2;
                     }
                     Text {
+                        // Sized to fit the 208px sidebar on one line in Roboto
+                        // Mono, which is wider per character than the face this
+                        // started in.
                         text: "MUSIC PLAYER";
                         color: Theme.text;
-                        font-size: 15px;
+                        font-size: 13px;
                         font-weight: 700;
-                        letter-spacing: 2px;
+                        letter-spacing: 1.5px;
+                        wrap: no-wrap;
+                        overflow: elide;
                         vertical-alignment: center;
                     }
                 }
@@ -585,43 +660,54 @@ export component AppWindow inherits Window {
                     icon: Icons.disc;
                     label: "Albums";
                     active: root.current-tab == 0;
-                    clicked => { root.current-tab = 0; root.show-detail = false; }
+                    clicked => { root.current-tab = 0; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.artist;
                     label: "Artists";
                     active: root.current-tab == 1;
-                    clicked => { root.current-tab = 1; root.show-detail = false; }
+                    clicked => { root.current-tab = 1; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.list-music;
                     label: "Tracks";
                     active: root.current-tab == 2;
-                    clicked => { root.current-tab = 2; root.show-detail = false; }
+                    clicked => { root.current-tab = 2; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.heart;
                     label: "Liked";
                     active: root.current-tab == 3;
-                    clicked => { root.current-tab = 3; root.show-detail = false; }
+                    clicked => { root.current-tab = 3; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.playlist;
                     label: "Playlists";
                     active: root.current-tab == 5;
-                    clicked => { root.current-tab = 5; root.show-detail = false; }
+                    clicked => { root.current-tab = 5; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.broadcast;
                     label: "Internet Radio";
                     active: root.current-tab == 6;
-                    clicked => { root.current-tab = 6; root.show-detail = false; root.radio-tab = 0; root.radio-category = ""; }
+                    clicked => { root.current-tab = 6; root.show-detail = false; root.show-artist = false; root.radio-tab = 0; root.radio-category = ""; }
                 }
                 SidebarItem {
                     icon: Icons.server;
                     label: "Servers";
                     active: root.current-tab == 4;
-                    clicked => { root.current-tab = 4; root.show-detail = false; }
+                    clicked => { root.current-tab = 4; root.show-detail = false; root.show-artist = false; }
+                }
+                SidebarItem {
+                    icon: Icons.extension;
+                    label: "Extensions";
+                    active: root.current-tab == 7;
+                    clicked => {
+                        root.current-tab = 7;
+                        root.show-detail = false; root.show-artist = false;
+                        root.extensions-loading = true;
+                        root.extensions-refresh();
+                    }
                 }
 
                 Rectangle { vertical-stretch: 1; }
@@ -712,12 +798,14 @@ export component AppWindow inherits Window {
                     spacing: 12px;
                     Text {
                         text: root.show-detail ? "Album"
+                            : root.show-artist ? "Artist"
                             : root.current-tab == 0 ? "Albums"
                             : root.current-tab == 1 ? "Artists"
                             : root.current-tab == 2 ? "Tracks"
                             : root.current-tab == 3 ? "Liked tracks"
                             : root.current-tab == 5 ? (root.pl-detail-open ? "Playlist" : "Playlists")
                             : root.current-tab == 6 ? "Internet Radio"
+                            : root.current-tab == 7 ? "Extensions"
                             : "Servers";
                         color: Theme.text;
                         font-size: 20px;
@@ -806,7 +894,7 @@ export component AppWindow inherits Window {
                     for a[i] in root.artists : ArtistRow {
                         artist: a;
                         play => { root.play-artist(a.id); }
-                        open => { root.open-artist(a.name); }
+                        open => { root.open-artist(a.id); }
                     }
                 }
 
@@ -1268,7 +1356,238 @@ export component AppWindow inherits Window {
                     }
                 }
 
+                // ── Extensions ─────────────────────────────────────────────
+                if root.current-tab == 7 : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    spacing: 10px;
+
+                    // One row: the state tabs at the left, the search and the
+                    // rescan button pushed to the far right, so it reads as a
+                    // single filter bar rather than two unrelated controls.
+                    HorizontalLayout {
+                        height: 34px;
+                        spacing: 6px;
+                        for label[i] in ["All", "Enabled", "Disabled"] : Rectangle {
+                            width: 74px;
+                            height: 26px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 13px;
+                            background: root.extension-state-filter == i
+                                ? Theme.selected-bg
+                                : (chip-touch.has-hover ? Theme.hover-bg : transparent);
+                            border-width: root.extension-state-filter == i ? 1px : 0px;
+                            border-color: Theme.accent.with-alpha(0.4);
+                            Text {
+                                text: label;
+                                color: root.extension-state-filter == i ? Theme.accent : Theme.text-dim;
+                                font-size: 11px;
+                                font-weight: root.extension-state-filter == i ? 600 : 400;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                            }
+                            chip-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.extension-state-filter = i;
+                                    root.extension-filter-changed(root.extension-filter);
+                                }
+                            }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        RadioFilterBox {
+                            width: 220px;
+                            y: (parent.height - self.height) / 2;
+                            placeholder: "Search extensions…";
+                            text: root.extension-filter;
+                            edited(value) => {
+                                root.extension-filter = value;
+                                root.extension-filter-changed(value);
+                            }
+                        }
+                        IconButton {
+                            icon: Icons.refresh;
+                            icon-size: 15px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => {
+                                root.extensions-loading = true;
+                                root.extensions-refresh();
+                            }
+                        }
+                    }
+
+                    if root.extensions-loading : RadioSkeletonList {
+                        rows: 4;
+                        vertical-stretch: 1;
+                    }
+                    if !root.extensions-loading && root.extensions.length > 0 : ListView {
+                        vertical-stretch: 1;
+                        for ext in root.extensions : Rectangle {
+                            height: ext.error != "" ? 116px : 100px;
+                            ExtensionRow {
+                                width: 100%;
+                                extension: ext;
+                                toggled(enabled) => {
+                                    root.extension-set-enabled(ext.id, enabled);
+                                }
+                            }
+                        }
+                    }
+                    if !root.extensions-loading && root.extensions.length == 0 : Text {
+                        text: root.extension-filter != "" || root.extension-state-filter != 0
+                            ? "No extension matches that filter."
+                            : "No extension installed. Create one with `music-player extension init <id>`.";
+                        color: Theme.text-muted;
+                        font-size: 12px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        vertical-stretch: 1;
+                    }
+                }
+
                 // ── Album detail (covers the tab content when open) ─────────
+                // ── Artist detail ───────────────────────────────────────────
+                if root.show-artist : Rectangle {
+                    background: Theme.window-bg;
+                    VerticalLayout {
+                        padding-left: 24px;
+                        padding-right: 24px;
+                        spacing: 12px;
+
+                        HorizontalLayout {
+                            spacing: 20px;
+                            padding-bottom: 8px;
+
+                            IconButton {
+                                icon: Icons.chevron-left;
+                                icon-size: 18px;
+                                y: 0;
+                                clicked => { root.show-artist = false; }
+                            }
+                            // Round, like every other portrait in the client.
+                            Rectangle {
+                                width: 150px;
+                                height: 150px;
+                                border-radius: 75px;
+                                background: Theme.art-placeholder;
+                                clip: true;
+                                if root.artist-detail.has-art : Image {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    source: root.artist-detail.art;
+                                    image-fit: cover;
+                                }
+                                if !root.artist-detail.has-art : Image {
+                                    source: Icons.artist;
+                                    colorize: Theme.text-muted;
+                                    width: parent.width * 0.4;
+                                    height: self.width;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                            }
+                            VerticalLayout {
+                                alignment: end;
+                                spacing: 6px;
+                                horizontal-stretch: 1;
+                                Text {
+                                    text: "ARTIST";
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    letter-spacing: 1.5px;
+                                }
+                                Text {
+                                    text: root.artist-detail.name;
+                                    color: Theme.text;
+                                    font-size: 26px;
+                                    font-weight: 700;
+                                    overflow: elide;
+                                }
+                                Text {
+                                    text: root.artist-detail-meta;
+                                    color: Theme.text-muted;
+                                    font-size: 12px;
+                                    overflow: elide;
+                                }
+                            }
+                            VerticalLayout {
+                                alignment: end;
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    IconButton {
+                                        icon: Icons.shuffle;
+                                        icon-size: 18px;
+                                        width: 44px;
+                                        height: 44px;
+                                        y: 0;
+                                        clicked => { root.play-artist-shuffled(root.artist-detail.id); }
+                                    }
+                                    PlayPauseButton {
+                                        playing: false;
+                                        clicked => { root.play-artist(root.artist-detail.id); }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Albums, then songs, in one scroller so the grid does
+                        // not fight the track list for the wheel.
+                        Flickable {
+                            vertical-stretch: 1;
+                            viewport-height: artist-body.preferred-height + 30px;
+
+                            artist-body := VerticalLayout {
+                                width: parent.width;
+                                spacing: 10px;
+
+                                if root.artist-detail-albums.length > 0 : SectionHeader {
+                                    title: "ALBUMS";
+                                }
+                                if root.artist-detail-albums.length > 0 : Rectangle {
+                                    property <float> cols: max(2, floor(self.width / 196px));
+                                    property <length> gap: 16px;
+                                    property <length> cell-w: (self.width - self.gap * (self.cols - 1)) / self.cols;
+                                    property <length> cell-h: self.cell-w + 66px;
+                                    height: ceil(root.artist-detail-albums.length / self.cols) * (self.cell-h + self.gap);
+
+                                    for a[i] in root.artist-detail-albums : AlbumCard {
+                                        album: a;
+                                        x: mod(i, parent.cols) * (parent.cell-w + parent.gap);
+                                        y: floor(i / parent.cols) * (parent.cell-h + parent.gap);
+                                        width: parent.cell-w;
+                                        height: parent.cell-h;
+                                        play => { root.play-album(a.id); }
+                                        open => { root.open-album(a.id); }
+                                        shuffle-play => { root.play-album-shuffled(a.id); }
+                                        play-next => { root.album-insert(a.id, -2); }
+                                        add-queue => { root.album-insert(a.id, -3); }
+                                        like => { root.album-like(a.id); }
+                                    }
+                                }
+
+                                if root.artist-detail-tracks.length > 0 : SectionHeader {
+                                    title: "SONGS";
+                                }
+                                if root.artist-detail-tracks.length > 0 : TrackListHeader {}
+                                for t[i] in root.artist-detail-tracks : TrackRow {
+                                    track: t;
+                                    height: 42px;
+                                    current: !root.stopped && t.title == root.now-title && t.artist == root.now-artist;
+                                    playlists: root.playlists;
+                                    play => { root.play-artist-at(root.artist-detail.id, i); }
+                                    like-toggled => { root.track-like(t.id); }
+                                    play-next => { root.track-insert(t.id, -2); }
+                                    add-queue => { root.track-insert(t.id, -3); }
+                                    go-album => { root.open-album(t.album-id); }
+                                    add-to-playlist(plid) => { root.track-add-to-playlist(plid, t.id); }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if root.show-detail : Rectangle {
                     background: Theme.window-bg;
                     VerticalLayout {
@@ -1300,8 +1619,8 @@ export component AppWindow inherits Window {
                                 if !root.detail-album.has-art : Image {
                                     source: Icons.disc;
                                     colorize: Theme.text-muted;
-                                    width: 42px;
-                                    height: 42px;
+                                    width: parent.width * 0.4;
+                                    height: self.width;
                                     x: (parent.width - self.width) / 2;
                                     y: (parent.height - self.height) / 2;
                                 }
@@ -1379,7 +1698,7 @@ export component AppWindow inherits Window {
                                                 drop-shadow-color: #000000aa;
                                                 drop-shadow-blur: 18px;
                                                 VerticalLayout {
-                                                    padding: 6px;
+                                                    padding: 4px;
                                                     CtxMenuItem {
                                                         icon: Icons.shuffle;
                                                         label: "Shuffle play";
@@ -1452,7 +1771,8 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                if !root.show-detail && ((root.current-tab == 0 && root.albums.length == 0)
+
+                if !root.show-detail && !root.show-artist && ((root.current-tab == 0 && root.albums.length == 0)
                     || (root.current-tab == 1 && root.artists.length == 0)
                     || (root.current-tab == 2 && root.tracks.length == 0)
                     || (root.current-tab == 3 && root.liked.length == 0)) : Text {
@@ -1682,6 +2002,15 @@ export component AppWindow inherits Window {
                             vu-left: root.vu-left;
                             vu-right: root.vu-right;
                         }
+                        // Mute is a button as well as `m`: a shortcut nobody
+                        // can see is a shortcut nobody uses.
+                        IconButton {
+                            icon: root.muted ? Icons.volume-mute : Icons.volume;
+                            icon-size: 17px;
+                            accented: root.muted;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { root.toggle-mute(); }
+                        }
                         Rectangle {
                             width: 72px;
                             Knob {
@@ -1693,12 +2022,13 @@ export component AppWindow inherits Window {
                                 size: 56px;
                                 gap: 2px;
                                 label: "";
-                                value-text: round(root.volume * 100) + "%";
+                                // Muted keeps the level, so the readout says so
+                                // rather than showing a number you cannot hear.
+                                value-text: root.muted ? "muted" : round(root.volume * 100) + "%";
                                 norm: root.volume;
                                 default-norm: 0.75;
                                 changed(p) => {
-                                    root.volume = p;
-                                    root.set-volume(p);
+                                    root.bump-volume(p - root.volume);
                                 }
                             }
                         }
@@ -1740,7 +2070,7 @@ export component AppWindow inherits Window {
                 drop-shadow-color: #000000aa;
                 drop-shadow-blur: 40px;
                 if root.now-has-art : Image { width: parent.width; height: parent.height; source: root.now-art; image-fit: cover; }
-                if !root.now-has-art : Image { source: Icons.music; colorize: Theme.text-muted; width: 72px; height: 72px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+                if !root.now-has-art : Image { source: Icons.music; colorize: Theme.text-muted; width: parent.width * 0.3; height: self.width; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
             }
         }
     }
@@ -3487,6 +3817,9 @@ export component AppWindow inherits Window {
                 HelpRow { keys: "s"; label: "Cycle skin"; }
                 HelpRow { keys: "q"; label: "Show / hide the play queue"; }
                 HelpRow { keys: "b"; label: "Show / hide the sidebar"; }
+                HelpRow { keys: "+ / -"; label: "Volume up / down"; }
+                HelpRow { keys: "m"; label: "Mute / unmute"; }
+                HelpRow { keys: "f"; label: "Fullscreen player (while playing)"; }
                 HelpRow { keys: "esc"; label: "Close dialog / go back"; }
                 HelpRow { keys: "?"; label: "Show this help"; }
             }

@@ -7,7 +7,11 @@ import type { StorybookConfig } from "@storybook/react-vite";
  */
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(js|jsx|ts|tsx)"],
-  addons: ["@storybook/addon-links"],
+  staticDirs: ["../public"],
+  // `msw-storybook-addon` answers the GraphQL calls with the same handlers
+  // the test suite uses, so a data-connected component renders real-shaped
+  // data in Storybook too.
+  addons: ["@storybook/addon-links", "msw-storybook-addon"],
   framework: {
     name: "@storybook/react-vite",
     options: {},

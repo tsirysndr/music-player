@@ -27,7 +27,8 @@ use music_player_server::api::music::v1alpha1::{
     LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest,
     PlayTrackAtRequest, PreviewSmartPlaylistRequest, PreviousRequest, RemoveItemRequest,
     RemoveTrackAtRequest, RenameRequest, SeekRequest, SetAudioSettingRequest, SetEqBandGainRequest,
-    SetRepeatRequest, SetVolumeRequest, ShuffleRequest, SmartPlaylist as SmartPlaylistProto,
+    SetMuteRequest, SetRepeatRequest, SetVolumeRequest, ShuffleRequest,
+    SmartPlaylist as SmartPlaylistProto,
 };
 use music_player_types::types as mp_types;
 
@@ -50,9 +51,13 @@ pub enum Cmd {
     Previous,
     SeekMs(u32),
     SetVolume(f32),
+    SetMute(bool),
     PlayAlbum(String),
     PlayAlbumAt(String, i32),
     PlayArtist(String),
+    PlayArtistShuffled(String),
+    /// Artist id and a position within that artist's track list.
+    PlayArtistAt(String, i32),
     PlayAllAt(i32),
     PlayLikedAt(i32),
     PlayLikedShuffled,
@@ -127,6 +132,13 @@ pub enum Cmd {
         grpc_port: u16,
     },
     DiscoverServers,
+    /// Re-read the extension directories, pruning flags for anything gone.
+    ExtensionsRescan,
+    /// Switch an extension on or off.
+    ExtensionSetEnabled {
+        id: String,
+        enabled: bool,
+    },
     RadioSearch(String),
     RadioBrowse(String),
     RadioBookmarks,
@@ -1152,6 +1164,20 @@ async fn fetch_album_tracks(
         .collect())
 }
 
+/// Every track by one artist, in library order.
+///
+/// Artist ids are `md5(name)` server-side, so both the id and the bare name
+/// are accepted — the sidebar and the artist page reach this by different
+/// routes and it is not worth making them agree first.
+async fn artist_tracks(state: &Arc<Mutex<WorkerState>>, id: &str) -> Vec<TrackProto> {
+    let st = state.lock().await;
+    st.tracks
+        .iter()
+        .filter(|t| t.artist == id || format!("{:x}", md5::compute(t.artist.as_bytes())) == id)
+        .map(|t| t.proto.clone())
+        .collect()
+}
+
 async fn open_album(
     channel: &Channel,
     state: &Arc<Mutex<WorkerState>>,
@@ -1579,6 +1605,11 @@ async fn cmd_loop(
                     let volume = (pct.clamp(0.0, 1.0) * 100.0).round() as u32;
                     mixer.set_volume(SetVolumeRequest { volume }).await?;
                 }
+                Cmd::SetMute(mute) => {
+                    // The daemon keeps the level while muted, so unmuting
+                    // restores it — nothing to remember on this side.
+                    mixer.set_mute(SetMuteRequest { mute }).await?;
+                }
                 Cmd::PlayAlbum(id) => {
                     let tracks = fetch_album_tracks(&channel, &state, &id).await?;
                     load_tracks(&channel, tracks, 0).await?;
@@ -1596,19 +1627,20 @@ async fn cmd_loop(
                     load_tracks(&channel, tracks, 0).await?;
                 }
                 Cmd::PlayArtist(id) => {
-                    let tracks: Vec<TrackProto> = {
-                        let st = state.lock().await;
-                        // Artist ids are md5(name) server-side; match either.
-                        st.tracks
-                            .iter()
-                            .filter(|t| {
-                                t.artist == id
-                                    || format!("{:x}", md5::compute(t.artist.as_bytes())) == id
-                            })
-                            .map(|t| t.proto.clone())
-                            .collect()
-                    };
+                    let tracks = artist_tracks(&state, &id).await;
                     load_tracks(&channel, tracks, 0).await?;
+                }
+                Cmd::PlayArtistShuffled(id) => {
+                    let mut tracks = artist_tracks(&state, &id).await;
+                    // Fisher–Yates via fastrand: shuffle client-side.
+                    for i in (1..tracks.len()).rev() {
+                        tracks.swap(i, fastrand::usize(..=i));
+                    }
+                    load_tracks(&channel, tracks, 0).await?;
+                }
+                Cmd::PlayArtistAt(id, pos) => {
+                    let tracks = artist_tracks(&state, &id).await;
+                    load_tracks(&channel, tracks, pos).await?;
                 }
                 Cmd::PlayAllAt(pos) => {
                     let tracks: Vec<TrackProto> = state
@@ -1897,6 +1929,31 @@ async fn cmd_loop(
                 Cmd::RadioBookmarks => {
                     let stations = crate::radio::load_bookmarks().await;
                     push_radios(&state, &weak, stations).await;
+                }
+                Cmd::ExtensionsRescan => {
+                    let extensions = crate::extensions::rescan().await;
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        crate::ui_set_extensions(&app, extensions);
+                    });
+                }
+                Cmd::ExtensionSetEnabled { id, enabled } => {
+                    match crate::extensions::set_enabled(&id, enabled).await {
+                        Ok(extensions) => {
+                            let _ = weak.upgrade_in_event_loop(move |app| {
+                                crate::ui_set_extensions(&app, extensions);
+                            });
+                        }
+                        Err(e) => {
+                            tracing::warn!(extension = %id, "could not switch it: {e}");
+                            // Put the row back the way it was rather than
+                            // leaving the switch showing a state that did not
+                            // stick.
+                            let extensions = crate::extensions::load().await;
+                            let _ = weak.upgrade_in_event_loop(move |app| {
+                                crate::ui_set_extensions(&app, extensions);
+                            });
+                        }
+                    }
                 }
                 Cmd::RadioStations => {
                     let stations = crate::radio::load_stations().await;

@@ -1,17 +1,16 @@
-import { FC, useMemo, useState } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import Artists from "./Artists";
+import { FC, useMemo, useState } from "react";
 import {
   GetArtistsQuery,
   useInfiniteGetArtistsQuery,
 } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
+import { usePlayback } from "../../Hooks/usePlayback";
+import Artists from "./Artists";
 
 const PAGE_SIZE = 100;
 
 const ArtistsWithData: FC = () => {
-  const [filter, setFilter] = useState<string | undefined>(undefined);
+  const [filter, setFilter] = useState("");
   const {
     data,
     isLoading: loading,
@@ -19,7 +18,7 @@ const ArtistsWithData: FC = () => {
     isFetchingNextPage,
     fetchNextPage,
   } = useInfiniteGetArtistsQuery(
-    { filter, limit: PAGE_SIZE },
+    { filter: filter || undefined, limit: PAGE_SIZE },
     {
       initialPageParam: { offset: 0 },
       getNextPageParam: (
@@ -32,31 +31,32 @@ const ArtistsWithData: FC = () => {
       placeholderData: keepPreviousData,
     }
   );
-  const navigate = useNavigate();
-  const { currentCastDevice } = useDevices();
+  const { playArtistTracks } = usePlayback();
+
   const artists = useMemo(
-    () => (!loading && data ? data.pages.flatMap((page) => page.artists) : []),
-    [loading, data]
-  );
-  const onFilter = (filter: string) => {
-    setFilter(filter.length > 0 ? filter : undefined);
-  };
-  const onLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage({ cancelRefetch: false });
-    }
-  };
-  return (
-    <Artists
-      artists={artists.map((artist) => ({
+    () =>
+      (data?.pages.flatMap((page) => page.artists) ?? []).map((artist) => ({
         id: artist.id,
         name: artist.name,
-        cover: artist.picture,
-      }))}
-      onClickArtist={({ id }) => navigate(`/artists/${id}`)}
-      currentCastDevice={currentCastDevice}
-      onFilter={onFilter}
-      onLoadMore={onLoadMore}
+        picture: artist.picture,
+      })),
+    [data]
+  );
+
+  return (
+    <Artists
+      artists={artists}
+      loading={loading}
+      filter={filter}
+      onFilter={setFilter}
+      onPlayArtist={(artistId) =>
+        playArtistTracks({ artistId, shuffle: false })
+      }
+      onLoadMore={() => {
+        if (hasNextPage && !isFetchingNextPage) {
+          fetchNextPage({ cancelRefetch: false });
+        }
+      }}
       hasMore={!!hasNextPage}
     />
   );

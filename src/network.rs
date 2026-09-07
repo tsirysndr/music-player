@@ -32,6 +32,7 @@ pub enum IoEvent {
     Seek(u32),
     SetVolume(u32),
     GetVolume,
+    SetMute(bool),
     GetPlaylists,
     PlayPlaylist(String),
     LoadSearchIndex,
@@ -110,6 +111,7 @@ impl<'a> Network<'a> {
             IoEvent::Seek(position_ms) => self.seek(position_ms).await,
             IoEvent::SetVolume(volume) => self.set_volume(volume).await,
             IoEvent::GetVolume => self.get_volume().await,
+            IoEvent::SetMute(mute) => self.set_mute(mute).await,
             IoEvent::GetPlaylists => self.get_playlists().await,
             IoEvent::PlayPlaylist(id) => self.play_playlist(id).await,
             IoEvent::LoadSearchIndex => self.load_search_index().await,
@@ -424,9 +426,15 @@ impl<'a> Network<'a> {
 
     async fn get_volume(&mut self) -> Result<(), Error> {
         let volume = self.playback.get_volume().await?;
+        let muted = self.playback.get_mute().await.unwrap_or(false);
         let mut app = self.app.lock().await;
         app.volume = volume.min(100);
+        app.muted = muted;
         Ok(())
+    }
+
+    async fn set_mute(&mut self, mute: bool) -> Result<(), Error> {
+        self.playback.set_mute(mute).await
     }
 
     async fn get_playlists(&mut self) -> Result<(), Error> {

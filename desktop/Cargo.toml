@@ -67,8 +67,13 @@ version = "0.2.1"
 path = "../rsql"
 version = "0.2.1"
 
+[dependencies.music-player-extensions]
+path = "../extensions"
+version = "0.2.1"
+
 [dependencies]
 anyhow = "1.0.67"
+chrono = "0.4.23"
 dirs = "4.0.0"
 if-addrs = "0.13"
 md5 = "0.7.0"

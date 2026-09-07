@@ -173,6 +173,8 @@ pub struct App {
     pub song_progress_ms: u128,
     pub is_fetching_current_playback: bool,
     pub volume: u32,
+    /// Muted at the daemon, which keeps `volume` so unmuting restores it.
+    pub muted: bool,
     pub show_help: bool,
     pub help_scroll: u16,
     pub search: SearchState,
@@ -201,6 +203,7 @@ impl App {
             is_fetching_current_playback: false,
             instant_since_last_current_playback_poll: Instant::now(),
             volume: 100,
+            muted: false,
             show_help: false,
             help_scroll: 0,
             search: SearchState::default(),
@@ -271,13 +274,24 @@ impl App {
     pub fn decrease_volume(&mut self) {
         self.volume = self.volume.saturating_sub(VOLUME_STEP);
         let volume = self.volume;
+        // Setting a level unmutes on the daemon; keep the flag in step so the
+        // status line does not go on claiming to be muted.
+        self.muted = false;
         self.dispatch(IoEvent::SetVolume(volume));
     }
 
     pub fn increase_volume(&mut self) {
         self.volume = (self.volume + VOLUME_STEP).min(100);
         let volume = self.volume;
+        self.muted = false;
         self.dispatch(IoEvent::SetVolume(volume));
+    }
+
+    /// Silence without losing the level — unmuting restores it.
+    pub fn toggle_mute(&mut self) {
+        self.muted = !self.muted;
+        let muted = self.muted;
+        self.dispatch(IoEvent::SetMute(muted));
     }
 
     pub fn toggle_playback(&mut self) {

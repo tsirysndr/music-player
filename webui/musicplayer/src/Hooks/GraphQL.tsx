@@ -47,6 +47,46 @@ export type Artist = {
   website: Scalars['String']['output'];
 };
 
+/**
+ * The DSP chain's state, in the firmware's units.
+ *
+ * Mirrors the `GetAudioSettingsResponse` of the gRPC `MixerService`, field for
+ * field, so the web client and the Slint desktop show the same numbers. The
+ * ranges come back with the values because they are what a slider needs and
+ * they are not obvious from the field alone.
+ */
+export type AudioSettingsState = {
+  __typename?: 'AudioSettingsState';
+  /** Stereo balance, -100 (full left)..=100 (full right). */
+  balance: Scalars['Int']['output'];
+  /** Bass shelf gain in dB. */
+  bass: Scalars['Int']['output'];
+  bassMax: Scalars['Int']['output'];
+  bassMin: Scalars['Int']['output'];
+  /** 0 off … 5 always. */
+  crossfade: Scalars['Int']['output'];
+  dithering: Scalars['Boolean']['output'];
+  eqBands: Array<EqBand>;
+  eqEnabled: Scalars['Boolean']['output'];
+  /** EQ pre-gain in dB × 10, 0..=240. */
+  eqPrecut: Scalars['Int']['output'];
+  fadeInDelay: Scalars['Int']['output'];
+  fadeInDuration: Scalars['Int']['output'];
+  fadeOutDelay: Scalars['Int']['output'];
+  fadeOutDuration: Scalars['Int']['output'];
+  /** 0 crossfade, 2 mix. */
+  fadeOutMixmode: Scalars['Int']['output'];
+  replaygainNoclip: Scalars['Boolean']['output'];
+  /** ReplayGain pre-amp in dB × 10, -120..=120. */
+  replaygainPreamp: Scalars['Int']['output'];
+  /** 0 track, 1 album, 2 track (shuffle), 3 off. */
+  replaygainType: Scalars['Int']['output'];
+  /** Treble shelf gain in dB. */
+  treble: Scalars['Int']['output'];
+  trebleMax: Scalars['Int']['output'];
+  trebleMin: Scalars['Int']['output'];
+};
+
 export type ConnectedDevice = {
   __typename?: 'ConnectedDevice';
   app: Scalars['String']['output'];
@@ -86,6 +126,57 @@ export type DisconnectedDevice = {
   name: Scalars['String']['output'];
   port: Scalars['Int']['output'];
   service: Scalars['String']['output'];
+};
+
+/** One EQ band, in the firmware's units. */
+export type EqBand = {
+  __typename?: 'EqBand';
+  /** Centre frequency in Hz. */
+  cutoff: Scalars['Int']['output'];
+  /**
+   * Gain in dB, times ten — the engine's own unit, so a UI never has to
+   * round-trip a float through a slider.
+   */
+  gain: Scalars['Int']['output'];
+  /** Q, times ten. */
+  q: Scalars['Int']['output'];
+};
+
+/** An installed WebAssembly extension, as its manifest declares it. */
+export type Extension = {
+  __typename?: 'Extension';
+  /** Hosts it may reach over HTTP. Empty means no network at all. */
+  allowedHosts: Array<Scalars['String']['output']>;
+  author: Scalars['String']['output'];
+  /**
+   * What it plugs into: `events`, `metadata`, `commands`, `predicates`,
+   * `source`. An extension only ever receives calls for what it declared.
+   */
+  capabilities: Array<Scalars['String']['output']>;
+  description: Scalars['String']['output'];
+  homepage: Scalars['String']['output'];
+  /** Reverse-DNS id, e.g. `com.example.lyrics`. Stable across versions. */
+  id: Scalars['ID']['output'];
+  /** Whether it may query the library through the host functions. */
+  libraryRead: Scalars['Boolean']['output'];
+  license: Scalars['String']['output'];
+  /** A URL, or a file name relative to the extension's directory. */
+  logo: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  /** The directory it was read from, so a user can find it on disk. */
+  path: Scalars['String']['output'];
+  repository: Scalars['String']['output'];
+  /**
+   * `enabled` or `disabled`.
+   *
+   * This is a manifest scan, so it cannot report whether an enabled module
+   * actually loads — that needs the module. The daemon logs a load failure
+   * at startup.
+   */
+  status: Scalars['String']['output'];
+  /** Free-form tags, e.g. `["lyrics", "offline"]`. */
+  topics: Array<Scalars['String']['output']>;
+  version: Scalars['String']['output'];
 };
 
 export type Folder = {
@@ -153,9 +244,44 @@ export type Mutation = {
   removeTrackFromPlaylist: Playlist;
   renameFolder: Folder;
   renamePlaylist: Playlist;
+  /**
+   * Re-read the extension directories and return what is installed now.
+   *
+   * Also drops the stored flags for extensions that are no longer there: a
+   * leftover row is harmless while it matches nothing, but it would switch
+   * an extension straight back off if it were ever reinstalled, which is
+   * not what deleting it meant.
+   */
+  rescanExtensions: Array<Extension>;
   saveRadio: Scalars['Boolean']['output'];
   scan: Scalars['Boolean']['output'];
   seek: Scalars['Boolean']['output'];
+  /**
+   * Change one audio setting, by the same names the gRPC service takes —
+   * `eq_enabled`, `eq_precut`, `bass`, `treble`, `balance`, `rg_type`,
+   * `rg_preamp`, `rg_noclip`, `crossfade`, `fade_in_delay`,
+   * `fade_in_duration`, `fade_out_delay`, `fade_out_duration`,
+   * `fade_out_mixmode`, `dithering`.
+   *
+   * Everything is an integer in the firmware's own units (dB × 10 where a
+   * fraction is meaningful, 0/1 for a flag), which is what keeps a slider
+   * from having to round-trip a float.
+   *
+   * Returns the whole state, so a client renders what was stored rather
+   * than what it asked for — the two differ wherever a value was clamped.
+   */
+  setAudioSetting: AudioSettingsState;
+  /** Set one EQ band's gain, in dB × 10 (-240..=240). */
+  setEqBandGain: AudioSettingsState;
+  /**
+   * Switch an extension on or off, and return it as it now stands.
+   *
+   * The flag is stored immediately, but a module that is already loaded
+   * keeps running until the daemon next starts — unloading WebAssembly
+   * mid-session would pull the ground out from under whatever happens to be
+   * in the middle of a call into it.
+   */
+  setExtensionEnabled: Extension;
   setMute: Scalars['Boolean']['output'];
   setVolume: Scalars['Boolean']['output'];
   shuffle: Scalars['Boolean']['output'];
@@ -315,6 +441,11 @@ export type MutationRenamePlaylistArgs = {
 };
 
 
+export type MutationRescanExtensionsArgs = {
+  filter?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type MutationSaveRadioArgs = {
   station: RadioStationInput;
 };
@@ -322,6 +453,24 @@ export type MutationSaveRadioArgs = {
 
 export type MutationSeekArgs = {
   position: Scalars['Int']['input'];
+};
+
+
+export type MutationSetAudioSettingArgs = {
+  name: Scalars['String']['input'];
+  value: Scalars['Int']['input'];
+};
+
+
+export type MutationSetEqBandGainArgs = {
+  band: Scalars['Int']['input'];
+  gain: Scalars['Int']['input'];
+};
+
+
+export type MutationSetExtensionEnabledArgs = {
+  enabled: Scalars['Boolean']['input'];
+  id: Scalars['ID']['input'];
 };
 
 
@@ -400,11 +549,22 @@ export type Query = {
   albums: Array<Album>;
   artist: Artist;
   artists: Array<Artist>;
+  /** The DSP chain's state: EQ, tone, ReplayGain, crossfade, dithering. */
+  audioSettings: AudioSettingsState;
   /** Check a stream url before the "add station" form saves it. */
   checkRadioStream: StreamCheck;
   connectedCastDevice: Device;
   connectedDevice: Device;
   currentlyPlayingSong: CurrentlyPlayingSong;
+  /**
+   * Every installed extension, in id order. `filter` is a case-insensitive
+   * search over the id, name, description, author, topics and capabilities.
+   *
+   * This reads the manifests rather than loading the modules, so opening an
+   * extensions page costs a directory walk instead of one WebAssembly
+   * instantiation per extension.
+   */
+  extensions: Array<Extension>;
   folder: Folder;
   folders: Array<Folder>;
   getMute: Scalars['Boolean']['output'];
@@ -481,6 +641,11 @@ export type QueryArtistsArgs = {
 
 export type QueryCheckRadioStreamArgs = {
   url: Scalars['String']['input'];
+};
+
+
+export type QueryExtensionsArgs = {
+  filter?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -748,6 +913,28 @@ export type OnDeviceDisconnectedSubscriptionVariables = Exact<{ [key: string]: n
 
 export type OnDeviceDisconnectedSubscription = { __typename?: 'Subscription', onDisconnected: { __typename?: 'DisconnectedDevice', id: string, name: string, service: string, app: string } };
 
+export type SetExtensionEnabledMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  enabled: Scalars['Boolean']['input'];
+}>;
+
+
+export type SetExtensionEnabledMutation = { __typename?: 'Mutation', setExtensionEnabled: { __typename?: 'Extension', id: string, name: string, version: string, author: string, description: string, homepage: string, repository: string, license: string, logo: string, topics: Array<string>, capabilities: Array<string>, allowedHosts: Array<string>, libraryRead: boolean, status: string, path: string } };
+
+export type RescanExtensionsMutationVariables = Exact<{
+  filter?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type RescanExtensionsMutation = { __typename?: 'Mutation', rescanExtensions: Array<{ __typename?: 'Extension', id: string, name: string, version: string, author: string, description: string, homepage: string, repository: string, license: string, logo: string, topics: Array<string>, capabilities: Array<string>, allowedHosts: Array<string>, libraryRead: boolean, status: string, path: string }> };
+
+export type GetExtensionsQueryVariables = Exact<{
+  filter?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetExtensionsQuery = { __typename?: 'Query', extensions: Array<{ __typename?: 'Extension', id: string, name: string, version: string, author: string, description: string, homepage: string, repository: string, license: string, logo: string, topics: Array<string>, capabilities: Array<string>, allowedHosts: Array<string>, libraryRead: boolean, status: string, path: string }> };
+
 export type AlbumFragmentFragment = { __typename?: 'Album', id: string, title: string, artist: string, year?: number | null, cover?: string | null };
 
 export type ArtistFragmentFragment = { __typename?: 'Artist', id: string, name: string, picture: string };
@@ -813,6 +1000,29 @@ export type SearchQueryVariables = Exact<{
 
 
 export type SearchQuery = { __typename?: 'Query', search: { __typename?: 'SearchResult', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }>, albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null }>, tracks: Array<{ __typename?: 'Track', id: string, title: string, artist: string, duration?: number | null, cover?: string | null, artistId: string, albumId: string, albumTitle: string }> } };
+
+export type SetAudioSettingMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+  value: Scalars['Int']['input'];
+}>;
+
+
+export type SetAudioSettingMutation = { __typename?: 'Mutation', setAudioSetting: { __typename?: 'AudioSettingsState', eqEnabled: boolean, eqPrecut: number, bass: number, bassMin: number, bassMax: number, treble: number, trebleMin: number, trebleMax: number, balance: number, replaygainType: number, replaygainPreamp: number, replaygainNoclip: boolean, crossfade: number, fadeInDelay: number, fadeInDuration: number, fadeOutDelay: number, fadeOutDuration: number, fadeOutMixmode: number, dithering: boolean, eqBands: Array<{ __typename?: 'EqBand', cutoff: number, q: number, gain: number }> } };
+
+export type SetEqBandGainMutationVariables = Exact<{
+  band: Scalars['Int']['input'];
+  gain: Scalars['Int']['input'];
+}>;
+
+
+export type SetEqBandGainMutation = { __typename?: 'Mutation', setEqBandGain: { __typename?: 'AudioSettingsState', eqEnabled: boolean, eqPrecut: number, bass: number, bassMin: number, bassMax: number, treble: number, trebleMin: number, trebleMax: number, balance: number, replaygainType: number, replaygainPreamp: number, replaygainNoclip: boolean, crossfade: number, fadeInDelay: number, fadeInDuration: number, fadeOutDelay: number, fadeOutDuration: number, fadeOutMixmode: number, dithering: boolean, eqBands: Array<{ __typename?: 'EqBand', cutoff: number, q: number, gain: number }> } };
+
+export type AudioSettingsFieldsFragment = { __typename?: 'AudioSettingsState', eqEnabled: boolean, eqPrecut: number, bass: number, bassMin: number, bassMax: number, treble: number, trebleMin: number, trebleMax: number, balance: number, replaygainType: number, replaygainPreamp: number, replaygainNoclip: boolean, crossfade: number, fadeInDelay: number, fadeInDuration: number, fadeOutDelay: number, fadeOutDuration: number, fadeOutMixmode: number, dithering: boolean, eqBands: Array<{ __typename?: 'EqBand', cutoff: number, q: number, gain: number }> };
+
+export type GetAudioSettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetAudioSettingsQuery = { __typename?: 'Query', audioSettings: { __typename?: 'AudioSettingsState', eqEnabled: boolean, eqPrecut: number, bass: number, bassMin: number, bassMax: number, treble: number, trebleMin: number, trebleMax: number, balance: number, replaygainType: number, replaygainPreamp: number, replaygainNoclip: boolean, crossfade: number, fadeInDelay: number, fadeInDuration: number, fadeOutDelay: number, fadeOutDuration: number, fadeOutMixmode: number, dithering: boolean, eqBands: Array<{ __typename?: 'EqBand', cutoff: number, q: number, gain: number }> } };
 
 export type NextMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -1083,6 +1293,34 @@ export const FolderFragmentFragmentDoc = `
     name
     description
   }
+}
+    `;
+export const AudioSettingsFieldsFragmentDoc = `
+    fragment AudioSettingsFields on AudioSettingsState {
+  eqEnabled
+  eqPrecut
+  eqBands {
+    cutoff
+    q
+    gain
+  }
+  bass
+  bassMin
+  bassMax
+  treble
+  trebleMin
+  trebleMax
+  balance
+  replaygainType
+  replaygainPreamp
+  replaygainNoclip
+  crossfade
+  fadeInDelay
+  fadeInDuration
+  fadeOutDelay
+  fadeOutDuration
+  fadeOutMixmode
+  dithering
 }
     `;
 export const ConnectToDeviceDocument = `
@@ -1444,6 +1682,150 @@ export const OnDeviceDisconnectedDocument = `
   }
 }
     `;
+export const SetExtensionEnabledDocument = `
+    mutation SetExtensionEnabled($id: ID!, $enabled: Boolean!) {
+  setExtensionEnabled(id: $id, enabled: $enabled) {
+    id
+    name
+    version
+    author
+    description
+    homepage
+    repository
+    license
+    logo
+    topics
+    capabilities
+    allowedHosts
+    libraryRead
+    status
+    path
+  }
+}
+    `;
+
+export const useSetExtensionEnabledMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<SetExtensionEnabledMutation, TError, SetExtensionEnabledMutationVariables, TContext>) => {
+    
+    return useMutation<SetExtensionEnabledMutation, TError, SetExtensionEnabledMutationVariables, TContext>(
+      {
+    mutationKey: ['SetExtensionEnabled'],
+    mutationFn: (variables?: SetExtensionEnabledMutationVariables) => fetcher<SetExtensionEnabledMutation, SetExtensionEnabledMutationVariables>(SetExtensionEnabledDocument, variables)(),
+    ...options
+  }
+    )};
+
+useSetExtensionEnabledMutation.getKey = () => ['SetExtensionEnabled'];
+
+
+useSetExtensionEnabledMutation.fetcher = (variables: SetExtensionEnabledMutationVariables, options?: RequestInit['headers']) => fetcher<SetExtensionEnabledMutation, SetExtensionEnabledMutationVariables>(SetExtensionEnabledDocument, variables, options);
+
+export const RescanExtensionsDocument = `
+    mutation RescanExtensions($filter: String) {
+  rescanExtensions(filter: $filter) {
+    id
+    name
+    version
+    author
+    description
+    homepage
+    repository
+    license
+    logo
+    topics
+    capabilities
+    allowedHosts
+    libraryRead
+    status
+    path
+  }
+}
+    `;
+
+export const useRescanExtensionsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<RescanExtensionsMutation, TError, RescanExtensionsMutationVariables, TContext>) => {
+    
+    return useMutation<RescanExtensionsMutation, TError, RescanExtensionsMutationVariables, TContext>(
+      {
+    mutationKey: ['RescanExtensions'],
+    mutationFn: (variables?: RescanExtensionsMutationVariables) => fetcher<RescanExtensionsMutation, RescanExtensionsMutationVariables>(RescanExtensionsDocument, variables)(),
+    ...options
+  }
+    )};
+
+useRescanExtensionsMutation.getKey = () => ['RescanExtensions'];
+
+
+useRescanExtensionsMutation.fetcher = (variables?: RescanExtensionsMutationVariables, options?: RequestInit['headers']) => fetcher<RescanExtensionsMutation, RescanExtensionsMutationVariables>(RescanExtensionsDocument, variables, options);
+
+export const GetExtensionsDocument = `
+    query GetExtensions($filter: String) {
+  extensions(filter: $filter) {
+    id
+    name
+    version
+    author
+    description
+    homepage
+    repository
+    license
+    logo
+    topics
+    capabilities
+    allowedHosts
+    libraryRead
+    status
+    path
+  }
+}
+    `;
+
+export const useGetExtensionsQuery = <
+      TData = GetExtensionsQuery,
+      TError = unknown
+    >(
+      variables?: GetExtensionsQueryVariables,
+      options?: Omit<UseQueryOptions<GetExtensionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetExtensionsQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetExtensionsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetExtensions'] : ['GetExtensions', variables],
+    queryFn: fetcher<GetExtensionsQuery, GetExtensionsQueryVariables>(GetExtensionsDocument, variables),
+    ...options
+  }
+    )};
+
+useGetExtensionsQuery.getKey = (variables?: GetExtensionsQueryVariables) => variables === undefined ? ['GetExtensions'] : ['GetExtensions', variables];
+
+export const useInfiniteGetExtensionsQuery = <
+      TData = InfiniteData<GetExtensionsQuery>,
+      TError = unknown
+    >(
+      variables: GetExtensionsQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetExtensionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetExtensionsQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetExtensionsQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetExtensions.infinite'] : ['GetExtensions.infinite', variables],
+      queryFn: (metaData) => fetcher<GetExtensionsQuery, GetExtensionsQueryVariables>(GetExtensionsDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetExtensionsQuery.getKey = (variables?: GetExtensionsQueryVariables) => variables === undefined ? ['GetExtensions.infinite'] : ['GetExtensions.infinite', variables];
+
+
+useGetExtensionsQuery.fetcher = (variables?: GetExtensionsQueryVariables, options?: RequestInit['headers']) => fetcher<GetExtensionsQuery, GetExtensionsQueryVariables>(GetExtensionsDocument, variables, options);
+
 export const LikeTrackDocument = `
     mutation LikeTrack($id: String!, $like: Boolean!) {
   likeTrack(id: $id, like: $like)
@@ -1830,6 +2212,108 @@ useInfiniteSearchQuery.getKey = (variables: SearchQueryVariables) => ['Search.in
 
 
 useSearchQuery.fetcher = (variables: SearchQueryVariables, options?: RequestInit['headers']) => fetcher<SearchQuery, SearchQueryVariables>(SearchDocument, variables, options);
+
+export const SetAudioSettingDocument = `
+    mutation SetAudioSetting($name: String!, $value: Int!) {
+  setAudioSetting(name: $name, value: $value) {
+    ...AudioSettingsFields
+  }
+}
+    ${AudioSettingsFieldsFragmentDoc}`;
+
+export const useSetAudioSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<SetAudioSettingMutation, TError, SetAudioSettingMutationVariables, TContext>) => {
+    
+    return useMutation<SetAudioSettingMutation, TError, SetAudioSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['SetAudioSetting'],
+    mutationFn: (variables?: SetAudioSettingMutationVariables) => fetcher<SetAudioSettingMutation, SetAudioSettingMutationVariables>(SetAudioSettingDocument, variables)(),
+    ...options
+  }
+    )};
+
+useSetAudioSettingMutation.getKey = () => ['SetAudioSetting'];
+
+
+useSetAudioSettingMutation.fetcher = (variables: SetAudioSettingMutationVariables, options?: RequestInit['headers']) => fetcher<SetAudioSettingMutation, SetAudioSettingMutationVariables>(SetAudioSettingDocument, variables, options);
+
+export const SetEqBandGainDocument = `
+    mutation SetEqBandGain($band: Int!, $gain: Int!) {
+  setEqBandGain(band: $band, gain: $gain) {
+    ...AudioSettingsFields
+  }
+}
+    ${AudioSettingsFieldsFragmentDoc}`;
+
+export const useSetEqBandGainMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<SetEqBandGainMutation, TError, SetEqBandGainMutationVariables, TContext>) => {
+    
+    return useMutation<SetEqBandGainMutation, TError, SetEqBandGainMutationVariables, TContext>(
+      {
+    mutationKey: ['SetEqBandGain'],
+    mutationFn: (variables?: SetEqBandGainMutationVariables) => fetcher<SetEqBandGainMutation, SetEqBandGainMutationVariables>(SetEqBandGainDocument, variables)(),
+    ...options
+  }
+    )};
+
+useSetEqBandGainMutation.getKey = () => ['SetEqBandGain'];
+
+
+useSetEqBandGainMutation.fetcher = (variables: SetEqBandGainMutationVariables, options?: RequestInit['headers']) => fetcher<SetEqBandGainMutation, SetEqBandGainMutationVariables>(SetEqBandGainDocument, variables, options);
+
+export const GetAudioSettingsDocument = `
+    query GetAudioSettings {
+  audioSettings {
+    ...AudioSettingsFields
+  }
+}
+    ${AudioSettingsFieldsFragmentDoc}`;
+
+export const useGetAudioSettingsQuery = <
+      TData = GetAudioSettingsQuery,
+      TError = unknown
+    >(
+      variables?: GetAudioSettingsQueryVariables,
+      options?: Omit<UseQueryOptions<GetAudioSettingsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetAudioSettingsQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetAudioSettingsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetAudioSettings'] : ['GetAudioSettings', variables],
+    queryFn: fetcher<GetAudioSettingsQuery, GetAudioSettingsQueryVariables>(GetAudioSettingsDocument, variables),
+    ...options
+  }
+    )};
+
+useGetAudioSettingsQuery.getKey = (variables?: GetAudioSettingsQueryVariables) => variables === undefined ? ['GetAudioSettings'] : ['GetAudioSettings', variables];
+
+export const useInfiniteGetAudioSettingsQuery = <
+      TData = InfiniteData<GetAudioSettingsQuery>,
+      TError = unknown
+    >(
+      variables: GetAudioSettingsQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetAudioSettingsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetAudioSettingsQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetAudioSettingsQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetAudioSettings.infinite'] : ['GetAudioSettings.infinite', variables],
+      queryFn: (metaData) => fetcher<GetAudioSettingsQuery, GetAudioSettingsQueryVariables>(GetAudioSettingsDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetAudioSettingsQuery.getKey = (variables?: GetAudioSettingsQueryVariables) => variables === undefined ? ['GetAudioSettings.infinite'] : ['GetAudioSettings.infinite', variables];
+
+
+useGetAudioSettingsQuery.fetcher = (variables?: GetAudioSettingsQueryVariables, options?: RequestInit['headers']) => fetcher<GetAudioSettingsQuery, GetAudioSettingsQueryVariables>(GetAudioSettingsDocument, variables, options);
 
 export const NextDocument = `
     mutation Next {

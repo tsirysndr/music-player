@@ -1,265 +1,145 @@
-import styled from "@emotion/styled";
-import { Cell, Grid } from "baseui/layout-grid";
 import { FC } from "react";
-import { Link } from "react-router-dom";
-import Button from "../Button";
-import ControlBar from "../ControlBar";
-import ArrowBack from "../Icons/ArrowBack";
-import Play from "../Icons/Play";
-import Shuffle from "../Icons/Shuffle";
-import MainContent from "../MainContent";
-import Sidebar from "../Sidebar";
-import TracksTable from "../TracksTable";
-import AlbumIcon from "../Icons/AlbumCover";
-import { Device } from "../../Types/Device";
-import { useTheme } from "@emotion/react";
-import ListeningOn from "../ListeningOn";
+import { AppShell } from "../Layout";
+import {
+  AlbumCard,
+  Artwork,
+  IconButton,
+  Icons,
+  PlayPauseButton,
+  SectionHeader,
+  SkeletonBox,
+  TrackListHeader,
+  TrackRow,
+  type AlbumCardItem,
+  type PlaylistOption,
+  type TrackRowItem,
+} from "../UI";
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: row;
-  background-color: ${(props) => props.theme.colors.background};
-`;
-
-const Content = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
-const BackButton = styled.button`
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  width: 30px;
-  border-radius: 15px;
-  background-color: ${(props) => props.theme.colors.backButton};
-  margin-left: 26px;
-  margin-bottom: 46px;
-  position: absolute;
-  z-index: 1;
-`;
-
-const Scrollable = styled.div`
-  height: calc(100vh - 100px);
-  overflow-y: auto;
-`;
-
-const Artist = styled.div`
-  font-family: RockfordSansBold;
-  font-size: 32px;
-  margin-top: 94px;
-  margin-left: 26px;
-  margin-bottom: 40px;
-  color: ${(props) => props.theme.colors.text};
-`;
-
-const Buttons = styled.div`
-  display: flex;
-  flex-direction: row;
-  margin-left: 26px;
-  margin-bottom: 20px;
-`;
-
-const Separator = styled.div`
-  width: 26px;
-`;
-
-const Label = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-`;
-
-const Icon = styled.div`
-  margin-top: 6px;
-`;
-
-const Title = styled.div`
-  font-family: RockfordSansBold;
-  font-size: 16px;
-  margin-left: 15px;
-  margin-bottom: 10px;
-  flex: 1;
-  color: ${(props) => props.theme.colors.text};
-`;
-
-const Row = styled.div`
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  margin-right: 50px;
-  margin-left: 10px;
-`;
-
-const SeeMore = styled.div`
-  width: 64px;
-  font-size: 14px;
-  color: ${(props) => props.theme.colors.secondaryText};
-  cursor: pointer;
-`;
-
-const Tracks = styled.div`
-  margin-bottom: 48px;
-`;
-
-const AlbumCover = styled.img`
-  height: 169px;
-  width: 169px;
-  border-radius: 5px;
-  cursor: pointer;
-`;
-
-const NoAlbumCover = styled.div`
-  height: 169px;
-  width: 169px;
-  border-radius: 5px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #ddaefb14;
-`;
-
-const AlbumArtist = styled.div`
-  color: #828282;
-  margin-bottom: 56px;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-`;
-
-const AlbumTitle = styled.div`
-  font-size: 14px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-  color: ${(props) => props.theme.colors.text};
-`;
+export type ArtistDetail = {
+  id: string;
+  name: string;
+  picture?: string | null;
+};
 
 export type ArtistDetailsProps = {
+  artist?: ArtistDetail;
+  albums: AlbumCardItem[];
+  tracks: TrackRowItem[];
+  loading?: boolean;
+  currentTrackId?: string;
+  recentPlaylists: PlaylistOption[];
   onBack: () => void;
-  artist: any;
-  tracks: any[];
-  albums: any[];
-  onPlayArtistTracks: (
-    artistId: string,
-    shuffle: boolean,
-    position?: number
-  ) => void;
-  onPlayNext: (id: string) => void;
-  onCreatePlaylist: (name: string, description?: string) => void;
-  recentPlaylists: any[];
+  onPlayArtist: (artistId: string, shuffle: boolean, position?: number) => void;
+  onPlayAlbum: (albumId: string, shuffle: boolean) => void;
+  onPlayNext: (trackId: string) => void;
+  onToggleLike: (trackId: string) => void;
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
-  currentDevice?: Device;
-  currentCastDevice?: Device;
 };
 
-const ArtistDetails: FC<ArtistDetailsProps> = (props) => {
-  const {
-    onBack,
-    artist,
-    tracks,
-    albums,
-    onPlayArtistTracks,
-    onPlayNext,
-    onCreatePlaylist,
-    recentPlaylists,
-    onAddTrackToPlaylist,
-    currentCastDevice,
-  } = props;
-  const theme = useTheme();
-  return (
-    <>
-      {currentCastDevice && <ListeningOn deviceName={currentCastDevice.name} />}
-      <Container>
-        <Sidebar active="artists" />
-        <Content>
-          <ControlBar />
-          <MainContent displayHeader={false}>
-            <Scrollable>
-              <BackButton onClick={onBack}>
-                <div style={{ marginTop: 2 }}>
-                  <ArrowBack color={theme.colors.text} />
-                </div>
-              </BackButton>
-              <Artist>{artist.name}</Artist>
-              <Buttons>
-                <Button
-                  onClick={() => onPlayArtistTracks(artist.id, false)}
-                  kind="primary"
-                >
-                  <Label>
-                    <Icon>
-                      <Play small color="#fff" />
-                    </Icon>
-                    <div style={{ marginLeft: 7 }}>Play</div>
-                  </Label>
-                </Button>
-                <Separator />
-                <Button
-                  onClick={() => onPlayArtistTracks(artist.id, true)}
-                  kind="secondary"
-                >
-                  <Label>
-                    <Shuffle color="#ab28fc" />
-                    <div style={{ marginLeft: 7 }}>Shuffle</div>
-                  </Label>
-                </Button>
-              </Buttons>
-              <Tracks>
-                <TracksTable
-                  tracks={tracks}
-                  title={
-                    <Row>
-                      <Title>Tracks</Title>
-                      <SeeMore>See all</SeeMore>
-                    </Row>
-                  }
-                  maxHeight={"initial"}
-                  onPlayTrack={(id, position) =>
-                    onPlayArtistTracks(id, false, position)
-                  }
-                  onPlayNext={onPlayNext}
-                  onCreatePlaylist={onCreatePlaylist}
-                  recentPlaylists={recentPlaylists}
-                  onAddTrackToPlaylist={onAddTrackToPlaylist}
+/** The artist page: round portrait, the artist's albums, then their songs. */
+const ArtistDetails: FC<ArtistDetailsProps> = ({
+  artist,
+  albums,
+  tracks,
+  loading,
+  currentTrackId,
+  recentPlaylists,
+  onBack,
+  onPlayArtist,
+  onPlayAlbum,
+  onPlayNext,
+  onToggleLike,
+  onAddTrackToPlaylist,
+}) => (
+  <AppShell title="Artist" onBack={onBack}>
+    {loading || !artist ? (
+      <div className="flex items-end gap-5 pb-3">
+        <SkeletonBox className="size-[150px] rounded-full" />
+        <div className="flex flex-1 flex-col gap-3">
+          <SkeletonBox className="h-3 w-16" />
+          <SkeletonBox className="h-7 w-1/2" />
+        </div>
+      </div>
+    ) : (
+      <>
+        <div className="flex flex-col gap-5 pb-6 sm:flex-row sm:items-end">
+          <Artwork
+            src={artist.picture}
+            alt={artist.name}
+            fallbackIcon={Icons.artist}
+            rounded="full"
+            className="size-[150px] shrink-0"
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-[6px]">
+            <span className="text-[10px] tracking-[1.5px] text-muted">
+              ARTIST
+            </span>
+            <h2 className="truncate text-2xl font-bold text-fg lg:text-[26px]">
+              {artist.name}
+            </h2>
+            <p className="truncate text-xs text-muted">
+              {`${albums.length} ${albums.length === 1 ? "album" : "albums"} · ${tracks.length} ${
+                tracks.length === 1 ? "song" : "songs"
+              }`}
+            </p>
+          </div>
+          <div className="flex items-center gap-[10px]">
+            <IconButton
+              icon={Icons.shuffle}
+              iconSize={18}
+              size={44}
+              aria-label={`Shuffle ${artist.name}`}
+              onClick={() => onPlayArtist(artist.id, true)}
+            />
+            <PlayPauseButton
+              aria-label={`Play ${artist.name}`}
+              onClick={() => onPlayArtist(artist.id, false)}
+            />
+          </div>
+        </div>
+
+        {albums.length > 0 && (
+          <>
+            <SectionHeader title="ALBUMS" className="mb-3" />
+            <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              {albums.map((album) => (
+                <AlbumCard
+                  key={album.id}
+                  album={album}
+                  onPlay={() => onPlayAlbum(album.id, false)}
+                  onShufflePlay={() => onPlayAlbum(album.id, true)}
                 />
-              </Tracks>
-              <Row>
-                <Title>Albums</Title>
-                <SeeMore>See all</SeeMore>
-              </Row>
-              <Grid gridColumns={[3, 4, 5]} gridMargins={[8, 16, 18]}>
-                {albums.map((item) => (
-                  <Cell key={item.id}>
-                    <Link to={`/albums/${item.id}`}>
-                      {item.cover && <AlbumCover src={item.cover} />}
-                      {!item.cover && (
-                        <NoAlbumCover>
-                          <AlbumIcon size={120} />
-                        </NoAlbumCover>
-                      )}
-                    </Link>
-                    <Link to={`/albums/${item.id}`}>
-                      <AlbumTitle>{item.title}</AlbumTitle>
-                    </Link>
-                    <AlbumArtist>{item.artist}</AlbumArtist>
-                  </Cell>
-                ))}
-              </Grid>
-            </Scrollable>
-          </MainContent>
-        </Content>
-      </Container>
-    </>
-  );
-};
+              ))}
+            </div>
+          </>
+        )}
+
+        {tracks.length > 0 && (
+          <>
+            <SectionHeader title="SONGS" className="mb-1" />
+            <TrackListHeader />
+            <div className="flex flex-col">
+              {tracks.map((track, index) => (
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  index={index}
+                  current={track.id === currentTrackId}
+                  playlists={recentPlaylists}
+                  onPlay={() => onPlayArtist(artist.id, false, index)}
+                  onLike={() => onToggleLike(track.id)}
+                  onPlayNext={() => onPlayNext(track.id)}
+                  onAddToPlaylist={(playlistId) =>
+                    onAddTrackToPlaylist(playlistId, track.id)
+                  }
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </>
+    )}
+  </AppShell>
+);
 
 export default ArtistDetails;

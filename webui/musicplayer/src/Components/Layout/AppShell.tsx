@@ -8,6 +8,7 @@ import {
   audioSettingsOpenAtom,
   fullPlayerOpenAtom,
   paletteOpenAtom,
+  serverSwitcherOpenAtom,
   queueOpenAtom,
   sidebarOpenAtom,
 } from "../../State";
@@ -41,6 +42,7 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const setQueueOpen = useSetAtom(queueOpenAtom);
   const [fullPlayerOpen, setFullPlayer] = useAtom(fullPlayerOpenAtom);
+  const setServerSwitcherOpen = useSetAtom(serverSwitcherOpenAtom);
   const setPaletteOpen = useSetAtom(paletteOpenAtom);
   const setAudioOpen = useSetAtom(audioSettingsOpenAtom);
   const { cycleSkin } = useSkin();
@@ -90,6 +92,16 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
         case "q":
           setQueueOpen((open) => !open);
           break;
+        // Where the library is read from, matching the desktop and the TUI.
+        case "C":
+          event.preventDefault();
+          setServerSwitcherOpen(true);
+          break;
+        // Straight to the add-server form, for one not saved yet.
+        case "A":
+          event.preventDefault();
+          navigate("/servers?add=1");
+          break;
         case "b":
           sidebarBeforeFullPlayer.current = undefined;
           setSidebarOpen((open) => !open);
@@ -128,6 +140,7 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [
     navigate,
+    setServerSwitcherOpen,
     cycleSkin,
     setQueueOpen,
     setSidebarOpen,

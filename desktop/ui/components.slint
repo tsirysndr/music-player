@@ -2167,7 +2167,7 @@ export component RendererRow inherits Rectangle {
             source: root.renderer.kind == "local" ? Icons.volume
                 : root.renderer.kind == "dlna" ? Icons.broadcast
                 : root.renderer.kind == "music-player" ? Icons.server
-                : Icons.cast;
+                : Icons.chromecast;
             colorize: root.renderer.playing ? Theme.accent : Theme.text-dim;
             width: 18px;
             height: 18px;

@@ -60,6 +60,8 @@ export const Icons = {
   device: IconDeviceSpeaker,
   connect: DESKTOP_ICONS.plugConnected,
   cast: DESKTOP_ICONS.cast,
+  chromecast: DESKTOP_ICONS.chromecast,
+  deviceSpeaker: DESKTOP_ICONS.deviceSpeaker,
   check: IconCheck,
 } satisfies Record<string, IconComponent>;
 

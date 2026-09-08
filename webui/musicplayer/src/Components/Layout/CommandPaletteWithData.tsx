@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,8 +10,14 @@ import {
 } from "../../Hooks/GraphQL";
 import { useDevices } from "../../Hooks/useDevices";
 import { usePlayTrack } from "../../Hooks/usePlayTrack";
-import { paletteOpenAtom } from "../../State";
-import { Icons, Toggle } from "../UI";
+import { paletteOpenAtom, serverSwitcherOpenAtom } from "../../State";
+import {
+  useAddServerMutation,
+  useConnectToServerMutation,
+  useDisconnectFromServerMutation,
+  useGetSavedServersQuery,
+} from "../../Hooks/GraphQL";
+import { Icons, Toggle, type IconComponent } from "../UI";
 import {
   gql,
   STATION_FIELDS,
@@ -22,9 +28,87 @@ import CommandPalette, { type PaletteEntry } from "./CommandPalette";
 /** How many of each kind the list shows, so no one kind fills it. */
 const PER_KIND = 5;
 
+/** What a server switch invalidates. */
+const LIBRARY_QUERIES = [
+  "GetTracks",
+  "GetAlbums",
+  "GetArtists",
+  "GetAlbum",
+  "GetArtist",
+  "GetPlaylists",
+  "GetPlaylist",
+  "GetLikedTracks",
+  "Search",
+  "GetSavedServers",
+];
+
+/** How each kind of server shows itself. */
+const KIND_ICON: Record<string, IconComponent> = {
+  jellyfin: Icons.jellyfin,
+  subsonic: Icons.navidrome,
+  navidrome: Icons.navidrome,
+  "music-player": Icons.server,
+  kodi: Icons.device,
+  plex: Icons.disc,
+};
+
 /** Builds the palette's entries from the library, playlists and extensions. */
 const CommandPaletteWithData = () => {
-  const [open, setOpen] = useAtom(paletteOpenAtom);
+  const [paletteOpen, setPaletteOpen] = useAtom(paletteOpenAtom);
+  const [switcherOpen, setSwitcherOpen] = useAtom(serverSwitcherOpenAtom);
+  // One overlay serves both: the switcher is the palette scoped to servers.
+  const scope = switcherOpen ? ("servers" as const) : undefined;
+  const queryClient = useQueryClient();
+  const { data: serverData } = useGetSavedServersQuery(undefined, {
+    enabled: scope === "servers",
+  });
+  const connectedServer = (serverData?.savedServers ?? []).find(
+    (server) => server.connected
+  );
+  const addServer = useAddServerMutation();
+  const connect = useConnectToServerMutation();
+  const disconnect = useDisconnectFromServerMutation();
+
+  /** Everything on screen came from the old server, so it all goes. */
+  const refreshLibrary = () =>
+    queryClient.invalidateQueries({
+      predicate: (entry: { queryKey: readonly unknown[] }) =>
+        LIBRARY_QUERIES.includes(String(entry.queryKey[0])),
+    });
+
+  const connectToServer = async ({ id }: { id: string }) => {
+    await connect.mutateAsync({ id });
+    await refreshLibrary();
+  };
+
+  const disconnectFromServer = async (_: Record<string, never>) => {
+    await disconnect.mutateAsync({});
+    await refreshLibrary();
+  };
+
+  /**
+   * Save whatever was typed as a peer daemon and switch to it. Bare hosts get
+   * the daemon's own port and scheme, so `studio.lan` is enough.
+   */
+  const connectToTyped = async (typed: string) => {
+    const url = /^https?:\/\//.test(typed) ? typed : `http://${typed}`;
+    const withPort = /:\d+/.test(url.replace(/^https?:\/\//, ""))
+      ? url
+      : `${url}:5053`;
+    const added = await addServer.mutateAsync({
+      input: { kind: "music-player", name: typed, url: withPort },
+    });
+    await connectToServer({ id: added.addServer.id });
+  };
+  const open = paletteOpen || switcherOpen;
+  const setOpen = (next: boolean) => {
+    if (!next) {
+      setPaletteOpen(false);
+      setSwitcherOpen(false);
+    } else if (!switcherOpen) {
+      setPaletteOpen(true);
+    }
+  };
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const navigate = useNavigate();
@@ -85,7 +169,10 @@ const CommandPaletteWithData = () => {
   const toggleExtension = setExtensionEnabled.mutate;
 
   const entries = useMemo<PaletteEntry[]>(() => {
-    if (!needle) return [];
+    // The library palette waits for a query — searching it costs a round trip.
+    // The switcher does not: its list is already loaded, and listing it is
+    // what makes it a switcher.
+    if (!needle && scope !== "servers") return [];
 
     const matches = (value?: string | null) =>
       !!value && value.toLowerCase().includes(needle);
@@ -173,37 +260,46 @@ const CommandPaletteWithData = () => {
         ),
       }));
 
-    // Servers and cast targets: the sidebar's status row is the only other way
-    // to reach them, and it is not where anyone looks for one by name.
-    const servers: PaletteEntry[] = [
-      ...castDevices.map((device) => ({ device, cast: true })),
-      ...devices.map((device) => ({ device, cast: false })),
-    ]
-      .filter(({ device }) => matches(device.name) || matches(device.id))
-      .slice(0, PER_KIND)
-      .map(({ device, cast }) => {
-        const active = cast
-          ? currentCastDevice?.id === device.id
-          : currentDevice?.id === device.id;
-        return {
-          key: `server-${cast ? "cast" : "mp"}-${device.id}`,
-          kind: "server" as const,
-          title: device.name,
-          subtitle: active
-            ? cast
-              ? "Cast · playing here"
-              : "music-player · playing here"
-            : cast
-              ? "Cast"
-              : "music-player",
-          icon: Icons.device,
-          run: () => {
-            if (active) return;
-            if (cast) connectToCastDevice({ id: device.id });
-            else connectToDevice({ id: device.id });
-          },
-        };
-      });
+    // The servers the library can be read *from*. Where the audio comes out
+    // is the Play to dialog — a different question, and it used to be this
+    // list, which is why picking a "server" here used to start casting.
+    const savedServers: PaletteEntry[] = (serverData?.savedServers ?? [])
+      .filter((server) => matches(server.name) || matches(server.url))
+      .slice(0, scope === "servers" ? 50 : PER_KIND)
+      .map((server) => ({
+        key: `server-${server.id}`,
+        kind: "server" as const,
+        title: server.name,
+        subtitle: server.connected
+          ? `${server.url} · connected`
+          : server.url,
+        icon: KIND_ICON[server.kind] ?? Icons.server,
+        run: () => {
+          if (server.connected) return;
+          connectToServer({ id: server.id });
+        },
+      }));
+
+    // The local library is always an option, and is where it starts.
+    const local: PaletteEntry[] =
+      scope === "servers" && (!needle || matches("this machine"))
+        ? [
+            {
+              key: "server-local",
+              kind: "server" as const,
+              title: "This machine",
+              subtitle: connectedServer
+                ? "the daemon's own library"
+                : "the daemon's own library · connected",
+              icon: Icons.server,
+              run: () => {
+                if (connectedServer) disconnectFromServer({});
+              },
+            },
+          ]
+        : [];
+
+    const servers = [...local, ...savedServers];
 
     const stations: PaletteEntry[] = (radios ?? [])
       .slice(0, PER_KIND)
@@ -222,6 +318,27 @@ const CommandPaletteWithData = () => {
         run: () => startStation(station),
       }));
 
+    // Nothing matched, but the user typed something: offer to connect to it.
+    // A peer daemon is the one kind that needs no credentials, so it is the
+    // only thing that can be connected to from a bare address.
+    const suggestion: PaletteEntry[] =
+      scope === "servers" && servers.length === 0 && needle.length > 0
+        ? [
+            {
+              key: "server-connect-typed",
+              kind: "server" as const,
+              title: `Connect to ${query.trim()}`,
+              subtitle: "music-player · adds it and switches to it",
+              icon: Icons.connect,
+              run: () => connectToTyped(query.trim()),
+            },
+          ]
+        : [];
+
+    if (scope === "servers") {
+      return [...servers, ...suggestion];
+    }
+
     return [
       ...tracks,
       ...albums,
@@ -233,6 +350,10 @@ const CommandPaletteWithData = () => {
     ];
   }, [
     needle,
+    scope,
+    query,
+    serverData,
+    connectedServer,
     search,
     playlistData,
     extensionData,
@@ -269,6 +390,20 @@ const CommandPaletteWithData = () => {
         setQuery(next);
         setSelected(0);
       }}
+      scope={scope}
+      onAddServer={() => {
+        close();
+        navigate("/servers?add=1");
+      }}
+      hint={
+        scope === "servers" ? (
+          <>
+            <span>enter connect</span>
+            <span>C-n add</span>
+            <span>esc close</span>
+          </>
+        ) : undefined
+      }
       onSelect={setSelected}
       onActivate={(entry) => {
         entry.run();

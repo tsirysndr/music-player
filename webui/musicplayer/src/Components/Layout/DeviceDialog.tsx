@@ -8,7 +8,7 @@ export type DeviceDialogProps = {
 
 /** How each kind of renderer describes itself. */
 const KIND: Record<string, { label: string; icon: IconComponent }> = {
-  chromecast: { label: "Chromecast", icon: Icons.device },
+  chromecast: { label: "Chromecast", icon: Icons.chromecast },
   dlna: { label: "UPnP / DLNA", icon: Icons.broadcast },
   "music-player": { label: "music-player", icon: Icons.server },
   xbmc: { label: "Kodi", icon: Icons.device },
@@ -58,7 +58,7 @@ const DeviceDialog = ({ isOpen, onClose }: DeviceDialogProps) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Play to"
-      icon={Icons.device}
+      icon={Icons.deviceSpeaker}
       width={440}
       footer={
         playingElsewhere ? (

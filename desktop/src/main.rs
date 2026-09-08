@@ -849,9 +849,13 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
                 ));
             }
         }
-        // Free-form "connect to host[:port]" when the query looks like one.
+        // Offer to connect to whatever was typed — when it looks like an
+        // address, and also whenever nothing else matched, so a search that
+        // finds no saved server still has somewhere to go.
         let raw = query.trim();
-        if (raw.contains('.') || raw.contains(':')) && !out.iter().any(|r| r.id.as_str() == raw) {
+        let looks_like_address = raw.contains('.') || raw.contains(':');
+        let nothing_matched = out.is_empty() && !raw.is_empty();
+        if (looks_like_address || nothing_matched) && !out.iter().any(|r| r.id.as_str() == raw) {
             out.push(server_row(
                 "server",
                 format!("Connect to {raw}"),

@@ -40,6 +40,15 @@ export type CommandPaletteProps = {
   onSelect: (index: number) => void;
   onActivate: (entry: PaletteEntry) => void;
   onClose: () => void;
+  /**
+   * Scoped to one kind. The server switcher is this overlay with `servers` —
+   * same search, same keys, one kind of row.
+   */
+  scope?: "servers";
+  /** Shown under the list; the switcher uses it for `C-n add`. */
+  hint?: ReactNode;
+  /** Ctrl-N in the server scope. */
+  onAddServer?: () => void;
 };
 
 const KIND_LABEL: Record<PaletteKind, string> = {
@@ -72,6 +81,9 @@ const CommandPalette = ({
   onSelect,
   onActivate,
   onClose,
+  scope,
+  hint,
+  onAddServer,
 }: CommandPaletteProps) => {
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -106,9 +118,25 @@ const CommandPalette = ({
               autoFocus
               value={query}
               aria-label="Search"
-              placeholder="Search tracks, albums, artists, playlists, extensions…"
+              placeholder={
+                scope === "servers"
+                  ? "Search servers, or type an address to connect…"
+                  : "Search tracks, albums, artists, playlists, extensions…"
+              }
               onChange={(event) => onQueryChange(event.target.value)}
               onKeyDown={(event) => {
+                // Ctrl-N adds a server without leaving the flow, matching the
+                // TUI and the Slint desktop. Before the empty-list guard: it
+                // is exactly when nothing matched that you want it.
+                if (
+                  scope === "servers" &&
+                  event.key.toLowerCase() === "n" &&
+                  (event.ctrlKey || event.metaKey)
+                ) {
+                  event.preventDefault();
+                  onAddServer?.();
+                  return;
+                }
                 if (entries.length === 0) return;
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
@@ -133,7 +161,10 @@ const CommandPalette = ({
             ref={listRef}
             className="scrollbar-skin min-h-0 flex-1 overflow-y-auto p-2"
           >
-            {trimmed === "" ? (
+            {/* A switcher lists everything before you type — that is what
+                makes it a switcher rather than a search box. The library
+                palette waits, because searching it costs a round trip. */}
+            {trimmed === "" && scope !== "servers" ? (
               <li className="px-3 py-8 text-center text-xs text-muted">
                 Search your library, playlists and extensions
               </li>
@@ -196,6 +227,11 @@ const CommandPalette = ({
               ))
             )}
           </ul>
+        {hint && (
+          <div className="flex items-center gap-4 border-t border-line px-4 py-2 font-mono text-[10px] text-muted">
+            {hint}
+          </div>
+        )}
       </div>
     </Dialog>
   );

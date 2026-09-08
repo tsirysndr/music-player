@@ -89,6 +89,27 @@ export const ChevronLeft: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) 
   </svg>
 );
 
+/** `desktop/assets/icons/chromecast.svg` */
+export const Chromecast: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M3 19h.01" />
+    <path d="M7 19a4 4 0 0 0 -4 -4" />
+    <path d="M11 19a8 8 0 0 0 -8 -8" />
+    <path d="M15 19h4a2 2 0 0 0 2 -2v-10a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v1" />
+  </svg>
+);
+
 /** `desktop/assets/icons/circle-plus.svg` */
 export const CirclePlus: FC<IconProps> = ({ size = 24, stroke: _stroke, ...props }) => (
   <svg
@@ -101,6 +122,26 @@ export const CirclePlus: FC<IconProps> = ({ size = 24, stroke: _stroke, ...props
   >
     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
     <path d="M4.929 4.929a10 10 0 1 1 14.141 14.141a10 10 0 0 1 -14.14 -14.14m8.071 4.071a1 1 0 1 0 -2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0 -2h-2v-2z" />
+  </svg>
+);
+
+/** `desktop/assets/icons/device-speaker.svg` */
+export const DeviceSpeaker: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M4 3m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" />
+    <path d="M12 14m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+    <path d="M12 7l0 .01" />
   </svg>
 );
 
@@ -732,7 +773,9 @@ export const DESKTOP_ICONS = {
   broadcast: Broadcast,
   cast: Cast,
   chevronLeft: ChevronLeft,
+  chromecast: Chromecast,
   circlePlus: CirclePlus,
+  deviceSpeaker: DeviceSpeaker,
   folder: Folder,
   disc: Disc,
   ellipsis: Ellipsis,

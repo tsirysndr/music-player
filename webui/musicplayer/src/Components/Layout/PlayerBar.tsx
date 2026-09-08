@@ -255,7 +255,7 @@ const PlayerBar = ({
         {/* Where the audio comes out. The sidebar's status row is the other
             question — where the library is read *from*. */}
         <IconButton
-          icon={Icons.cast}
+          icon={Icons.deviceSpeaker}
           iconSize={17}
           accented={!!castingTo}
           aria-label={castingTo ? `Playing on ${castingTo}` : "Play to"}

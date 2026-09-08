@@ -1,9 +1,13 @@
-import { useAtom, useAtomValue } from "jotai";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useLocation } from "react-router-dom";
 import { useGetConnectedServerQuery } from "../../Hooks/GraphQL";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSkin } from "../../Providers/SkinProvider";
-import { serverConnectedAtom, sidebarOpenAtom } from "../../State";
+import {
+  serverConnectedAtom,
+  serverSwitcherOpenAtom,
+  sidebarOpenAtom,
+} from "../../State";
 import { Icons, SidebarItem, cn } from "../UI";
 import { isActive, NAV } from "./navigation";
 
@@ -17,10 +21,10 @@ import { isActive, NAV } from "./navigation";
 const Sidebar = () => {
   const [open] = useAtom(sidebarOpenAtom);
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const { skinName, cycleSkin } = useSkin();
   const { recentPlaylists } = usePlaylist();
   const connected = useAtomValue(serverConnectedAtom);
+  const openServerSwitcher = useSetAtom(serverSwitcherOpenAtom);
   // Which server the library is being *read* from. Nothing to do with where
   // the audio comes out — that is the "play on" picker, one row up.
   const { data: server } = useGetConnectedServerQuery();
@@ -92,7 +96,7 @@ const Sidebar = () => {
             is a separate question, and a separate picker. */}
         <button
           type="button"
-          onClick={() => navigate("/servers")}
+          onClick={() => openServerSwitcher(true)}
           title="Choose which server the library is read from"
           className="mt-[6px] flex h-[30px] items-center gap-2 rounded-control pl-4 pr-2 text-left hover:bg-hover"
         >

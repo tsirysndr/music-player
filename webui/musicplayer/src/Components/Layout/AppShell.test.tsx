@@ -202,7 +202,7 @@ describe("AppShell", () => {
      * audio comes out is the player bar's picker, and conflating the two is
      * what made this row open the cast dialog.
      */
-    it("goes to the servers page rather than opening the cast picker", async () => {
+    it("opens the server switcher rather than the cast picker", async () => {
       const { user } = setupPlaying(TRACK);
 
       await user.click(
@@ -210,9 +210,61 @@ describe("AppShell", () => {
       );
 
       expect(
-        await screen.findByRole("heading", { name: "Servers", level: 1 })
+        await screen.findByPlaceholderText(
+          "Search servers, or type an address to connect…"
+        )
       ).toBeInTheDocument();
       expect(screen.queryByText("Play to")).toBeNull();
+    });
+
+    /** `C` opens it too, matching the desktop and the TUI. */
+    it("opens the switcher on C", async () => {
+      const { user } = setupPlaying(TRACK);
+      await user.keyboard("C");
+      expect(
+        await screen.findByPlaceholderText(
+          "Search servers, or type an address to connect…"
+        )
+      ).toBeInTheDocument();
+    });
+
+    it("lists the saved servers, and the local library", async () => {
+      const { user } = setupPlaying(TRACK);
+      await user.keyboard("C");
+      expect(await screen.findByText("Living room NAS")).toBeInTheDocument();
+      expect(screen.getByText("This machine")).toBeInTheDocument();
+    });
+
+    /**
+     * A search that finds nothing still has somewhere to go: the typed text is
+     * offered as an address. A peer daemon is the one kind that needs no
+     * credentials, so it is the only thing a bare address can mean.
+     */
+    it("offers to connect to whatever was typed when nothing matches", async () => {
+      const { user } = setupPlaying(TRACK);
+      await user.keyboard("C");
+
+      const input = await screen.findByPlaceholderText(
+        "Search servers, or type an address to connect…"
+      );
+      await user.type(input, "studio.lan");
+
+      expect(
+        await screen.findByText("Connect to studio.lan")
+      ).toBeInTheDocument();
+    });
+
+    it("does not offer it while something still matches", async () => {
+      const { user } = setupPlaying(TRACK);
+      await user.keyboard("C");
+
+      const input = await screen.findByPlaceholderText(
+        "Search servers, or type an address to connect…"
+      );
+      await user.type(input, "Living");
+
+      expect(await screen.findByText("Living room NAS")).toBeInTheDocument();
+      expect(screen.queryByText(/^Connect to /)).toBeNull();
     });
 
     /** Renderers, not the queue: the queue has the right panel. */

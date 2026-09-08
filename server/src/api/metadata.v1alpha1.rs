@@ -123,4 +123,8 @@ pub struct Track {
     /// Hz, 0 = unknown
     #[prost(uint32, tag = "12")]
     pub sample_rate: u32,
+    /// Whether the source has it starred/favourited. Absent when the source did
+    /// not say — which is different from "not liked".
+    #[prost(bool, optional, tag = "13")]
+    pub liked: ::core::option::Option<bool>,
 }

@@ -154,6 +154,8 @@ impl Kodi {
     fn map_song(&self, song: &KodiSong) -> Track {
         let artist = song.artist.join(", ");
         Track {
+            // This server has ratings rather than likes.
+            liked: None,
             // Not reported on a listing by this server.
             bitrate: None,
             sample_rate: None,

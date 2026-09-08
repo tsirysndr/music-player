@@ -257,6 +257,7 @@ pub mod api {
                     // Zero on the wire means unknown.
                     bitrate: Some(val.bitrate).filter(|rate| *rate > 0),
                     sample_rate: Some(val.sample_rate).filter(|rate| *rate > 0),
+                    liked: val.liked,
                 }
             }
         }
@@ -296,6 +297,7 @@ pub mod api {
                     album: track.album.map(|album| album.into()),
                     bitrate: track.bitrate.unwrap_or_default(),
                     sample_rate: track.sample_rate.unwrap_or_default(),
+                    liked: track.liked,
                     ..Default::default()
                 }
             }

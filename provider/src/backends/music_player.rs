@@ -312,6 +312,7 @@ impl From<RemoteTrack> for Track {
             // Not reported on a listing by this server.
             bitrate: None,
             sample_rate: None,
+            liked: None,
             id: track.id,
             title: track.title,
             duration: track.duration,

@@ -448,7 +448,19 @@ async fn session(
             .into_inner();
 
         let playing = now.is_playing;
-        state.lock().await.playing = playing;
+        let liked_now = {
+            let mut st = state.lock().await;
+            st.playing = playing;
+            // The track's own answer when the source gave one: a snapshot of
+            // "everything liked" can always be incomplete — truncated by a
+            // limit, or listing only songs when an album was what was starred
+            // — and then some hearts are right and some are not. The set is
+            // the fallback, and is all a local library has.
+            match now.track.as_ref() {
+                Some(track) => track.liked.unwrap_or_else(|| st.liked.contains(&track.id)),
+                None => false,
+            }
+        };
 
         let (title, artist, album, path, length_ms, art_file, track_id) = match &now.track {
             Some(t) => (
@@ -579,7 +591,7 @@ async fn session(
             app.set_now_artist(artist.into());
             app.set_now_album(album.into());
             app.set_now_path(path.into());
-            app.set_now_liked(crate::is_liked(&track_id));
+            app.set_now_liked(liked_now);
             app.set_now_track_id(track_id.into());
             app.set_now_is_radio(is_radio);
             if station_changed || !is_radio {
@@ -905,14 +917,22 @@ async fn load_library(
     // The daemon knows whose likes these are: with a provider connected they
     // are *its* stars, and their ids mean nothing to the local like store —
     // which is why filtering the cache locally left the screen empty.
-    let remote_liked = lib
+    let remote_liked = match lib
         .get_liked_tracks(GetLikedTracksRequest {
             offset: 0,
             limit: 500,
         })
         .await
-        .ok()
-        .map(|response| response.into_inner().tracks);
+    {
+        Ok(response) => Some(response.into_inner().tracks),
+        Err(e) => {
+            // Swallowing this made the Liked screen and the heart both look
+            // like "nothing is liked" when the truth was "the daemon could
+            // not be asked" — usually an older daemon still running.
+            tracing::warn!("could not read liked tracks: {e}");
+            None
+        }
+    };
 
     let liked = {
         let mut st = state.lock().await;
@@ -2396,20 +2416,41 @@ async fn stream_levels(channel: Channel, weak: Weak<AppWindow>) {
     };
     let mut stream = response.into_inner();
 
+    // Auto-gain, so kicks reach the top on any material.
+    //
+    // A fixed scale cannot: bass RMS depends on the mix, the master and the
+    // volume, and a factor chosen for one track leaves another at half height
+    // — which is why these sat around 60%. Instead the loudest thing heard
+    // recently *is* the top of the meter. The reference jumps up instantly and
+    // falls slowly, so a quiet passage does not immediately re-normalise into
+    // looking loud.
+    const FLOOR: f32 = 0.02;
+    /// Per update at 20 Hz — about a 1.5 second half-life, which is release
+    /// rather than memory. Slower and a quiet passage stays squashed for most
+    /// of a verse.
+    const DECAY: f32 = 0.977;
+    let mut reference = FLOOR;
+
     while let Ok(Some(levels)) = stream.message().await {
+        let peak = levels.low_left.max(levels.low_right);
+        reference = (reference * DECAY).max(peak).max(FLOOR);
+        let scale = |value: f32| (value / reference).clamp(0.0, 1.0);
+        let (left, right) = (scale(levels.low_left), scale(levels.low_right));
+
         let _ = weak.upgrade_in_event_loop(move |app| {
-            // Eased upward and released slowly, the way a real meter's
-            // ballistics work: instant attack reads as jitter, and instant
-            // release makes it flicker between buffers.
+            // Fast attack, slow release: real meter ballistics. An instant
+            // attack reads as jitter and an instant release flickers between
+            // buffers, but too slow an attack clips the top off a kick, which
+            // is the one thing the meter exists to show.
             let ease = |current: f32, target: f32| {
                 if target > current {
-                    current + (target - current) * 0.6
+                    current + (target - current) * 0.8
                 } else {
-                    current + (target - current) * 0.25
+                    current + (target - current) * 0.15
                 }
             };
-            app.set_vu_left(ease(app.get_vu_left(), levels.low_left).clamp(0.0, 1.0));
-            app.set_vu_right(ease(app.get_vu_right(), levels.low_right).clamp(0.0, 1.0));
+            app.set_vu_left(ease(app.get_vu_left(), left).clamp(0.0, 1.0));
+            app.set_vu_right(ease(app.get_vu_right(), right).clamp(0.0, 1.0));
         });
     }
 
@@ -2422,6 +2463,60 @@ async fn stream_levels(channel: Channel, weak: Weak<AppWindow>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The meter's auto-gain, extracted so it can be reasoned about: the
+    /// loudest thing heard recently is the top of the meter.
+    fn normalise(reference: &mut f32, peak: f32) -> f32 {
+        const FLOOR: f32 = 0.02;
+        const DECAY: f32 = 0.977;
+        *reference = (*reference * DECAY).max(peak).max(FLOOR);
+        (peak / *reference).clamp(0.0, 1.0)
+    }
+
+    /// The whole point: whatever the material's level, its peaks reach the
+    /// top. A fixed scale left quiet mixes at a fraction of the height.
+    #[test]
+    fn a_peak_reaches_the_top_at_any_level() {
+        for peak in [0.05_f32, 0.2, 0.6, 1.0] {
+            let mut reference = 0.02;
+            assert!(
+                (normalise(&mut reference, peak) - 1.0).abs() < 1e-6,
+                "{peak} did not reach the top"
+            );
+        }
+    }
+
+    /// Between kicks the meter has to fall, or it just sits at the top.
+    #[test]
+    fn quieter_passages_read_lower() {
+        let mut reference = 0.02;
+        normalise(&mut reference, 0.5);
+        let quiet = normalise(&mut reference, 0.1);
+        assert!(quiet < 0.25, "expected a low reading, got {quiet}");
+    }
+
+    /// The reference decays, so a track that gets quieter re-normalises
+    /// rather than staying pinned near the floor forever.
+    #[test]
+    fn the_reference_recovers_after_a_loud_passage() {
+        let mut reference = 0.02;
+        normalise(&mut reference, 1.0);
+        // ~10 seconds at 20 Hz.
+        for _ in 0..200 {
+            normalise(&mut reference, 0.1);
+        }
+        assert!(
+            normalise(&mut reference, 0.1) > 0.5,
+            "still scaled to the old peak: reference {reference}"
+        );
+    }
+
+    /// Silence must not divide by zero or invent a reading.
+    #[test]
+    fn silence_reads_as_silence() {
+        let mut reference = 0.02;
+        assert_eq!(normalise(&mut reference, 0.0), 0.0);
+    }
 
     /// What the albums screen is actually given: the gRPC library response must
     /// carry a cover filename, or `art_file` is None and every card falls back

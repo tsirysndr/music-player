@@ -152,6 +152,7 @@ impl Subsonic {
             disc_number: song.disc_number.unwrap_or(1),
             track_number: song.track,
             // Reported by the server with every listing; no probing needed.
+            liked: Some(song.starred.is_some()),
             bitrate: song.bit_rate.filter(|rate| *rate > 0),
             sample_rate: song.sampling_rate.filter(|rate| *rate > 0),
             uri: self.stream_url(&song.id),
@@ -642,6 +643,9 @@ pub struct AlbumList2 {
 #[serde(rename_all = "camelCase")]
 pub struct Child {
     pub id: String,
+    /// When the user starred it; absent means not starred. Subsonic reports
+    /// this on every song in every listing.
+    pub starred: Option<String>,
     pub title: String,
     pub album: Option<String>,
     pub album_id: Option<String>,
@@ -702,6 +706,29 @@ mod tests {
         let mut client = Subsonic::with_credentials("https://music.example.com/", "demo", "demo");
         client.salt = "abcdef123456".to_string();
         client
+    }
+
+    /// `getStarred2` is what a Subsonic "like" is, so its envelope has to
+    /// parse — an empty list here is an empty Liked screen and a heart that
+    /// never lights.
+    #[test]
+    fn the_starred_envelope_parses() {
+        let envelope: SubsonicResponse = serde_json::from_value(serde_json::json!({
+            "subsonic-response": {
+                "status": "ok",
+                "starred2": {
+                    "song": [
+                        { "id": "300", "title": "God Is Dead?", "artist": "Black Sabbath" }
+                    ]
+                }
+            }
+        }))
+        .unwrap();
+
+        let body = envelope.into_result().expect("ok status");
+        let starred = body.starred2.expect("starred2 is present");
+        assert_eq!(starred.song.len(), 1);
+        assert_eq!(starred.song[0].id, "300");
     }
 
     /// The server reports these with every listing, so nothing has to probe

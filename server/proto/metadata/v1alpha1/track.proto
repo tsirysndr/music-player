@@ -19,4 +19,7 @@ message Track {
   string artist = 10;
   uint32 bitrate = 11;     // kbps, 0 = unknown
   uint32 sample_rate = 12; // Hz, 0 = unknown
+  // Whether the source has it starred/favourited. Absent when the source did
+  // not say — which is different from "not liked".
+  optional bool liked = 13;
 }

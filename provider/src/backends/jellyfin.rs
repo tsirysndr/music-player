@@ -192,6 +192,7 @@ impl Jellyfin {
             // Jellyfin reports these only on a full item query, not a listing.
             bitrate: None,
             sample_rate: None,
+            liked: item.user_data.as_ref().map(|data| data.is_favorite),
             id: item.id.clone(),
             title: item.name.clone(),
             duration: item
@@ -637,6 +638,15 @@ pub struct BaseItem {
     pub child_count: Option<u32>,
     /// A track's identity *within* a playlist, which is what removal takes.
     pub playlist_item_id: Option<String>,
+    /// Per-item user state; `IsFavorite` is Jellyfin's "like".
+    pub user_data: Option<UserData>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct UserData {
+    #[serde(default)]
+    pub is_favorite: bool,
 }
 
 #[derive(Debug, Deserialize)]

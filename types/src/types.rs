@@ -362,6 +362,13 @@ pub struct Track {
     pub bitrate: Option<u32>,
     /// Hz, on the same terms as `bitrate`.
     pub sample_rate: Option<u32>,
+    /// Whether the server this came from has it starred/favourited.
+    ///
+    /// Carried per track because a snapshot of "everything liked" can always
+    /// be incomplete — truncated by a limit, or listing only songs when an
+    /// album was the thing starred — and then some hearts are right and some
+    /// are not. `None` means the source did not say.
+    pub liked: Option<bool>,
 }
 
 #[derive(Default, Clone)]

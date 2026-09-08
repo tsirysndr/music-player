@@ -148,6 +148,8 @@ impl Plex {
         let artist = item.grandparent_title.clone().unwrap_or_default();
         let media = item.media.first();
         Track {
+            // This server has ratings rather than likes.
+            liked: None,
             // Plex reports both on the media entry.
             bitrate: media.and_then(|m| m.bitrate).filter(|rate| *rate > 0),
             sample_rate: media

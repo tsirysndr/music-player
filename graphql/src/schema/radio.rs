@@ -429,6 +429,7 @@ impl RadioMutation {
         };
         sender.lock().unwrap().send(PlayerCommand::LoadTracklist {
             tracks: vec![model],
+            start_index: None,
         })?;
         Ok(true)
     }

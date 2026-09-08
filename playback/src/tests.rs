@@ -55,7 +55,10 @@ async fn load_tracklist() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -113,7 +116,10 @@ fn play() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -184,7 +190,10 @@ fn pause() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -247,7 +256,10 @@ fn stop() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -310,7 +322,10 @@ fn next() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -373,7 +388,10 @@ fn previous() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -448,7 +466,10 @@ fn clear() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -513,7 +534,10 @@ fn play_track_at() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -580,7 +604,10 @@ fn play_next() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));
@@ -664,7 +691,10 @@ fn current_track() {
     cmd_tx
         .lock()
         .unwrap()
-        .send(PlayerCommand::LoadTracklist { tracks })
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        })
         .unwrap();
 
     sleep(Duration::from_millis(1000));

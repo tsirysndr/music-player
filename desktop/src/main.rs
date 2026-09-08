@@ -143,6 +143,11 @@ pub fn ui_set_library(app: &AppWindow, data: rpc::LibraryData) {
         app.set_artists(ModelRc::new(VecModel::from(artists)));
         app.set_tracks(ModelRc::new(VecModel::from(tracks)));
         app.set_liked(ModelRc::new(VecModel::from(liked)));
+        // The heart, for whatever is already playing. The library arrives
+        // after the first now-playing poll, so without this a track that is
+        // liked shows an empty heart until it changes — which is exactly what
+        // happens with a remote provider, whose likes only this list knows.
+        app.set_now_liked(ids.contains(app.get_now_track_id().as_str()));
     });
     // The lists are populated; the placeholders can go.
     app.set_library_loading(false);

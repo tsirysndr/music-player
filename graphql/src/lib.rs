@@ -195,11 +195,15 @@ pub async fn load_tracks(
     let player_cmd_tx = player_cmd.lock().unwrap();
     player_cmd_tx.send(PlayerCommand::Stop).unwrap();
     player_cmd_tx.send(PlayerCommand::Clear).unwrap();
+    // One command: loading the tracklist and *then* asking for an index opened
+    // the first track's stream and immediately replaced it, which against a
+    // remote server is a wasted connection and a real delay before anything
+    // is heard.
     player_cmd_tx
-        .send(PlayerCommand::LoadTracklist { tracks })
-        .unwrap();
-    player_cmd_tx
-        .send(PlayerCommand::PlayTrackAt(position.unwrap_or(0) as usize))
+        .send(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: Some(position.unwrap_or(0) as usize),
+        })
         .unwrap();
     Ok(())
 }

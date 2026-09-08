@@ -339,6 +339,13 @@ struct WorkerState {
     /// server — that is a visible pause against a remote library, and the
     /// answer does not change between two clicks. Dropped on a server switch,
     /// where every id belongs to a different library.
+    /// The connected provider's own liked tracks, when there is one.
+    ///
+    /// A provider's likes are its own — Subsonic's stars, Jellyfin's
+    /// favourites — and their ids mean nothing to the local store, so they
+    /// cannot be derived by filtering the cached library. `None` means the
+    /// local library, where they can.
+    remote_liked: Option<Vec<TrackProto>>,
     album_cache: HashMap<String, Vec<TrackProto>>,
     playlist_cache: HashMap<String, (Vec<TrackProto>, u32)>,
     radios: HashMap<String, crate::radio::Station>,
@@ -811,8 +818,19 @@ async fn init_audio_settings(channel: &Channel, weak: &Weak<AppWindow>) {
     }
 }
 
-/// Rebuilds the liked TrackData list from the worker cache (library order).
+/// The liked tracks to show.
+///
+/// The daemon's list when a provider is connected — it is the only thing that
+/// knows that server's stars — else the local set filtered over the cached
+/// library.
 fn liked_list(state: &WorkerState) -> Vec<TrackData> {
+    if let Some(remote) = &state.remote_liked {
+        return remote
+            .iter()
+            .enumerate()
+            .map(|(i, track)| track_data(track, i as i32))
+            .collect();
+    }
     state
         .tracks
         .iter()
@@ -895,15 +913,19 @@ async fn load_library(
         let mut st = state.lock().await;
         st.tracks = full;
         match remote_liked {
-            Some(tracks) if !tracks.is_empty() => tracks
-                .iter()
-                .enumerate()
-                .map(|(i, t)| track_data(t, i as i32))
-                .collect(),
-            // Nothing from the daemon: fall back to the local set, which is
-            // what a purely local library has always used.
-            _ => liked_list(&st),
+            Some(tracks) if !tracks.is_empty() => {
+                // The ids go into the same set the heart icon consults, so a
+                // remote star lights it just as a local like does.
+                for track in &tracks {
+                    st.liked.insert(track.id.clone());
+                }
+                st.remote_liked = Some(tracks);
+            }
+            // Nothing from the daemon: the local set, which is what a purely
+            // local library has always used.
+            _ => st.remote_liked = None,
         }
+        liked_list(&st)
     };
 
     let data = LibraryData {
@@ -1060,12 +1082,27 @@ async fn open_playlist(
 }
 
 /// A saved playlist's tracks with stream uris, for loading into the queue.
-async fn playlist_tracks(channel: &Channel, id: &str) -> Result<Vec<TrackProto>, tonic::Status> {
+async fn playlist_tracks(
+    channel: &Channel,
+    state: &Arc<Mutex<WorkerState>>,
+    id: &str,
+) -> Result<Vec<TrackProto>, tonic::Status> {
+    // Pressing play on a playlist you are looking at should not re-ask for
+    // what the detail view already fetched.
+    if let Some((tracks, _)) = state.lock().await.playlist_cache.get(id) {
+        return Ok(tracks.clone());
+    }
     let mut playlists = PlaylistServiceClient::new(channel.clone());
     let resp = playlists
         .get_playlist_details(GetPlaylistDetailsRequest { id: id.to_string() })
         .await?
         .into_inner();
+    let count = resp.track_count.max(resp.tracks.len() as u32);
+    state
+        .lock()
+        .await
+        .playlist_cache
+        .insert(id.to_string(), (resp.tracks.clone(), count));
     Ok(resp.tracks)
 }
 
@@ -1562,7 +1599,10 @@ async fn discover_music_player_servers() -> Vec<(String, String, u16)> {
 async fn push_liked(state: &Arc<Mutex<WorkerState>>, weak: &Weak<AppWindow>) {
     let liked = {
         let st = state.lock().await;
-        likes::save(&st.liked);
+        // Only the local store is a file; a provider's stars live on it.
+        if st.remote_liked.is_none() {
+            likes::save(&st.liked);
+        }
         liked_list(&st)
     };
     let _ = weak.upgrade_in_event_loop(move |app| {
@@ -1797,11 +1837,11 @@ async fn cmd_loop(
                     open_playlist(&channel, &state, &weak, id, false).await?;
                 }
                 Cmd::PlaySavedPlaylist(id) => {
-                    let tracks = playlist_tracks(&channel, &id).await?;
+                    let tracks = playlist_tracks(&channel, &state, &id).await?;
                     load_tracks(&channel, tracks, 0).await?;
                 }
                 Cmd::ShufflePlaylist(id) => {
-                    let mut tracks = playlist_tracks(&channel, &id).await?;
+                    let mut tracks = playlist_tracks(&channel, &state, &id).await?;
                     // Shuffled here rather than by turning the player's own
                     // shuffle on: that is a mode the user set, and starting a
                     // playlist should not silently change it. Fisher–Yates via
@@ -1971,6 +2011,25 @@ async fn cmd_loop(
                             st.liked.insert(id.clone());
                         } else {
                             st.liked.remove(&id);
+                        }
+                        // Keep the provider's list in step so the Liked screen
+                        // reflects the toggle without waiting for a reload.
+                        // Looked up before the mutable borrow.
+                        let newly_liked = st
+                            .tracks
+                            .iter()
+                            .find(|t| t.proto.id == id)
+                            .map(|t| t.proto.clone());
+                        if let Some(remote) = st.remote_liked.as_mut() {
+                            match (like, newly_liked) {
+                                (true, Some(track))
+                                    if !remote.iter().any(|t| t.id == id) =>
+                                {
+                                    remote.insert(0, track)
+                                }
+                                (false, _) => remote.retain(|track| track.id != id),
+                                _ => {}
+                            }
                         }
                     }
                     push_liked(&state, &weak).await;

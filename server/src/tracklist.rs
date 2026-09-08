@@ -73,6 +73,8 @@ impl TracklistService for Tracklist {
             .unwrap()
             .send(PlayerCommand::LoadTracklist {
                 tracks: vec![track],
+                // Appending one track: wherever playback is, it stays.
+                start_index: None,
             })
             .unwrap();
         let response = AddTrackResponse {};
@@ -268,15 +270,17 @@ impl TracklistService for Tracklist {
             .unwrap()
             .send(PlayerCommand::Clear)
             .unwrap();
+        // One command, so the engine opens the wanted track's stream once.
+        // This used to load the tracklist — which starts the first track — and
+        // then ask for the wanted index, opening two remote streams for every
+        // play.
         self.cmd_tx
             .lock()
             .unwrap()
-            .send(PlayerCommand::LoadTracklist { tracks })
-            .unwrap();
-        self.cmd_tx
-            .lock()
-            .unwrap()
-            .send(PlayerCommand::PlayTrackAt(start_index))
+            .send(PlayerCommand::LoadTracklist {
+                tracks,
+                start_index: Some(start_index),
+            })
             .unwrap();
         let response = LoadTracksResponse {};
         Ok(tonic::Response::new(response))

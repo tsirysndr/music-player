@@ -111,6 +111,7 @@ impl TracklistMutation {
                     .unwrap()
                     .send(PlayerCommand::LoadTracklist {
                         tracks: vec![track.clone()],
+                        start_index: None,
                     })
                     .unwrap();
             }
@@ -144,6 +145,7 @@ impl TracklistMutation {
             .unwrap()
             .send(PlayerCommand::LoadTracklist {
                 tracks: vec![track.clone()],
+                start_index: None,
             })
             .unwrap();
 

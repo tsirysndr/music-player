@@ -189,7 +189,10 @@ impl PlayerEngine for Player {
     }
 
     fn load_tracklist(&mut self, tracks: Vec<Track>) {
-        self.command(PlayerCommand::LoadTracklist { tracks });
+        self.command(PlayerCommand::LoadTracklist {
+            tracks,
+            start_index: None,
+        });
     }
 
     fn play(&self) {
@@ -615,7 +618,10 @@ impl PlayerInternal {
     fn handle_command(&mut self, cmd: PlayerCommand) -> PlayerResult {
         match cmd {
             PlayerCommand::Load { track_id } => self.handle_command_load(&track_id),
-            PlayerCommand::LoadTracklist { tracks } => self.handle_command_load_tracklist(tracks),
+            PlayerCommand::LoadTracklist {
+                tracks,
+                start_index,
+            } => self.handle_command_load_tracklist(tracks, start_index),
             PlayerCommand::Play => self.handle_play(),
             PlayerCommand::Pause => self.handle_pause(),
             PlayerCommand::Stop => self.handle_player_stop(),
@@ -754,17 +760,21 @@ impl PlayerInternal {
         self.save_queue();
     }
 
-    fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>) {
+    fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>, start_index: Option<usize>) {
         self.tracklist.lock().unwrap().queue(tracks);
         if self.shuffle {
             self.tracklist.lock().unwrap().shuffle();
         }
         let (current_track, _) = self.tracklist.lock().unwrap().current_track();
-        if current_track.is_none() {
-            self.handle_next();
-        } else {
+        if current_track.is_some() {
             // Appended while playing — the lookahead may have been empty.
             self.resync_engine_next();
+            return;
+        }
+        match start_index.filter(|index| *index > 0) {
+            // Straight to the wanted track: one stream opened, not two.
+            Some(index) => self.handle_play_track_at(index),
+            None => self.handle_next(),
         }
     }
 
@@ -907,6 +917,14 @@ pub enum PlayerCommand {
     },
     LoadTracklist {
         tracks: Vec<Track>,
+        /// Which track to start on.
+        ///
+        /// `None` starts at the beginning. It exists so a caller that wants a
+        /// particular track does not have to follow this with `PlayTrackAt`:
+        /// that opened the first track's stream and immediately replaced it,
+        /// which against a remote server is a wasted connection and a real
+        /// delay before anything is heard.
+        start_index: Option<usize>,
     },
     Play,
     Pause,

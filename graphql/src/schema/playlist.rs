@@ -392,6 +392,22 @@ impl PlaylistMutation {
         id: ID,
         track_id: ID,
     ) -> Result<Playlist, Error> {
+        // With a provider connected the playlist and the track are both its
+        // own; the local table has never heard of either id.
+        if let Some(current) = provider::connected(ctx).await {
+            current
+                .provider
+                .add_to_playlist(&id, &track_id)
+                .await
+                .map_err(provider::err)?;
+            let playlist = current
+                .provider
+                .playlist(&id)
+                .await
+                .map_err(provider::err)?;
+            return Ok(provider::decorate(playlist, &current.config).into());
+        }
+
         let db = ctx.data::<Database>().unwrap();
         let track = track_entity::Entity::find_by_id(track_id.to_string())
             .one(db.get_connection())
@@ -433,6 +449,32 @@ impl PlaylistMutation {
         id: ID,
         position: usize,
     ) -> Result<Playlist, Error> {
+        if let Some(current) = provider::connected(ctx).await {
+            let playlist = current
+                .provider
+                .playlist(&id)
+                .await
+                .map_err(provider::err)?;
+            // This resolver takes a position; the provider trait takes an id,
+            // because that is what survives a list being reordered elsewhere.
+            let track_id = playlist
+                .tracks
+                .get(position)
+                .map(|track| track.id.clone())
+                .ok_or_else(|| Error::new("Track not found"))?;
+            current
+                .provider
+                .remove_from_playlist(&id, &track_id)
+                .await
+                .map_err(provider::err)?;
+            let playlist = current
+                .provider
+                .playlist(&id)
+                .await
+                .map_err(provider::err)?;
+            return Ok(provider::decorate(playlist, &current.config).into());
+        }
+
         let db = ctx.data::<Database>().unwrap();
         let playlist_track = playlist_tracks_entity::Entity::find()
             .filter(playlist_tracks_entity::Column::PlaylistId.eq(id.to_string()))

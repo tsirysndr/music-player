@@ -207,6 +207,15 @@ impl PlaylistService for Playlist {
         &self,
         request: tonic::Request<RemoveItemRequest>,
     ) -> Result<tonic::Response<RemoveItemResponse>, tonic::Status> {
+        if let Some(current) = self.providers.current().await {
+            current
+                .provider
+                .remove_from_playlist(&request.get_ref().id, &request.get_ref().track_id)
+                .await
+                .map_err(crate::library::provider_status)?;
+            return Ok(tonic::Response::new(RemoveItemResponse::default()));
+        }
+
         let item = playlist_tracks::Entity::find()
             .filter(
                 playlist_tracks::Column::PlaylistId
@@ -239,6 +248,19 @@ impl PlaylistService for Playlist {
         &self,
         request: tonic::Request<AddItemRequest>,
     ) -> Result<tonic::Response<AddItemResponse>, tonic::Status> {
+        // With a provider connected the playlist is *its* playlist and the
+        // track is *its* track. Writing the pair into the local table instead
+        // recorded an id the local library has never heard of, which is why
+        // adding a remote track appeared to do nothing.
+        if let Some(current) = self.providers.current().await {
+            current
+                .provider
+                .add_to_playlist(&request.get_ref().id, &request.get_ref().track_id)
+                .await
+                .map_err(crate::library::provider_status)?;
+            return Ok(tonic::Response::new(AddItemResponse::default()));
+        }
+
         let item = playlist_tracks::ActiveModel {
             id: ActiveValue::set(Uuid::new_v4().to_string()),
             playlist_id: ActiveValue::set(request.get_ref().id.clone()),

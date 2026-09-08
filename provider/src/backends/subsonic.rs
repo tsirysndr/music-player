@@ -398,6 +398,44 @@ impl MusicProvider for Subsonic {
         request(url).await.map(|_| ())
     }
 
+    async fn add_to_playlist(
+        &self,
+        playlist_id: &str,
+        track_id: &str,
+    ) -> Result<(), ProviderError> {
+        let url = self.api_url(
+            "updatePlaylist",
+            &[("playlistId", playlist_id), ("songIdToAdd", track_id)],
+        )?;
+        request(url).await.map(|_| ())
+    }
+
+    /// Subsonic removes by *position*, not by id, so the playlist has to be
+    /// read first to find where the track sits.
+    async fn remove_from_playlist(
+        &self,
+        playlist_id: &str,
+        track_id: &str,
+    ) -> Result<(), ProviderError> {
+        let playlist = self.playlist(playlist_id).await?;
+        let Some(index) = playlist
+            .tracks
+            .iter()
+            .position(|track| track.id == track_id)
+        else {
+            // Already gone is the state the caller wanted.
+            return Ok(());
+        };
+        let url = self.api_url(
+            "updatePlaylist",
+            &[
+                ("playlistId", playlist_id),
+                ("songIndexToRemove", &index.to_string()),
+            ],
+        )?;
+        request(url).await.map(|_| ())
+    }
+
     /// One search call rather than the trait's three.
     async fn search(
         &self,

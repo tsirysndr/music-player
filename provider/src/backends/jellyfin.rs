@@ -475,6 +475,70 @@ impl MusicProvider for Jellyfin {
         Ok(())
     }
 
+    async fn add_to_playlist(
+        &self,
+        playlist_id: &str,
+        track_id: &str,
+    ) -> Result<(), ProviderError> {
+        let url = self.url(
+            &format!("/Playlists/{playlist_id}/Items"),
+            &[("ids", track_id), ("userId", &self.user_id)],
+        )?;
+        let response = http::client()
+            .post(url.as_str())
+            .header("X-Emby-Token", self.token())
+            .send()
+            .await
+            .map_err(ProviderError::transport)?;
+        if !response.status().is_success() {
+            return Err(ProviderError::Transport(format!(
+                "the server answered {}",
+                response.status()
+            )));
+        }
+        Ok(())
+    }
+
+    async fn remove_from_playlist(
+        &self,
+        playlist_id: &str,
+        track_id: &str,
+    ) -> Result<(), ProviderError> {
+        // Jellyfin removes by playlist *entry* id, which is not the track id,
+        // so the entry has to be found first.
+        let url = self.url(
+            &format!("/Playlists/{playlist_id}/Items"),
+            &[("userId", &self.user_id)],
+        )?;
+        let items: ItemsResult = self.get_json(url).await?;
+        let Some(entry) = items
+            .items
+            .iter()
+            .find(|item| item.id == track_id)
+            .and_then(|item| item.playlist_item_id.clone())
+        else {
+            return Ok(());
+        };
+
+        let url = self.url(
+            &format!("/Playlists/{playlist_id}/Items"),
+            &[("entryIds", &entry)],
+        )?;
+        let response = http::client()
+            .delete(url.as_str())
+            .header("X-Emby-Token", self.token())
+            .send()
+            .await
+            .map_err(ProviderError::transport)?;
+        if !response.status().is_success() {
+            return Err(ProviderError::Transport(format!(
+                "the server answered {}",
+                response.status()
+            )));
+        }
+        Ok(())
+    }
+
     /// `/Items` already searches every type in one call.
     async fn ping(&self) -> Result<(), ProviderError> {
         self.items(&[("IncludeItemTypes", "Audio"), ("limit", "1")])
@@ -571,6 +635,8 @@ pub struct BaseItem {
     pub production_year: Option<u32>,
     /// How many items a container holds — the playlist row's "N tracks".
     pub child_count: Option<u32>,
+    /// A track's identity *within* a playlist, which is what removal takes.
+    pub playlist_item_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

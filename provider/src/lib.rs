@@ -211,6 +211,33 @@ pub trait MusicProvider: Send + Sync + 'static {
         })
     }
 
+    /// Add a track to one of this server's playlists.
+    ///
+    /// A remote track cannot go into a *local* playlist — the row would point
+    /// at an id the local library has never heard of — so with a provider
+    /// connected the playlist is its own, and so is the track.
+    async fn add_to_playlist(
+        &self,
+        _playlist_id: &str,
+        _track_id: &str,
+    ) -> Result<(), ProviderError> {
+        Err(ProviderError::Unsupported {
+            kind: self.kind(),
+            feature: "editing playlists",
+        })
+    }
+
+    async fn remove_from_playlist(
+        &self,
+        _playlist_id: &str,
+        _track_id: &str,
+    ) -> Result<(), ProviderError> {
+        Err(ProviderError::Unsupported {
+            kind: self.kind(),
+            feature: "editing playlists",
+        })
+    }
+
     /// A cheap round trip, used to check a server is reachable before it is
     /// made current.
     async fn ping(&self) -> Result<(), ProviderError> {

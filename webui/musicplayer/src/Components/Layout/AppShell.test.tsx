@@ -9,6 +9,7 @@ import Providers from "../../Providers";
 import {
   mutedAtom,
   nowPlayingAtom,
+  sidebarOpenAtom,
   volumeAtom,
   volumeLoadedAtom,
   type NowPlaying,
@@ -192,6 +193,47 @@ describe("AppShell", () => {
       expect(
         screen.getByRole("heading", { name: "Queue" })
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("the full player and the sidebar", () => {
+    /** The canvas wants the window; the sidebar navigates a hidden page. */
+    it("hides the sidebar while the full player is open", async () => {
+      const { user, store } = setupPlaying(TRACK);
+      expect(store.get(sidebarOpenAtom)).toBe(true);
+
+      await user.keyboard("f");
+      await waitFor(() => expect(store.get(sidebarOpenAtom)).toBe(false));
+
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(store.get(sidebarOpenAtom)).toBe(true));
+    });
+
+    /** Someone who had it collapsed must not get it back. */
+    it("restores what it was, not what it assumes", async () => {
+      const { user, store } = setupPlaying(TRACK, (store) =>
+        store.set(sidebarOpenAtom, false)
+      );
+
+      await user.keyboard("f");
+      expect(store.get(sidebarOpenAtom)).toBe(false);
+
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(store.get(sidebarOpenAtom)).toBe(false));
+    });
+
+    /** Opening it by hand over the canvas is a deliberate override. */
+    it("leaves the sidebar alone once it has been reopened by hand", async () => {
+      const { user, store } = setupPlaying(TRACK);
+
+      await user.keyboard("f");
+      await waitFor(() => expect(store.get(sidebarOpenAtom)).toBe(false));
+
+      await user.keyboard("b");
+      await waitFor(() => expect(store.get(sidebarOpenAtom)).toBe(true));
+
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(store.get(sidebarOpenAtom)).toBe(true));
     });
   });
 

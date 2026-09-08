@@ -1,5 +1,5 @@
-import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useState, type ReactNode } from "react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useVolume, VOLUME_STEP } from "../../Hooks/useVolume";
 import { useSkin } from "../../Providers/SkinProvider";
@@ -38,9 +38,9 @@ export type AppShellProps = HeaderProps & {
 const AppShell = ({ children, bare, ...header }: AppShellProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const setSidebarOpen = useSetAtom(sidebarOpenAtom);
+  const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const setQueueOpen = useSetAtom(queueOpenAtom);
-  const setFullPlayer = useSetAtom(fullPlayerOpenAtom);
+  const [fullPlayerOpen, setFullPlayer] = useAtom(fullPlayerOpenAtom);
   const setPaletteOpen = useSetAtom(paletteOpenAtom);
   const setAudioOpen = useSetAtom(audioSettingsOpenAtom);
   const { cycleSkin } = useSkin();
@@ -91,6 +91,7 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
           setQueueOpen((open) => !open);
           break;
         case "b":
+          sidebarBeforeFullPlayer.current = undefined;
           setSidebarOpen((open) => !open);
           break;
         case "e":
@@ -137,6 +138,33 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
     adjustVolume,
     toggleMute,
   ]);
+
+  /**
+   * The full player wants the window; the sidebar is navigation for a page
+   * that is no longer showing.
+   *
+   * What it was before is remembered rather than assumed, so someone who had
+   * it collapsed does not get it back on Escape. The ref is only set while we
+   * are the reason it is closed — reopening it by hand with `b` while the
+   * canvas is up clears the claim, so closing the canvas leaves it alone.
+   */
+  const sidebarBeforeFullPlayer = useRef<boolean | undefined>(undefined);
+  const fullPlayerWasOpen = useRef(false);
+  useEffect(() => {
+    const opened = fullPlayerOpen && !fullPlayerWasOpen.current;
+    const closed = !fullPlayerOpen && fullPlayerWasOpen.current;
+    fullPlayerWasOpen.current = fullPlayerOpen;
+
+    // Acts on the edges, not the state: re-running on every sidebar change
+    // would undo a `b` press the moment it happened.
+    if (opened) {
+      sidebarBeforeFullPlayer.current = sidebarOpen;
+      if (sidebarOpen) setSidebarOpen(false);
+    } else if (closed && sidebarBeforeFullPlayer.current !== undefined) {
+      setSidebarOpen(sidebarBeforeFullPlayer.current);
+      sidebarBeforeFullPlayer.current = undefined;
+    }
+  }, [fullPlayerOpen, sidebarOpen, setSidebarOpen]);
 
   // A phone has no room for both the sheet and the page; close it on
   // navigation so a tap on a result does not land behind the queue.

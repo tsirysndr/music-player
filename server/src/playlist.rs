@@ -291,6 +291,7 @@ impl PlaylistService for Playlist {
                 .map_err(crate::library::provider_status)?;
             let playlist = music_player_provider::url::decorate(playlist, &current.config);
             return Ok(tonic::Response::new(GetPlaylistDetailsResponse {
+                track_count: playlist.len(),
                 id: playlist.id,
                 name: playlist.name,
                 description: playlist.description.unwrap_or_default(),

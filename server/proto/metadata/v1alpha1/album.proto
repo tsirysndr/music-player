@@ -14,6 +14,11 @@ message Song {
   float duration = 5;
   int32 disc_number = 6;
   int32 track_number = 7;
+  // The stream url. Without it a client holding an album listing cannot play
+  // anything from it, and has to re-fetch every track one by one.
+  string uri = 8;
+  string album = 9;
+  string artist = 10;
 }
 
 message Album {

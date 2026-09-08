@@ -354,6 +354,7 @@ impl From<RemotePlaylist> for Playlist {
             id: playlist.id,
             name: playlist.name,
             description: playlist.description,
+            track_count: None,
             tracks: playlist.tracks.into_iter().map(Into::into).collect(),
         }
     }

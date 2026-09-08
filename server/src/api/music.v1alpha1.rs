@@ -4135,6 +4135,10 @@ pub struct GetPlaylistDetailsResponse {
     pub description: ::prost::alloc::string::String,
     #[prost(message, repeated, tag = "4")]
     pub tracks: ::prost::alloc::vec::Vec<super::super::metadata::v1alpha1::Track>,
+    /// Present when the server reported one; a detail call carries the entries
+    /// anyway, so this is for consistency with the listing.
+    #[prost(uint32, tag = "5")]
+    pub track_count: u32,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateFolderRequest {

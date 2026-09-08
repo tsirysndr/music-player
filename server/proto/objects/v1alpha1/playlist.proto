@@ -9,4 +9,7 @@ message Playlist {
   string name = 2;
   string description = 3;
   repeated metadata.v1alpha1.Track tracks = 4;
+  // How many tracks it has. A listing reports this without sending the
+  // entries, so counting `tracks` there gives zero.
+  uint32 track_count = 5;
 }

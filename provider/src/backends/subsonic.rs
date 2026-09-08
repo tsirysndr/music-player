@@ -214,6 +214,9 @@ impl Subsonic {
                 .iter()
                 .map(|song| self.map_song(song))
                 .collect(),
+            // `getPlaylists` reports the count but sends no entries, so this
+            // is the only place the row's "N tracks" can come from.
+            track_count: playlist.song_count.map(|count| count.max(0) as u32),
         }
     }
 }

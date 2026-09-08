@@ -283,6 +283,8 @@ impl MusicProvider for Plex {
                     name: item.title.clone(),
                     description: item.summary.clone().filter(|s| !s.is_empty()),
                     tracks: vec![],
+                    // Reported on the listing; the items are a second call.
+                    track_count: item.leaf_count,
                 })
                 .collect(),
         ))
@@ -303,6 +305,8 @@ impl MusicProvider for Plex {
             id: id.to_string(),
             name,
             description,
+            // The items are right here, so counting them is exact.
+            track_count: None,
             tracks: items
                 .media_container
                 .metadata
@@ -399,6 +403,8 @@ struct Metadata {
     year: Option<u32>,
     /// Milliseconds.
     duration: Option<u64>,
+    /// How many tracks a playlist holds.
+    leaf_count: Option<u32>,
     #[serde(rename = "Media", default)]
     media: Vec<Media>,
 }

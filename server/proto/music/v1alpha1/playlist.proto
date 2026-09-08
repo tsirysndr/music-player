@@ -91,6 +91,9 @@ message GetPlaylistDetailsResponse {
   string name = 2;
   string description = 3;
   repeated metadata.v1alpha1.Track tracks = 4;
+  // Present when the server reported one; a detail call carries the entries
+  // anyway, so this is for consistency with the listing.
+  uint32 track_count = 5;
 }
 
 message CreateFolderRequest {

@@ -87,6 +87,7 @@ impl PlaylistRepository {
             name: playlist.name,
             description: playlist.description,
             tracks: result.into_iter().map(Into::into).collect(),
+            track_count: None,
         })
     }
 

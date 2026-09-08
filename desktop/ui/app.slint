@@ -117,6 +117,8 @@ export component AppWindow inherits Window {
     // ── Playlists ───────────────────────────────────────────────────────────
     in-out property <[PlaylistItem]> playlists: [];
     in-out property <bool> pl-detail-open: false;
+    /// The playlist page is open but its tracks are still in flight.
+    in-out property <bool> pl-detail-loading: false;
     in-out property <PlaylistItem> pl-detail;
     in-out property <[TrackItem]> pl-detail-tracks: [];
     in-out property <bool> show-playlist-form: false;
@@ -1081,7 +1083,15 @@ export component AppWindow inherits Window {
                                 width: 100%;
                                 height: 56px;
                                 playlist: pl;
-                                open => { root.playlists-open(pl.id); }
+                                open => {
+                                    // Navigate first, as the album grid does:
+                                    // fetching the tracks is a round trip.
+                                    root.pl-detail = pl;
+                                    root.pl-detail-tracks = [];
+                                    root.pl-detail-loading = true;
+                                    root.pl-detail-open = true;
+                                    root.playlists-open(pl.id);
+                                }
                                 play => { root.playlist-play(pl.id); }
                                 shuffle-play => { root.playlist-shuffle(pl.id); }
                                 edit => {
@@ -1172,7 +1182,11 @@ export component AppWindow inherits Window {
                         }
                     }
                     TrackListHeader {}
-                    ListView {
+                    if root.pl-detail-loading : TrackSkeletonList {
+                        rows: 8;
+                        vertical-stretch: 1;
+                    }
+                    if !root.pl-detail-loading : ListView {
                         vertical-stretch: 1;
                         for t[i] in root.pl-detail-tracks : Rectangle {
                             height: 42px;
@@ -1201,7 +1215,7 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
-                    if root.pl-detail-tracks.length == 0 : Text {
+                    if !root.pl-detail-loading && root.pl-detail-tracks.length == 0 : Text {
                         text: "Empty playlist — click + to add tracks.";
                         color: Theme.text-muted;
                         font-size: 12px;

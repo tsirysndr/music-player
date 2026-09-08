@@ -611,22 +611,33 @@ pub fn ui_set_playlists(app: &AppWindow, data: Vec<rpc::PlaylistData>) {
 }
 
 /// Called from the rpc worker with a playlist's track ids.
-pub fn ui_show_playlist(app: &AppWindow, id: String, track_ids: Vec<String>, open_picker: bool) {
-    let tracks: Vec<TrackItem> = STATE.with(|s| {
+pub fn ui_show_playlist(
+    app: &AppWindow,
+    id: String,
+    tracks: Vec<rpc::TrackProto>,
+    count: u32,
+    open_picker: bool,
+) {
+    let items: Vec<TrackItem> = STATE.with(|s| {
         let mut st = s.borrow_mut();
         st.pl_detail_id = Some(id.clone());
-        st.pl_detail_track_ids = track_ids.clone();
-        let ids = liked_ids_of(&st.liked);
-        track_ids
+        st.pl_detail_track_ids = tracks.iter().map(|t| t.id.clone()).collect();
+        let liked = liked_ids_of(&st.liked);
+        tracks
             .iter()
-            .filter_map(|tid| st.tracks.iter().find(|t| &t.id == tid))
-            .map(|t| track_item_with(t, &ids))
+            .enumerate()
+            .map(|(i, t)| track_item_with(&rpc::track_data(t, i as i32), &liked))
             .collect()
     });
     if let Some(p) = STATE.with(|s| s.borrow().playlists.iter().find(|p| p.id == id).cloned()) {
-        app.set_pl_detail(playlist_item(&p));
+        let mut item = playlist_item(&p);
+        // The detail knows the real count; a listing row may only have had
+        // what the server reported.
+        item.count = count as i32;
+        app.set_pl_detail(item);
     }
-    app.set_pl_detail_tracks(ModelRc::new(VecModel::from(tracks)));
+    app.set_pl_detail_tracks(ModelRc::new(VecModel::from(items)));
+    app.set_pl_detail_loading(false);
     app.set_pl_detail_open(true);
     app.set_current_tab(5);
     if open_picker {
@@ -778,10 +789,11 @@ fn server_row(
     active: &str,
     provider: &str,
 ) -> PaletteItem {
+    let same = |value: &str| value.trim_end_matches('/') == provider.trim_end_matches('/');
     let connected = if provider.is_empty() {
+        // Reading locally: the daemon this client points at is the answer.
         subtitle == active || id == active
     } else {
-        let same = |value: &str| value.trim_end_matches('/') == provider.trim_end_matches('/');
         same(&subtitle) || same(&id)
     };
     if connected {
@@ -1391,6 +1403,12 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_switcher_opened(move || {
             let _ = tx.send(rpc::Cmd::DiscoverServers);
+            // Both lists it shows, re-read from the daemon: the saved servers
+            // (another client may have changed them) and which one is current.
+            // Without the latter the local row lights up whenever this side's
+            // copy is empty, which is what made a connected server look
+            // disconnected.
+            let _ = tx.send(rpc::Cmd::LoadServers);
         });
     }
     {

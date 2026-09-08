@@ -20,6 +20,14 @@ pub struct Song {
     pub disc_number: i32,
     #[prost(int32, tag = "7")]
     pub track_number: i32,
+    /// The stream url. Without it a client holding an album listing cannot play
+    /// anything from it, and has to re-fetch every track one by one.
+    #[prost(string, tag = "8")]
+    pub uri: ::prost::alloc::string::String,
+    #[prost(string, tag = "9")]
+    pub album: ::prost::alloc::string::String,
+    #[prost(string, tag = "10")]
+    pub artist: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Album {

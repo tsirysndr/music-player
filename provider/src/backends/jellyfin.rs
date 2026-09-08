@@ -361,6 +361,8 @@ impl MusicProvider for Jellyfin {
                 name: item.name.clone(),
                 description: None,
                 tracks: vec![],
+                // Jellyfin reports it on the listing; the entries are not sent.
+                track_count: item.child_count,
             })
             .collect())
     }
@@ -416,6 +418,7 @@ impl MusicProvider for Jellyfin {
             id: item.id.clone(),
             name: item.name.clone(),
             description: None,
+            track_count: None,
             tracks: songs
                 .items
                 .iter()
@@ -563,6 +566,8 @@ pub struct BaseItem {
     pub index_number: Option<u32>,
     pub parent_index_number: Option<u32>,
     pub production_year: Option<u32>,
+    /// How many items a container holds — the playlist row's "N tracks".
+    pub child_count: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -364,6 +364,23 @@ pub struct Playlist {
     pub name: String,
     pub description: Option<String>,
     pub tracks: Vec<Track>,
+    /// How many tracks it has, when that is known without listing them.
+    ///
+    /// A listing gives a count but no entries, so counting `tracks` there
+    /// yields zero — which is what every playlist row used to show. `None`
+    /// means "no better answer than `tracks.len()`".
+    pub track_count: Option<u32>,
+}
+
+impl Playlist {
+    /// The count to display: the server's if it gave one, else what we hold.
+    pub fn len(&self) -> u32 {
+        self.track_count.unwrap_or(self.tracks.len() as u32)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 #[derive(Default, Clone)]

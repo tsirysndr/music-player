@@ -15,12 +15,12 @@ use tonic::transport::{Channel, Endpoint};
 
 use crate::AppWindow;
 
-use music_player_server::api::metadata::v1alpha1::Track as TrackProto;
+pub use music_player_server::api::metadata::v1alpha1::Track as TrackProto;
 use music_player_server::api::music::v1alpha1::{
     library_service_client::LibraryServiceClient, mixer_service_client::MixerServiceClient,
     playback_service_client::PlaybackServiceClient, playlist_service_client::PlaylistServiceClient,
     tracklist_service_client::TracklistServiceClient, AddItemRequest, AddTrackRequest,
-    ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest, GetLikedTracksRequest, GetTrackDetailsRequest,
+    ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest, GetLikedTracksRequest,
     GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
     GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest, GetVolumeRequest,
     LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest,
@@ -333,6 +333,14 @@ struct WorkerState {
     tracks: Vec<FullTrack>,
     liked: HashSet<String>,
     playing: bool,
+    /// Album and playlist detail responses, keyed by id.
+    ///
+    /// Navigating back to one it has already fetched should not re-ask the
+    /// server — that is a visible pause against a remote library, and the
+    /// answer does not change between two clicks. Dropped on a server switch,
+    /// where every id belongs to a different library.
+    album_cache: HashMap<String, Vec<TrackProto>>,
+    playlist_cache: HashMap<String, (Vec<TrackProto>, u32)>,
     radios: HashMap<String, crate::radio::Station>,
 }
 
@@ -741,7 +749,7 @@ async fn probe_local_audio_format(path: std::path::PathBuf) -> Option<(u32, u32)
     .ok()?
 }
 
-fn track_data(t: &TrackProto, index: i32) -> TrackData {
+pub fn track_data(t: &TrackProto, index: i32) -> TrackData {
     TrackData {
         id: t.id.clone(),
         title: if t.title.is_empty() {
@@ -824,6 +832,14 @@ async fn load_library(
     state: &Arc<Mutex<WorkerState>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = weak.upgrade_in_event_loop(|app| app.set_library_loading(true));
+    {
+        // Every cached id belongs to whichever library was current when it was
+        // fetched, so a reload — which is what a server switch triggers —
+        // drops the lot.
+        let mut st = state.lock().await;
+        st.album_cache.clear();
+        st.playlist_cache.clear();
+    }
     let mut lib = LibraryServiceClient::new(channel.clone());
 
     let albums = lib
@@ -1006,18 +1022,36 @@ async fn load_playlists(channel: &Channel, weak: &Weak<AppWindow>) {
 
 async fn open_playlist(
     channel: &Channel,
+    state: &Arc<Mutex<WorkerState>>,
     weak: &Weak<AppWindow>,
     id: String,
     open_picker: bool,
 ) -> Result<(), tonic::Status> {
+    if let Some((tracks, count)) = state.lock().await.playlist_cache.get(&id).cloned() {
+        let id = id.clone();
+        let _ = weak.upgrade_in_event_loop(move |app| {
+            crate::ui_show_playlist(&app, id, tracks, count, open_picker);
+        });
+        return Ok(());
+    }
+
     let mut playlists = PlaylistServiceClient::new(channel.clone());
     let resp = playlists
         .get_playlist_details(GetPlaylistDetailsRequest { id: id.clone() })
         .await?
         .into_inner();
-    let ids: Vec<String> = resp.tracks.iter().map(|t| t.id.clone()).collect();
+    // The full tracks, not just their ids: the daemon has already sent
+    // everything a row needs, and looking each one up in the cached library
+    // dropped whatever was not cached — most of a remote playlist.
+    let count = resp.track_count.max(resp.tracks.len() as u32);
+    let tracks = resp.tracks;
+    state
+        .lock()
+        .await
+        .playlist_cache
+        .insert(id.clone(), (tracks.clone(), count));
     let _ = weak.upgrade_in_event_loop(move |app| {
-        crate::ui_show_playlist(&app, id, ids, open_picker);
+        crate::ui_show_playlist(&app, id, tracks, count, open_picker);
     });
     Ok(())
 }
@@ -1164,14 +1198,34 @@ async fn fetch_album(
         .album)
 }
 
+/// An album's tracks, fetching the album only if it is not already cached.
 async fn fetch_album_tracks(
     channel: &Channel,
     state: &Arc<Mutex<WorkerState>>,
     id: &str,
 ) -> Result<Vec<TrackProto>, tonic::Status> {
-    let Some(mut album) = fetch_album(channel, id).await? else {
+    // Before the request, not after it: the point is to skip the round trip.
+    if let Some(cached) = state.lock().await.album_cache.get(id) {
+        return Ok(cached.clone());
+    }
+    let Some(album) = fetch_album(channel, id).await? else {
         return Ok(Vec::new());
     };
+    Ok(album_tracks_from(state, id, album).await)
+}
+
+/// Turn an already-fetched album into playable rows, and remember them.
+///
+/// The listing carries every field a row needs, uri included, so this makes no
+/// request of its own. It used to look each track up in the cached library,
+/// which dropped anything uncached — most of a remote album — and, once that
+/// was fixed by fetching the misses, opening an album became a dozen
+/// sequential round trips.
+async fn album_tracks_from(
+    state: &Arc<Mutex<WorkerState>>,
+    id: &str,
+    mut album: music_player_server::api::metadata::v1alpha1::Album,
+) -> Vec<TrackProto> {
     let songs = std::mem::take(&mut album.tracks);
     let by_id: HashMap<String, TrackProto> = state
         .lock()
@@ -1180,49 +1234,36 @@ async fn fetch_album_tracks(
         .iter()
         .map(|track| (track.proto.id.clone(), track.proto.clone()))
         .collect();
-    // A song in the album listing carries no uri, so the full track has to
-    // come from somewhere. The local cache holds the whole library, but a
-    // remote provider's does not — its cached list is one page of a much
-    // larger library — so anything missing is fetched rather than dropped.
-    // Dropping is what showed three tracks of a twelve-track Subsonic album.
-    let missing: Vec<String> = songs
-        .iter()
-        .filter(|song| !by_id.contains_key(&song.id))
-        .map(|song| song.id.clone())
-        .collect();
-    let fetched: HashMap<String, TrackProto> = if missing.is_empty() {
-        HashMap::new()
-    } else {
-        let mut library = LibraryServiceClient::new(channel.clone());
-        let mut fetched = HashMap::new();
-        for id in missing {
-            // One at a time: the client is not `Sync`, and an album is a
-            // handful of rows rather than a sweep of the library.
-            if let Ok(response) = library
-                .get_track_details(GetTrackDetailsRequest { id: id.clone() })
-                .await
-            {
-                if let Some(track) = response.into_inner().track {
-                    fetched.insert(id, track);
-                }
-            }
-        }
-        fetched
-    };
 
-    Ok(songs
+    let tracks: Vec<TrackProto> = songs
         .into_iter()
-        .filter_map(|song| {
-            let mut track = by_id
-                .get(&song.id)
-                .or_else(|| fetched.get(&song.id))?
-                .clone();
+        .map(|song| {
+            // The cached copy is preferred only for what the listing does not
+            // repeat per song.
+            let mut track = by_id.get(&song.id).cloned().unwrap_or_else(|| TrackProto {
+                id: song.id.clone(),
+                title: song.title.clone(),
+                artist: song.artist.clone(),
+                duration: song.duration,
+                uri: song.uri.clone(),
+                ..Default::default()
+            });
+            if track.uri.is_empty() {
+                track.uri = song.uri.clone();
+            }
             track.album = Some(album.clone());
             track.track_number = song.track_number;
             track.disc_number = song.disc_number;
-            Some(track)
+            track
         })
-        .collect())
+        .collect();
+
+    state
+        .lock()
+        .await
+        .album_cache
+        .insert(id.to_string(), tracks.clone());
+    tracks
 }
 
 /// Every track by one artist, in library order.
@@ -1250,14 +1291,14 @@ async fn open_album(
     let failed = |weak: &Weak<AppWindow>| {
         let _ = weak.upgrade_in_event_loop(|app| app.set_detail_loading(false));
     };
+    // One `GetAlbumDetails` for both the header and the rows. This used to
+    // call it twice — once here and once inside `fetch_album_tracks` — which
+    // doubled the wait on every album against a remote server.
     let Ok(Some(album)) = fetch_album(channel, &id).await else {
         failed(weak);
         return;
     };
-    let Ok(tracks) = fetch_album_tracks(channel, state, &id).await else {
-        failed(weak);
-        return;
-    };
+    let tracks = album_tracks_from(state, &id, album.clone()).await;
     let detail = AlbumDetailData {
         id,
         title: album.title,
@@ -1750,7 +1791,7 @@ async fn cmd_loop(
                         .await?;
                 }
                 Cmd::OpenPlaylist(id) => {
-                    open_playlist(&channel, &weak, id, false).await?;
+                    open_playlist(&channel, &state, &weak, id, false).await?;
                 }
                 Cmd::PlaySavedPlaylist(id) => {
                     let tracks = playlist_tracks(&channel, &id).await?;
@@ -1794,7 +1835,7 @@ async fn cmd_loop(
                             load_playlists(&channel, &weak).await;
                             // A smart playlist arrives full, so it opens on its
                             // tracks rather than on the picker.
-                            open_playlist(&channel, &weak, id, false).await?;
+                            open_playlist(&channel, &state, &weak, id, false).await?;
                         }
                         Err(status) => {
                             let message = status.message().to_owned();
@@ -1849,7 +1890,7 @@ async fn cmd_loop(
                         .await?
                         .into_inner();
                     load_playlists(&channel, &weak).await;
-                    open_playlist(&channel, &weak, resp.id, true).await?;
+                    open_playlist(&channel, &state, &weak, resp.id, true).await?;
                 }
                 Cmd::PlaylistUpdate {
                     id,
@@ -1865,7 +1906,8 @@ async fn cmd_loop(
                         })
                         .await?;
                     load_playlists(&channel, &weak).await;
-                    open_playlist(&channel, &weak, id, false).await.ok();
+                    state.lock().await.playlist_cache.remove(&id);
+                    open_playlist(&channel, &state, &weak, id, false).await.ok();
                 }
                 Cmd::PlaylistDelete(id) => {
                     let mut playlists = PlaylistServiceClient::new(channel.clone());
@@ -1884,7 +1926,9 @@ async fn cmd_loop(
                         })
                         .await?;
                     load_playlists(&channel, &weak).await;
-                    open_playlist(&channel, &weak, playlist_id, false)
+                    // The cached copy is now wrong.
+                    state.lock().await.playlist_cache.remove(&playlist_id);
+                    open_playlist(&channel, &state, &weak, playlist_id, false)
                         .await
                         .ok();
                 }
@@ -1900,7 +1944,9 @@ async fn cmd_loop(
                         })
                         .await?;
                     load_playlists(&channel, &weak).await;
-                    open_playlist(&channel, &weak, playlist_id, false)
+                    // The cached copy is now wrong.
+                    state.lock().await.playlist_cache.remove(&playlist_id);
+                    open_playlist(&channel, &state, &weak, playlist_id, false)
                         .await
                         .ok();
                 }
@@ -2064,6 +2110,9 @@ async fn cmd_loop(
                     if let Err(e) = load_servers(&weak).await {
                         tracing::warn!("could not list servers: {e}");
                     }
+                    // Which one is current, so the switcher marks the right
+                    // row rather than falling back to "this machine".
+                    load_connected_provider(&weak).await;
                 }
                 Cmd::AddServer {
                     kind,

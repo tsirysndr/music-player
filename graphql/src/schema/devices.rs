@@ -74,9 +74,18 @@ impl DevicesQuery {
     async fn list_cast_devices(&self, ctx: &Context<'_>) -> Result<Vec<Device>, Error> {
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
+
+        // One row per device, not per advertised service. A music-player peer
+        // announces gRPC and HTTP separately — and mDNS may carry more — so
+        // without this the Play to list showed the same machine three times.
+        // Discovery keys on (id, service) because it genuinely needs both;
+        // this list is about *places to play*, where the id alone identifies
+        // one.
+        let mut seen = std::collections::HashSet::new();
         Ok(devices
             .into_iter()
             .filter(|device| device.is_cast_device)
+            .filter(|device| seen.insert(device.id.clone()))
             .map(Into::into)
             .collect())
     }

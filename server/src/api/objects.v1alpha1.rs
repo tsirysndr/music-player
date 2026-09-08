@@ -28,6 +28,10 @@ pub struct Playlist {
     pub description: ::prost::alloc::string::String,
     #[prost(message, repeated, tag = "4")]
     pub tracks: ::prost::alloc::vec::Vec<super::super::metadata::v1alpha1::Track>,
+    /// How many tracks it has. A listing reports this without sending the
+    /// entries, so counting `tracks` there gives zero.
+    #[prost(uint32, tag = "5")]
+    pub track_count: u32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Tracklist {

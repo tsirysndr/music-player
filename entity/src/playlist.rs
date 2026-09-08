@@ -71,6 +71,9 @@ impl From<Model> for PlaylistType {
             name: val.name,
             description: val.description,
             tracks: val.tracks.into_iter().map(Into::into).collect(),
+            // A local playlist always carries its tracks, so counting them is
+            // exact.
+            track_count: None,
         }
     }
 }

@@ -48,6 +48,7 @@ pub mod api {
                     name: val.name,
                     description: Some(val.description),
                     tracks: val.tracks.into_iter().map(Into::into).collect(),
+                    track_count: Some(val.track_count).filter(|count| *count > 0),
                 }
             }
         }
@@ -55,6 +56,7 @@ pub mod api {
         impl From<Playlist> for GetPlaylistDetailsResponse {
             fn from(playlist: Playlist) -> Self {
                 Self {
+                    track_count: playlist.len(),
                     id: playlist.id,
                     name: playlist.name,
                     description: playlist.description.unwrap_or_default(),
@@ -76,6 +78,7 @@ pub mod api {
         impl From<playlist::Model> for Playlist {
             fn from(model: playlist::Model) -> Self {
                 Self {
+                    track_count: model.tracks.len() as u32,
                     id: model.id,
                     name: model.name,
                     description: model.description.unwrap_or_default(),
@@ -91,6 +94,7 @@ pub mod api {
                     name: val.name,
                     description: Some(val.description),
                     tracks: val.tracks.into_iter().map(Into::into).collect(),
+                    track_count: Some(val.track_count).filter(|count| *count > 0),
                 }
             }
         }
@@ -158,8 +162,13 @@ pub mod api {
                     title: model.title,
                     duration: model.duration.unwrap_or_default(),
                     track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
+                    // The local track table has no disc column; multi-disc
+                    // information reaches the app by the scanner's own path.
+                    disc_number: 0,
+                    uri: model.uri,
+                    album: model.album.title.clone(),
+                    artist: model.artist,
                     artists: model.artists.into_iter().map(Into::into).collect(),
-                    ..Default::default()
                 }
             }
         }
@@ -171,8 +180,11 @@ pub mod api {
                     title: track.title,
                     duration: track.duration.unwrap_or_default(),
                     track_number: track.track_number.unwrap_or_default() as i32,
+                    disc_number: track.disc_number as i32,
+                    uri: track.uri,
+                    album: track.album.as_ref().map(|a| a.title.clone()).unwrap_or_default(),
+                    artist: track.artist,
                     artists: track.artists.into_iter().map(Into::into).collect(),
-                    ..Default::default()
                 }
             }
         }

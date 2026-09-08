@@ -87,17 +87,23 @@ impl ServersMutation {
     /// Save a server, or update the one already stored at that url.
     async fn add_server(&self, ctx: &Context<'_>, input: ServerInput) -> Result<Server, Error> {
         let db = ctx.data::<Database>().unwrap();
-        if input.url.trim().is_empty() {
-            return Err(Error::new("a server needs a url"));
-        }
-        if provider::state(ctx).registry().get(&input.kind).is_none() {
-            return Err(Error::new(format!(
-                "unknown kind of server: {}",
-                input.kind
-            )));
-        }
+        let factory = provider::state(ctx)
+            .registry()
+            .get(&input.kind)
+            .ok_or_else(|| Error::new(format!("unknown kind of server: {}", input.kind)))?;
 
-        let server = NewServer::new(input.kind, input.name, input.url)
+        // A hosted backend has one address, and it is the factory's — not
+        // whatever a client happened to send. Its form has no url field, so
+        // demanding one here is what made Rocksky unusable.
+        let url = match factory.fixed_url() {
+            Some(fixed) => fixed.to_string(),
+            None if input.url.trim().is_empty() => {
+                return Err(Error::new("a server needs a url"))
+            }
+            None => input.url.clone(),
+        };
+
+        let server = NewServer::new(input.kind, input.name, url)
             .with_credentials(input.username, input.password);
         let row = saved_servers::upsert(db.get_connection(), &server, &now())
             .await

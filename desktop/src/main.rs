@@ -1713,6 +1713,12 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        app.on_servers_refresh(move || {
+            let _ = tx.send(rpc::Cmd::LoadServers);
+        });
+    }
+    {
+        let tx = tx.clone();
         let app_weak = app.as_weak();
         app.on_server_disconnect(move || {
             let app = app_weak.unwrap();

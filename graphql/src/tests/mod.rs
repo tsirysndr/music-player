@@ -20,6 +20,7 @@ pub mod library;
 pub mod objects;
 pub mod playback;
 pub mod playlist;
+mod servers;
 pub mod tracklist;
 
 pub async fn setup_schema() -> (

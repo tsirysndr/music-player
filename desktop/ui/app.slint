@@ -288,6 +288,8 @@ export component AppWindow inherits Window {
     callback server-connect(int);
     /// Read the library from the daemon's own files again.
     callback server-disconnect();
+    /// Re-read the saved servers from the daemon.
+    callback servers-refresh();
 
     // ── Renderers (where the audio comes out) ───────────────────────────────
     in-out property <bool> show-renderers: false;
@@ -725,7 +727,14 @@ export component AppWindow inherits Window {
                     icon: Icons.server;
                     label: "Servers";
                     active: root.current-tab == 4;
-                    clicked => { root.current-tab = 4; root.show-detail = false; root.show-artist = false; }
+                    clicked => {
+                        root.current-tab = 4;
+                        root.show-detail = false;
+                        root.show-artist = false;
+                        // Another client may have added one since this list
+                        // was last read; the daemon is the one that knows.
+                        root.servers-refresh();
+                    }
                 }
                 SidebarItem {
                     icon: Icons.extension;

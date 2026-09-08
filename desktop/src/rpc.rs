@@ -1013,7 +1013,10 @@ async fn load_playlists(channel: &Channel, weak: &Weak<AppWindow>) {
                 id: p.id,
                 name: p.name,
                 description: p.description,
-                track_count: p.tracks.len() as i64,
+                // The server's own count: a listing reports one without
+                // sending the entries, so counting `tracks` here gave zero for
+                // every row.
+                track_count: p.track_count.max(p.tracks.len() as u32) as i64,
             })
             .collect();
         let _ = weak.upgrade_in_event_loop(move |app| crate::ui_set_playlists(&app, data));

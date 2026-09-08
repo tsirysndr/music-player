@@ -1796,23 +1796,32 @@ export component AppWindow inherits Window {
                             vertical-stretch: 1;
                             for r[i] in root.detail-tracks : Rectangle {
                                 height: r.is-header ? 36px : 42px;
-                                if r.is-header : HorizontalLayout {
-                                    padding-left: 12px;
-                                    padding-top: 8px;
-                                    spacing: 8px;
-                                    Image {
-                                        source: Icons.disc;
-                                        colorize: Theme.text-muted;
-                                        width: 12px;
-                                        height: 12px;
-                                        y: (parent.height - self.height) / 2 + 3px;
-                                    }
-                                    Text {
-                                        text: r.header;
-                                        color: Theme.text-muted;
-                                        font-size: 11px;
-                                        letter-spacing: 1.5px;
-                                        vertical-alignment: center;
+                                // Both centered in one band. The icon used to
+                                // carry a manual `y` measured from the row
+                                // while the text was centered by the layout —
+                                // and the layout's own top padding shifted the
+                                // text but not the icon, so they never lined
+                                // up.
+                                if r.is-header : Rectangle {
+                                    disc-line := HorizontalLayout {
+                                        x: 12px;
+                                        y: (parent.height - self.height) / 2;
+                                        height: 16px;
+                                        spacing: 8px;
+                                        Image {
+                                            source: Icons.disc;
+                                            colorize: Theme.text-muted;
+                                            width: 12px;
+                                            height: 12px;
+                                            y: (parent.height - self.height) / 2;
+                                        }
+                                        Text {
+                                            text: r.header;
+                                            color: Theme.text-muted;
+                                            font-size: 11px;
+                                            letter-spacing: 1.5px;
+                                            vertical-alignment: center;
+                                        }
                                     }
                                 }
                                 if !r.is-header : TrackRow {

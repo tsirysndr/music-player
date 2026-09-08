@@ -7,6 +7,7 @@ export const GET_PLAYLISTS = gql`
       id
       name
       description
+      trackCount
     }
   }
 `;
@@ -17,6 +18,7 @@ export const GET_RECENT_PLAYLISTS = gql`
       id
       name
       description
+      trackCount
     }
   }
 `;
@@ -27,6 +29,7 @@ export const GET_MAIN_PLAYLISTS = gql`
       id
       name
       description
+      trackCount
     }
   }
 `;

@@ -122,12 +122,15 @@ export const playlists = [
     id: "pl-late-night",
     name: "Late night",
     description: "For the small hours",
+    // A listing reports the count without sending the entries.
+    trackCount: 42,
   },
   {
     __typename: "Playlist",
     id: "pl-focus",
     name: "Focus",
     description: null,
+    trackCount: 1,
   },
 ];
 

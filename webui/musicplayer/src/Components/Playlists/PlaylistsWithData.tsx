@@ -20,6 +20,7 @@ const PlaylistsWithData: FC = () => {
         id: playlist.id,
         name: playlist.name,
         description: playlist.description,
+        trackCount: playlist.trackCount,
       }))}
       folders={folders}
       onCreatePlaylist={(name, description, smart) =>

@@ -17,6 +17,11 @@ pub struct Playlist {
     pub sort_by: Option<String>,
     pub sort_order: Option<String>,
     pub max_tracks: Option<u32>,
+    /// How many tracks it has.
+    ///
+    /// A listing reports a count without sending the entries, so counting
+    /// `tracks` gives zero there — which is what every row used to show.
+    pub track_count: u32,
 }
 
 #[Object]
@@ -57,6 +62,12 @@ impl Playlist {
     async fn max_tracks(&self) -> Option<u32> {
         self.max_tracks
     }
+
+    /// Never zero for a playlist that has tracks, whether or not this
+    /// response carried them.
+    async fn track_count(&self) -> u32 {
+        self.track_count.max(self.tracks.len() as u32)
+    }
 }
 
 impl From<Model> for Playlist {
@@ -65,6 +76,7 @@ impl From<Model> for Playlist {
             id: ID(model.id),
             name: model.name,
             description: model.description,
+            track_count: model.tracks.len() as u32,
             tracks: model.tracks.into_iter().map(Track::from).collect(),
             is_smart: model.is_smart,
             rsql: model.rsql,
@@ -94,10 +106,13 @@ impl From<Vec<select_result::PlaylistTrack>> for Playlist {
 
 impl From<PlaylistType> for Playlist {
     fn from(playlist: PlaylistType) -> Self {
+        // Taken before the fields move out from under it.
+        let track_count = playlist.len();
         Self {
             id: ID(playlist.id),
             name: playlist.name,
             description: playlist.description,
+            track_count,
             tracks: playlist.tracks.into_iter().map(Into::into).collect(),
             // A playlist from a remote source (Subsonic, Jellyfin, DLNA) is
             // never smart — those servers have no notion of one.

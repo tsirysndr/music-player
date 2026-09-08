@@ -575,6 +575,11 @@ export type Playlist = {
   rsql?: Maybe<Scalars['String']['output']>;
   sortBy?: Maybe<Scalars['String']['output']>;
   sortOrder?: Maybe<Scalars['String']['output']>;
+  /**
+   * Never zero for a playlist that has tracks, whether or not this
+   * response carried them.
+   */
+  trackCount: Scalars['Int']['output'];
   tracks: Array<Track>;
 };
 
@@ -1288,17 +1293,17 @@ export type MovePlaylistsToFolderMutation = { __typename?: 'Mutation', movePlayl
 export type GetPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetPlaylistsQuery = { __typename?: 'Query', playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
+export type GetPlaylistsQuery = { __typename?: 'Query', playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null, trackCount: number }> };
 
 export type GetRecentPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetRecentPlaylistsQuery = { __typename?: 'Query', recentPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
+export type GetRecentPlaylistsQuery = { __typename?: 'Query', recentPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null, trackCount: number }> };
 
 export type GetMainPlaylistsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetMainPlaylistsQuery = { __typename?: 'Query', mainPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> };
+export type GetMainPlaylistsQuery = { __typename?: 'Query', mainPlaylists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null, trackCount: number }> };
 
 export type GetPlaylistQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -3001,6 +3006,7 @@ export const GetPlaylistsDocument = `
     id
     name
     description
+    trackCount
   }
 }
     `;
@@ -3053,6 +3059,7 @@ export const GetRecentPlaylistsDocument = `
     id
     name
     description
+    trackCount
   }
 }
     `;
@@ -3105,6 +3112,7 @@ export const GetMainPlaylistsDocument = `
     id
     name
     description
+    trackCount
   }
 }
     `;

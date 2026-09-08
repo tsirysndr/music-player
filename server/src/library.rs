@@ -64,45 +64,43 @@ impl LibraryService for Library {
     ) -> Result<tonic::Response<SearchResponse>, tonic::Status> {
         let query = request.into_inner().query;
 
-        // The local index describes local files, so with a provider connected
-        // it would be answering about a library nobody is looking at.
-        if let Some(current) = self.providers.current().await {
-            let results = current
-                .provider
-                .search(&query, Page::new(0, 50))
-                .await
-                .map_err(provider_status)?;
-            let config = &current.config;
-            return Ok(tonic::Response::new(SearchResponse {
-                tracks: music_player_provider::url::decorate_all(results.tracks, config)
-                    .into_iter()
-                    .map(Into::into)
-                    .collect(),
-                albums: music_player_provider::url::decorate_all(results.albums, config)
-                    .into_iter()
-                    .map(Into::into)
-                    .collect(),
-                artists: music_player_provider::url::decorate_all(results.artists, config)
-                    .into_iter()
-                    .map(Into::into)
-                    .collect(),
-            }));
-        }
+        // Federated: the connected server and this machine's own index are
+        // searched together, so one box covers everything reachable rather
+        // than describing only whichever library happens to be current. A
+        // failure on either side contributes nothing rather than failing the
+        // search — half an answer beats none.
+        let remote = match self.providers.current().await {
+            Some(current) => match current.provider.search(&query, Page::new(0, 50)).await {
+                Ok(results) => {
+                    let config = &current.config;
+                    SearchResponse {
+                        tracks: music_player_provider::url::decorate_all(results.tracks, config)
+                            .into_iter()
+                            .map(Into::into)
+                            .collect(),
+                        albums: music_player_provider::url::decorate_all(results.albums, config)
+                            .into_iter()
+                            .map(Into::into)
+                            .collect(),
+                        artists: music_player_provider::url::decorate_all(results.artists, config)
+                            .into_iter()
+                            .map(Into::into)
+                            .collect(),
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("searching {} failed: {e}", current.config.name);
+                    SearchResponse::default()
+                }
+            },
+            None => SearchResponse::default(),
+        };
 
         let searcher = Searcher::new(self.db.get_connection().clone());
 
-        let tracks = searcher
-            .search_song(&query)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let albums = searcher
-            .search_album(&query)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        let artists = searcher
-            .search_artist(&query)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let tracks = searcher.search_song(&query).await.unwrap_or_default();
+        let albums = searcher.search_album(&query).await.unwrap_or_default();
+        let artists = searcher.search_artist(&query).await.unwrap_or_default();
 
         let response = SearchResponse {
             tracks: tracks
@@ -141,7 +139,14 @@ impl LibraryService for Library {
                 })
                 .collect(),
         };
-        Ok(tonic::Response::new(response))
+
+        // The connected server leads: it is the library the screens are
+        // showing, so it is what the user is most likely looking for.
+        Ok(tonic::Response::new(SearchResponse {
+            tracks: [remote.tracks, response.tracks].concat(),
+            albums: [remote.albums, response.albums].concat(),
+            artists: [remote.artists, response.artists].concat(),
+        }))
     }
 
     async fn get_artists(

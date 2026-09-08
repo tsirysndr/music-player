@@ -46,6 +46,9 @@ pub async fn setup_schema() -> (
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
 
     env::set_var("MUSIC_PLAYER_APPLICATION_DIRECTORY", "/tmp");
+    // Search the fixture library, not whatever Typesense the developer's
+    // settings point at.
+    env::set_var(music_player_settings::LOCAL_SEARCH_ONLY, "1");
     env::set_var("MUSIC_PLAYER_MUSIC_DIRECTORY", "/tmp/audio");
     env::set_var(
         "MUSIC_PLAYER_DATABASE_URL",

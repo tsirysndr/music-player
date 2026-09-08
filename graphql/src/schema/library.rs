@@ -195,37 +195,83 @@ impl LibraryQuery {
     ///
     /// The local searcher indexes local files, so with a provider connected it
     /// would be answering about a library the user is not looking at.
+    /// Search both libraries at once.
+    ///
+    /// With a provider connected the results are *federated*: the remote
+    /// server and this machine's own index are queried together and the rows
+    /// interleaved, so one search box covers everything reachable rather than
+    /// silently describing only whichever library happens to be current.
+    ///
+    /// The two run concurrently — a remote round trip should not be paid on
+    /// top of a local index scan — and a failure on either side yields that
+    /// side's results as empty rather than failing the whole search: half an
+    /// answer is worth more than none.
     async fn search(&self, ctx: &Context<'_>, keyword: String) -> Result<SearchResult, Error> {
-        if let Some(current) = provider::connected(ctx).await {
-            let results = current
+        let searcher = ctx.data::<Arc<Searcher>>().unwrap();
+        let local = async {
+            SearchResult {
+                artists: searcher
+                    .search_artist(&keyword)
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
+                albums: searcher
+                    .search_album(&keyword)
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
+                tracks: searcher
+                    .search_song(&keyword)
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
+            }
+        };
+
+        let Some(current) = provider::connected(ctx).await else {
+            return Ok(local.await);
+        };
+
+        let remote = async {
+            match current
                 .provider
                 .search(&keyword, provider::page(None, Some(50)))
                 .await
-                .map_err(provider::err)?;
-            return Ok(SearchResult {
-                artists: decorate_all(results.artists, &current.config)
-                    .into_iter()
-                    .map(Artist::from)
-                    .collect(),
-                albums: decorate_all(results.albums, &current.config)
-                    .into_iter()
-                    .map(Album::from)
-                    .collect(),
-                tracks: decorate_all(results.tracks, &current.config)
-                    .into_iter()
-                    .map(Track::from)
-                    .collect(),
-            });
-        }
+            {
+                Ok(results) => SearchResult {
+                    artists: decorate_all(results.artists, &current.config)
+                        .into_iter()
+                        .map(Artist::from)
+                        .collect(),
+                    albums: decorate_all(results.albums, &current.config)
+                        .into_iter()
+                        .map(Album::from)
+                        .collect(),
+                    tracks: decorate_all(results.tracks, &current.config)
+                        .into_iter()
+                        .map(Track::from)
+                        .collect(),
+                },
+                Err(e) => {
+                    tracing::warn!("searching {} failed: {e}", current.config.name);
+                    SearchResult::default()
+                }
+            }
+        };
 
-        let searcher = ctx.data::<Arc<Searcher>>().unwrap();
-        let artists = searcher.search_artist(&keyword).await?;
-        let albums = searcher.search_album(&keyword).await?;
-        let tracks = searcher.search_song(&keyword).await?;
+        let (remote, local) = futures_util::future::join(remote, local).await;
+        // The connected server leads: it is the library the screens are
+        // showing, so it is what the user is most likely looking for.
         Ok(SearchResult {
-            artists: artists.into_iter().map(Into::into).collect(),
-            tracks: tracks.into_iter().map(Into::into).collect(),
-            albums: albums.into_iter().map(Into::into).collect(),
+            artists: [remote.artists, local.artists].concat(),
+            albums: [remote.albums, local.albums].concat(),
+            tracks: [remote.tracks, local.tracks].concat(),
         })
     }
 }

@@ -1178,10 +1178,21 @@ async fn fetch_now_art(covers_base: String, file: String, track_id: String, weak
     // works with the embedded HTTP server, remote servers, and macOS App
     // Transport Security alike.
     let cache_dir = std::env::temp_dir().join("music-player-now-playing");
-    let cache_name = std::path::Path::new(&file)
-        .file_name()
-        .unwrap_or_else(|| std::ffi::OsStr::new("cover"));
-    let cache_path = cache_dir.join(cache_name);
+    // Hashed, not taken from the url's last path segment. A remote cover is
+    // `/rest/getCoverArt?id=…&t=…`, whose "file name" is the whole query
+    // string — too long to write on most filesystems and carrying the auth
+    // token in a temp file's name. The write then failed and the fallback was
+    // the plain-http url, which macOS refuses to load, so remote tracks showed
+    // no artwork at all.
+    let extension = std::path::Path::new(&file)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .filter(|extension| extension.len() <= 5 && extension.chars().all(char::is_alphanumeric))
+        .unwrap_or("jpg");
+    let cache_path = cache_dir.join(format!(
+        "{:x}.{extension}",
+        md5::compute(url.as_bytes())
+    ));
     let cover_url = if tokio::fs::create_dir_all(&cache_dir).await.is_ok()
         && tokio::fs::write(&cache_path, &bytes).await.is_ok()
     {

@@ -88,6 +88,7 @@ impl ServersService for Servers {
                     display_name: info.display_name.to_string(),
                     needs_credentials: info.needs_credentials,
                     default_port: info.default_port as u32,
+                    fixed_url: info.fixed_url.map(str::to_owned),
                 })
                 .collect(),
         }))
@@ -125,17 +126,27 @@ impl ServersService for Servers {
         request: tonic::Request<AddServerRequest>,
     ) -> Result<tonic::Response<AddServerResponse>, tonic::Status> {
         let request = request.into_inner();
-        if request.url.trim().is_empty() {
-            return Err(tonic::Status::invalid_argument("a server needs a url"));
-        }
-        if self.providers.registry().get(&request.kind).is_none() {
-            return Err(tonic::Status::invalid_argument(format!(
-                "unknown kind of server: {}",
-                request.kind
-            )));
-        }
+        let factory = self
+            .providers
+            .registry()
+            .get(&request.kind)
+            .ok_or_else(|| {
+                tonic::Status::invalid_argument(format!(
+                    "unknown kind of server: {}",
+                    request.kind
+                ))
+            })?;
 
-        let server = NewServer::new(request.kind, request.name, request.url)
+        // A hosted backend has one address, and it is the factory's.
+        let url = match factory.fixed_url() {
+            Some(fixed) => fixed.to_string(),
+            None if request.url.trim().is_empty() => {
+                return Err(tonic::Status::invalid_argument("a server needs a url"))
+            }
+            None => request.url.clone(),
+        };
+
+        let server = NewServer::new(request.kind, request.name, url)
             .with_credentials(Some(request.username), Some(request.password));
         let row = saved_servers::upsert(self.db.get_connection(), &server, &now())
             .await

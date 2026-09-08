@@ -203,6 +203,50 @@ describe("ServersWithData", () => {
       );
     });
 
+    /**
+     * Rocksky is a hosted Navidrome: there is one address and it is not the
+     * user's to give, so the field goes rather than being a thing to get
+     * wrong.
+     */
+    it("drops the url field for a backend with a fixed address", async () => {
+      const { user } = await open();
+      expect(await screen.findByLabelText("SERVER URL")).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText("TYPE"), "rocksky");
+      await waitFor(() =>
+        expect(screen.queryByLabelText("SERVER URL")).toBeNull()
+      );
+      expect(
+        screen.getByText("https://navidrome.rocksky.app")
+      ).toBeInTheDocument();
+      // It still needs a login.
+      expect(screen.getByLabelText("USERNAME")).toBeInTheDocument();
+    });
+
+    it("saves a fixed-address backend without a url", async () => {
+      const added = vi.fn();
+      server.use(
+        graphql.mutation("AddServer", ({ variables }) => {
+          added(variables);
+          return HttpResponse.json({
+            data: { addServer: { ...fixtures.savedServers[0], id: "new" } },
+          });
+        })
+      );
+
+      const { user } = await open();
+      await user.selectOptions(
+        await screen.findByLabelText("TYPE"),
+        "rocksky"
+      );
+      await user.type(screen.getByLabelText("NAME"), "Rocksky");
+      await user.type(screen.getByLabelText("USERNAME"), "tsiry");
+      await user.click(screen.getByRole("button", { name: "Add server" }));
+
+      await waitFor(() => expect(added).toHaveBeenCalled());
+      expect(added.mock.calls[0][0].input.kind).toBe("rocksky");
+    });
+
     it("refuses a url with no scheme", async () => {
       const { user } = await open();
       await user.type(await screen.findByLabelText("NAME"), "NAS");

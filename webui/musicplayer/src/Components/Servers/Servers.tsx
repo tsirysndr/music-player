@@ -27,6 +27,8 @@ export type SourceKind = {
   displayName: string;
   needsCredentials: boolean;
   defaultPort: number;
+  /** A backend that always talks to one address; the form drops the field. */
+  fixedUrl?: string | null;
 };
 
 export type ServersProps = {
@@ -49,6 +51,7 @@ const KIND_ICON: Record<string, IconComponent> = {
   "music-player": Icons.server,
   kodi: Icons.device,
   plex: Icons.disc,
+  rocksky: Icons.navidrome,
 };
 
 /**

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   useAddServerMutation,
   useConnectToServerMutation,
@@ -34,9 +35,21 @@ const LIBRARY_QUERIES = [
 const ServersWithData = () => {
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
   const [formError, setFormError] = useState<string>();
+
+  // `?add=1` opens the form — that is what the `A` shortcut and the switcher's
+  // Ctrl-n navigate to, so a link is the mechanism rather than a side channel
+  // between components.
+  useEffect(() => {
+    if (params.get("add") === "1") {
+      setFormError(undefined);
+      setAddOpen(true);
+      setParams({}, { replace: true });
+    }
+  }, [params, setParams]);
 
   const { data, isLoading, refetch } = useGetSavedServersQuery();
   const { data: kindData } = useGetSourceKindsQuery();

@@ -29,6 +29,9 @@ message SourceKind {
   // False for backends with no login, so a form can hide those fields.
   bool needs_credentials = 3;
   uint32 default_port = 4;
+  // Set for a backend that always talks to one address, so a form can drop
+  // the url field instead of asking for something it ignores.
+  optional string fixed_url = 5;
 }
 
 message ListServersRequest {}

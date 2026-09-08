@@ -19,6 +19,7 @@ pub mod jellyfin;
 pub mod kodi;
 pub mod music_player;
 pub mod plex;
+pub mod rocksky;
 pub mod subsonic;
 
 use crate::ProviderRegistry;
@@ -34,7 +35,8 @@ pub fn register_builtin(registry: &mut ProviderRegistry) {
         .register(jellyfin::JellyfinFactory)
         .register(music_player::MusicPlayerFactory)
         .register(kodi::KodiFactory)
-        .register(plex::PlexFactory);
+        .register(plex::PlexFactory)
+        .register(rocksky::RockskyFactory);
 }
 
 /// A registry with the built-ins already in it.
@@ -51,7 +53,7 @@ mod tests {
     #[test]
     fn every_builtin_is_reachable_by_kind() {
         let registry = builtin_registry();
-        for kind in ["subsonic", "jellyfin", "music-player", "kodi", "plex"] {
+        for kind in ["subsonic", "jellyfin", "music-player", "kodi", "plex", "rocksky"] {
             assert!(registry.get(kind).is_some(), "{kind} is not registered");
         }
     }

@@ -208,6 +208,14 @@ export type Mutation = {
   addTracks: Scalars['Boolean']['output'];
   clearTracklist: Scalars['Boolean']['output'];
   connectToCastDevice: Device;
+  /**
+   * Read the library from a *discovered* device — an mDNS peer, or a
+   * streaming server named in the settings.
+   *
+   * A saved server goes through `connectToServer` instead. Both end at the
+   * same `ProviderState::connect`, which is what stops the two paths from
+   * disagreeing about what "connected" means.
+   */
   connectToDevice: Device;
   /**
    * Point the library screens at a saved server.
@@ -593,6 +601,7 @@ export type Query = {
   /** Check a stream url before the "add station" form saves it. */
   checkRadioStream: StreamCheck;
   connectedCastDevice: Device;
+  /** The device the library is being read from, if it is a discovered one. */
   connectedDevice: Device;
   /**
    * The server the library screens are currently reading from, if any.
@@ -883,6 +892,11 @@ export type SourceKind = {
   __typename?: 'SourceKind';
   defaultPort: Scalars['Int']['output'];
   displayName: Scalars['String']['output'];
+  /**
+   * Set for a backend that always talks to one address, so the form can
+   * drop the url field instead of asking for something it ignores.
+   */
+  fixedUrl?: Maybe<Scalars['String']['output']>;
   kind: Scalars['String']['output'];
   /**
    * False for backends with no login — the form hides those fields rather
@@ -1341,7 +1355,7 @@ export type GetSavedServersQuery = { __typename?: 'Query', savedServers: Array<{
 export type GetSourceKindsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetSourceKindsQuery = { __typename?: 'Query', sourceKinds: Array<{ __typename?: 'SourceKind', kind: string, displayName: string, needsCredentials: boolean, defaultPort: number }> };
+export type GetSourceKindsQuery = { __typename?: 'Query', sourceKinds: Array<{ __typename?: 'SourceKind', kind: string, displayName: string, needsCredentials: boolean, defaultPort: number, fixedUrl?: string | null }> };
 
 export type GetConnectedServerQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3448,6 +3462,7 @@ export const GetSourceKindsDocument = `
     displayName
     needsCredentials
     defaultPort
+    fixedUrl
   }
 }
     `;

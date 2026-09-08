@@ -5551,6 +5551,10 @@ pub struct SourceKind {
     pub needs_credentials: bool,
     #[prost(uint32, tag = "4")]
     pub default_port: u32,
+    /// Set for a backend that always talks to one address, so a form can drop
+    /// the url field instead of asking for something it ignores.
+    #[prost(string, optional, tag = "5")]
+    pub fixed_url: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListServersRequest {}

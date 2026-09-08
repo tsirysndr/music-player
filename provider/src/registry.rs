@@ -17,6 +17,9 @@ pub struct ProviderKindInfo {
     pub display_name: &'static str,
     pub needs_credentials: bool,
     pub default_port: u16,
+    /// A backend that always talks to one address. Clients hide the url field
+    /// for these rather than asking for something that would be ignored.
+    pub fixed_url: Option<&'static str>,
 }
 
 /// How to build one kind of source.
@@ -25,6 +28,15 @@ pub trait ProviderFactory: Send + Sync + 'static {
     /// Stored verbatim in the saved-server row, and matched against a
     /// device's `app`.
     fn kind(&self) -> &'static str;
+
+    /// The one address this backend talks to, if it only talks to one.
+    ///
+    /// A hosted service has no url to ask for; saving one uses this instead of
+    /// whatever the form sent, so the field can be hidden rather than being a
+    /// thing to get wrong.
+    fn fixed_url(&self) -> Option<&'static str> {
+        None
+    }
 
     /// Other `app` values that mean this backend. Kodi advertises itself as
     /// `xbmc`, which is the string already flowing through discovery.
@@ -90,6 +102,7 @@ impl ProviderRegistry {
                 display_name: factory.display_name(),
                 needs_credentials: factory.needs_credentials(),
                 default_port: factory.default_port(),
+                fixed_url: factory.fixed_url(),
             })
             .collect()
     }

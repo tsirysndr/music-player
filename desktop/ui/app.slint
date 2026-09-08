@@ -522,12 +522,27 @@ export component AppWindow inherits Window {
                 root.show-help = true;
                 return accept;
             }
+            // Where the library is read from.
+            if (event.text == "C") {
+                root.open-server-switcher();
+                return accept;
+            }
+            // Straight to the add-server form, for a server not saved yet.
+            if (event.text == "A") {
+                root.current-tab = 4;
+                root.show-detail = false;
+                root.show-artist = false;
+                root.server-error = "";
+                root.show-server-form = true;
+                return accept;
+            }
             reject
         }
         key-pressed(event) => {
             // '/', 'r' and '?' are handled on release (so the keystroke cannot
             // leak into the palette input) — swallow their press here.
-            if (event.text == "/" || event.text == "r" || event.text == "?") {
+            if (event.text == "/" || event.text == "r" || event.text == "?"
+                || event.text == "C" || event.text == "A") {
                 return accept;
             }
             if (event.text == " ") {
@@ -1976,7 +1991,7 @@ export component AppWindow inherits Window {
                         // Where the audio comes out. The queue has the right
                         // panel, so the miniplayer's slot is better spent here.
                         IconButton {
-                            icon: Icons.cast;
+                            icon: Icons.device-speaker;
                             icon-size: 17px;
                             accented: root.current-renderer != "";
                             y: (parent.height - self.height) / 2;
@@ -2976,7 +2991,7 @@ export component AppWindow inherits Window {
                         letter-spacing: 1px;
                     }
                     kind-dd := Dropdown {
-                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player", "Kodi", "Plex"];
+                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player", "Kodi", "Plex", "Rocksky"];
                         current: 0;
                         menu-width: 190px;
                         selected(i) => { self.current = i; }
@@ -2986,8 +3001,15 @@ export component AppWindow inherits Window {
                     label: "NAME";
                     placeholder: "Living room NAS";
                 }
+                if kind-dd.current == 5 : Text {
+                    text: "Connects to https://navidrome.rocksky.app";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                }
                 url-field := FormField {
                     label: "SERVER URL";
+                    visible: kind-dd.current != 5;
+                    height: kind-dd.current == 5 ? 0px : self.preferred-height;
                     // The port each kind actually listens on, so the example is
                     // one that would work rather than one to be edited.
                     placeholder: kind-dd.current == 1 ? "http://192.168.1.10:8096"
@@ -3053,12 +3075,13 @@ export component AppWindow inherits Window {
                         srv-submit-touch := TouchArea {
                             mouse-cursor: pointer;
                             clicked => {
-                                if (url-field.text != "") {
+                                if (url-field.text != "" || kind-dd.current == 5) {
                                     root.server-add(
                                         kind-dd.current == 1 ? "jellyfin"
                                             : kind-dd.current == 2 ? "music-player"
                                             : kind-dd.current == 3 ? "kodi"
                                             : kind-dd.current == 4 ? "plex"
+                                            : kind-dd.current == 5 ? "rocksky"
                                             : "subsonic",
                                         name-field.text == "" ? url-field.text : name-field.text,
                                         url-field.text,
@@ -3603,6 +3626,15 @@ export component AppWindow inherits Window {
                                 main-focus.focus();
                                 return accept;
                             }
+                            // Ctrl-N adds one without leaving the flow; a plain
+                            // `n` would type into the filter.
+                            if (event.modifiers.control && event.text == "n") {
+                                root.show-server-switcher = false;
+                                root.current-tab = 4;
+                                root.server-error = "";
+                                root.show-server-form = true;
+                                return accept;
+                            }
                             reject
                         }
                         switcher-input := TextInput {
@@ -3648,6 +3680,12 @@ export component AppWindow inherits Window {
                     spacing: 18px;
                     Text {
                         text: "enter connect";
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-family: Theme.font-mono;
+                    }
+                    Text {
+                        text: "C-n add";
                         color: Theme.text-muted;
                         font-size: 10px;
                         font-family: Theme.font-mono;

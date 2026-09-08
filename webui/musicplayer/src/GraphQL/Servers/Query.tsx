@@ -33,6 +33,7 @@ export const GET_SOURCE_KINDS = gql`
       displayName
       needsCredentials
       defaultPort
+      fixedUrl
     }
   }
 `;

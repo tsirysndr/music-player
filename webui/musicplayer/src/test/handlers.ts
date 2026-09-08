@@ -182,6 +182,7 @@ export const sourceKinds = [
     displayName: "Subsonic / Navidrome",
     needsCredentials: true,
     defaultPort: 4533,
+    fixedUrl: null,
   },
   {
     __typename: "SourceKind",
@@ -189,6 +190,7 @@ export const sourceKinds = [
     displayName: "Jellyfin",
     needsCredentials: true,
     defaultPort: 8096,
+    fixedUrl: null,
   },
   {
     __typename: "SourceKind",
@@ -196,6 +198,7 @@ export const sourceKinds = [
     displayName: "music-player",
     needsCredentials: false,
     defaultPort: 5053,
+    fixedUrl: null,
   },
   {
     __typename: "SourceKind",
@@ -203,6 +206,7 @@ export const sourceKinds = [
     displayName: "Kodi",
     needsCredentials: true,
     defaultPort: 8080,
+    fixedUrl: null,
   },
   {
     __typename: "SourceKind",
@@ -210,6 +214,15 @@ export const sourceKinds = [
     displayName: "Plex (token in the password field)",
     needsCredentials: true,
     defaultPort: 32400,
+    fixedUrl: null,
+  },
+  {
+    __typename: "SourceKind",
+    kind: "rocksky",
+    displayName: "Rocksky",
+    needsCredentials: true,
+    defaultPort: 443,
+    fixedUrl: "https://navidrome.rocksky.app",
   },
 ];
 

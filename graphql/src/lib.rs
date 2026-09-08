@@ -38,18 +38,34 @@ fn scan_mp_devices(mp_devices: Arc<Mutex<Vec<Device>>>) {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             while let Some(info) = services.next().await {
                 let device = Device::from(info.clone());
-                let mut mp_devices = mp_devices.lock().unwrap();
-                if mp_devices
-                    .iter()
-                    .find(|d| d.id == device.id && d.service == device.service)
-                    .is_none()
-                {
-                    mp_devices.push(device.clone());
-                    SimpleBroker::<Device>::publish(device.clone());
+                if insert_unique(&mp_devices, device.clone()) {
+                    SimpleBroker::<Device>::publish(device);
                 }
             }
         });
     });
+}
+
+/// Add a discovered device, unless it is already listed.
+///
+/// mDNS re-announces periodically and SSDP answers more than once, so every
+/// discovery loop sees the same device repeatedly — without this the picker
+/// fills up with copies of one Chromecast. Keyed on id *and* service because a
+/// music-player peer legitimately advertises two records (gRPC and HTTP) under
+/// one id.
+///
+/// Returns whether it was new, so the caller only broadcasts a device the
+/// clients have not already been told about.
+fn insert_unique(devices: &Arc<Mutex<Vec<Device>>>, device: Device) -> bool {
+    let mut devices = devices.lock().unwrap();
+    if devices
+        .iter()
+        .any(|existing| existing.id == device.id && existing.service == device.service)
+    {
+        return false;
+    }
+    devices.push(device);
+    true
 }
 
 fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
@@ -58,8 +74,10 @@ fn scan_chromecast_devices(devices: Arc<Mutex<Vec<Device>>>) {
             let services = discover(CHROMECAST_SERVICE_NAME);
             tokio::pin!(services);
             while let Some(info) = services.next().await {
-                devices.lock().unwrap().push(Device::from(info.clone()));
-                SimpleBroker::<Device>::publish(Device::from(info.clone()));
+                let device = Device::from(info.clone());
+                if insert_unique(&devices, device.clone()) {
+                    SimpleBroker::<Device>::publish(device);
+                }
             }
         });
     });
@@ -82,9 +100,7 @@ fn add_configured_streaming_devices(devices: Arc<Mutex<Vec<Device>>>) {
     for (app, url) in servers {
         if let Some(url) = url {
             if let Some(device) = Device::from_streaming_server(app, &url) {
-                let mut devices = devices.lock().unwrap();
-                if devices.iter().find(|d| d.id == device.id).is_none() {
-                    devices.push(device.clone());
+                if insert_unique(&devices, device.clone()) {
                     SimpleBroker::<Device>::publish(device);
                 }
             }
@@ -102,10 +118,9 @@ fn scan_upnp_dlna_devices(devices: Arc<Mutex<Vec<Device>>>) {
                     if device.device_type.contains(MEDIA_RENDERER)
                         || device.device_type.contains(MEDIA_SERVER)
                     {
-                        let mut devices = devices.lock().unwrap();
-                        if devices.iter().find(|d| d.id == device.udn).is_none() {
-                            devices.push(Device::from(device.clone()));
-                            SimpleBroker::<Device>::publish(Device::from(device.clone()));
+                        let device = Device::from(device.clone());
+                        if insert_unique(&devices, device.clone()) {
+                            SimpleBroker::<Device>::publish(device);
                         }
                     }
                 }

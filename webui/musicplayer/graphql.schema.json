@@ -1655,7 +1655,7 @@
         "fields": [
           {
             "name": "connectToDevice",
-            "description": null,
+            "description": "Read the library from a *discovered* device — an mDNS peer, or a\nstreaming server named in the settings.\n\nA saved server goes through `connectToServer` instead. Both end at the\nsame `ProviderState::connect`, which is what stops the two paths from\ndisagreeing about what \"connected\" means.",
             "args": [
               {
                 "name": "id",
@@ -3689,7 +3689,7 @@
         "fields": [
           {
             "name": "connectedDevice",
-            "description": null,
+            "description": "The device the library is being read from, if it is a discovered one.",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -5531,6 +5531,18 @@
                 "name": "Int",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "fixedUrl",
+            "description": "Set for a backend that always talks to one address, so the form can\ndrop the url field instead of asking for something it ignores.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null

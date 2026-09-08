@@ -49,6 +49,9 @@ pub struct SourceKind {
     /// than asking for something that will be ignored.
     pub needs_credentials: bool,
     pub default_port: i32,
+    /// Set for a backend that always talks to one address, so the form can
+    /// drop the url field instead of asking for something it ignores.
+    pub fixed_url: Option<String>,
 }
 
 impl From<ProviderKindInfo> for SourceKind {
@@ -58,6 +61,7 @@ impl From<ProviderKindInfo> for SourceKind {
             display_name: info.display_name.to_string(),
             needs_credentials: info.needs_credentials,
             default_port: info.default_port as i32,
+            fixed_url: info.fixed_url.map(str::to_owned),
         }
     }
 }

@@ -29,6 +29,13 @@ const kinds: SourceKind[] = [
     needsCredentials: true,
     defaultPort: 32400,
   },
+  {
+    kind: "rocksky",
+    displayName: "Rocksky",
+    needsCredentials: true,
+    defaultPort: 443,
+    fixedUrl: "https://navidrome.rocksky.app",
+  },
 ];
 
 const servers: ServerItem[] = [

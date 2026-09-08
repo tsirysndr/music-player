@@ -11,7 +11,6 @@ const schema = z.object({
   url: z
     .string()
     .trim()
-    .min(1, "A server needs a url")
     // `URL` rather than a regex: it is the same parser the daemon uses, so a
     // url the form accepts is one the daemon can reach.
     .refine((value) => {
@@ -21,7 +20,10 @@ const schema = z.object({
       } catch {
         return false;
       }
-    }, "Include the scheme, e.g. http://192.168.1.10:4533"),
+    }, "Include the scheme, e.g. http://192.168.1.10:4533")
+    // Empty is allowed: a fixed-url backend fills it in server-side, and the
+    // form never showed the field.
+    .or(z.literal("")),
   username: z.string().optional(),
   password: z.string().optional(),
 });
@@ -73,6 +75,9 @@ const AddServerForm = ({
   const kind = watch("kind");
   const selected = kinds.find((entry) => entry.kind === kind);
   const needsCredentials = selected?.needsCredentials ?? true;
+  // A hosted backend has one address and it is not the user's to give, so the
+  // field goes rather than being a thing to get wrong.
+  const fixedUrl = selected?.fixedUrl ?? undefined;
   // Built from the registry's own default port, so a newly registered backend
   // gets a placeholder that points at the right one without this form being
   // told about it.
@@ -121,12 +126,18 @@ const AddServerForm = ({
           error={errors.name?.message}
           {...register("name")}
         />
-        <TextField
-          label="SERVER URL"
-          placeholder={urlPlaceholder}
-          error={errors.url?.message}
-          {...register("url")}
-        />
+        {fixedUrl ? (
+          <p className="text-[11px] text-muted">
+            Connects to <span className="font-mono text-dim">{fixedUrl}</span>.
+          </p>
+        ) : (
+          <TextField
+            label="SERVER URL"
+            placeholder={urlPlaceholder}
+            error={errors.url?.message}
+            {...register("url")}
+          />
+        )}
         {/* Hidden for backends with no login rather than asking for something
             that would be ignored. */}
         {needsCredentials && (

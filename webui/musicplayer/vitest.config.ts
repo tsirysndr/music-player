@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
  * Test config, kept apart from `vite.config.ts`.
  *
  * The app config pins an output directory and a strict port for the two
- * consumers that depend on them (rust-embed and Tauri); neither matters here,
+ * consumers that depend on them (rust-embed); that does not matter here,
  * and `svgr` is left out because nothing under test imports an SVG as a
  * component. Tailwind stays so a component that renders `@apply`-ed classes
  * does not blow up on the import of `index.css`.

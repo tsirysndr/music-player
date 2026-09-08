@@ -1,6 +1,6 @@
 //! State for the TUI's server switcher.
 //!
-//! An fzf-style overlay over the saved servers, opened with `S`. Picking one
+//! An fzf-style overlay over the saved servers, opened with `C`. Picking one
 //! repoints every library screen at it; picking "This machine" goes back to
 //! the daemon's own files. Neither interrupts playback — a server is where the
 //! library is *read from*, which is a different question from where the audio

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AppStateSync from "./Components/AppStateSync";
 import AlbumDetailsPage from "./Containers/AlbumDetails";
@@ -14,22 +13,9 @@ import RadioPage from "./Containers/Radio";
 import SearchPage from "./Containers/Search";
 import ServersPage from "./Containers/Servers";
 import TracksPage from "./Containers/Tracks";
-import { resourceUriResolver } from "./ResourceUriResolver";
 
-const hasNativeWrapper = !!import.meta.env.VITE_NATIVE_WRAPPER;
 
 function App() {
-  const [ready, setReady] = useState(!hasNativeWrapper);
-  useEffect(() => {
-    async function initializeForNativeWrapper() {
-      if (!ready) {
-        await resourceUriResolver.initializeForNativeWrapper();
-        setReady(true);
-      }
-    }
-    initializeForNativeWrapper();
-  }, [ready]);
-  if (!ready) return null;
   return (
     <BrowserRouter>
       <AppStateSync />

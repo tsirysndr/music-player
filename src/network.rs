@@ -1,4 +1,5 @@
 use anyhow::Error;
+use serde_json::{json, Value};
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     servers::ServersClient, tracklist::TracklistClient,
@@ -38,6 +39,10 @@ pub enum IoEvent {
     ConnectServer(String),
     DisconnectServer,
     DeleteServer(String),
+    /// The places the audio could come out.
+    LoadRenderers,
+    /// An empty id means "play here".
+    ActivateRenderer { id: String, cast: bool },
     AddServer {
         kind: String,
         name: String,
@@ -86,6 +91,8 @@ pub struct Network<'a> {
     tracklist: TracklistClient,
     playlist: PlaylistClient,
     servers: ServersClient,
+    /// The daemon's GraphQL endpoint. Cast devices live only there.
+    graphql_url: String,
 }
 
 impl<'a> Network<'a> {
@@ -98,6 +105,7 @@ impl<'a> Network<'a> {
         let tracklist = TracklistClient::new(settings.host.clone(), settings.port).await?;
         let playlist = PlaylistClient::new(settings.host.clone(), settings.port).await?;
         let servers = ServersClient::new(settings.host.clone(), settings.port).await?;
+        let graphql_url = format!("http://{}:{}/graphql", settings.host, settings.http_port);
         Ok(Network {
             app,
             library,
@@ -105,6 +113,7 @@ impl<'a> Network<'a> {
             tracklist,
             playlist,
             servers,
+            graphql_url,
         })
     }
 
@@ -131,6 +140,8 @@ impl<'a> Network<'a> {
             IoEvent::ConnectServer(id) => self.connect_server(&id).await,
             IoEvent::DisconnectServer => self.disconnect_server().await,
             IoEvent::DeleteServer(id) => self.delete_server(&id).await,
+            IoEvent::LoadRenderers => self.load_renderers().await,
+            IoEvent::ActivateRenderer { id, cast } => self.activate_renderer(&id, cast).await,
             IoEvent::AddServer {
                 kind,
                 name,
@@ -541,6 +552,113 @@ impl<'a> Network<'a> {
                 Ok(())
             }
         }
+    }
+
+    // ── Renderers (where the audio comes out) ──────────────────────────────
+
+    /// The daemon does the discovering — Chromecast, UPnP/DLNA and mDNS peers
+    /// all arrive through it — so this is a read rather than a scan.
+    ///
+    /// Two calls, not one: `connectedCastDevice` *errors* when nothing is
+    /// connected rather than returning null, and that is the ordinary case.
+    async fn load_renderers(&mut self) -> Result<(), Error> {
+        const LIST: &str = r#"query { listCastDevices { id name app } }"#;
+        const CONNECTED: &str = r#"query { connectedCastDevice { id } }"#;
+
+        let data = match self.graphql(LIST, json!({})).await {
+            Ok(data) => data,
+            Err(e) => {
+                let mut app = self.app.lock().await;
+                app.renderers.loading = false;
+                app.renderers.error = e.to_string();
+                return Ok(());
+            }
+        };
+        let current = self
+            .graphql(CONNECTED, json!({}))
+            .await
+            .ok()
+            .and_then(|data| {
+                data["connectedCastDevice"]["id"]
+                    .as_str()
+                    .map(str::to_owned)
+            })
+            .unwrap_or_default();
+
+        let renderers = data["listCastDevices"]
+            .as_array()
+            .map(|rows| {
+                rows.iter()
+                    .map(|row| {
+                        let id = row["id"].as_str().unwrap_or_default().to_string();
+                        let kind = row["app"].as_str().unwrap_or_default().to_string();
+                        crate::renderer_picker::RendererEntry {
+                            playing: id == current,
+                            // A peer daemon is reached over the device API,
+                            // everything else over the cast one.
+                            cast: kind != "music-player",
+                            name: row["name"].as_str().unwrap_or_default().to_string(),
+                            id,
+                            kind,
+                        }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let mut app = self.app.lock().await;
+        app.renderers.error.clear();
+        app.renderers.set_renderers(renderers);
+        Ok(())
+    }
+
+    async fn activate_renderer(&mut self, id: &str, cast: bool) -> Result<(), Error> {
+        let result = if id.is_empty() {
+            const OFF: &str = r#"mutation { disconnectFromCastDevice { id } }"#;
+            // Failing here just means nothing was connected.
+            let _ = self.graphql(OFF, json!({})).await;
+            Ok(json!({}))
+        } else if cast {
+            const ON: &str = r#"mutation($id: ID!) { connectToCastDevice(id: $id) { id } }"#;
+            self.graphql(ON, json!({ "id": id })).await
+        } else {
+            const ON: &str = r#"mutation($id: ID!) { connectToDevice(id: $id) { id } }"#;
+            self.graphql(ON, json!({ "id": id })).await
+        };
+        if let Err(e) = result {
+            let mut app = self.app.lock().await;
+            app.renderers.error = e.to_string();
+            return Ok(());
+        }
+        self.load_renderers().await
+    }
+
+    /// One GraphQL round trip to the daemon.
+    ///
+    /// Cast devices are only exposed over GraphQL — the gRPC surface has no
+    /// equivalent — so this is how the TUI reaches them. GraphQL answers 200
+    /// even when it failed, so the errors array is the only thing that says so.
+    async fn graphql(&self, query: &str, variables: Value) -> Result<Value, Error> {
+        let response = reqwest::Client::new()
+            .post(&self.graphql_url)
+            .json(&json!({ "query": query, "variables": variables }))
+            .send()
+            .await?;
+        let body: Value = response.json().await?;
+        if let Some(first) = body
+            .get("errors")
+            .and_then(|errors| errors.as_array())
+            .and_then(|errors| errors.first())
+        {
+            let message = first
+                .get("message")
+                .and_then(|message| message.as_str())
+                .unwrap_or("the daemon refused the request");
+            return Err(Error::msg(message.to_string()));
+        }
+        body.get("data")
+            .cloned()
+            .ok_or_else(|| Error::msg("the daemon returned no data"))
     }
 
     /// Everything on screen came from the old server, so it all goes.

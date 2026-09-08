@@ -142,6 +142,7 @@ pub struct KeyBindings {
     pub increase_volume: Key,
     pub toggle_mute: Key,
     pub switch_server: Key,
+    pub play_to: Key,
     pub toggle_playback: Key,
     pub seek_backwards: Key,
     pub seek_forwards: Key,
@@ -178,6 +179,9 @@ impl UserConfig {
                 // Capital, matching the smart-playlist form's `S`-style
                 // shortcuts and free of every list handler.
                 switch_server: Key::Char('C'),
+                // `p` is the previous track; the capital is where the audio
+                // comes out.
+                play_to: Key::Char('P'),
                 toggle_playback: Key::Char(' '),
                 seek_backwards: Key::Char('<'),
                 seek_forwards: Key::Char('>'),

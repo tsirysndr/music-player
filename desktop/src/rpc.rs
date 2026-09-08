@@ -1279,11 +1279,14 @@ async fn load_servers(
 async fn load_renderers(
     weak: &Weak<AppWindow>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    const QUERY: &str = r#"query {
-        listCastDevices { id name app }
-        connectedCastDevice { id name }
-    }"#;
-    let data = graphql(QUERY, serde_json::json!({})).await?;
+    // Two calls, not one: `connectedCastDevice` *errors* when nothing is
+    // connected rather than returning null, and one error in a combined query
+    // failed the whole thing — which is why this list came back empty until
+    // something was already casting.
+    const LIST: &str = r#"query { listCastDevices { id name app } }"#;
+    const CONNECTED: &str = r#"query { connectedCastDevice { id } }"#;
+
+    let data = graphql(LIST, serde_json::json!({})).await?;
     let devices: Vec<(String, String, String)> = data["listCastDevices"]
         .as_array()
         .map(|rows| {
@@ -1298,12 +1301,17 @@ async fn load_renderers(
                 .collect()
         })
         .unwrap_or_default();
-    // The query errors rather than returning null when nothing is connected,
-    // so a missing field means "playing here".
-    let current = data["connectedCastDevice"]["id"]
-        .as_str()
-        .unwrap_or_default()
-        .to_string();
+    // Nothing connected is an error here, not a null, and it is the ordinary
+    // case — so a failure means "playing on this machine".
+    let current = graphql(CONNECTED, serde_json::json!({}))
+        .await
+        .ok()
+        .and_then(|data| {
+            data["connectedCastDevice"]["id"]
+                .as_str()
+                .map(str::to_owned)
+        })
+        .unwrap_or_default();
 
     let _ = weak.upgrade_in_event_loop(move |app| {
         crate::ui_set_renderers(&app, devices, current);

@@ -1,34 +1,17 @@
 import _ from "lodash";
 
-let pathSep = "/";
-let coversDir = "";
-
+/**
+ * Turns a cover path into something an `<img>` can load.
+ *
+ * A remote provider hands back absolute, already-authenticated urls; the
+ * daemon's own covers arrive as `/covers/<file>` and are served from the same
+ * origin. Both cases reduce to "strip the prefix if what is underneath is
+ * already a url".
+ */
 export const resourceUriResolver = {
-  async initializeForNativeWrapper(): Promise<void> {
-    if (import.meta.env.VITE_NATIVE_WRAPPER !== "tauri") return;
-    const { path } = window.__TAURI__;
-    const appDataDir = await path.appDataDir();
-    coversDir = await path.join(appDataDir, "covers");
-    // In Tauri v2, `path.sep` is a function returning the separator
-    pathSep = path.sep();
-  },
   resolve(path: string | undefined): string | undefined {
     if (!path) return path;
-    if (import.meta.env.VITE_NATIVE_WRAPPER !== "tauri") {
-      if (_.startsWith(_.replace(path, /^\/covers\//, ""), "http")) {
-        return _.replace(path, /^\/covers\//, "");
-      }
-      return path;
-    }
-    if (_.startsWith(_.replace(path, /^\/covers\//, ""), "http")) {
-      return _.replace(path, /^\/covers\//, "");
-    }
-    // Image file in covers/ data directory
-    if (/^\/covers\/[^<>:;,?"*|/]+\.(?:jpg|png)$/.test(path)) {
-      const { core } = window.__TAURI__;
-      const devicePath = [coversDir, path.substring(8)].join(pathSep);
-      return core.convertFileSrc(devicePath);
-    }
-    return path;
+    const withoutPrefix = _.replace(path, /^\/covers\//, "");
+    return _.startsWith(withoutPrefix, "http") ? withoutPrefix : path;
   },
 };

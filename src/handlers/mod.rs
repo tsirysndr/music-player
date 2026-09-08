@@ -14,6 +14,7 @@ pub mod library;
 pub mod play_queue;
 pub mod playbar;
 pub mod playlist;
+pub mod renderer_picker;
 pub mod search;
 pub mod server_switcher;
 pub mod smart_playlist;
@@ -54,6 +55,11 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         server_switcher::handler(key, app);
         return false;
     }
+    // And the "play to" picker.
+    if app.renderers.active {
+        renderer_picker::handler(key, app);
+        return false;
+    }
 
     match key {
         Key::Esc => {
@@ -79,6 +85,11 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         }
         _ if key == app.user_config.keys.toggle_mute => {
             app.toggle_mute();
+        }
+        _ if key == app.user_config.keys.play_to => {
+            app.renderers.open();
+            app.renderers.loading = true;
+            app.dispatch(IoEvent::LoadRenderers);
         }
         _ if key == app.user_config.keys.switch_server => {
             app.switcher.open();

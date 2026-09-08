@@ -1,6 +1,6 @@
 # Music Player Web UI
 
-The browser client. It is served by the daemon, and is also what the Tauri
+The browser client, served by the daemon.
 desktop wrapper loads.
 
 ## Design system
@@ -49,15 +49,6 @@ Every form is [react-hook-form](https://react-hook-form.com) with a
 `error` prop and render the message themselves, so a form is
 `register(...)` plus `errors.field?.message`.
 
-## Tauri
-
-This directory is also configured as a [Tauri](https://tauri.app/) project.
-Refer to https://tauri.app/start/prerequisites/ for system-level prerequisites.
-
-```sh
-cargo install tauri-cli
-cargo tauri dev
-```
 
 ## Development
 
@@ -67,9 +58,6 @@ The build moved from create-react-app to [Vite](https://vite.dev) in September
 
 - `webui/src/lib.rs` embeds `musicplayer/build/` with `rust-embed`, so the
   output directory is `build/`, not Vite's default `dist/`.
-- `src-tauri/tauri.conf.json` sets `devUrl: "http://localhost:3000"`, so the
-  dev server uses port 3000 with `strictPort` — silently moving to 3001 would
-  leave Tauri pointing at nothing.
 
 ```sh
 bun install
@@ -100,7 +88,6 @@ Environment variables use Vite's `VITE_` prefix and `import.meta.env`, not
 
 | Variable              | Effect                                    |
 | --------------------- | ----------------------------------------- |
-| `VITE_NATIVE_WRAPPER` | Set to `tauri` when building inside Tauri |
 | `VITE_API_URL`        | GraphQL endpoint in development           |
 
 ### Regenerating the GraphQL hooks

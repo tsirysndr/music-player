@@ -200,8 +200,7 @@ src/skin.rs          skin TOML loading + Theme application + persistence
 src/daemon.rs        embedded daemon boot (mirrors src/main.rs server mode)
 assets/icon.svg      app icon source (synthwave note); regenerate with:
                      inkscape -o icon_1024.png -w 1024 assets/icon.svg,
-                     iconutil for AppIcon.icns, `bunx tauri icon` for the
-                     Tauri set, sips for the webui logos
+                     iconutil for AppIcon.icns, sips for the webui logos
 build.rs             Slint compile (fluent-dark base style)
 ```
 

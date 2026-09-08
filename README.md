@@ -49,7 +49,7 @@
 
 An extensible music player daemon, server and client, written in Rust — like [mpd](https://github.com/MusicPlayerDaemon/MPD) or [Mopidy](https://github.com/mopidy/mopidy).
 
-Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org) firmware's battle-tested engine, via the [rockbox-playback](https://crates.io/crates/rockbox-playback), [rockbox-dsp](https://crates.io/crates/rockbox-dsp) and [rockbox-metadata](https://crates.io/crates/rockbox-metadata) crates: 40+ audio formats, gapless-grade buffering, EQ/crossfade/ReplayGain DSP, and native HTTP streaming. The daemon indexes your library into SQLite (with FTS5 full-text search) and exposes it over gRPC, GraphQL and a web UI — controllable from the terminal UI, the browser, or the Tauri desktop app.
+Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org) firmware's battle-tested engine, via the [rockbox-playback](https://crates.io/crates/rockbox-playback), [rockbox-dsp](https://crates.io/crates/rockbox-dsp) and [rockbox-metadata](https://crates.io/crates/rockbox-metadata) crates: 40+ audio formats, gapless-grade buffering, EQ/crossfade/ReplayGain DSP, and native HTTP streaming. The daemon indexes your library into SQLite (with FTS5 full-text search) and exposes it over gRPC, GraphQL and a web UI — controllable from the terminal UI, the browser, or the desktop app.
 
 > [!NOTE]
 > **Looking for more?**
@@ -86,7 +86,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - 🔎 **Instant full-text search** backed by SQLite FTS5, kept in sync automatically by database triggers
 - 🖥️ **Terminal UI** (ratatui) with an fzf-style fuzzy finder, neovim-inspired status line and `?` help overlay
 - 🌐 **Web UI** (React 18 + Tailwind v4 + HeroUI) — the same skins, fonts and components as the Slint desktop app, responsive down to a phone
-- 🖱️ **Desktop apps** — a skinnable [Slint](https://slint.dev) app with an embedded daemon, and a Tauri 2 version
+- 🖱️ **Desktop app** — a skinnable [Slint](https://slint.dev) app with an embedded daemon
 - 📡 **gRPC + GraphQL APIs** (tonic 0.14, grpc-web enabled) for building your own clients
 - ☁️ **Browse & stream from Subsonic/Navidrome and Jellyfin servers**
 - 📻 **Cast to Chromecast and UPnP/DLNA renderers**, or control another music-player daemon
@@ -269,6 +269,7 @@ Main keys:
 | `+` / `-`   | Volume up / down (`=` / `_` work unshifted)             |
 | `m`         | Mute / unmute                                           |
 | `C`         | Switch which server the library is read from            |
+| `P`         | Choose where the audio comes out (Play to)              |
 | `z`         | Add selected track to the queue                         |
 | `q` / `Esc` | Back / quit                                             |
 
@@ -300,18 +301,6 @@ Both the Slint desktop and the web UI answer to the same keys:
 | `s`       | Cycle skin                                    |
 | `Esc`     | Close dialog / go back                        |
 | `?`       | Help overlay (desktop)                        |
-
-The desktop app wraps the same UI with [Tauri 2](https://v2.tauri.app):
-
-```bash
-cd webui/musicplayer
-bun install
-bun run tauri dev   # or: bun run tauri build
-```
-
-The Tauri app reuses an existing local music-player daemon when one is
-available; otherwise it starts the daemon in-process so playback and the
-GraphQL, gRPC, websocket, and web UI endpoints are available immediately.
 
 ## GraphQL API
 

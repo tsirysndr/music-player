@@ -92,6 +92,10 @@ pub fn draw_main_layout(f: &mut Frame, app: &App) {
         draw_server_switcher_overlay(f, app);
     }
 
+    if app.renderers.active {
+        draw_renderer_picker_overlay(f, app);
+    }
+
     if app.smart_playlist_form.active {
         draw_smart_playlist_overlay(f, app);
     }
@@ -784,6 +788,8 @@ pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
             ("←/→", "type"),
             ("enter", "save & connect"),
         ]
+    } else if app.renderers.active {
+        &[("esc", "close"), ("↑/↓", "move"), ("enter", "play here")]
     } else if app.switcher.active {
         &[
             ("esc", "close"),
@@ -821,6 +827,7 @@ pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
             ("m", "mute"),
             ("S", "smart playlist"),
             ("C", "servers"),
+            ("P", "play to"),
             ("z", "queue"),
             ("u", "play queue"),
             ("q", "back/quit"),
@@ -1403,6 +1410,138 @@ fn draw_add_server_form(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(Paragraph::new(Text::from(lines)), area);
 }
 
+/// The "play to" picker: an fzf-style list of renderers over the library.
+///
+/// "This computer" is always the first row, so there is always somewhere to
+/// play. A renderer is where the audio *comes out* — the opposite question
+/// from the server switcher, which is where the library is read from.
+pub fn draw_renderer_picker_overlay(f: &mut Frame, app: &App) {
+    let theme = app.user_config.theme;
+    let area = centered_rect(60, 60, f.area());
+    if area.width < 24 || area.height < 6 {
+        return;
+    }
+
+    f.render_widget(Clear, area);
+
+    let title = Line::from(vec![
+        Span::raw(" Play to "),
+        Span::styled(
+            "— where the audio comes out",
+            Style::default().fg(theme.inactive),
+        ),
+        Span::raw(" "),
+    ]);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title)
+        .border_style(Style::default().fg(theme.active));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    if inner.height < 3 {
+        return;
+    }
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .split(inner);
+
+    if app.renderers.results.is_empty() {
+        let message = if app.renderers.loading {
+            "  looking for renderers…"
+        } else {
+            "  nothing matches"
+        };
+        f.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                message,
+                Style::default().fg(theme.inactive),
+            ))),
+            chunks[0],
+        );
+    } else {
+        let items: Vec<ListItem> = app
+            .renderers
+            .results
+            .iter()
+            .enumerate()
+            .map(|(index, result)| {
+                let selected = index == app.renderers.selected_index;
+                let base = if selected {
+                    Style::default()
+                        .fg(theme.active)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(theme.text)
+                };
+                let mut spans = vec![Span::styled(
+                    if selected { "▌ " } else { "  " },
+                    Style::default().fg(theme.active),
+                )];
+                // A dot marks what is playing, matching the other clients.
+                spans.push(Span::styled(
+                    if result.entry.playing { "● " } else { "  " },
+                    Style::default().fg(theme.statusline_normal),
+                ));
+                for (position, ch) in result.display.chars().enumerate() {
+                    let matched = result.indices.contains(&(position as u32));
+                    spans.push(Span::styled(
+                        ch.to_string(),
+                        if matched {
+                            base.fg(theme.statusline_search).add_modifier(Modifier::BOLD)
+                        } else {
+                            base
+                        },
+                    ));
+                }
+                ListItem::new(Line::from(spans))
+            })
+            .collect();
+
+        let mut state = ListState::default();
+        state.select(Some(app.renderers.selected_index));
+        f.render_stateful_widget(List::new(items), chunks[0], &mut state);
+    }
+
+    // The prompt doubles as the error line: a refused connection is about the
+    // thing you just picked.
+    if !app.renderers.error.is_empty() {
+        f.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                format!("  {}", app.renderers.error),
+                Style::default().fg(theme.statusline_search),
+            ))),
+            chunks[1],
+        );
+        return;
+    }
+
+    let prompt = Line::from(vec![
+        Span::styled(
+            "> ",
+            Style::default()
+                .fg(theme.active)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(app.renderers.query.clone()),
+        Span::styled(
+            if app.renderers.loading {
+                " looking…".to_string()
+            } else {
+                format!("  [{}]", app.renderers.results.len())
+            },
+            Style::default().fg(theme.inactive),
+        ),
+    ]);
+    f.render_widget(Paragraph::new(prompt), chunks[1]);
+    let cursor_x = chunks[1].x + 2 + app.renderers.query.chars().count() as u16;
+    f.set_cursor_position(Position::new(
+        cursor_x.min(chunks[1].right().saturating_sub(1)),
+        chunks[1].y,
+    ));
+}
+
 /// All keybindings, grouped by category. Used by the `?` help dialog.
 pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
     vec![
@@ -1438,6 +1577,16 @@ pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> 
                 ("m", "Mute / unmute"),
                 ("z", "Add selected track to the queue"),
                 ("u", "Toggle the play-queue view"),
+            ],
+        ),
+        (
+            "Play to",
+            vec![
+                ("P", "Choose where the audio comes out"),
+                ("Type", "Fuzzy-filter the renderers"),
+                ("Up / Down", "Move selection"),
+                ("Enter", "Play there (or back to this computer)"),
+                ("Esc", "Close"),
             ],
         ),
         (

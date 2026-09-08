@@ -1,6 +1,3 @@
-export const isTauri = (): boolean =>
-  import.meta.env.VITE_NATIVE_WRAPPER === "tauri";
-
 export const getApiUrl = (): string =>
   import.meta.env.DEV
     ? import.meta.env.VITE_API_URL || "http://localhost:3001/graphql"
@@ -18,9 +15,8 @@ type GraphQLResponse<TData> = {
  * GraphQL fetcher used by the hooks generated with
  * @graphql-codegen/typescript-react-query.
  *
- * - In tauri mode, operations are routed through the
- *   `execute_graphql` tauri command (`window.__TAURI__.core.invoke`).
- * - In web mode, operations are POSTed to the GraphQL endpoint.
+ * GraphQL answers 200 even when the operation failed, so the errors array is
+ * the only thing that says so — hence the throw rather than a status check.
  */
 export const fetcher = <TData, TVariables>(
   query: string,
@@ -28,26 +24,15 @@ export const fetcher = <TData, TVariables>(
   options?: RequestInit["headers"]
 ) => {
   return async (): Promise<TData> => {
-    let response: GraphQLResponse<TData>;
-    if (isTauri()) {
-      const { invoke } = window.__TAURI__.core;
-      response = await invoke("execute_graphql", {
-        request: {
-          query,
-          variables,
-        },
-      });
-    } else {
-      const res = await fetch(getApiUrl(), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...options,
-        },
-        body: JSON.stringify({ query, variables }),
-      });
-      response = await res.json();
-    }
+    const res = await fetch(getApiUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...options,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    const response: GraphQLResponse<TData> = await res.json();
 
     if (response.errors && response.errors.length > 0) {
       throw new Error(response.errors[0].message);

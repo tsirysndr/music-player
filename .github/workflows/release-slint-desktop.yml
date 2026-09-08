@@ -106,8 +106,8 @@ jobs:
           tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player-desktop
           sha256sum $ASSET.tar.gz > $ASSET.tar.gz.sha256
 
-      # Ships an ad-hoc signed `Music Player.app` in place of the Tauri bundle.
-      # The asset names must stay byte-identical to the ones Tauri used so that
+      # Ships an ad-hoc signed `Music Player.app`. The asset names are kept
+      # byte-identical to the ones earlier releases used so that
       # `gh release upload --clobber` overwrites the broken downloads rather
       # than leaving them alongside the new ones. COPYFILE_DISABLE keeps macOS
       # tar from injecting ._AppleDouble files into the signed bundle.

@@ -7,7 +7,6 @@ import svgr from "vite-plugin-svgr";
  * Two consumers pin the shape of this build:
  *
  *  - `webui/src/lib.rs` embeds `musicplayer/build/` with rust-embed, and
- *  - `src-tauri/tauri.conf.json` sets `frontendDist: "../build"` and
  *    `devUrl: "http://localhost:3000"`.
  *
  * So the output stays in `build/` rather than Vite's default `dist/`, and the
@@ -17,7 +16,7 @@ export default defineConfig({
   plugins: [tailwindcss(), react(), svgr()],
   server: {
     port: 3000,
-    // Fail loudly rather than silently moving to 3001, which Tauri's devUrl
+    // Fail loudly rather than silently moving to 3001, which the embedded
     // would then not find.
     strictPort: true,
   },

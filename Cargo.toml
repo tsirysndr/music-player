@@ -33,7 +33,6 @@ members = [
   "tracklist",
   "types",
   "webui",
-  "webui/musicplayer/src-tauri",
 ]
 
 [[bin]]
@@ -132,6 +131,7 @@ md5 = "0.7.0"
 owo-colors = "3.5.0"
 sea-orm = {version = "0.9.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 serde_json = "1.0.85"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 spinners = "4.1.0"
 tabled = "0.8.0"
 time = "0.3.36"

@@ -52,6 +52,7 @@ mod extension;
 mod handlers;
 mod network;
 mod scan;
+mod renderer_picker;
 mod server_switcher;
 mod smart_playlist_form;
 mod ui;

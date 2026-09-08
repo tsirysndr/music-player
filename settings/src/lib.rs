@@ -102,7 +102,6 @@ pub struct Settings {
     pub device_name: String,
     pub device_id: String,
     pub http_port: u16,
-    pub tauri_enable_graphql_server: bool,
     /// Where decoded audio is sent: "cpal" (system audio device, default),
     /// "stdout", "fifo:/path/to/pipe", "unix:/path/to/socket" or "tcp:host:port".
     pub audio_output: String,
@@ -230,7 +229,6 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         device_name: "Music Player".to_string(),
         device_id,
         http_port: 5053,
-        tauri_enable_graphql_server: false,
         audio_output: "cpal".to_string(),
         library_refresh_interval: 30,
         radio_browser_url: DEFAULT_RADIO_BROWSER_URL.to_string(),
@@ -277,10 +275,6 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("device_name", default_settings.device_name)?
         .set_default("device_id", default_settings.device_id)?
         .set_default("http_port", default_settings.http_port)?
-        .set_default(
-            "tauri_enable_graphql_server",
-            default_settings.tauri_enable_graphql_server,
-        )?
         .set_default("audio_output", default_settings.audio_output)?
         .set_default(
             "library_refresh_interval",

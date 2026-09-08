@@ -120,6 +120,8 @@ pub enum Cmd {
         track_id: String,
     },
     PlaySavedPlaylist(String),
+    /// Same, in a random order.
+    ShufflePlaylist(String),
     /// Rockbox insert positions: -2 play next, -3 add last. `tracks` are ids.
     InsertTracks {
         position: i32,
@@ -1243,10 +1245,17 @@ async fn open_album(
     weak: &Weak<AppWindow>,
     id: String,
 ) {
+    // The page is already open with a placeholder list, so a failure has to
+    // put it back rather than leaving it loading forever.
+    let failed = |weak: &Weak<AppWindow>| {
+        let _ = weak.upgrade_in_event_loop(|app| app.set_detail_loading(false));
+    };
     let Ok(Some(album)) = fetch_album(channel, &id).await else {
+        failed(weak);
         return;
     };
     let Ok(tracks) = fetch_album_tracks(channel, state, &id).await else {
+        failed(weak);
         return;
     };
     let detail = AlbumDetailData {
@@ -1745,6 +1754,17 @@ async fn cmd_loop(
                 }
                 Cmd::PlaySavedPlaylist(id) => {
                     let tracks = playlist_tracks(&channel, &id).await?;
+                    load_tracks(&channel, tracks, 0).await?;
+                }
+                Cmd::ShufflePlaylist(id) => {
+                    let mut tracks = playlist_tracks(&channel, &id).await?;
+                    // Shuffled here rather than by turning the player's own
+                    // shuffle on: that is a mode the user set, and starting a
+                    // playlist should not silently change it. Fisher–Yates via
+                    // fastrand, as the album path does.
+                    for i in (1..tracks.len()).rev() {
+                        tracks.swap(i, fastrand::usize(..=i));
+                    }
                     load_tracks(&channel, tracks, 0).await?;
                 }
                 Cmd::SmartPlaylistCreate {

@@ -77,6 +77,9 @@ export component AppWindow inherits Window {
     // ── App state ───────────────────────────────────────────────────────────
     in-out property <int> current-tab: 0; // 0 albums, 1 artists, 2 tracks, 3 liked
     in-out property <bool> show-detail: false;
+    /// The album detail is open but its tracks are still in flight. The page
+    /// shows placeholder rows rather than an empty table.
+    in-out property <bool> detail-loading: false;
     in-out property <AlbumItem> detail-album;
     in-out property <string> detail-meta: "";
     in-out property <string> detail-label: "";
@@ -265,6 +268,7 @@ export component AppWindow inherits Window {
     callback track-add-to-playlist(string, string); // playlist id, track id
     callback playlists-open(string);
     callback playlist-play(string);
+    callback playlist-shuffle(string);
     callback playlist-delete(string);
     callback playlist-form-submit(string, string, string); // id ("" = create), name, desc
     // id ("" = create), name, desc, rsql, sort-by, sort-order, limit
@@ -933,7 +937,19 @@ export component AppWindow inherits Window {
                         width: parent.cell-w;
                         height: parent.cell-h;
                         play => { root.play-album(a.id); }
-                        open => { root.open-album(a.id); }
+                        open => {
+                            // Navigate first: fetching the tracks is a round
+                            // trip, and waiting on it makes the click feel
+                            // dropped. The card already has everything the
+                            // header needs.
+                            root.detail-album = a;
+                            root.detail-meta = "";
+                            root.detail-label = "";
+                            root.detail-tracks = [];
+                            root.detail-loading = true;
+                            root.show-detail = true;
+                            root.open-album(a.id);
+                        }
                         shuffle-play => { root.play-album-shuffled(a.id); }
                         play-next => { root.album-insert(a.id, -2); }
                         add-queue => { root.album-insert(a.id, -3); }
@@ -1067,6 +1083,7 @@ export component AppWindow inherits Window {
                                 playlist: pl;
                                 open => { root.playlists-open(pl.id); }
                                 play => { root.playlist-play(pl.id); }
+                                shuffle-play => { root.playlist-shuffle(pl.id); }
                                 edit => {
                                     root.open-playlist-form(pl.id, pl.name, pl.description);
                                 }
@@ -1140,6 +1157,13 @@ export component AppWindow inherits Window {
                                     root.pl-detail.name,
                                     root.pl-detail.description);
                             }
+                        }
+                        // Beside play, as the album detail has it.
+                        IconButton {
+                            icon: Icons.shuffle;
+                            icon-size: 17px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { root.playlist-shuffle(root.pl-detail.id); }
                         }
                         PlayPauseButton {
                             playing: false;
@@ -1572,7 +1596,15 @@ export component AppWindow inherits Window {
                                         width: parent.cell-w;
                                         height: parent.cell-h;
                                         play => { root.play-album(a.id); }
-                                        open => { root.open-album(a.id); }
+                                        open => {
+                                            root.detail-album = a;
+                                            root.detail-meta = "";
+                                            root.detail-label = "";
+                                            root.detail-tracks = [];
+                                            root.detail-loading = true;
+                                            root.show-detail = true;
+                                            root.open-album(a.id);
+                                        }
                                         shuffle-play => { root.play-album-shuffled(a.id); }
                                         play-next => { root.album-insert(a.id, -2); }
                                         add-queue => { root.album-insert(a.id, -3); }
@@ -1742,7 +1774,11 @@ export component AppWindow inherits Window {
                         }
 
                         TrackListHeader {}
-                        ListView {
+                        if root.detail-loading : TrackSkeletonList {
+                            rows: 8;
+                            vertical-stretch: 1;
+                        }
+                        if !root.detail-loading : ListView {
                             vertical-stretch: 1;
                             for r[i] in root.detail-tracks : Rectangle {
                                 height: r.is-header ? 36px : 42px;

@@ -2306,6 +2306,7 @@ export component PlaylistRow inherits Rectangle {
     in property <PlaylistItem> playlist;
     callback open;
     callback play;
+    callback shuffle-play;
     callback edit;
     callback delete;
 
@@ -2363,6 +2364,13 @@ export component PlaylistRow inherits Rectangle {
             y: (parent.height - self.height) / 2;
             opacity: touch.has-hover ? 1 : 0.35;
             clicked => { root.delete(); }
+        }
+        IconButton {
+            icon: Icons.shuffle;
+            icon-size: 15px;
+            y: (parent.height - self.height) / 2;
+            opacity: touch.has-hover ? 1 : 0.35;
+            clicked => { root.shuffle-play(); }
         }
         IconButton {
             icon: Icons.play;

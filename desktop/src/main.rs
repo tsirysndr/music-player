@@ -427,6 +427,7 @@ pub fn ui_show_album_detail(app: &AppWindow, detail: rpc::AlbumDetailData) {
     app.set_detail_label(detail.label.into());
     app.set_detail_tracks(ModelRc::new(VecModel::from(rows)));
     app.set_show_detail(true);
+    app.set_detail_loading(false);
 }
 
 /// Fills the artist page from what the library already holds.
@@ -1496,6 +1497,12 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_playlist_play(move |id| {
             let _ = tx.send(rpc::Cmd::PlaySavedPlaylist(id.into()));
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_playlist_shuffle(move |id| {
+            let _ = tx.send(rpc::Cmd::ShufflePlaylist(id.into()));
         });
     }
     {

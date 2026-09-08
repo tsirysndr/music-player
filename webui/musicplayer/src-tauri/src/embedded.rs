@@ -143,7 +143,9 @@ fn boot() {
     let providers = {
         let mut registry = music_player_provider::ProviderRegistry::new();
         music_player_provider::register_builtin(&mut registry);
-        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(
+            registry,
+        )))
     };
     let grpc_providers = Arc::clone(&providers);
     let ws_providers = Arc::clone(&providers);
@@ -180,12 +182,10 @@ fn boot() {
             .enable_all()
             .build()
             .expect("websocket runtime");
-        if let Err(error) = runtime
-            .block_on(
-                MusicPlayerServer::new(ws_tracklist, ws_cmd_tx, ws_peers, ws_db, ws_providers)
-                    .start_ws(),
-            )
-        {
+        if let Err(error) = runtime.block_on(
+            MusicPlayerServer::new(ws_tracklist, ws_cmd_tx, ws_peers, ws_db, ws_providers)
+                .start_ws(),
+        ) {
             tracing::error!("embedded websocket server failed: {error}");
         }
     });

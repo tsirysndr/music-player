@@ -15,10 +15,10 @@ pub mod mixer;
 pub mod play_stats;
 pub mod playback;
 pub mod playlist;
-pub mod servers;
 pub mod remote;
 pub mod scrobbler;
 pub mod server;
+pub mod servers;
 pub mod tracklist;
 pub mod api {
     #[path = ""]

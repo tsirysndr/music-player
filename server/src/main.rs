@@ -49,8 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db,
         providers,
     )
-        .start()
-        .await?;
+    .start()
+    .await?;
 
     Ok(())
 }

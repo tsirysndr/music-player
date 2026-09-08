@@ -38,8 +38,8 @@ impl Plex {
         path: &str,
         query: &[(&str, &str)],
     ) -> Result<T, ProviderError> {
-        let mut url = url::Url::parse(&format!("{}{path}", self.base_url))
-            .map_err(ProviderError::other)?;
+        let mut url =
+            url::Url::parse(&format!("{}{path}", self.base_url)).map_err(ProviderError::other)?;
         {
             let mut pairs = url.query_pairs_mut();
             for (key, value) in query {
@@ -109,10 +109,7 @@ impl Plex {
             params.push(("title", query));
         }
         let container: Container = self
-            .get(
-                &format!("/library/sections/{}/all", self.section),
-                &params,
-            )
+            .get(&format!("/library/sections/{}/all", self.section), &params)
             .await?;
         Ok(container.media_container.metadata)
     }
@@ -170,7 +167,9 @@ impl Plex {
                 title: item.parent_title.clone().unwrap_or_default(),
                 artist: artist.clone(),
                 year: item.parent_year.or(item.year),
-                cover: self.cover(&item.parent_thumb).or_else(|| self.cover(&item.thumb)),
+                cover: self
+                    .cover(&item.parent_thumb)
+                    .or_else(|| self.cover(&item.thumb)),
                 ..Default::default()
             }),
             artist,
@@ -273,9 +272,7 @@ impl MusicProvider for Plex {
     }
 
     async fn playlists(&self, page: Page) -> Result<Vec<Playlist>, ProviderError> {
-        let container: Container = self
-            .get("/playlists", &[("playlistType", "audio")])
-            .await?;
+        let container: Container = self.get("/playlists", &[("playlistType", "audio")]).await?;
         Ok(page.slice(
             container
                 .media_container
@@ -461,9 +458,7 @@ impl ProviderFactory for PlexFactory {
             .iter()
             .find(|section| section.kind == "artist")
             .map(|section| section.key.clone())
-            .ok_or_else(|| {
-                ProviderError::Other("that Plex server has no music library".into())
-            })?;
+            .ok_or_else(|| ProviderError::Other("that Plex server has no music library".into()))?;
 
         Ok(Arc::new(plex))
     }
@@ -584,7 +579,9 @@ mod tests {
         .unwrap();
         assert_eq!(container.media_container.hub.len(), 2);
         assert_eq!(
-            container.media_container.hub[1].metadata[0].item_type.as_deref(),
+            container.media_container.hub[1].metadata[0]
+                .item_type
+                .as_deref(),
             Some("album")
         );
     }

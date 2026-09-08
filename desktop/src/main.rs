@@ -514,11 +514,7 @@ fn server_item(s: &SavedServer, connected_url: &str) -> ServerItem {
 }
 
 /// The "play to" list: this machine first, then whatever the daemon found.
-pub fn ui_set_renderers(
-    app: &AppWindow,
-    devices: Vec<(String, String, String)>,
-    current: String,
-) {
+pub fn ui_set_renderers(app: &AppWindow, devices: Vec<(String, String, String)>, current: String) {
     let mut items = vec![RendererItem {
         id: "".into(),
         name: "This computer".into(),

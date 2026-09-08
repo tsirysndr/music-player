@@ -137,7 +137,10 @@ impl<'a> Network<'a> {
                 url,
                 username,
                 password,
-            } => self.add_server(&kind, &name, &url, &username, &password).await,
+            } => {
+                self.add_server(&kind, &name, &url, &username, &password)
+                    .await
+            }
             IoEvent::GetPlaylists => self.get_playlists().await,
             IoEvent::PlayPlaylist(id) => self.play_playlist(id).await,
             IoEvent::LoadSearchIndex => self.load_search_index().await,

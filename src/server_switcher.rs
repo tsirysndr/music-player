@@ -220,7 +220,10 @@ impl ServerSwitcher {
 
     pub fn selected(&self) -> Option<&ServerEntry> {
         self.results
-            .get(self.selected_index.min(self.results.len().saturating_sub(1)))
+            .get(
+                self.selected_index
+                    .min(self.results.len().saturating_sub(1)),
+            )
             .map(|result| &result.entry)
     }
 

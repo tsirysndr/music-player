@@ -67,7 +67,10 @@ mod tests {
     /// through discovery.
     #[test]
     fn xbmc_is_kodi() {
-        assert_eq!(builtin_registry().get("xbmc").map(|f| f.kind()), Some("kodi"));
+        assert_eq!(
+            builtin_registry().get("xbmc").map(|f| f.kind()),
+            Some("kodi")
+        );
     }
 
     /// Navidrome speaks the Subsonic API under its own name.

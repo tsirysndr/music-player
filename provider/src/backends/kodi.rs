@@ -141,7 +141,10 @@ impl Kodi {
     fn map_artist(&self, artist: &KodiArtist) -> Artist {
         Artist {
             id: artist.artistid.to_string(),
-            name: artist.artist.clone().unwrap_or_else(|| artist.label.clone()),
+            name: artist
+                .artist
+                .clone()
+                .unwrap_or_else(|| artist.label.clone()),
             picture: self.cover(&artist.thumbnail),
             albums: vec![],
             songs: vec![],
@@ -255,7 +258,11 @@ impl MusicProvider for Kodi {
             fields["filter"] = filter;
         }
         let result: SongsResult = self.call("AudioLibrary.GetSongs", fields).await?;
-        Ok(result.songs.iter().map(|song| self.map_song(song)).collect())
+        Ok(result
+            .songs
+            .iter()
+            .map(|song| self.map_song(song))
+            .collect())
     }
 
     async fn album(&self, id: &str) -> Result<Album, ProviderError> {
@@ -559,7 +566,10 @@ mod tests {
     /// Kodi pages with a window, not a count.
     #[test]
     fn a_page_becomes_a_window() {
-        assert_eq!(Kodi::limits(Page::new(20, 50)), json!({"start": 20, "end": 70}));
+        assert_eq!(
+            Kodi::limits(Page::new(20, 50)),
+            json!({"start": 20, "end": 70})
+        );
         // No limit means no upper bound rather than an end of zero.
         assert_eq!(Kodi::limits(Page::all()), json!({"start": 0}));
     }

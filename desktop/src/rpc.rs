@@ -2031,8 +2031,7 @@ async fn cmd_loop(
                     }
                 }
                 Cmd::DisconnectProvider => {
-                    const DISCONNECT: &str =
-                        r#"mutation { disconnectFromServer { id } }"#;
+                    const DISCONNECT: &str = r#"mutation { disconnectFromServer { id } }"#;
                     // A failure here just means nothing was connected.
                     let _ = graphql(DISCONNECT, serde_json::json!({})).await;
                     let ep = endpoints();

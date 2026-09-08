@@ -173,7 +173,9 @@ fn boot() {
     let providers = {
         let mut registry = music_player_provider::ProviderRegistry::new();
         music_player_provider::register_builtin(&mut registry);
-        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(
+            registry,
+        )))
     };
 
     // gRPC server
@@ -188,11 +190,9 @@ fn boot() {
                 .enable_all()
                 .build()
                 .unwrap();
-            if let Err(e) =
-                runtime.block_on(
-                    MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db, grpc_providers).start(),
-                )
-            {
+            if let Err(e) = runtime.block_on(
+                MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db, grpc_providers).start(),
+            ) {
                 tracing::error!("gRPC server failed: {e}");
             }
         });
@@ -210,11 +210,9 @@ fn boot() {
                 .enable_all()
                 .build()
                 .unwrap();
-            if let Err(e) =
-                runtime.block_on(
-                    MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db, ws_providers).start_ws(),
-                )
-            {
+            if let Err(e) = runtime.block_on(
+                MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db, ws_providers).start_ws(),
+            ) {
                 tracing::error!("websocket server failed: {e}");
             }
         });

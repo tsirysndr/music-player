@@ -1328,7 +1328,8 @@ fn draw_switcher_list(f: &mut Frame, app: &App, area: Rect) {
                 spans.push(Span::styled(
                     ch.to_string(),
                     if matched {
-                        base.fg(theme.statusline_search).add_modifier(Modifier::BOLD)
+                        base.fg(theme.statusline_search)
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         base
                     },

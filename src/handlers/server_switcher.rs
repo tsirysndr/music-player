@@ -3,12 +3,7 @@
 //! Mirrors the fuzzy finder: while the overlay is up it takes every key, so a
 //! stray `p` types into the filter rather than pausing playback.
 
-use crate::{
-    app::App,
-    event::Key,
-    network::IoEvent,
-    server_switcher::AddField,
-};
+use crate::{app::App, event::Key, network::IoEvent, server_switcher::AddField};
 
 pub fn handler(key: Key, app: &mut App) {
     if app.switcher.form.active {

@@ -21,7 +21,10 @@ async fn scan() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -44,7 +47,10 @@ async fn search() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -64,7 +70,10 @@ async fn get_artists() -> Result<(), Box<dyn std::error::Error>> {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -98,7 +107,10 @@ async fn get_albums() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -128,7 +140,10 @@ async fn get_tracks() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -176,7 +191,10 @@ async fn get_track_details() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -211,7 +229,10 @@ async fn get_album_details() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -245,7 +266,10 @@ async fn get_artist_details() {
         Server::builder()
             .accept_http1(true)
             .layer(tonic_web::GrpcWebLayer::new())
-            .add_service(LibraryServiceServer::new(Library::new(db, super::local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                super::local_only(),
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();

@@ -13,7 +13,8 @@ use crate::api::music::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
     GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
-    GetTracksRequest, GetTracksResponse, LikeTrackRequest, LikeTrackResponse, ScanRequest,
+    GetLikedTracksRequest, GetLikedTracksResponse, GetTracksRequest, GetTracksResponse,
+    LikeTrackRequest, LikeTrackResponse, ScanRequest,
     ScanResponse, SearchRequest, SearchResponse,
 };
 
@@ -249,6 +250,59 @@ impl LibraryService for Library {
             tracks: tracks.into_iter().map(Into::into).collect(),
         };
         Ok(tonic::Response::new(response))
+    }
+
+    /// The tracks the user has liked.
+    ///
+    /// On a remote provider these are *its* likes — Subsonic's starred songs,
+    /// Jellyfin's favourites. There is deliberately no fallback to the local
+    /// list: those ids belong to a different library, so the rows would render
+    /// but not play.
+    async fn get_liked_tracks(
+        &self,
+        request: tonic::Request<GetLikedTracksRequest>,
+    ) -> Result<tonic::Response<GetLikedTracksResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let page = Page::new(request.offset as i32, request.limit as i32);
+
+        if let Some(current) = self.providers.current().await {
+            let tracks = current
+                .provider
+                .liked_tracks(page)
+                .await
+                .map_err(provider_status)?;
+            let tracks = music_player_provider::url::decorate_all(tracks, &current.config);
+            return Ok(tonic::Response::new(GetLikedTracksResponse {
+                tracks: tracks.into_iter().map(Into::into).collect(),
+            }));
+        }
+
+        // Locally a like lives in the user's atproto repo; only the ones
+        // matched to a local file have a track to return.
+        let ids = music_player_storage::rocksky_likes::matched_track_ids(
+            self.db.get_connection(),
+        )
+        .await
+        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let repository = TrackRepository::new(self.db.get_connection());
+        let mut tracks = Vec::new();
+        for id in ids
+            .into_iter()
+            .skip(page.offset.max(0) as usize)
+            .take(if page.limit > 0 {
+                page.limit as usize
+            } else {
+                usize::MAX
+            })
+        {
+            // A like can outlive the file it matched; skip those rather than
+            // failing the whole call.
+            if let Ok(track) = repository.find(&id).await {
+                tracks.push(track.into());
+            }
+        }
+        Ok(tonic::Response::new(GetLikedTracksResponse { tracks }))
     }
 
     async fn like_track(

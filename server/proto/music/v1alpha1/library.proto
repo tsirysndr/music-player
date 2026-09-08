@@ -48,6 +48,20 @@ message GetAlbumDetailsRequest {
 
 message GetAlbumDetailsResponse { metadata.v1alpha1.Album album = 1; }
 
+// The tracks the user has liked.
+//
+// On a remote provider these are *its* likes — Subsonic's starred songs,
+// Jellyfin's favourites. There is no fallback to the local list: those ids
+// belong to a different library, so the rows would render but not play.
+message GetLikedTracksRequest {
+    uint32 offset = 1;
+    uint32 limit = 2;
+}
+
+message GetLikedTracksResponse {
+    repeated metadata.v1alpha1.Track tracks = 1;
+}
+
 message GetArtistDetailsRequest {
     string id = 1;
 }
@@ -77,6 +91,7 @@ service LibraryService {
   rpc GetAlbumDetails(GetAlbumDetailsRequest)
       returns (GetAlbumDetailsResponse) {}
   rpc GetTracks(GetTracksRequest) returns (GetTracksResponse) {}
+  rpc GetLikedTracks(GetLikedTracksRequest) returns (GetLikedTracksResponse) {}
   rpc GetTrackDetails(GetTrackDetailsRequest)
       returns (GetTrackDetailsResponse) {}
   rpc GetArtists(GetArtistsRequest) returns (GetArtistsResponse) {}

@@ -20,7 +20,7 @@ use music_player_server::api::music::v1alpha1::{
     library_service_client::LibraryServiceClient, mixer_service_client::MixerServiceClient,
     playback_service_client::PlaybackServiceClient, playlist_service_client::PlaylistServiceClient,
     tracklist_service_client::TracklistServiceClient, AddItemRequest, AddTrackRequest,
-    ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest,
+    ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest, GetLikedTracksRequest, GetTrackDetailsRequest,
     GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
     GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest, GetVolumeRequest,
     LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest,
@@ -861,10 +861,31 @@ async fn load_library(
         })
         .collect();
 
+    // The daemon knows whose likes these are: with a provider connected they
+    // are *its* stars, and their ids mean nothing to the local like store —
+    // which is why filtering the cache locally left the screen empty.
+    let remote_liked = lib
+        .get_liked_tracks(GetLikedTracksRequest {
+            offset: 0,
+            limit: 500,
+        })
+        .await
+        .ok()
+        .map(|response| response.into_inner().tracks);
+
     let liked = {
         let mut st = state.lock().await;
         st.tracks = full;
-        liked_list(&st)
+        match remote_liked {
+            Some(tracks) if !tracks.is_empty() => tracks
+                .iter()
+                .enumerate()
+                .map(|(i, t)| track_data(t, i as i32))
+                .collect(),
+            // Nothing from the daemon: fall back to the local set, which is
+            // what a purely local library has always used.
+            _ => liked_list(&st),
+        }
     };
 
     let data = LibraryData {
@@ -1157,10 +1178,43 @@ async fn fetch_album_tracks(
         .iter()
         .map(|track| (track.proto.id.clone(), track.proto.clone()))
         .collect();
+    // A song in the album listing carries no uri, so the full track has to
+    // come from somewhere. The local cache holds the whole library, but a
+    // remote provider's does not — its cached list is one page of a much
+    // larger library — so anything missing is fetched rather than dropped.
+    // Dropping is what showed three tracks of a twelve-track Subsonic album.
+    let missing: Vec<String> = songs
+        .iter()
+        .filter(|song| !by_id.contains_key(&song.id))
+        .map(|song| song.id.clone())
+        .collect();
+    let fetched: HashMap<String, TrackProto> = if missing.is_empty() {
+        HashMap::new()
+    } else {
+        let mut library = LibraryServiceClient::new(channel.clone());
+        let mut fetched = HashMap::new();
+        for id in missing {
+            // One at a time: the client is not `Sync`, and an album is a
+            // handful of rows rather than a sweep of the library.
+            if let Ok(response) = library
+                .get_track_details(GetTrackDetailsRequest { id: id.clone() })
+                .await
+            {
+                if let Some(track) = response.into_inner().track {
+                    fetched.insert(id, track);
+                }
+            }
+        }
+        fetched
+    };
+
     Ok(songs
         .into_iter()
         .filter_map(|song| {
-            let mut track = by_id.get(&song.id)?.clone();
+            let mut track = by_id
+                .get(&song.id)
+                .or_else(|| fetched.get(&song.id))?
+                .clone();
             track.album = Some(album.clone());
             track.track_number = song.track_number;
             track.disc_number = song.disc_number;

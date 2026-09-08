@@ -146,7 +146,13 @@ impl Plex {
             .map(|part| part.key.clone())
             .unwrap_or_default();
         let artist = item.grandparent_title.clone().unwrap_or_default();
+        let media = item.media.first();
         Track {
+            // Plex reports both on the media entry.
+            bitrate: media.and_then(|m| m.bitrate).filter(|rate| *rate > 0),
+            sample_rate: media
+                .and_then(|m| m.audio_sampling_rate)
+                .filter(|rate| *rate > 0),
             id: item.rating_key.clone(),
             title: item.title.clone(),
             // Plex reports milliseconds.
@@ -410,7 +416,10 @@ struct Metadata {
 }
 
 #[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 struct Media {
+    bitrate: Option<u32>,
+    audio_sampling_rate: Option<u32>,
     #[serde(rename = "Part", default)]
     part: Vec<Part>,
 }

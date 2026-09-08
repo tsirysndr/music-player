@@ -356,6 +356,12 @@ pub struct Track {
     pub artists: Vec<Artist>,
     pub album: Option<Album>,
     pub artist: String,
+    /// kbps, when the server reports it. Local files get this from the
+    /// scanner; a remote server usually sends it with the listing, so there is
+    /// nothing to compute — it was simply being dropped here.
+    pub bitrate: Option<u32>,
+    /// Hz, on the same terms as `bitrate`.
+    pub sample_rate: Option<u32>,
 }
 
 #[derive(Default, Clone)]

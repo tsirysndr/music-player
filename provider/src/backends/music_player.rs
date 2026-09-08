@@ -309,6 +309,9 @@ struct RemoteSearch {
 impl From<RemoteTrack> for Track {
     fn from(track: RemoteTrack) -> Self {
         Track {
+            // Not reported on a listing by this server.
+            bitrate: None,
+            sample_rate: None,
             id: track.id,
             title: track.title,
             duration: track.duration,

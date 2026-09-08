@@ -254,6 +254,9 @@ pub mod api {
                     artists: val.artists.into_iter().map(Into::into).collect(),
                     artist: val.artist,
                     album: val.album.map(|album| album.into()),
+                    // Zero on the wire means unknown.
+                    bitrate: Some(val.bitrate).filter(|rate| *rate > 0),
+                    sample_rate: Some(val.sample_rate).filter(|rate| *rate > 0),
                 }
             }
         }
@@ -268,7 +271,12 @@ pub mod api {
                     track: Some(u32::try_from(val.track_number).unwrap_or_default()),
                     artists: val.artists.into_iter().map(Into::into).collect(),
                     artist: val.artist,
-                    album: val.album.unwrap().into(),
+                    // The tracklist holds these, and the now-playing readout
+                    // reads them back — dropping them here is what made a
+                    // remote track show no bitrate and probe the stream for it.
+                    bitrate: Some(val.bitrate).filter(|rate| *rate > 0),
+                    sample_rate: Some(val.sample_rate).filter(|rate| *rate > 0),
+                    album: val.album.map(Into::into).unwrap_or_default(),
                     ..Default::default()
                 }
             }
@@ -286,6 +294,8 @@ pub mod api {
                     artists: track.artists.into_iter().map(Into::into).collect(),
                     artist: track.artist,
                     album: track.album.map(|album| album.into()),
+                    bitrate: track.bitrate.unwrap_or_default(),
+                    sample_rate: track.sample_rate.unwrap_or_default(),
                     ..Default::default()
                 }
             }

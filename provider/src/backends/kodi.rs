@@ -154,6 +154,9 @@ impl Kodi {
     fn map_song(&self, song: &KodiSong) -> Track {
         let artist = song.artist.join(", ");
         Track {
+            // Not reported on a listing by this server.
+            bitrate: None,
+            sample_rate: None,
             id: song.songid.to_string(),
             title: song.title.clone().unwrap_or_else(|| song.label.clone()),
             duration: song.duration.map(|seconds| seconds as f32),

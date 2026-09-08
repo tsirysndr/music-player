@@ -189,6 +189,9 @@ impl Jellyfin {
             .unwrap_or_else(|| format!("{:x}", md5::compute(&album_title)));
         let cover_item_id = item.album_id.clone().unwrap_or_else(|| item.id.clone());
         Track {
+            // Jellyfin reports these only on a full item query, not a listing.
+            bitrate: None,
+            sample_rate: None,
             id: item.id.clone(),
             title: item.name.clone(),
             duration: item

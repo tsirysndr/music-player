@@ -151,6 +151,9 @@ impl Subsonic {
             duration: song.duration.map(|duration| duration as f32),
             disc_number: song.disc_number.unwrap_or(1),
             track_number: song.track,
+            // Reported by the server with every listing; no probing needed.
+            bitrate: song.bit_rate.filter(|rate| *rate > 0),
+            sample_rate: song.sampling_rate.filter(|rate| *rate > 0),
             uri: self.stream_url(&song.id),
             artists: vec![Artist {
                 id: artist_id,
@@ -614,6 +617,8 @@ pub struct Child {
     pub content_type: Option<String>,
     pub suffix: Option<String>,
     pub path: Option<String>,
+    pub bit_rate: Option<u32>,
+    pub sampling_rate: Option<u32>,
 }
 
 /// `getStarred2` — the songs the user has starred on this server.
@@ -659,6 +664,35 @@ mod tests {
         let mut client = Subsonic::with_credentials("https://music.example.com/", "demo", "demo");
         client.salt = "abcdef123456".to_string();
         client
+    }
+
+    /// The server reports these with every listing, so nothing has to probe
+    /// the stream for them — which is what the desktop fell back to.
+    #[test]
+    fn a_song_carries_its_bitrate_and_sample_rate() {
+        let song: Child = serde_json::from_value(serde_json::json!({
+            "id": "1",
+            "title": "God Is Dead?",
+            "bitRate": 986,
+            "samplingRate": 44100,
+            "suffix": "flac"
+        }))
+        .unwrap();
+
+        let track = Subsonic::new().map_song(&song);
+        assert_eq!(track.bitrate, Some(986));
+        assert_eq!(track.sample_rate, Some(44100));
+    }
+
+    /// A server that omits them, or reports zero, means "unknown" — not "0".
+    #[test]
+    fn absent_rates_stay_absent() {
+        let song: Child =
+            serde_json::from_value(serde_json::json!({ "id": "1", "title": "x", "bitRate": 0 }))
+                .unwrap();
+        let track = Subsonic::new().map_song(&song);
+        assert_eq!(track.bitrate, None);
+        assert_eq!(track.sample_rate, None);
     }
 
     #[test]

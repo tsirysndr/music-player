@@ -197,6 +197,20 @@ export const sourceKinds = [
     needsCredentials: false,
     defaultPort: 5053,
   },
+  {
+    __typename: "SourceKind",
+    kind: "kodi",
+    displayName: "Kodi",
+    needsCredentials: true,
+    defaultPort: 8080,
+  },
+  {
+    __typename: "SourceKind",
+    kind: "plex",
+    displayName: "Plex (token in the password field)",
+    needsCredentials: true,
+    defaultPort: 32400,
+  },
 ];
 
 export const savedServers = [

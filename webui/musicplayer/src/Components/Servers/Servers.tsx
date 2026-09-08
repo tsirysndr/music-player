@@ -47,6 +47,8 @@ const KIND_ICON: Record<string, IconComponent> = {
   subsonic: Icons.navidrome,
   navidrome: Icons.navidrome,
   "music-player": Icons.server,
+  kodi: Icons.device,
+  plex: Icons.disc,
 };
 
 /**

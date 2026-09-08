@@ -22,6 +22,13 @@ const kinds: SourceKind[] = [
     needsCredentials: false,
     defaultPort: 5053,
   },
+  { kind: "kodi", displayName: "Kodi", needsCredentials: true, defaultPort: 8080 },
+  {
+    kind: "plex",
+    displayName: "Plex (token in the password field)",
+    needsCredentials: true,
+    defaultPort: 32400,
+  },
 ];
 
 const servers: ServerItem[] = [

@@ -16,7 +16,9 @@
 //! source needed the gRPC client.
 
 pub mod jellyfin;
+pub mod kodi;
 pub mod music_player;
+pub mod plex;
 pub mod subsonic;
 
 use crate::ProviderRegistry;
@@ -30,7 +32,9 @@ pub fn register_builtin(registry: &mut ProviderRegistry) {
     registry
         .register(subsonic::SubsonicFactory)
         .register(jellyfin::JellyfinFactory)
-        .register(music_player::MusicPlayerFactory);
+        .register(music_player::MusicPlayerFactory)
+        .register(kodi::KodiFactory)
+        .register(plex::PlexFactory);
 }
 
 /// A registry with the built-ins already in it.
@@ -47,7 +51,7 @@ mod tests {
     #[test]
     fn every_builtin_is_reachable_by_kind() {
         let registry = builtin_registry();
-        for kind in ["subsonic", "jellyfin", "music-player"] {
+        for kind in ["subsonic", "jellyfin", "music-player", "kodi", "plex"] {
             assert!(registry.get(kind).is_some(), "{kind} is not registered");
         }
     }
@@ -57,6 +61,13 @@ mod tests {
         let registry = builtin_registry();
         assert!(!registry.get("music-player").unwrap().needs_credentials());
         assert!(registry.get("subsonic").unwrap().needs_credentials());
+    }
+
+    /// Kodi still calls itself xbmc over mDNS, and that string already flows
+    /// through discovery.
+    #[test]
+    fn xbmc_is_kodi() {
+        assert_eq!(builtin_registry().get("xbmc").map(|f| f.kind()), Some("kodi"));
     }
 
     /// Navidrome speaks the Subsonic API under its own name.

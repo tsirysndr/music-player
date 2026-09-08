@@ -2976,7 +2976,7 @@ export component AppWindow inherits Window {
                         letter-spacing: 1px;
                     }
                     kind-dd := Dropdown {
-                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player"];
+                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player", "Kodi", "Plex"];
                         current: 0;
                         menu-width: 190px;
                         selected(i) => { self.current = i; }
@@ -2992,6 +2992,8 @@ export component AppWindow inherits Window {
                     // one that would work rather than one to be edited.
                     placeholder: kind-dd.current == 1 ? "http://192.168.1.10:8096"
                         : kind-dd.current == 2 ? "http://192.168.1.10:5053"
+                        : kind-dd.current == 3 ? "http://192.168.1.10:8080"
+                        : kind-dd.current == 4 ? "http://192.168.1.10:32400"
                         : "http://192.168.1.10:4533";
                 }
                 HorizontalLayout {
@@ -3002,10 +3004,12 @@ export component AppWindow inherits Window {
                     spacing: 12px;
                     user-field := FormField {
                         label: "USERNAME";
+                        // Plex authenticates with a token alone.
+                        visible: kind-dd.current != 4;
                         horizontal-stretch: 1;
                     }
                     pass-field := FormField {
-                        label: "PASSWORD";
+                        label: kind-dd.current == 4 ? "X-PLEX-TOKEN" : "PASSWORD";
                         password: true;
                         horizontal-stretch: 1;
                     }
@@ -3053,6 +3057,8 @@ export component AppWindow inherits Window {
                                     root.server-add(
                                         kind-dd.current == 1 ? "jellyfin"
                                             : kind-dd.current == 2 ? "music-player"
+                                            : kind-dd.current == 3 ? "kodi"
+                                            : kind-dd.current == 4 ? "plex"
                                             : "subsonic",
                                         name-field.text == "" ? url-field.text : name-field.text,
                                         url-field.text,

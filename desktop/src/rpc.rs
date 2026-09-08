@@ -2022,9 +2022,7 @@ async fn cmd_loop(
                             .map(|t| t.proto.clone());
                         if let Some(remote) = st.remote_liked.as_mut() {
                             match (like, newly_liked) {
-                                (true, Some(track))
-                                    if !remote.iter().any(|t| t.id == id) =>
-                                {
+                                (true, Some(track)) if !remote.iter().any(|t| t.id == id) => {
                                     remote.insert(0, track)
                                 }
                                 (false, _) => remote.retain(|track| track.id != id),

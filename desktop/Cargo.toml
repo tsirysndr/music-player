@@ -59,8 +59,8 @@ version = "0.2.1"
 path = "../graphql"
 version = "0.2.1"
 
-[dependencies.music-player-addons]
-path = "../addons"
+[dependencies.music-player-renderer]
+path = "../renderer"
 version = "0.2.1"
 
 [dependencies.music-player-types]

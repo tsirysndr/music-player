@@ -47,8 +47,8 @@ version = "0.2.1"
 path = "../discovery"
 version = "0.2.1"
 
-[dependencies.music-player-addons]
-path = "../addons"
+[dependencies.music-player-renderer]
+path = "../renderer"
 version = "0.2.1"
 
 [dev-dependencies.music-player-migration]

@@ -833,7 +833,7 @@ mod tests {
     ///   curl -X POST http://localhost:4544/auth/createAdmin \
     ///     -d '{"username":"admin","password":"admin"}'
     /// Override with SUBSONIC_TEST_URL / SUBSONIC_TEST_USERNAME / SUBSONIC_TEST_PASSWORD.
-    /// Run with: cargo test -p music-player-addons -- --ignored
+    /// Run with: cargo test -p music-player-provider -- --ignored
     #[test]
     #[ignore = "requires a running Navidrome/Subsonic server"]
     fn live_navidrome_smoke() {

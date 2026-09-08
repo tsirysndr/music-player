@@ -14,8 +14,8 @@ version = "0.2.1"
 [build-dependencies]
 tauri-build = {version = "2", features = []}
 
-[dependencies.music-player-addons]
-path = "../../../addons"
+[dependencies.music-player-renderer]
+path = "../../../renderer"
 version = "0.2.1"
 
 [dependencies.music-player-provider]

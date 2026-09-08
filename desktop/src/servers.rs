@@ -1,6 +1,6 @@
 //! Saved remote music servers (Subsonic/Navidrome + Jellyfin). The desktop
-//! browses them directly through the `music-player-addons` clients — no
-//! daemon involvement; the daemon just streams whatever URI it is handed.
+//! The desktop hands these to the daemon, which saves them and connects to
+//! one as the current provider; every library screen then reads through it.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

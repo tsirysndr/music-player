@@ -1,6 +1,6 @@
 extern crate chromecast as rust_cast;
 
-use crate::{Addon, Player};
+use crate::Player;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures_util::Future;
@@ -30,11 +30,6 @@ const DEFAULT_DESTINATION_ID: &str = "receiver-0";
 const DEFAULT_APP_ID: &str = "34164A08";
 
 pub struct Chromecast<'a> {
-    name: String,
-    version: String,
-    author: String,
-    description: String,
-    enabled: bool,
     host: Option<String>,
     port: Option<u16>,
     client: Option<CastDevice<'a>>,
@@ -48,11 +43,6 @@ pub struct Chromecast<'a> {
 impl<'a> Chromecast<'a> {
     pub fn new() -> Self {
         Self {
-            name: "Chromecast".to_string(),
-            version: "0.1.0".to_string(),
-            author: "Tsiry Sandratraina".to_string(),
-            description: "Chromecast addon".to_string(),
-            enabled: true,
             host: None,
             port: None,
             client: None,
@@ -173,32 +163,6 @@ impl<'a> Chromecast<'a> {
             }
             None => Err(Error::msg(format!("{:?} is not running", app_to_manage))),
         }
-    }
-}
-
-impl<'a> Addon for Chromecast<'a> {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn version(&self) -> &str {
-        &self.version
-    }
-
-    fn author(&self) -> &str {
-        &self.author
-    }
-
-    fn description(&self) -> &str {
-        &self.description
-    }
-
-    fn enabled(&self) -> bool {
-        self.enabled
-    }
-
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
     }
 }
 

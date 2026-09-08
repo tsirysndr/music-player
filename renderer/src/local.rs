@@ -1,4 +1,4 @@
-use super::{Addon, Browsable, Player, StreamingAddon};
+use super::Player;
 use anyhow::{Error, Ok};
 use async_trait::async_trait;
 use music_player_client::{
@@ -6,7 +6,7 @@ use music_player_client::{
     tracklist::TracklistClient,
 };
 use music_player_types::types::{
-    Album, Artist, Device, Playback, Playlist, Track, MUSIC_PLAYER_DEVICE,
+    Device, Playback, Track, MUSIC_PLAYER_DEVICE,
 };
 
 pub struct Client {
@@ -17,11 +17,6 @@ pub struct Client {
 }
 
 pub struct Local {
-    name: String,
-    version: String,
-    author: String,
-    description: String,
-    enabled: bool,
     client: Option<Client>,
     host: String,
     ip: String,
@@ -31,137 +26,11 @@ pub struct Local {
 impl Local {
     pub fn new() -> Self {
         Self {
-            name: "Local".to_string(),
-            version: "0.1.0".to_string(),
-            author: "Tsiry Sandratraina".to_string(),
-            description: "Local addon".to_string(),
-            enabled: true,
             client: None,
             host: "localhost".to_string(),
             ip: "".to_string(),
             port: 5051,
         }
-    }
-}
-
-impl Addon for Local {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn version(&self) -> &str {
-        &self.version
-    }
-
-    fn author(&self) -> &str {
-        &self.author
-    }
-
-    fn description(&self) -> &str {
-        &self.description
-    }
-
-    fn enabled(&self) -> bool {
-        self.enabled
-    }
-
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-    }
-}
-
-impl StreamingAddon for Local {
-    fn stream(&self, _url: &str) -> Result<(), Error> {
-        todo!("Implement Local::stream");
-    }
-}
-
-#[async_trait]
-impl Browsable for Local {
-    async fn albums(
-        &mut self,
-        filter: Option<String>,
-        offset: i32,
-        limit: i32,
-    ) -> Result<Vec<Album>, Error> {
-        let response = self
-            .client
-            .as_mut()
-            .unwrap()
-            .library
-            .albums(filter, offset, limit)
-            .await?;
-        Ok(response.into_iter().map(Into::into).collect())
-    }
-
-    async fn artists(
-        &mut self,
-        filter: Option<String>,
-        offset: i32,
-        limit: i32,
-    ) -> Result<Vec<Artist>, Error> {
-        let response = self
-            .client
-            .as_mut()
-            .unwrap()
-            .library
-            .artists(filter, offset, limit)
-            .await?;
-        Ok(response.into_iter().map(Into::into).collect())
-    }
-
-    async fn tracks(
-        &mut self,
-        filter: Option<String>,
-        offset: i32,
-        limit: i32,
-    ) -> Result<Vec<Track>, Error> {
-        let response = self
-            .client
-            .as_mut()
-            .unwrap()
-            .library
-            .songs(filter, offset, limit)
-            .await?;
-        Ok(response.into_iter().map(Into::into).collect())
-    }
-
-    async fn playlists(&mut self, _offset: i32, _limit: i32) -> Result<Vec<Playlist>, Error> {
-        let response = self.client.as_mut().unwrap().playlist.list_all().await?;
-        Ok(response)
-    }
-
-    async fn album(&mut self, id: &str) -> Result<Album, Error> {
-        let response = self.client.as_mut().unwrap().library.album(id).await?;
-        match response {
-            Some(album) => Ok(album.into()),
-            None => Err(Error::msg("Album not found")),
-        }
-    }
-
-    async fn artist(&mut self, id: &str) -> Result<Artist, Error> {
-        let response = self.client.as_mut().unwrap().library.artist(id).await?;
-        match response {
-            Some(artist) => Ok(artist.into()),
-            None => Err(Error::msg("Artist not found")),
-        }
-    }
-
-    async fn track(&mut self, id: &str) -> Result<Track, Error> {
-        let response = self.client.as_mut().unwrap().library.song(id).await?;
-        match response {
-            Some(track) => Ok(track.into()),
-            None => Err(Error::msg("Track not found")),
-        }
-    }
-
-    async fn playlist(&mut self, id: &str) -> Result<Playlist, Error> {
-        let response = self.client.as_mut().unwrap().playlist.find(id).await?;
-        Ok(response)
-    }
-
-    fn device_ip(&self) -> String {
-        self.ip.clone()
     }
 }
 

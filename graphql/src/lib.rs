@@ -4,7 +4,7 @@ use crate::simple_broker::SimpleBroker;
 use anyhow::Error;
 use async_graphql::Schema;
 use futures_util::StreamExt;
-use music_player_addons::Player;
+use music_player_renderer::Player;
 use music_player_discovery::{discover, SERVICE_NAME};
 use music_player_entity::track as track_entity;
 use music_player_playback::player::PlayerCommand;
@@ -275,5 +275,20 @@ pub fn update_cover_url<T: RemoteCoverUrl>(
             Ok(result.with_remote_cover_url(&base_url))
         }
         false => Err(Error::msg("Cannot find current device")),
+    }
+}
+
+/// Swap the host in a url for another one, leaving the rest untouched.
+///
+/// A cast device fetches the audio itself, so a url that names the daemon is
+/// no use to it — the server it came from is what it has to be told about.
+/// A url that will not parse is handed back unchanged rather than dropped.
+pub fn replace_host(url: &str, host: &str) -> String {
+    match url::Url::parse(url) {
+        Ok(parsed) => match parsed.host_str() {
+            Some(original) => url.replace(original, host),
+            None => url.to_string(),
+        },
+        Err(_) => url.to_string(),
     }
 }

@@ -15,7 +15,6 @@ version = "0.2.1"
 [workspace]
 
 members = [
-  "addons",
   "client",
   "desktop",
   "discovery",
@@ -29,6 +28,7 @@ members = [
   "server",
   "settings",
   "provider",
+  "renderer",
   "storage",
   "tracklist",
   "types",
@@ -72,8 +72,8 @@ version = "0.2.1"
 path = "storage"
 version = "0.2.1"
 
-[dependencies.music-player-addons]
-path = "addons"
+[dependencies.music-player-renderer]
+path = "renderer"
 version = "0.2.1"
 
 [dependencies.music-player-tracklist]

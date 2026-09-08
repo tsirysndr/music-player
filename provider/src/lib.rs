@@ -2,7 +2,7 @@
 //!
 //! A *provider* is where the library screens read from: another music-player
 //! daemon, a Subsonic/Navidrome server, Jellyfin, Kodi. It is deliberately not
-//! a *sink* — where the audio comes out is [`music_player_addons::Player`], a
+//! a *sink* — where the audio comes out is [`music_player_renderer::Player`], a
 //! separate trait behind separate state. Keeping them apart is what lets you
 //! switch servers without interrupting whatever is playing: nothing reachable
 //! from here can send a `PlayerCommand` or touch the tracklist.

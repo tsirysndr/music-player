@@ -6,15 +6,18 @@ use std::{
 use async_graphql::*;
 
 use futures_util::Stream;
-use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_renderer::CurrentReceiverDevice;
+use music_player_provider::ProviderConfig;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::simple_broker::SimpleBroker;
 
+use super::provider;
+
 use music_player_types::types::{self, Connected};
 
 use super::{
-    connect_to, connect_to_cast_device,
+    connect_to_cast_device,
     objects::device::{App, ConnectedDevice, Device, DisconnectedDevice},
     PlayerType,
 };
@@ -24,13 +27,12 @@ pub struct DevicesQuery;
 
 #[Object]
 impl DevicesQuery {
+    /// The device the library is being read from, if it is a discovered one.
     async fn connected_device(&self, ctx: &Context<'_>) -> Result<Device, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
-        let device = current_device.lock().await;
-        match &device.source_device {
-            Some(device) => Ok(Device {
+        match provider::state(ctx).config().await {
+            Some(config) => Ok(Device {
                 is_connected: true,
-                ..device.clone().into()
+                ..config.to_device().into()
             }),
             None => Err(Error::new("No device connected")),
         }
@@ -40,8 +42,7 @@ impl DevicesQuery {
         ctx: &Context<'_>,
         filter: Option<App>,
     ) -> Result<Vec<Device>, Error> {
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
-        let device = current_device.lock().await;
+        let connected = provider::state(ctx).config().await.map(|c| c.to_device());
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
 
@@ -64,7 +65,7 @@ impl DevicesQuery {
         let devices = devices
             .iter()
             .filter(|device| device.is_source_device)
-            .map(|srv| types::Device::from(srv.clone()).is_connected(device.source_device.as_ref()))
+            .map(|srv| types::Device::from(srv.clone()).is_connected(connected.as_ref()))
             .map(Into::into)
             .collect();
         Ok(devices)
@@ -100,64 +101,47 @@ pub struct DevicesMutation;
 
 #[Object]
 impl DevicesMutation {
+    /// Read the library from a *discovered* device — an mDNS peer, or a
+    /// streaming server named in the settings.
+    ///
+    /// A saved server goes through `connectToServer` instead. Both end at the
+    /// same `ProviderState::connect`, which is what stops the two paths from
+    /// disagreeing about what "connected" means.
     async fn connect_to_device(&self, ctx: &Context<'_>, id: ID) -> Result<Device, Error> {
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let io_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
-        let mut io_device = io_device.lock().await;
 
-        let base_url = match devices.clone().into_iter().find(|device| {
-            device.id == id.to_string() && (device.app == "subsonic" || device.app == "jellyfin")
-        }) {
-            Some(device) => device.base_url.clone(),
-            None => match devices.clone().into_iter().find(|device| {
-                device.id == id.to_string() && (device.service == "http" || device.app == "xbmc")
-            }) {
-                Some(device) => Some(format!("http://{}:{}", device.host, device.port)),
-                None => None,
-            },
-        };
+        // A music-player peer advertises gRPC and HTTP as two records; the
+        // HTTP one is the address a provider actually reads from.
+        let http_port = devices
+            .iter()
+            .find(|device| device.id == id.to_string() && device.service == "http")
+            .map(|device| device.port);
 
-        match devices.into_iter().find(|device| {
-            device.id == id.to_string()
-                && (device.service == "grpc"
-                    || device.app == "xbmc"
-                    || device.app == "subsonic"
-                    || device.app == "jellyfin")
-        }) {
-            Some(device) => {
-                let current_device = types::Device::from(device.clone())
-                    .is_connected(Some(&device.clone()))
-                    .with_base_url(base_url);
-                io_device.set_source_device(current_device.clone());
+        let device = devices
+            .into_iter()
+            .find(|device| device.id == id.to_string() && device.is_source_device)
+            .ok_or_else(|| Error::new("Device not found"))?;
 
-                let source = connect_to(
-                    types::Device::from(device.clone()).is_connected(Some(&device.clone())),
-                )
-                .await?;
+        let config = ProviderConfig::from_device(&device, http_port)
+            .ok_or_else(|| Error::new("that device has no address to read from"))?;
+        provider::state(ctx)
+            .connect(config)
+            .await
+            .map_err(provider::err)?;
 
-                match source {
-                    Some(source) => io_device.set_client(source),
-                    None => return Err(Error::new("No source found")),
-                }
-
-                SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
-
-                Ok(types::Device::from(device.clone())
-                    .is_connected(Some(&device.clone()))
-                    .into())
-            }
-            None => Err(Error::new("Device not found")),
-        }
+        SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
+        Ok(types::Device::from(device.clone())
+            .is_connected(Some(&device))
+            .into())
     }
 
     async fn disconnect_from_device(&self, ctx: &Context<'_>) -> Result<Option<Device>, Error> {
-        let io_device = ctx.data::<Arc<TokioMutex<CurrentSourceDevice>>>().unwrap();
-        let mut io_device = io_device.lock().await;
-        match io_device.clear_client() {
-            Some(device) => {
+        match provider::state(ctx).disconnect().await {
+            Some(config) => {
+                let device = config.to_device();
                 SimpleBroker::<DisconnectedDevice>::publish(device.clone().into());
-                Ok(Some(device.clone().into()))
+                Ok(Some(device.into()))
             }
             None => Ok(None),
         }
@@ -237,16 +221,17 @@ impl DevicesSubscription {
     async fn on_new_device(&self, ctx: &Context<'_>) -> impl Stream<Item = Device> {
         let devices = ctx.data::<Arc<Mutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<TokioMutex<CurrentDevice>>>().unwrap();
-        let current_device = current_device.lock().await;
-
-        let current_device = match &current_device.source_device {
-            Some(device) => Some(types::Device {
-                id: device.id.clone(),
+        // Marks whichever discovered device is the current provider, so a
+        // late-arriving mDNS record does not appear unconnected when it is the
+        // one being read from. `CurrentDevice` was read here before and was
+        // never written to, so this was always `None`.
+        let current_device = provider::state(ctx)
+            .config()
+            .await
+            .map(|config| types::Device {
+                id: config.id,
                 ..Default::default()
-            }),
-            None => None,
-        };
+            });
 
         thread::spawn(move || {
             thread::sleep(std::time::Duration::from_secs(1));

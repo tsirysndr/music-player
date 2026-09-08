@@ -14,7 +14,7 @@ use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fs::NamedFile;
 use mime_guess::from_path;
-use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
     scan_devices,
@@ -139,8 +139,6 @@ pub async fn start_webui(
     let addr = format!("0.0.0.0:{}", settings.http_port);
 
     let devices = scan_devices().await.unwrap();
-    let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
-    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
     let db = Database::new().await;
     let searcher = Arc::new(Searcher::new(db.get_connection().clone()));
@@ -154,8 +152,6 @@ pub async fn start_webui(
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
-    .data(current_device)
-    .data(source_device)
     .data(receiver_device)
     .data(Arc::clone(&providers))
     .data(searcher)

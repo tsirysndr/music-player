@@ -4,31 +4,24 @@ use std::{
     time::Duration,
 };
 
-use crate::{Addon, Browsable, Player};
+use crate::Player;
 use anyhow::Error;
 use async_trait::async_trait;
 use music_player_tracklist::Tracklist;
 use music_player_types::types::{
-    Album, Artist, CurrentPlayback, Device, Playback, Playlist, Track, UPNP_DLNA_DEVICE,
+    CurrentPlayback, Device, Playback, Track, UPNP_DLNA_DEVICE,
 };
 use tokio::sync::mpsc;
 use upnp_client::{
     device_client::DeviceClient,
     media_renderer::MediaRendererClient,
-    media_server::MediaServerClient,
     types::{LoadOptions, Metadata, ObjectClass},
 };
 
 pub struct Dlna {
-    name: String,
-    version: String,
-    author: String,
-    description: String,
-    enabled: bool,
     client: Option<MediaRendererClient>,
     dlna_player: Option<DlnaPlayer>,
     location: Option<String>,
-    media_server_client: Option<MediaServerClient>,
     cmd_tx: Option<mpsc::UnboundedSender<DlnaPlayerCommand>>,
     tracklist: Arc<Mutex<Tracklist>>,
     current_playback: Arc<Mutex<CurrentPlayback>>,
@@ -37,14 +30,8 @@ pub struct Dlna {
 impl Dlna {
     pub fn new() -> Self {
         Self {
-            name: "DLNA".to_string(),
-            version: "0.1.0".to_string(),
-            author: "Tsiry Sandratraina".to_string(),
-            description: "UPnP/DLNA addon".to_string(),
-            enabled: true,
             client: None,
             dlna_player: None,
-            media_server_client: None,
             cmd_tx: None,
             location: None,
             tracklist: Arc::new(Mutex::new(Tracklist::new(vec![]))),
@@ -75,117 +62,6 @@ impl Dlna {
         Ok(Some(Box::new(player)))
     }
 
-    pub fn connect_to_media_server(
-        device: Device,
-    ) -> Result<Option<Box<dyn Browsable + Send>>, Error> {
-        let mut player: Self = device.clone().into();
-        let location = player.location.clone().unwrap();
-        let device_client = futures::executor::block_on(DeviceClient::new(&location)?.connect())?;
-        player.media_server_client = Some(MediaServerClient::new(device_client));
-        Ok(Some(Box::new(player)))
-    }
-}
-
-impl Addon for Dlna {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn version(&self) -> &str {
-        &self.version
-    }
-
-    fn author(&self) -> &str {
-        &self.author
-    }
-
-    fn description(&self) -> &str {
-        &self.description
-    }
-
-    fn enabled(&self) -> bool {
-        self.enabled
-    }
-
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-    }
-}
-
-#[async_trait]
-impl Browsable for Dlna {
-    async fn albums(
-        &mut self,
-        _filter: Option<String>,
-        _offset: i32,
-        _limit: i32,
-    ) -> Result<Vec<Album>, Error> {
-        if let Some(client) = &self.media_server_client {
-            client
-                .browse("musicdb://albums", "BrowseDirectChildren")
-                .await?;
-            let result = vec![];
-            return Ok(result);
-        }
-        Err(Error::msg("No device connected"))
-    }
-
-    async fn artists(
-        &mut self,
-        _filter: Option<String>,
-        _offset: i32,
-        _limit: i32,
-    ) -> Result<Vec<Artist>, Error> {
-        if let Some(client) = &self.media_server_client {
-            client
-                .browse("musicdb://artists", "BrowseDirectChildren")
-                .await?;
-            let result = vec![];
-            return Ok(result);
-        }
-        Err(Error::msg("No device connected"))
-    }
-
-    async fn tracks(
-        &mut self,
-        _filter: Option<String>,
-        _offset: i32,
-        _limit: i32,
-    ) -> Result<Vec<Track>, Error> {
-        if let Some(client) = &self.media_server_client {
-            client
-                .browse("musicdb://songs", "BrowseDirectChildren")
-                .await?;
-            let result = vec![];
-            return Ok(result);
-        }
-        Err(Error::msg("No device connected"))
-    }
-
-    async fn playlists(&mut self, _offset: i32, _limit: i32) -> Result<Vec<Playlist>, Error> {
-        todo!()
-    }
-
-    async fn album(&mut self, _id: &str) -> Result<Album, Error> {
-        todo!()
-    }
-
-    async fn artist(&mut self, _id: &str) -> Result<Artist, Error> {
-        todo!()
-    }
-
-    async fn track(&mut self, _id: &str) -> Result<Track, Error> {
-        todo!()
-    }
-
-    async fn playlist(&mut self, _id: &str) -> Result<Playlist, Error> {
-        todo!()
-    }
-
-    fn device_ip(&self) -> String {
-        // self.ip.clone()
-        todo!()
-    }
 }
 
 #[async_trait]

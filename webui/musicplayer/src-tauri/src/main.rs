@@ -10,7 +10,7 @@ use futures::{
     future::Either::{Left, Right},
     stream::StreamExt,
 };
-use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_graphql::{
     scan_devices,
     schema::{
@@ -94,8 +94,6 @@ async fn main() {
 
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
-    let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
-    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
     let db = Database::new().await;
     let searcher = Arc::new(Searcher::new(db.get_connection().clone()));
@@ -138,8 +136,6 @@ async fn main() {
     .data(cmd_tx)
     .data(tracklist)
     .data(devices)
-    .data(current_device)
-    .data(source_device)
     .data(receiver_device)
     .data(searcher)
     .finish();

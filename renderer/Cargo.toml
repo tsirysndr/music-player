@@ -1,19 +1,15 @@
 [package]
-name = "music-player-addons"
+name = "music-player-renderer"
 version = "0.2.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
-description = "The addons for the music player"
+description = "Playback receivers (Chromecast, DLNA, peer daemons) for music player"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.1"
-
-[dependencies.music-player-provider]
-path = "../provider"
 version = "0.2.1"
 
 [dependencies.music-player-client]
@@ -32,7 +28,6 @@ version = "0.2.1"
 async-trait = "0.1.59"
 anyhow = "1.0.67"
 # rust_cast = { package = "chromecast", version = "0.18.1", git = "https://github.com/tsirysndr/rust-cast.git", rev = "d63aa7f", features = ["thread_safe"] }
-jsonrpsee = { version = "0.16.2", features = ["jsonrpsee-ws-client", "jsonrpsee-http-client", "jsonrpsee-client-transport", "async-client", "client"] }
 url = "2.3.1"
 md5 = "0.7.0"
 local-ip-addr = "0.1.1"

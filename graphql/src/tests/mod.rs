@@ -1,7 +1,7 @@
 use std::{env, sync::Arc};
 
 use async_graphql::Schema;
-use music_player_addons::{CurrentDevice, CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
@@ -33,8 +33,6 @@ pub async fn setup_schema() -> (
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let devices = scan_devices().await.unwrap();
-    let current_device = Arc::new(Mutex::new(CurrentDevice::new()));
-    let source_device = Arc::new(Mutex::new(CurrentSourceDevice::new()));
     // No provider is connected, so every resolver takes its local-library
     // branch — which is what these tests are about.
     let providers = {
@@ -65,8 +63,6 @@ pub async fn setup_schema() -> (
         .data(Arc::clone(&cmd_tx))
         .data(Arc::clone(&tracklist))
         .data(Arc::clone(&devices))
-        .data(Arc::clone(&current_device))
-        .data(Arc::clone(&source_device))
         .data(Arc::clone(&providers))
         .data(Arc::clone(&receiver_device))
         .data(Arc::clone(&searcher))

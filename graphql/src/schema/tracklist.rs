@@ -1,6 +1,6 @@
 use async_graphql::*;
 use futures_util::Stream;
-use music_player_addons::{CurrentReceiverDevice, CurrentSourceDevice};
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_playback::player::PlayerCommand;
 use music_player_storage::repo::album::AlbumRepository;
@@ -9,15 +9,17 @@ use music_player_storage::repo::playlist::PlaylistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
-use music_player_types::types::{self, RemoteCoverUrl, RemoteTrackUrl};
+use music_player_types::types;
 use music_player_types::types::{CHROMECAST_DEVICE, MUSIC_PLAYER_DEVICE};
 use sea_orm::EntityTrait;
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
-use url::Url;
 
 use crate::load_tracks;
+use crate::replace_host;
+
+use super::provider;
 use crate::simple_broker::SimpleBroker;
 use crate::update_cover_url;
 use crate::update_track_url;
@@ -88,29 +90,17 @@ impl TracklistMutation {
             .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
             .unwrap();
         let db = ctx.data::<Database>().unwrap();
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
-
         let id = track.id.to_string();
 
         let track: track_entity::Model;
 
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let result = source.track(&id).await?;
-
-            let base_url = device
-                .source_device
-                .as_ref()
-                .unwrap()
-                .base_url
-                .as_ref()
-                .unwrap();
-
-            track = result
-                .with_remote_track_url(base_url.as_str())
-                .with_remote_cover_url(base_url.as_str())
-                .into();
+        if let Some(current) = provider::connected(ctx).await {
+            let result = current
+                .provider
+                .track(&id)
+                .await
+                .map_err(provider::err)?;
+            track = provider::decorate(result, &current.config).into();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;
@@ -273,51 +263,41 @@ impl TracklistMutation {
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
-
         let id = id.to_string();
 
         let mut track: track_entity::Model;
 
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let source_ip = source.device_ip();
-            let result = source.track(&id).await?;
-
-            let base_url = device
-                .source_device
-                .as_ref()
-                .unwrap()
-                .base_url
-                .as_ref()
-                .unwrap();
-
-            track = result
-                .with_remote_track_url(base_url.as_str())
-                .with_remote_cover_url(base_url.as_str())
-                .into();
+        if let Some(current) = provider::connected(ctx).await {
+            let source_ip = current.provider.host().to_string();
+            let result = current
+                .provider
+                .track(&id)
+                .await
+                .map_err(provider::err)?;
+            track = provider::decorate(result, &current.config).into();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;
 
-            let receiver = device.client.as_mut().unwrap();
-            let will_play_on_chromecast = receiver.device_type() == String::from(CHROMECAST_DEVICE);
-            if will_play_on_chromecast {
-                let url = Url::parse(track.uri.as_str()).unwrap();
-                let host = url.host_str().unwrap();
-                track.uri = track.uri.to_lowercase().replace(host, source_ip.as_str());
-                let cover = match track.clone().album.cover {
-                    Some(cover) => Url::parse(cover.as_str()).ok().map(|url| {
-                        let host = url.host_str().unwrap();
-                        cover.to_lowercase().replace(host, source_ip.as_str())
-                    }),
-                    None => None,
-                };
-                track.album.cover = cover;
+            // With no receiver the local engine plays it — which is the common
+            // case, and which this used to unwrap and panic on. Falling
+            // through reaches the same `PlayNext` the local branch uses.
+            if let Some(receiver) = device.client.as_mut() {
+                let will_play_on_chromecast =
+                    receiver.device_type() == String::from(CHROMECAST_DEVICE);
+                if will_play_on_chromecast {
+                    // A cast device fetches the audio itself, so a url naming
+                    // *us* is no use to it — point it at the server instead.
+                    track.uri = replace_host(&track.uri, &source_ip);
+                    track.album.cover = track
+                        .album
+                        .cover
+                        .as_deref()
+                        .map(|cover| replace_host(cover, &source_ip));
+                }
+                receiver.play_next(track.into()).await?;
+                return Ok(true);
             }
-            receiver.play_next(track.into()).await?;
-            return Ok(true);
         } else {
             track = TrackRepository::new(db.get_connection()).find(&id).await?;
         }
@@ -361,28 +341,16 @@ impl TracklistMutation {
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
-
         let id = id.to_string();
 
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let album = source.album(&id).await?;
-            let source_ip = source.device_ip();
-
-            let base_url = device
-                .source_device
-                .as_ref()
-                .unwrap()
-                .base_url
-                .as_ref()
-                .unwrap();
-
-            let album: album_entity::Model = album
-                .with_remote_cover_url(&base_url)
-                .with_remote_track_url(&base_url)
-                .into();
+        if let Some(current) = provider::connected(ctx).await {
+            let source_ip = current.provider.host().to_string();
+            let album = current
+                .provider
+                .album(&id)
+                .await
+                .map_err(provider::err)?;
+            let album: album_entity::Model = provider::decorate(album, &current.config).into();
             let tracks = album.tracks;
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
@@ -447,25 +415,17 @@ impl TracklistMutation {
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
         let id = id.to_string();
 
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let artist = source.artist(&id).await?;
-            let source_ip = source.device_ip();
-
-            let base_url = device
-                .source_device
-                .as_ref()
-                .unwrap()
-                .base_url
-                .as_ref()
-                .unwrap();
-
+        if let Some(current) = provider::connected(ctx).await {
+            let source_ip = current.provider.host().to_string();
+            let artist = current
+                .provider
+                .artist(&id)
+                .await
+                .map_err(provider::err)?;
             let artist: artist_entity::Model =
-                artist.with_remote_track_url(base_url.as_str()).into();
+                provider::decorate(artist, &current.config).into();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;
@@ -529,25 +489,16 @@ impl TracklistMutation {
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
-        let current_device = ctx.data::<Arc<Mutex<CurrentSourceDevice>>>().unwrap();
-        let mut device = current_device.lock().await;
-
         let id = id.to_string();
 
-        if device.client.is_some() {
-            let source = device.client.as_mut().unwrap();
-            let result = source.playlist(&id).await?;
-            let source_ip = source.device_ip();
-
-            let base_url = device
-                .source_device
-                .as_ref()
-                .unwrap()
-                .base_url
-                .as_ref()
-                .unwrap();
-
-            let tracks = result.with_remote_track_url(base_url.as_str()).tracks;
+        if let Some(current) = provider::connected(ctx).await {
+            let source_ip = current.provider.host().to_string();
+            let result = current
+                .provider
+                .playlist(&id)
+                .await
+                .map_err(provider::err)?;
+            let tracks = provider::decorate(result, &current.config).tracks;
             let tracks: Vec<track_entity::Model> = tracks.into_iter().map(Into::into).collect();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();

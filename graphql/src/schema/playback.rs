@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::simple_broker::SimpleBroker;
 use async_graphql::*;
 use futures_util::Stream;
-use music_player_addons::CurrentReceiverDevice;
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_playback::player::PlayerCommand;
 use music_player_tracklist::Tracklist;
 use tokio::sync::mpsc::UnboundedSender;

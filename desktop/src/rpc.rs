@@ -31,7 +31,7 @@ use music_player_server::api::music::v1alpha1::{
 };
 
 use crate::likes;
-use crate::servers::SavedServer;
+use crate::SavedServer;
 use music_player_entity::saved_radio;
 use sea_orm::EntityTrait;
 
@@ -71,6 +71,16 @@ pub enum Cmd {
     ConnectServer(SavedServer),
     /// Read the library from the daemon's own files again.
     DisconnectProvider,
+    /// Fetch the saved servers from the daemon.
+    LoadServers,
+    AddServer {
+        kind: String,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+    },
+    DeleteServer(String),
     /// Fetch the places the audio could come out.
     LoadRenderers,
     /// id, is-cast. An empty id means "play here".
@@ -396,6 +406,7 @@ async fn session(
     // Whatever the daemon is already reading from — a restart must not claim
     // the local library when a provider is connected.
     load_connected_provider(weak).await;
+    let _ = load_servers(weak).await;
     init_volume(channel, weak).await;
     init_audio_settings(channel, weak).await;
     load_library(channel, ep, weak, state).await?;
@@ -801,12 +812,16 @@ fn liked_list(state: &WorkerState) -> Vec<TrackData> {
         .collect()
 }
 
+/// Fetch albums, artists and tracks, flipping `library-loading` around it so
+/// every list screen shows placeholders rather than an empty page — including
+/// after a server switch, which re-reads the lot.
 async fn load_library(
     channel: &Channel,
     ep: &Endpoints,
     weak: &Weak<AppWindow>,
     state: &Arc<Mutex<WorkerState>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let _ = weak.upgrade_in_event_loop(|app| app.set_library_loading(true));
     let mut lib = LibraryServiceClient::new(channel.clone());
 
     let albums = lib
@@ -1210,28 +1225,11 @@ async fn connect_provider(
     weak: &Weak<AppWindow>,
     server: &SavedServer,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    const ADD: &str = r#"mutation($input: ServerInput!) { addServer(input: $input) { id } }"#;
+    // Already saved — the list comes from the daemon, so connecting is just
+    // asking it to use one of its own rows.
     const CONNECT: &str = r#"mutation($id: ID!) { connectToServer(id: $id) { id name url kind } }"#;
 
-    let added = graphql(
-        ADD,
-        serde_json::json!({
-            "input": {
-                "kind": server.kind,
-                "name": server.name,
-                "url": server.url,
-                "username": server.username,
-                "password": server.password,
-            }
-        }),
-    )
-    .await?;
-    let id = added["addServer"]["id"]
-        .as_str()
-        .ok_or("the daemon did not return a server id")?
-        .to_string();
-
-    let connected = graphql(CONNECT, serde_json::json!({ "id": id })).await?;
+    let connected = graphql(CONNECT, serde_json::json!({ "id": &server.id })).await?;
     let name = connected["connectToServer"]["name"]
         .as_str()
         .unwrap_or(&server.name)
@@ -1248,6 +1246,29 @@ async fn connect_provider(
         crate::set_active_provider(&url);
         crate::refresh_servers_model(&app);
     });
+    Ok(())
+}
+
+/// The saved servers, as the daemon has them.
+async fn load_servers(
+    weak: &Weak<AppWindow>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    const QUERY: &str = r#"query { savedServers { id kind name url } }"#;
+    let data = graphql(QUERY, serde_json::json!({})).await?;
+    let servers: Vec<SavedServer> = data["savedServers"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .map(|row| SavedServer {
+                    id: row["id"].as_str().unwrap_or_default().to_string(),
+                    kind: row["kind"].as_str().unwrap_or_default().to_string(),
+                    name: row["name"].as_str().unwrap_or_default().to_string(),
+                    url: row["url"].as_str().unwrap_or_default().to_string(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let _ = weak.upgrade_in_event_loop(move |app| crate::ui_set_servers(&app, servers));
     Ok(())
 }
 
@@ -1956,6 +1977,48 @@ async fn cmd_loop(
                         };
                         load_tracks(&channel, vec![track], 0).await?;
                     }
+                }
+                Cmd::LoadServers => {
+                    if let Err(e) = load_servers(&weak).await {
+                        tracing::warn!("could not list servers: {e}");
+                    }
+                }
+                Cmd::AddServer {
+                    kind,
+                    name,
+                    url,
+                    username,
+                    password,
+                } => {
+                    const ADD: &str =
+                        r#"mutation($input: ServerInput!) { addServer(input: $input) { id } }"#;
+                    let input = serde_json::json!({
+                        "input": {
+                            "kind": kind,
+                            "name": if name.is_empty() { url.clone() } else { name },
+                            "url": url,
+                            "username": username,
+                            "password": password,
+                        }
+                    });
+                    match graphql(ADD, input).await {
+                        Ok(_) => {
+                            let _ = load_servers(&weak).await;
+                        }
+                        Err(e) => {
+                            let message = e.to_string();
+                            let _ = weak.upgrade_in_event_loop(move |app| {
+                                app.set_server_error(message.into());
+                            });
+                        }
+                    }
+                }
+                Cmd::DeleteServer(id) => {
+                    const DELETE: &str = r#"mutation($id: ID!) { deleteServer(id: $id) }"#;
+                    if let Err(e) = graphql(DELETE, serde_json::json!({ "id": id })).await {
+                        tracing::warn!("could not delete the server: {e}");
+                    }
+                    let _ = load_servers(&weak).await;
                 }
                 Cmd::LoadRenderers => {
                     if let Err(e) = load_renderers(&weak).await {

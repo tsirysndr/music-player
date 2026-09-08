@@ -205,6 +205,138 @@ export component RadioSkeletonList inherits VerticalLayout {
     for row in root.rows : RadioSkeletonRow {}
 }
 
+// Placeholder for a track row while the library loads. Mirrors TrackRow's
+// columns so nothing jumps when the real rows land.
+export component TrackSkeletonRow inherits Rectangle {
+    height: 42px;
+
+    SkeletonBox {
+        x: 12px;
+        y: 16px;
+        width: 18px;
+        height: 10px;
+        corner: 3px;
+    }
+    SkeletonBox {
+        x: 46px;
+        y: 15px;
+        width: parent.width * 0.28;
+        height: 12px;
+    }
+    SkeletonBox {
+        x: parent.width * 0.42;
+        y: 16px;
+        width: parent.width * 0.18;
+        height: 10px;
+        corner: 3px;
+    }
+    SkeletonBox {
+        x: parent.width * 0.66;
+        y: 16px;
+        width: parent.width * 0.18;
+        height: 10px;
+        corner: 3px;
+    }
+    SkeletonBox {
+        x: parent.width - 52px;
+        y: 16px;
+        width: 36px;
+        height: 10px;
+        corner: 3px;
+    }
+}
+
+export component TrackSkeletonList inherits VerticalLayout {
+    in property <int> rows: 10;
+
+    alignment: start;
+    spacing: 0px;
+
+    for row in root.rows : TrackSkeletonRow {}
+}
+
+// One album card's worth of placeholder: the square, then two lines.
+export component AlbumSkeletonCard inherits VerticalLayout {
+    spacing: 8px;
+
+    SkeletonBox {
+        height: root.width;
+        corner: 6px;
+    }
+    SkeletonBox {
+        width: parent.width * 0.8;
+        height: 12px;
+    }
+    SkeletonBox {
+        width: parent.width * 0.5;
+        height: 10px;
+        corner: 3px;
+    }
+}
+
+// Placeholder for an artist row: the round portrait and a name.
+export component ArtistSkeletonRow inherits Rectangle {
+    height: 56px;
+
+    SkeletonBox {
+        x: 8px;
+        y: 8px;
+        width: 40px;
+        height: 40px;
+        corner: 20px;
+    }
+    SkeletonBox {
+        x: 60px;
+        y: 22px;
+        width: parent.width * 0.3;
+        height: 12px;
+    }
+}
+
+export component ArtistSkeletonList inherits VerticalLayout {
+    in property <int> rows: 8;
+
+    alignment: start;
+    spacing: 2px;
+
+    for row in root.rows : ArtistSkeletonRow {}
+}
+
+// Placeholder for a playlist row.
+export component PlaylistSkeletonRow inherits Rectangle {
+    height: 52px;
+
+    SkeletonBox {
+        x: 10px;
+        y: 16px;
+        width: 20px;
+        height: 20px;
+        corner: 5px;
+    }
+    SkeletonBox {
+        x: 44px;
+        y: 14px;
+        width: parent.width * 0.26;
+        height: 12px;
+    }
+    SkeletonBox {
+        x: 44px;
+        y: 32px;
+        width: parent.width * 0.16;
+        height: 9px;
+        corner: 3px;
+    }
+}
+
+export component PlaylistSkeletonList inherits VerticalLayout {
+    in property <int> rows: 8;
+
+    alignment: start;
+    spacing: 2px;
+
+    for row in root.rows : PlaylistSkeletonRow {}
+}
+
 /// Compact search box used to filter the station list in place.
 export component RadioFilterBox inherits Rectangle {
     in-out property <string> text;

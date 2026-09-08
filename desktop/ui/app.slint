@@ -9,6 +9,7 @@ import {
     DetailRow, ServerItem, FormField, ServerRow, RendererItem, RendererRow,
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
     RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion,
+    TrackSkeletonList, AlbumSkeletonCard, ArtistSkeletonList, PlaylistSkeletonList,
     ExtensionItem, ExtensionRow
 } from "components.slint";
 import { Icons } from "icons.slint";
@@ -190,6 +191,10 @@ export component AppWindow inherits Window {
     /// can reach the fields the row does not show (topics, id).
     in-out property <string> extension-filter: "";
     in-out property <bool> extensions-loading: true;
+    /// The first library fetch is in flight. Every list screen shows its
+    /// placeholder rows until it lands — including after a server switch,
+    /// which re-reads everything.
+    in-out property <bool> library-loading: true;
     /// Quick filter by state: 0 all, 1 enabled, 2 disabled. Applied on the
     /// Rust side alongside the text search.
     in-out property <int> extension-state-filter: 0;
@@ -874,8 +879,21 @@ export component AppWindow inherits Window {
                 background: Theme.window-bg;
                 vertical-stretch: 1;
 
-                // Albums grid
-                if root.current-tab == 0 : Flickable {
+                // Albums grid — placeholders while the first fetch is out.
+                if root.current-tab == 0 && root.library-loading : Rectangle {
+                    property <float> cols: max(2, floor((self.width - 48px) / 196px));
+                    property <length> gap: 16px;
+                    property <length> cell-w: (self.width - 48px - self.gap * (self.cols - 1)) / self.cols;
+                    x: 24px;
+                    width: parent.width - 48px;
+                    for i in 12 : AlbumSkeletonCard {
+                        x: mod(i, parent.cols) * (parent.cell-w + parent.gap);
+                        y: floor(i / parent.cols) * (parent.cell-w + 66px + parent.gap);
+                        width: parent.cell-w;
+                        height: parent.cell-w + 66px;
+                    }
+                }
+                if root.current-tab == 0 && !root.library-loading : Flickable {
                     property <float> cols: max(2, floor((self.width - 48px) / 196px));
                     property <length> gap: 16px;
                     property <length> cell-w: (self.width - 48px - self.gap * (self.cols - 1)) / self.cols;
@@ -900,7 +918,11 @@ export component AppWindow inherits Window {
                 }
 
                 // Artists
-                if root.current-tab == 1 : ListView {
+                if root.current-tab == 1 && root.library-loading : ArtistSkeletonList {
+                    x: 24px;
+                    width: parent.width - 48px;
+                }
+                if root.current-tab == 1 && !root.library-loading : ListView {
                     x: 24px;
                     width: parent.width - 48px;
                     for a[i] in root.artists : ArtistRow {
@@ -911,7 +933,13 @@ export component AppWindow inherits Window {
                 }
 
                 // All tracks
-                if root.current-tab == 2 : VerticalLayout {
+                if root.current-tab == 2 && root.library-loading : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    TrackListHeader {}
+                    TrackSkeletonList { rows: 12; }
+                }
+                if root.current-tab == 2 && !root.library-loading : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
                     TrackListHeader {}
@@ -932,7 +960,13 @@ export component AppWindow inherits Window {
                 }
 
                 // Liked tracks
-                if root.current-tab == 3 : VerticalLayout {
+                if root.current-tab == 3 && root.library-loading : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    TrackListHeader {}
+                    TrackSkeletonList { rows: 10; }
+                }
+                if root.current-tab == 3 && !root.library-loading : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
                     TrackListHeader {}
@@ -953,7 +987,13 @@ export component AppWindow inherits Window {
                 }
 
                 // ── Playlists ───────────────────────────────────────────────
-                if root.current-tab == 5 && !root.pl-detail-open : VerticalLayout {
+                if root.current-tab == 5 && !root.pl-detail-open && root.library-loading
+                    : PlaylistSkeletonList {
+                    x: 24px;
+                    width: parent.width - 48px;
+                }
+                if root.current-tab == 5 && !root.pl-detail-open && !root.library-loading
+                    : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
                     spacing: 8px;

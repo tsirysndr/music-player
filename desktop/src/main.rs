@@ -12,7 +12,6 @@ mod extensions;
 mod likes;
 mod radio;
 mod rpc;
-mod servers;
 mod skin;
 
 use std::cell::RefCell;
@@ -38,7 +37,7 @@ struct UiState {
     artists: Vec<ArtistEntry>,
     tracks: Vec<rpc::TrackData>,
     liked: Vec<rpc::TrackData>,
-    servers: Vec<servers::SavedServer>,
+    servers: Vec<SavedServer>,
     playlists: Vec<rpc::PlaylistData>,
     discovered: Vec<(String, String, u16)>,
     switcher_query: String,
@@ -145,6 +144,8 @@ pub fn ui_set_library(app: &AppWindow, data: rpc::LibraryData) {
         app.set_tracks(ModelRc::new(VecModel::from(tracks)));
         app.set_liked(ModelRc::new(VecModel::from(liked)));
     });
+    // The lists are populated; the placeholders can go.
+    app.set_library_loading(false);
 }
 
 /// Called per decoded album-art thumbnail, keyed by album id so it cannot land
@@ -483,7 +484,24 @@ pub fn ui_show_artist_detail(app: &AppWindow, id: &str) {
 
 // ── Remote servers / browsing ───────────────────────────────────────────────
 
-fn server_item(s: &servers::SavedServer, connected_url: &str) -> ServerItem {
+/// A saved server as the daemon reports it.
+#[derive(Clone, Debug, Default)]
+pub struct SavedServer {
+    pub id: String,
+    pub kind: String,
+    pub name: String,
+    pub url: String,
+}
+
+/// Replace the saved-server list with what the daemon has.
+pub fn ui_set_servers(app: &AppWindow, servers: Vec<SavedServer>) {
+    STATE.with(|s| s.borrow_mut().servers = servers);
+    refresh_servers_model(app);
+    let query = STATE.with(|s| s.borrow().switcher_query.clone());
+    app.set_switcher_results(ModelRc::new(VecModel::from(switcher_results(&query))));
+}
+
+fn server_item(s: &SavedServer, connected_url: &str) -> ServerItem {
     ServerItem {
         kind: s.kind.clone().into(),
         name: s.name.clone().into(),
@@ -1652,38 +1670,33 @@ fn main() -> Result<(), slint::PlatformError> {
     }
 
     // ── Remote servers ──────────────────────────────────────────────────────
-    STATE.with(|s| s.borrow_mut().servers = servers::load());
-    refresh_servers_model(&app);
+    // The list lives in the daemon, not in a file next to this binary: the web
+    // client and the TUI have to see the same servers, and a local copy went
+    // stale the moment either of them added one.
     {
-        let app_weak = app.as_weak();
+        let tx = tx.clone();
         app.on_server_add(move |kind, name, url, user, pass| {
-            let app = app_weak.unwrap();
-            STATE.with(|s| {
-                let mut st = s.borrow_mut();
-                st.servers.push(servers::SavedServer {
-                    kind: kind.into(),
-                    name: name.into(),
-                    url: url.into(),
-                    username: user.into(),
-                    password: pass.into(),
-                });
-                servers::save(&st.servers);
+            let _ = tx.send(rpc::Cmd::AddServer {
+                kind: kind.into(),
+                name: name.into(),
+                url: url.into(),
+                username: user.into(),
+                password: pass.into(),
             });
-            refresh_servers_model(&app);
         });
     }
     {
-        let app_weak = app.as_weak();
+        let tx = tx.clone();
         app.on_server_delete(move |idx| {
-            let app = app_weak.unwrap();
-            STATE.with(|s| {
-                let mut st = s.borrow_mut();
-                if (idx as usize) < st.servers.len() {
-                    st.servers.remove(idx as usize);
-                    servers::save(&st.servers);
-                }
+            let id = STATE.with(|s| {
+                s.borrow()
+                    .servers
+                    .get(idx as usize)
+                    .map(|srv| srv.id.clone())
             });
-            refresh_servers_model(&app);
+            if let Some(id) = id {
+                let _ = tx.send(rpc::Cmd::DeleteServer(id));
+            }
         });
     }
     {

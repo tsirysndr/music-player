@@ -1189,10 +1189,7 @@ async fn fetch_now_art(covers_base: String, file: String, track_id: String, weak
         .and_then(|extension| extension.to_str())
         .filter(|extension| extension.len() <= 5 && extension.chars().all(char::is_alphanumeric))
         .unwrap_or("jpg");
-    let cache_path = cache_dir.join(format!(
-        "{:x}.{extension}",
-        md5::compute(url.as_bytes())
-    ));
+    let cache_path = cache_dir.join(format!("{:x}.{extension}", md5::compute(url.as_bytes())));
     let cover_url = if tokio::fs::create_dir_all(&cache_dir).await.is_ok()
         && tokio::fs::write(&cache_path, &bytes).await.is_ok()
     {

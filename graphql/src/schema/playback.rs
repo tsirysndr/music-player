@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use crate::simple_broker::SimpleBroker;
 use async_graphql::*;
@@ -242,4 +243,44 @@ impl PlaybackSubscription {
     async fn track_time_position(&self) -> impl Stream<Item = PositionMilliseconds> {
         SimpleBroker::<PositionMilliseconds>::subscribe()
     }
+
+    /// Output levels for a meter, pushed at 20 Hz.
+    ///
+    /// A stream rather than a field: a meter wants tens of updates a second,
+    /// and the poll a client would otherwise ride on is far slower. Read from
+    /// the tracklist, which the player writes each tick, so this adds no work
+    /// to the audio path.
+    async fn levels(&self, ctx: &Context<'_>) -> impl Stream<Item = Levels> {
+        const INTERVAL: Duration = Duration::from_millis(50);
+        let tracklist = Arc::clone(
+            ctx.data::<Arc<std::sync::Mutex<Tracklist>>>()
+                .expect("the tracklist is registered on the schema"),
+        );
+        async_stream::stream! {
+            let mut tick = tokio::time::interval(INTERVAL);
+            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tick.tick().await;
+                let levels = tracklist.lock().unwrap().levels();
+                yield Levels {
+                    left: levels.left,
+                    right: levels.right,
+                    low_left: levels.low_left,
+                    low_right: levels.low_right,
+                };
+            }
+        }
+    }
+}
+
+/// Output levels for a meter, measured on the PCM leaving the device.
+#[derive(SimpleObject, Clone, Copy, Default)]
+pub struct Levels {
+    /// 0..1 RMS over one output buffer.
+    pub left: f32,
+    pub right: f32,
+    /// The same signal below roughly 200 Hz, which is what makes a meter move
+    /// with the bass rather than with whatever is loudest.
+    pub low_left: f32,
+    pub low_right: f32,
 }

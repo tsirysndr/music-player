@@ -427,6 +427,17 @@ impl PlayerInternal {
     /// Reconcile the engine's status with the tracklist state and emit events.
     fn poll_engine(&mut self) {
         let status = self.engine.status();
+        // Published every tick so a meter has something current to read; the
+        // engine measures the PCM it actually hands to the output.
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_levels(music_player_tracklist::Levels {
+                left: status.levels.left,
+                right: status.levels.right,
+                low_left: status.levels.low_left,
+                low_right: status.levels.low_right,
+            });
         match status.state {
             EngineState::Playing | EngineState::Paused => {
                 self.engine_started = true;

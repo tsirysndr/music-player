@@ -141,3 +141,13 @@ tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 ratatui = {version = "0.30", features = ["serde"]}
 tungstenite = "0.17.3"
+
+# Until rockbox-playback 0.6.2 is published: it adds the output level tap the
+# VU meters read. Patched rather than a path dependency because
+# `rockbox-metadata` sets `links`, so the graph may only ever contain one copy
+# — a path dep on the playback crate alone pulls in a second and cargo refuses
+# to resolve. Drop this section once the crate is on crates.io.
+[patch.crates-io]
+rockbox-playback = { path = "../rockbox-zig/crates/rockbox-playback" }
+rockbox-metadata = { path = "../rockbox-zig/crates/rockbox-metadata" }
+rockbox-dsp = { path = "../rockbox-zig/crates/rockbox-dsp" }

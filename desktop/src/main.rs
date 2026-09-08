@@ -45,6 +45,14 @@ struct UiState {
     /// The provider the daemon is reading its library from, as a url. Empty
     /// means the daemon's own library.
     active_provider: String,
+    /// The daemon's answer to the last palette query: its search is federated,
+    /// so these cover the connected server *and* the local library. Filtering
+    /// the cached library instead only ever saw local files, which is what
+    /// made the palette look like it had no remote results.
+    palette_query: String,
+    search_tracks: Vec<rpc::TrackData>,
+    search_albums: Vec<(String, String, String)>,
+    search_artists: Vec<(String, String)>,
     pl_detail_id: Option<String>,
     pl_detail_track_ids: Vec<String>,
     picker_query: String,
@@ -544,6 +552,23 @@ pub fn ui_set_renderers(app: &AppWindow, devices: Vec<(String, String, String)>,
     app.set_renderers(ModelRc::new(VecModel::from(items)));
 }
 
+/// Store the daemon's search results and re-render the palette.
+pub fn ui_set_search_hits(
+    app: &AppWindow,
+    tracks: Vec<rpc::TrackData>,
+    albums: Vec<(String, String, String)>,
+    artists: Vec<(String, String)>,
+) {
+    STATE.with(|s| {
+        let mut st = s.borrow_mut();
+        st.search_tracks = tracks;
+        st.search_albums = albums;
+        st.search_artists = artists;
+    });
+    let query = STATE.with(|s| s.borrow().palette_query.clone());
+    app.set_palette_results(ModelRc::new(VecModel::from(palette_results(&query))));
+}
+
 /// Remember which provider the daemon is reading from, so the switcher marks
 /// the right row.
 pub fn set_active_provider(url: &str) {
@@ -894,10 +919,22 @@ fn palette_results(query: &str) -> Vec<PaletteItem> {
     STATE.with(|s| {
         let st = s.borrow();
         let mut out: Vec<PaletteItem> = Vec::new();
-        out.extend(
+        // The daemon's search is federated; its answer supersedes the cached
+        // library, which for a remote provider is one page of many.
+        let from_daemon = !st.search_tracks.is_empty()
+            || !st.search_albums.is_empty()
+            || !st.search_artists.is_empty();
+        let tracks: Vec<&rpc::TrackData> = if from_daemon {
+            st.search_tracks.iter().collect()
+        } else {
             st.tracks
                 .iter()
                 .filter(|t| hit(&[&t.title, &t.artist, &t.album]))
+                .collect()
+        };
+        out.extend(
+            tracks
+                .into_iter()
                 .take(8)
                 .map(|t| {
                     // Reuse the album grid's thumbnail for the track's album.
@@ -1773,10 +1810,15 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     }
     {
+        let tx = tx.clone();
         let app_weak = app.as_weak();
         app.on_palette_query(move |text| {
             let app = app_weak.unwrap();
+            STATE.with(|s| s.borrow_mut().palette_query = text.to_string());
+            // Rendered at once from what is already known, then again when the
+            // daemon answers — typing should not wait on a round trip.
             app.set_palette_results(ModelRc::new(VecModel::from(palette_results(&text))));
+            let _ = tx.send(rpc::Cmd::Search(text.to_string()));
         });
     }
     {

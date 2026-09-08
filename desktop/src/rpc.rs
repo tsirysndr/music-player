@@ -22,6 +22,7 @@ use music_player_server::api::music::v1alpha1::{
     tracklist_service_client::TracklistServiceClient, AddItemRequest, AddTrackRequest,
     ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest,
     GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
+    SearchRequest, StreamLevelsRequest,
     GetLikedTracksRequest, GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest,
     GetVolumeRequest, LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest,
     PlayNextRequest, PlayRequest, PlayTrackAtRequest, PreviewSmartPlaylistRequest, PreviousRequest,
@@ -71,6 +72,10 @@ pub enum Cmd {
     ConnectServer(SavedServer),
     /// Read the library from the daemon's own files again.
     DisconnectProvider,
+    /// Ask the daemon to search. Its search is federated — the connected
+    /// server *and* the local index — which filtering this side's cached
+    /// library could never be: that cache is one page of a remote library.
+    Search(String),
     /// Fetch the saved servers from the daemon.
     LoadServers,
     AddServer {
@@ -424,6 +429,7 @@ async fn session(
     // the local library when a provider is connected.
     load_connected_provider(weak).await;
     let _ = load_servers(weak).await;
+    tokio::spawn(stream_levels(channel.clone(), weak.clone()));
     init_volume(channel, weak).await;
     init_audio_settings(channel, weak).await;
     load_library(channel, ep, weak, state).await?;
@@ -2174,6 +2180,34 @@ async fn cmd_loop(
                         load_tracks(&channel, vec![track], 0).await?;
                     }
                 }
+                Cmd::Search(query) => {
+                    let mut lib = LibraryServiceClient::new(channel.clone());
+                    let Ok(response) = lib.search(SearchRequest { query }).await else {
+                        // A failed search leaves the palette showing whatever
+                        // it had; the next keystroke tries again.
+                        return Ok(());
+                    };
+                    let hits = response.into_inner();
+                    let tracks: Vec<TrackData> = hits
+                        .tracks
+                        .iter()
+                        .enumerate()
+                        .map(|(i, t)| track_data(t, i as i32))
+                        .collect();
+                    let albums: Vec<(String, String, String)> = hits
+                        .albums
+                        .iter()
+                        .map(|a| (a.id.clone(), a.title.clone(), a.artist.clone()))
+                        .collect();
+                    let artists: Vec<(String, String)> = hits
+                        .artists
+                        .iter()
+                        .map(|a| (a.id.clone(), a.name.clone()))
+                        .collect();
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        crate::ui_set_search_hits(&app, tracks, albums, artists);
+                    });
+                }
                 Cmd::LoadServers => {
                     if let Err(e) = load_servers(&weak).await {
                         tracing::warn!("could not list servers: {e}");
@@ -2319,16 +2353,16 @@ async fn insert_track_ids(
     Ok(())
 }
 
-/// Local clock: advances elapsed between polls and animates the VU meters
-/// (decorative — the daemon does not export PCM levels over gRPC). Runs at
-/// 60 ms so the meters bounce like meters instead of crawling.
+/// Local clock: advances elapsed between polls.
+///
+/// The VU meters are no longer its business — they follow the daemon's own
+/// measurement of the audio leaving the device (see [`stream_levels`]). This
+/// used to synthesise them from a pair of sine waves, which looked like a
+/// meter and measured nothing.
 async fn ticker(weak: Weak<AppWindow>) {
     const TICK_S: f64 = 0.06;
-    let mut phase: f64 = 0.0;
     loop {
         tokio::time::sleep(Duration::from_millis((TICK_S * 1000.0) as u64)).await;
-        phase += TICK_S;
-        let t = phase;
         let _ = weak.upgrade_in_event_loop(move |app| {
             if app.get_playing() {
                 let length = app.get_length_s();
@@ -2343,16 +2377,47 @@ async fn ticker(weak: Weak<AppWindow>) {
                 app.set_elapsed_s(elapsed);
                 app.set_progress(if length > 0.0 { elapsed / length } else { 0.0 });
                 app.set_elapsed_text(format_time(elapsed as f64).into());
-                let l = 0.62 + 0.22 * (t * 5.9).sin() + 0.12 * (t * 13.7).sin();
-                let r = 0.60 + 0.24 * (t * 5.1 + 1.3).sin() + 0.12 * (t * 11.3).sin();
-                app.set_vu_left(l.clamp(0.05, 1.0) as f32);
-                app.set_vu_right(r.clamp(0.05, 1.0) as f32);
-            } else {
-                app.set_vu_left((app.get_vu_left() * 0.8).max(0.0));
-                app.set_vu_right((app.get_vu_right() * 0.8).max(0.0));
             }
         });
     }
+}
+
+/// Drive the VU meters from the daemon's own measurement of the audio.
+///
+/// The bass band, not the full-band RMS: a meter driven by everything sits
+/// near the top on anything loud, and reads as an ornament. The low band
+/// moves with the beat, which is what a meter is for.
+///
+/// Falls back to decaying to zero if the stream ends — a meter frozen at its
+/// last reading looks broken rather than stopped.
+async fn stream_levels(channel: Channel, weak: Weak<AppWindow>) {
+    let mut playback = PlaybackServiceClient::new(channel);
+    let Ok(response) = playback.stream_levels(StreamLevelsRequest {}).await else {
+        return;
+    };
+    let mut stream = response.into_inner();
+
+    while let Ok(Some(levels)) = stream.message().await {
+        let _ = weak.upgrade_in_event_loop(move |app| {
+            // Eased upward and released slowly, the way a real meter's
+            // ballistics work: instant attack reads as jitter, and instant
+            // release makes it flicker between buffers.
+            let ease = |current: f32, target: f32| {
+                if target > current {
+                    current + (target - current) * 0.6
+                } else {
+                    current + (target - current) * 0.25
+                }
+            };
+            app.set_vu_left(ease(app.get_vu_left(), levels.low_left).clamp(0.0, 1.0));
+            app.set_vu_right(ease(app.get_vu_right(), levels.low_right).clamp(0.0, 1.0));
+        });
+    }
+
+    let _ = weak.upgrade_in_event_loop(|app| {
+        app.set_vu_left(0.0);
+        app.set_vu_right(0.0);
+    });
 }
 
 #[cfg(test)]

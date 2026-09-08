@@ -13,6 +13,19 @@ message GetCurrentlyPlayingSongResponse {
     bool is_playing = 4;
 }
 
+// Output levels for a meter, measured on the PCM leaving the device.
+message Levels {
+    // 0..1 RMS over one output buffer.
+    float left = 1;
+    float right = 2;
+    // The same signal below roughly 200 Hz, which is what makes a meter move
+    // with the bass rather than with whatever is loudest.
+    float low_left = 3;
+    float low_right = 4;
+}
+
+message StreamLevelsRequest {}
+
 message GetPlaybackStateRequest {}
 
 message GetPlaybackStateResponse {}
@@ -50,6 +63,9 @@ message StopResponse {}
 service PlaybackService {
   rpc GetCurrentlyPlayingSong(GetCurrentlyPlayingSongRequest)
       returns (GetCurrentlyPlayingSongResponse) {}
+  // A meter needs tens of updates a second, which is no way to poll — the
+  // daemon pushes instead, and stops when the client goes away.
+  rpc StreamLevels(StreamLevelsRequest) returns (stream Levels) {}
   rpc GetPlaybackState(GetPlaybackStateRequest)
       returns (GetPlaybackStateResponse) {}
   rpc GetTimePosition(GetTimePositionRequest)

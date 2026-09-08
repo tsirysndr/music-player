@@ -8,7 +8,7 @@ use crate::api::music::v1alpha1::{
     GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
     GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
     PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
-    SeekResponse, StopRequest, StopResponse,
+    Levels, SeekResponse, StopRequest, StopResponse, StreamLevelsRequest,
 };
 
 pub struct Playback {
@@ -27,6 +27,41 @@ impl Playback {
 
 #[tonic::async_trait]
 impl PlaybackService for Playback {
+    type StreamLevelsStream = std::pin::Pin<
+        Box<dyn futures_util::Stream<Item = Result<Levels, tonic::Status>> + Send + 'static>,
+    >;
+
+    /// Push output levels for a meter.
+    ///
+    /// A meter wants tens of updates a second, which is no way to poll — and
+    /// the now-playing poll this would otherwise ride on runs once a second.
+    /// The stream ends when the client drops it.
+    async fn stream_levels(
+        &self,
+        _request: tonic::Request<StreamLevelsRequest>,
+    ) -> Result<tonic::Response<Self::StreamLevelsStream>, tonic::Status> {
+        // 20 Hz: fast enough to read as a meter, slow enough that it is not
+        // the most expensive thing the daemon does.
+        const INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
+        let tracklist = Arc::clone(&self.tracklist);
+
+        let stream = async_stream::stream! {
+            let mut tick = tokio::time::interval(INTERVAL);
+            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tick.tick().await;
+                let levels = tracklist.lock().unwrap().levels();
+                yield Ok(Levels {
+                    left: levels.left,
+                    right: levels.right,
+                    low_left: levels.low_left,
+                    low_right: levels.low_right,
+                });
+            }
+        };
+        Ok(tonic::Response::new(Box::pin(stream)))
+    }
+
     async fn get_currently_playing_song(
         &self,
         _request: tonic::Request<GetCurrentlyPlayingSongRequest>,

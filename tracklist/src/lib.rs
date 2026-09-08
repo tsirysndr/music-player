@@ -10,12 +10,28 @@ pub struct PlaybackState {
     pub is_playing: bool,
 }
 
+/// Output levels for a meter, as the engine last reported them.
+///
+/// Kept here because the player writes them and the gRPC and GraphQL layers
+/// read them, and all three already share this structure — a meter is not
+/// worth a second channel.
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct Levels {
+    pub left: f32,
+    pub right: f32,
+    /// The same signal below roughly 200 Hz, which is what makes a meter move
+    /// with the bass rather than with whatever is loudest.
+    pub low_left: f32,
+    pub low_right: f32,
+}
+
 #[derive(Debug, Clone)]
 pub struct Tracklist {
     tracks: Vec<Track>,
     played: Vec<Track>,
     current_track: Option<Track>,
     playback_state: PlaybackState,
+    levels: Levels,
 }
 
 impl Tracklist {
@@ -25,6 +41,7 @@ impl Tracklist {
             played: Vec::new(),
             current_track: None,
             playback_state: PlaybackState::default(),
+            levels: Levels::default(),
         }
     }
     pub fn new_empty() -> Self {
@@ -33,6 +50,7 @@ impl Tracklist {
             played: Vec::new(),
             current_track: None,
             playback_state: PlaybackState::default(),
+            levels: Levels::default(),
         }
     }
 
@@ -164,6 +182,14 @@ impl Tracklist {
 
     pub fn playback_state(&self) -> PlaybackState {
         self.playback_state.clone()
+    }
+
+    pub fn levels(&self) -> Levels {
+        self.levels
+    }
+
+    pub fn set_levels(&mut self, levels: Levels) {
+        self.levels = levels;
     }
 
     pub fn set_playback_state(&mut self, playback_state: PlaybackState) {

@@ -7956,6 +7956,7 @@ dependencies = [
  "anyhow",
  "async-graphql",
  "async-graphql-tide",
+ "async-stream 0.3.4",
  "chrono",
  "ctor 0.1.26",
  "cuid",
@@ -8093,6 +8094,7 @@ name = "music-player-server"
 version = "0.2.1"
 dependencies = [
  "anyhow",
+ "async-stream 0.3.4",
  "chrono",
  "dirs",
  "futures",
@@ -10935,8 +10937,6 @@ dependencies = [
 [[package]]
 name = "rockbox-codecs"
 version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60c0319e44b8c458680bb3f16eae7f47d065891086a341476af7f6a4cab4e6b9"
 dependencies = [
  "cc",
  "rockbox-metadata",
@@ -10945,8 +10945,6 @@ dependencies = [
 [[package]]
 name = "rockbox-dsp"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413a59a41ed9e936c283b28d494c22d19e42c1043292a920b84b3ff0bd5af6c2"
 dependencies = [
  "cc",
 ]
@@ -10954,17 +10952,13 @@ dependencies = [
 [[package]]
 name = "rockbox-metadata"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db63af95f49518272074eb0f9f397ea6e841eed34d3f5f84e71a6fe2fa63f81e"
 dependencies = [
  "cc",
 ]
 
 [[package]]
 name = "rockbox-playback"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "362365474b246e1f1483f53d52c85d25365607424e3da3141c36e7d14c898706"
+version = "0.6.2"
 dependencies = [
  "cpal",
  "quick-xml 0.37.5",

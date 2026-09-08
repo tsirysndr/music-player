@@ -22,13 +22,12 @@ use music_player_server::api::music::v1alpha1::{
     tracklist_service_client::TracklistServiceClient, AddItemRequest, AddTrackRequest,
     ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest,
     GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
-    SearchRequest, StreamLevelsRequest,
     GetLikedTracksRequest, GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest,
     GetVolumeRequest, LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest,
     PlayNextRequest, PlayRequest, PlayTrackAtRequest, PreviewSmartPlaylistRequest, PreviousRequest,
-    RemoveItemRequest, RemoveTrackAtRequest, RenameRequest, SeekRequest, SetAudioSettingRequest,
-    SetEqBandGainRequest, SetMuteRequest, SetRepeatRequest, SetVolumeRequest, ShuffleRequest,
-    SmartPlaylist as SmartPlaylistProto,
+    RemoveItemRequest, RemoveTrackAtRequest, RenameRequest, SearchRequest, SeekRequest,
+    SetAudioSettingRequest, SetEqBandGainRequest, SetMuteRequest, SetRepeatRequest,
+    SetVolumeRequest, ShuffleRequest, SmartPlaylist as SmartPlaylistProto, StreamLevelsRequest,
 };
 
 use crate::likes;

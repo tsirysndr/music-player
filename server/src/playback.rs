@@ -6,9 +6,9 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::api::music::v1alpha1::{
     playback_service_server::PlaybackService, GetCurrentlyPlayingSongRequest,
     GetCurrentlyPlayingSongResponse, GetPlaybackStateRequest, GetPlaybackStateResponse,
-    GetTimePositionRequest, GetTimePositionResponse, NextRequest, NextResponse, PauseRequest,
-    PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse, SeekRequest,
-    Levels, SeekResponse, StopRequest, StopResponse, StreamLevelsRequest,
+    GetTimePositionRequest, GetTimePositionResponse, Levels, NextRequest, NextResponse,
+    PauseRequest, PauseResponse, PlayRequest, PlayResponse, PreviousRequest, PreviousResponse,
+    SeekRequest, SeekResponse, StopRequest, StopResponse, StreamLevelsRequest,
 };
 
 pub struct Playback {

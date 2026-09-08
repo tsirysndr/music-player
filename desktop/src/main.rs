@@ -932,28 +932,23 @@ fn palette_results(query: &str) -> Vec<PaletteItem> {
                 .filter(|t| hit(&[&t.title, &t.artist, &t.album]))
                 .collect()
         };
-        out.extend(
-            tracks
-                .into_iter()
-                .take(8)
-                .map(|t| {
-                    // Reuse the album grid's thumbnail for the track's album.
-                    let art = st
-                        .albums
-                        .iter()
-                        .find(|a| a.data.title == t.album && a.data.artist == t.artist)
-                        .and_then(|a| a.image.clone());
-                    PaletteItem {
-                        kind: "track".into(),
-                        id: t.id.clone().into(),
-                        title: t.title.clone().into(),
-                        subtitle: format!("{} · {}", t.artist, t.album).into(),
-                        index: t.index,
-                        has_art: art.is_some(),
-                        art: art.unwrap_or_default(),
-                    }
-                }),
-        );
+        out.extend(tracks.into_iter().take(8).map(|t| {
+            // Reuse the album grid's thumbnail for the track's album.
+            let art = st
+                .albums
+                .iter()
+                .find(|a| a.data.title == t.album && a.data.artist == t.artist)
+                .and_then(|a| a.image.clone());
+            PaletteItem {
+                kind: "track".into(),
+                id: t.id.clone().into(),
+                title: t.title.clone().into(),
+                subtitle: format!("{} · {}", t.artist, t.album).into(),
+                index: t.index,
+                has_art: art.is_some(),
+                art: art.unwrap_or_default(),
+            }
+        }));
         out.extend(
             st.albums
                 .iter()

@@ -16,6 +16,10 @@ async fn new_database() {
 }
 
 async fn setup_searcher() -> (tempfile::TempDir, Searcher) {
+    // These test the built-in index. Without this the searcher would answer
+    // from whatever Typesense the developer's settings point at, describing a
+    // different library than the fixture below.
+    env::set_var(music_player_settings::LOCAL_SEARCH_ONLY, "1");
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("music-player.sqlite3");
     let url = format!("sqlite://{}?mode=rwc", db_path.display());

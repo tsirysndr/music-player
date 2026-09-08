@@ -169,7 +169,19 @@ pub struct Settings {
 /// The `[typesense]` section of settings.toml, if configured with a
 /// non-empty url. Reads the file directly so callers don't need a full
 /// `Settings` deserialization round-trip.
+/// Set to force the built-in FTS5 index even when a Typesense server is
+/// configured.
+///
+/// Tests need it: a searcher built over a temporary database would otherwise
+/// answer from whatever Typesense the developer's `settings.toml` points at,
+/// so its results describe a different library than the one under test. It is
+/// also a reasonable thing to want at runtime.
+pub const LOCAL_SEARCH_ONLY: &str = "MUSIC_PLAYER_LOCAL_SEARCH_ONLY";
+
 pub fn read_typesense_settings() -> Option<TypesenseSettings> {
+    if env::var(LOCAL_SEARCH_ONLY).is_ok_and(|value| value != "0") {
+        return None;
+    }
     let config = read_settings().ok()?;
     let settings = config.try_deserialize::<Settings>().ok()?;
     settings.typesense.filter(|t| !t.url.trim().is_empty())

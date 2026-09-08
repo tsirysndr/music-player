@@ -59,14 +59,14 @@ async fn play() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
-    let (__, _, _, is_playing) = client.current().await.unwrap();
+    let (_tracks, _, _, is_playing) = client.current().await.unwrap();
     assert!(!is_playing);
 
     client.play().await.unwrap();
 
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
-    let (__, _, _, is_playing) = client.current().await.unwrap();
+    let (_tracks, _, _, is_playing) = client.current().await.unwrap();
     assert!(is_playing);
 
     tx.send(()).unwrap();

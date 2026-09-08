@@ -376,8 +376,10 @@ mod tests {
 
     #[test]
     fn the_form_types_into_the_focused_field() {
-        let mut form = AddServerForm::default();
-        form.focus = AddField::Name;
+        let mut form = AddServerForm {
+            focus: AddField::Name,
+            ..Default::default()
+        };
         for c in "NAS".chars() {
             form.push(c);
         }

@@ -689,11 +689,15 @@ fn playback_state() {
     assert!(!state.is_playing);
 }
 
-fn setup_new_params() -> (
+/// What `Player::new` needs: the command channel's two ends, and the shared
+/// tracklist.
+type NewParams = (
     Arc<Mutex<UnboundedSender<PlayerCommand>>>,
     Arc<Mutex<UnboundedReceiver<PlayerCommand>>>,
     Arc<Mutex<Tracklist>>,
-) {
+);
+
+fn setup_new_params() -> NewParams {
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(Mutex::new(cmd_rx));

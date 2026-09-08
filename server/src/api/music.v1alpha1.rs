@@ -5512,6 +5512,894 @@ pub mod playlist_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
+/// A remote music server the user has saved.
+///
+/// This is where a library is *read from* — a different question from where
+/// the audio comes out, which is a cast device. The password is stored but
+/// never returned; callers are told only whether one is set.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Server {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    /// The provider-registry key: "subsonic", "jellyfin", "music-player", ...
+    #[prost(string, tag = "2")]
+    pub kind: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub name: ::prost::alloc::string::String,
+    /// Absolute, scheme included.
+    #[prost(string, tag = "4")]
+    pub url: ::prost::alloc::string::String,
+    #[prost(string, tag = "5")]
+    pub username: ::prost::alloc::string::String,
+    #[prost(bool, tag = "6")]
+    pub has_password: bool,
+    /// The library screens are currently reading from this one.
+    #[prost(bool, tag = "7")]
+    pub connected: bool,
+}
+/// One kind of server this build can talk to, straight from the provider
+/// registry — so a newly registered backend offers itself to every client
+/// without any of them being changed.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SourceKind {
+    #[prost(string, tag = "1")]
+    pub kind: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub display_name: ::prost::alloc::string::String,
+    /// False for backends with no login, so a form can hide those fields.
+    #[prost(bool, tag = "3")]
+    pub needs_credentials: bool,
+    #[prost(uint32, tag = "4")]
+    pub default_port: u32,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListServersRequest {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListServersResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub servers: ::prost::alloc::vec::Vec<Server>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListSourceKindsRequest {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListSourceKindsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub kinds: ::prost::alloc::vec::Vec<SourceKind>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetConnectedServerRequest {}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetConnectedServerResponse {
+    /// Absent means the daemon's own library.
+    #[prost(message, optional, tag = "1")]
+    pub server: ::core::option::Option<Server>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AddServerRequest {
+    #[prost(string, tag = "1")]
+    pub kind: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub url: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub username: ::prost::alloc::string::String,
+    /// Omit to keep whatever is stored: the password is never handed back, so a
+    /// blank field cannot mean "clear it".
+    #[prost(string, tag = "5")]
+    pub password: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AddServerResponse {
+    #[prost(message, optional, tag = "1")]
+    pub server: ::core::option::Option<Server>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteServerRequest {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteServerResponse {
+    #[prost(bool, tag = "1")]
+    pub deleted: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ConnectServerRequest {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ConnectServerResponse {
+    #[prost(message, optional, tag = "1")]
+    pub server: ::core::option::Option<Server>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DisconnectServerRequest {}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DisconnectServerResponse {
+    #[prost(message, optional, tag = "1")]
+    pub server: ::core::option::Option<Server>,
+}
+/// Generated client implementations.
+pub mod servers_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
+    /// Saved servers, and which one the library is read from.
+    ///
+    /// Connecting cannot interrupt playback: a provider is where the screens read,
+    /// and nothing here can reach the player.
+    #[derive(Debug, Clone)]
+    pub struct ServersServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl ServersServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> ServersServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> ServersServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            ServersServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        pub async fn list_servers(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListServersRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListServersResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/ListServers",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("music.v1alpha1.ServersService", "ListServers"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn list_source_kinds(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListSourceKindsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListSourceKindsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/ListSourceKinds",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("music.v1alpha1.ServersService", "ListSourceKinds"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_connected_server(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetConnectedServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetConnectedServerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/GetConnectedServer",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "music.v1alpha1.ServersService",
+                        "GetConnectedServer",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn add_server(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AddServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::AddServerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/AddServer",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("music.v1alpha1.ServersService", "AddServer"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn delete_server(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DeleteServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DeleteServerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/DeleteServer",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("music.v1alpha1.ServersService", "DeleteServer"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn connect_server(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ConnectServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ConnectServerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/ConnectServer",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("music.v1alpha1.ServersService", "ConnectServer"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn disconnect_server(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DisconnectServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DisconnectServerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.ServersService/DisconnectServer",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("music.v1alpha1.ServersService", "DisconnectServer"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
+/// Generated server implementations.
+pub mod servers_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with ServersServiceServer.
+    #[async_trait]
+    pub trait ServersService: std::marker::Send + std::marker::Sync + 'static {
+        async fn list_servers(
+            &self,
+            request: tonic::Request<super::ListServersRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListServersResponse>,
+            tonic::Status,
+        >;
+        async fn list_source_kinds(
+            &self,
+            request: tonic::Request<super::ListSourceKindsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListSourceKindsResponse>,
+            tonic::Status,
+        >;
+        async fn get_connected_server(
+            &self,
+            request: tonic::Request<super::GetConnectedServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetConnectedServerResponse>,
+            tonic::Status,
+        >;
+        async fn add_server(
+            &self,
+            request: tonic::Request<super::AddServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::AddServerResponse>,
+            tonic::Status,
+        >;
+        async fn delete_server(
+            &self,
+            request: tonic::Request<super::DeleteServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DeleteServerResponse>,
+            tonic::Status,
+        >;
+        async fn connect_server(
+            &self,
+            request: tonic::Request<super::ConnectServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ConnectServerResponse>,
+            tonic::Status,
+        >;
+        async fn disconnect_server(
+            &self,
+            request: tonic::Request<super::DisconnectServerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DisconnectServerResponse>,
+            tonic::Status,
+        >;
+    }
+    /// Saved servers, and which one the library is read from.
+    ///
+    /// Connecting cannot interrupt playback: a provider is where the screens read,
+    /// and nothing here can reach the player.
+    #[derive(Debug)]
+    pub struct ServersServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> ServersServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for ServersServiceServer<T>
+    where
+        T: ServersService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/music.v1alpha1.ServersService/ListServers" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListServersSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::ListServersRequest>
+                    for ListServersSvc<T> {
+                        type Response = super::ListServersResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListServersRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::list_servers(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListServersSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.ServersService/ListSourceKinds" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListSourceKindsSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::ListSourceKindsRequest>
+                    for ListSourceKindsSvc<T> {
+                        type Response = super::ListSourceKindsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListSourceKindsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::list_source_kinds(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListSourceKindsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.ServersService/GetConnectedServer" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetConnectedServerSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::GetConnectedServerRequest>
+                    for GetConnectedServerSvc<T> {
+                        type Response = super::GetConnectedServerResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetConnectedServerRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::get_connected_server(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetConnectedServerSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.ServersService/AddServer" => {
+                    #[allow(non_camel_case_types)]
+                    struct AddServerSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::AddServerRequest>
+                    for AddServerSvc<T> {
+                        type Response = super::AddServerResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::AddServerRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::add_server(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = AddServerSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.ServersService/DeleteServer" => {
+                    #[allow(non_camel_case_types)]
+                    struct DeleteServerSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::DeleteServerRequest>
+                    for DeleteServerSvc<T> {
+                        type Response = super::DeleteServerResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::DeleteServerRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::delete_server(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = DeleteServerSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.ServersService/ConnectServer" => {
+                    #[allow(non_camel_case_types)]
+                    struct ConnectServerSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::ConnectServerRequest>
+                    for ConnectServerSvc<T> {
+                        type Response = super::ConnectServerResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ConnectServerRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::connect_server(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ConnectServerSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.ServersService/DisconnectServer" => {
+                    #[allow(non_camel_case_types)]
+                    struct DisconnectServerSvc<T: ServersService>(pub Arc<T>);
+                    impl<
+                        T: ServersService,
+                    > tonic::server::UnaryService<super::DisconnectServerRequest>
+                    for DisconnectServerSvc<T> {
+                        type Response = super::DisconnectServerResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::DisconnectServerRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ServersService>::disconnect_server(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = DisconnectServerSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        let mut response = http::Response::new(
+                            tonic::body::Body::default(),
+                        );
+                        let headers = response.headers_mut();
+                        headers
+                            .insert(
+                                tonic::Status::GRPC_STATUS,
+                                (tonic::Code::Unimplemented as i32).into(),
+                            );
+                        headers
+                            .insert(
+                                http::header::CONTENT_TYPE,
+                                tonic::metadata::GRPC_CONTENT_TYPE,
+                            );
+                        Ok(response)
+                    })
+                }
+            }
+        }
+    }
+    impl<T> Clone for ServersServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "music.v1alpha1.ServersService";
+    impl<T> tonic::server::NamedService for ServersServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddTrackRequest {
     #[prost(message, optional, tag = "1")]

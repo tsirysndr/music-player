@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+// A remote music server the user has saved.
+//
+// This is where a library is *read from* — a different question from where
+// the audio comes out, which is a cast device. The password is stored but
+// never returned; callers are told only whether one is set.
+message Server {
+  string id = 1;
+  // The provider-registry key: "subsonic", "jellyfin", "music-player", ...
+  string kind = 2;
+  string name = 3;
+  // Absolute, scheme included.
+  string url = 4;
+  string username = 5;
+  bool has_password = 6;
+  // The library screens are currently reading from this one.
+  bool connected = 7;
+}
+
+// One kind of server this build can talk to, straight from the provider
+// registry — so a newly registered backend offers itself to every client
+// without any of them being changed.
+message SourceKind {
+  string kind = 1;
+  string display_name = 2;
+  // False for backends with no login, so a form can hide those fields.
+  bool needs_credentials = 3;
+  uint32 default_port = 4;
+}
+
+message ListServersRequest {}
+message ListServersResponse {
+  repeated Server servers = 1;
+}
+
+message ListSourceKindsRequest {}
+message ListSourceKindsResponse {
+  repeated SourceKind kinds = 1;
+}
+
+message GetConnectedServerRequest {}
+message GetConnectedServerResponse {
+  // Absent means the daemon's own library.
+  optional Server server = 1;
+}
+
+message AddServerRequest {
+  string kind = 1;
+  string name = 2;
+  string url = 3;
+  string username = 4;
+  // Omit to keep whatever is stored: the password is never handed back, so a
+  // blank field cannot mean "clear it".
+  string password = 5;
+}
+message AddServerResponse {
+  Server server = 1;
+}
+
+message DeleteServerRequest {
+  string id = 1;
+}
+message DeleteServerResponse {
+  bool deleted = 1;
+}
+
+message ConnectServerRequest {
+  string id = 1;
+}
+message ConnectServerResponse {
+  Server server = 1;
+}
+
+message DisconnectServerRequest {}
+message DisconnectServerResponse {
+  optional Server server = 1;
+}
+
+// Saved servers, and which one the library is read from.
+//
+// Connecting cannot interrupt playback: a provider is where the screens read,
+// and nothing here can reach the player.
+service ServersService {
+  rpc ListServers(ListServersRequest) returns (ListServersResponse) {}
+  rpc ListSourceKinds(ListSourceKindsRequest) returns (ListSourceKindsResponse) {}
+  rpc GetConnectedServer(GetConnectedServerRequest) returns (GetConnectedServerResponse) {}
+  rpc AddServer(AddServerRequest) returns (AddServerResponse) {}
+  rpc DeleteServer(DeleteServerRequest) returns (DeleteServerResponse) {}
+  rpc ConnectServer(ConnectServerRequest) returns (ConnectServerResponse) {}
+  rpc DisconnectServer(DisconnectServerRequest) returns (DisconnectServerResponse) {}
+}

@@ -268,6 +268,7 @@ Main keys:
 | `<` / `>`   | Seek −5s / +5s                                          |
 | `+` / `-`   | Volume up / down (`=` / `_` work unshifted)             |
 | `m`         | Mute / unmute                                           |
+| `C`         | Switch which server the library is read from            |
 | `z`         | Add selected track to the queue                         |
 | `q` / `Esc` | Back / quit                                             |
 

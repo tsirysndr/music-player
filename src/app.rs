@@ -178,6 +178,7 @@ pub struct App {
     pub show_help: bool,
     pub help_scroll: u16,
     pub search: SearchState,
+    pub switcher: crate::server_switcher::ServerSwitcher,
     pub library_cache: Option<LibraryCache>,
     pub server_addr: String,
 }
@@ -207,6 +208,7 @@ impl App {
             show_help: false,
             help_scroll: 0,
             search: SearchState::default(),
+            switcher: Default::default(),
             smart_playlist_form: Default::default(),
             library_cache: None,
             server_addr: "localhost:5051".to_string(),

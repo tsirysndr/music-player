@@ -19,14 +19,14 @@ use tungstenite::Message;
 
 use crate::{
     addons::Addons, core::Core, history::History, library::Library, mixer::Mixer,
-    playback::Playback, playlist::Playlist, tracklist::Tracklist,
+    playback::Playback, playlist::Playlist, servers::Servers, tracklist::Tracklist,
 };
 
 use crate::api::music::v1alpha1::{
     addons_service_server::AddonsServiceServer, core_service_server::CoreServiceServer,
     history_service_server::HistoryServiceServer, library_service_server::LibraryServiceServer,
     mixer_service_server::MixerServiceServer, playback_service_server::PlaybackServiceServer,
-    playlist_service_server::PlaylistServiceServer,
+    playlist_service_server::PlaylistServiceServer, servers_service_server::ServersServiceServer,
     tracklist_service_server::TracklistServiceServer,
 };
 
@@ -98,6 +98,10 @@ impl MusicPlayerServer {
                 self.db.clone(),
                 Arc::clone(&self.providers),
             )))
+            .add_service(ServersServiceServer::new(Servers::new(
+                self.db.clone(),
+                Arc::clone(&self.providers),
+            )))
             .add_service(TracklistServiceServer::new(Tracklist::new(
                 Arc::clone(&self.tracklist),
                 Arc::clone(&self.cmd_tx),
@@ -140,6 +144,10 @@ impl MusicPlayerServer {
                 Arc::clone(&self.cmd_tx),
             )))
             .add_service(PlaylistServiceServer::new(Playlist::new(
+                self.db.clone(),
+                Arc::clone(&self.providers),
+            )))
+            .add_service(ServersServiceServer::new(Servers::new(
                 self.db.clone(),
                 Arc::clone(&self.providers),
             )))

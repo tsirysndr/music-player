@@ -17,6 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "proto/music/v1alpha1/mixer.proto",
                 "proto/music/v1alpha1/playback.proto",
                 "proto/music/v1alpha1/playlist.proto",
+                "proto/music/v1alpha1/servers.proto",
                 "proto/music/v1alpha1/tracklist.proto",
             ],
             &["proto"],

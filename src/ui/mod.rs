@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{ActiveBlock, App, Pagination, RouteId, SearchScope, LIBRARY_OPTIONS};
+use crate::server_switcher::AddField;
 use crate::smart_playlist_form::Field;
 
 use self::util::{
@@ -85,6 +86,10 @@ pub fn draw_main_layout(f: &mut Frame, app: &App) {
 
     if app.search.active {
         draw_search_overlay(f, app);
+    }
+
+    if app.switcher.active {
+        draw_server_switcher_overlay(f, app);
     }
 
     if app.smart_playlist_form.active {
@@ -772,6 +777,21 @@ pub fn draw_status_line(f: &mut Frame, app: &App, layout_chunk: Rect) {
 pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
     let hints: &[(&str, &str)] = if app.show_help {
         &[("?/q/esc", "close"), ("j/k", "scroll")]
+    } else if app.switcher.active && app.switcher.form.active {
+        &[
+            ("esc", "back"),
+            ("tab", "next field"),
+            ("←/→", "type"),
+            ("enter", "save & connect"),
+        ]
+    } else if app.switcher.active {
+        &[
+            ("esc", "close"),
+            ("↑/↓", "move"),
+            ("enter", "connect"),
+            ("C-n", "add"),
+            ("C-d", "forget"),
+        ]
     } else if app.smart_playlist_form.active {
         &[
             ("esc", "cancel"),
@@ -800,6 +820,7 @@ pub fn draw_hint_bar(f: &mut Frame, app: &App, layout_chunk: Rect) {
             ("+/-", "volume"),
             ("m", "mute"),
             ("S", "smart playlist"),
+            ("C", "servers"),
             ("z", "queue"),
             ("u", "play queue"),
             ("q", "back/quit"),
@@ -1169,6 +1190,218 @@ pub fn draw_smart_playlist_overlay(f: &mut Frame, app: &App) {
     }
 }
 
+/// The server switcher: an fzf-style list of saved servers over the library.
+///
+/// "This machine" is always the first row, so there is always somewhere to
+/// read from. Picking one re-points every screen; it never touches playback.
+pub fn draw_server_switcher_overlay(f: &mut Frame, app: &App) {
+    let theme = app.user_config.theme;
+    let area = centered_rect(70, 70, f.area());
+    if area.width < 24 || area.height < 6 {
+        return;
+    }
+
+    f.render_widget(Clear, area);
+
+    let title = Line::from(vec![
+        Span::raw(" Play from "),
+        Span::styled(
+            "— where the library is read",
+            Style::default().fg(theme.inactive),
+        ),
+        Span::raw(" "),
+    ]);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title)
+        .border_style(Style::default().fg(theme.active));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    if inner.height < 3 {
+        return;
+    }
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .split(inner);
+
+    if app.switcher.form.active {
+        draw_add_server_form(f, app, chunks[0]);
+    } else {
+        draw_switcher_list(f, app, chunks[0]);
+    }
+
+    // The prompt doubles as the error line: a refused connection is about the
+    // thing you just typed.
+    if !app.switcher.error.is_empty() {
+        f.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                format!("  {}", app.switcher.error),
+                Style::default().fg(theme.statusline_search),
+            ))),
+            chunks[1],
+        );
+        return;
+    }
+    if app.switcher.form.active {
+        f.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                "  tab next · ←/→ type · C-u clear · enter save & connect · esc back",
+                Style::default().fg(theme.inactive),
+            ))),
+            chunks[1],
+        );
+        return;
+    }
+
+    let prompt = Line::from(vec![
+        Span::styled(
+            "> ",
+            Style::default()
+                .fg(theme.active)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(app.switcher.query.clone()),
+        Span::styled(
+            if app.switcher.loading {
+                " loading…".to_string()
+            } else {
+                format!("  [{}]", app.switcher.results.len())
+            },
+            Style::default().fg(theme.inactive),
+        ),
+    ]);
+    f.render_widget(Paragraph::new(prompt), chunks[1]);
+    let cursor_x = chunks[1].x + 2 + app.switcher.query.chars().count() as u16;
+    f.set_cursor_position(Position::new(
+        cursor_x.min(chunks[1].right().saturating_sub(1)),
+        chunks[1].y,
+    ));
+}
+
+fn draw_switcher_list(f: &mut Frame, app: &App, area: Rect) {
+    let theme = app.user_config.theme;
+
+    if app.switcher.results.is_empty() {
+        let message = if app.switcher.loading {
+            "  loading servers…"
+        } else {
+            "  no server matches"
+        };
+        f.render_widget(
+            Paragraph::new(Line::from(Span::styled(
+                message,
+                Style::default().fg(theme.inactive),
+            ))),
+            area,
+        );
+        return;
+    }
+
+    let items: Vec<ListItem> = app
+        .switcher
+        .results
+        .iter()
+        .enumerate()
+        .map(|(index, result)| {
+            let selected = index == app.switcher.selected_index;
+            let base = if selected {
+                Style::default()
+                    .fg(theme.active)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(theme.text)
+            };
+            let mut spans = vec![Span::styled(
+                if selected { "▌ " } else { "  " },
+                Style::default().fg(theme.active),
+            )];
+            // A dot marks the one being read from, matching the other clients.
+            spans.push(Span::styled(
+                if result.entry.connected { "● " } else { "  " },
+                Style::default().fg(theme.statusline_normal),
+            ));
+            // Highlight the characters the query matched.
+            for (position, ch) in result.display.chars().enumerate() {
+                let matched = result.indices.contains(&(position as u32));
+                spans.push(Span::styled(
+                    ch.to_string(),
+                    if matched {
+                        base.fg(theme.statusline_search).add_modifier(Modifier::BOLD)
+                    } else {
+                        base
+                    },
+                ));
+            }
+            ListItem::new(Line::from(spans))
+        })
+        .collect();
+
+    let mut state = ListState::default();
+    state.select(Some(app.switcher.selected_index));
+    f.render_stateful_widget(List::new(items), area, &mut state);
+}
+
+fn draw_add_server_form(f: &mut Frame, app: &App, area: Rect) {
+    let theme = app.user_config.theme;
+    let form = &app.switcher.form;
+
+    let kind = app
+        .switcher
+        .kinds
+        .get(form.kind)
+        .map(|(_, label)| label.as_str())
+        .unwrap_or("Subsonic / Navidrome");
+
+    let mut lines: Vec<Line> = vec![Line::from(Span::styled(
+        "  Add a server",
+        Style::default()
+            .fg(theme.active)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::default());
+
+    for field in AddField::ALL {
+        let focused = form.focus == field;
+        let value = if field == AddField::Kind {
+            format!("< {kind} >")
+        } else if field == AddField::Password {
+            // Not echoed, for the same reason it is never returned by the API.
+            "•".repeat(form.value(field).chars().count())
+        } else {
+            form.value(field).to_string()
+        };
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("  {:>9}  ", field.label()),
+                if focused {
+                    Style::default()
+                        .fg(theme.active)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(theme.inactive)
+                },
+            ),
+            Span::styled(value, Style::default().fg(theme.text)),
+            Span::styled(
+                if focused { "▌" } else { "" },
+                Style::default().fg(theme.active),
+            ),
+        ]));
+    }
+
+    if !form.error.is_empty() {
+        lines.push(Line::default());
+        lines.push(Line::from(Span::styled(
+            format!("  {}", form.error),
+            Style::default().fg(theme.statusline_search),
+        )));
+    }
+
+    f.render_widget(Paragraph::new(Text::from(lines)), area);
+}
+
 /// All keybindings, grouped by category. Used by the `?` help dialog.
 pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
     vec![
@@ -1204,6 +1437,18 @@ pub fn help_entries() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> 
                 ("m", "Mute / unmute"),
                 ("z", "Add selected track to the queue"),
                 ("u", "Toggle the play-queue view"),
+            ],
+        ),
+        (
+            "Servers",
+            vec![
+                ("C", "Switch which server the library is read from"),
+                ("Type", "Fuzzy-filter the list"),
+                ("Up / Down", "Move selection"),
+                ("Enter", "Connect (or go back to this machine)"),
+                ("Ctrl-n", "Add a server"),
+                ("Ctrl-d", "Forget the highlighted server"),
+                ("Esc", "Close"),
             ],
         ),
         (

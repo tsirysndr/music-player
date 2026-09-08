@@ -15,6 +15,7 @@ pub mod play_queue;
 pub mod playbar;
 pub mod playlist;
 pub mod search;
+pub mod server_switcher;
 pub mod smart_playlist;
 pub mod tracks;
 
@@ -48,6 +49,11 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         search::handler(key, app);
         return false;
     }
+    // As does the server switcher.
+    if app.switcher.active {
+        server_switcher::handler(key, app);
+        return false;
+    }
 
     match key {
         Key::Esc => {
@@ -73,6 +79,11 @@ pub fn handle_app(key: Key, app: &mut App) -> bool {
         }
         _ if key == app.user_config.keys.toggle_mute => {
             app.toggle_mute();
+        }
+        _ if key == app.user_config.keys.switch_server => {
+            app.switcher.open();
+            app.switcher.loading = true;
+            app.dispatch(IoEvent::LoadServers);
         }
         // Press space to toggle playback
         _ if key == app.user_config.keys.toggle_playback => {

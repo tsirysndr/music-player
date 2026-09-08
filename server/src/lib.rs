@@ -15,6 +15,7 @@ pub mod mixer;
 pub mod play_stats;
 pub mod playback;
 pub mod playlist;
+pub mod servers;
 pub mod remote;
 pub mod scrobbler;
 pub mod server;

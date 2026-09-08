@@ -1,7 +1,7 @@
 use anyhow::Error;
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
-    tracklist::TracklistClient,
+    servers::ServersClient, tracklist::TracklistClient,
 };
 use music_player_server::api::metadata::v1alpha1::{Album, Track};
 use music_player_server::api::music::v1alpha1::SmartPlaylist;
@@ -33,6 +33,18 @@ pub enum IoEvent {
     SetVolume(u32),
     GetVolume,
     SetMute(bool),
+    /// The saved servers, and which one the library is read from.
+    LoadServers,
+    ConnectServer(String),
+    DisconnectServer,
+    DeleteServer(String),
+    AddServer {
+        kind: String,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+    },
     GetPlaylists,
     PlayPlaylist(String),
     LoadSearchIndex,
@@ -73,6 +85,7 @@ pub struct Network<'a> {
     playback: PlaybackClient,
     tracklist: TracklistClient,
     playlist: PlaylistClient,
+    servers: ServersClient,
 }
 
 impl<'a> Network<'a> {
@@ -84,12 +97,14 @@ impl<'a> Network<'a> {
         let playback = PlaybackClient::new(settings.host.clone(), settings.port).await?;
         let tracklist = TracklistClient::new(settings.host.clone(), settings.port).await?;
         let playlist = PlaylistClient::new(settings.host.clone(), settings.port).await?;
+        let servers = ServersClient::new(settings.host.clone(), settings.port).await?;
         Ok(Network {
             app,
             library,
             playback,
             tracklist,
             playlist,
+            servers,
         })
     }
 
@@ -112,6 +127,17 @@ impl<'a> Network<'a> {
             IoEvent::SetVolume(volume) => self.set_volume(volume).await,
             IoEvent::GetVolume => self.get_volume().await,
             IoEvent::SetMute(mute) => self.set_mute(mute).await,
+            IoEvent::LoadServers => self.load_servers().await,
+            IoEvent::ConnectServer(id) => self.connect_server(&id).await,
+            IoEvent::DisconnectServer => self.disconnect_server().await,
+            IoEvent::DeleteServer(id) => self.delete_server(&id).await,
+            IoEvent::AddServer {
+                kind,
+                name,
+                url,
+                username,
+                password,
+            } => self.add_server(&kind, &name, &url, &username, &password).await,
             IoEvent::GetPlaylists => self.get_playlists().await,
             IoEvent::PlayPlaylist(id) => self.play_playlist(id).await,
             IoEvent::LoadSearchIndex => self.load_search_index().await,
@@ -435,6 +461,95 @@ impl<'a> Network<'a> {
 
     async fn set_mute(&mut self, mute: bool) -> Result<(), Error> {
         self.playback.set_mute(mute).await
+    }
+
+    // ── Servers (where the library is read from) ────────────────────────────
+
+    async fn load_servers(&mut self) -> Result<(), Error> {
+        let servers = self.servers.list().await?;
+        let kinds = self.servers.source_kinds().await.unwrap_or_default();
+        let mut app = self.app.lock().await;
+        app.switcher.kinds = kinds
+            .into_iter()
+            .map(|kind| (kind.kind, kind.display_name))
+            .collect();
+        app.switcher.set_servers(
+            servers
+                .into_iter()
+                .map(|server| crate::server_switcher::ServerEntry {
+                    id: server.id,
+                    kind: server.kind,
+                    name: server.name,
+                    url: server.url,
+                    connected: server.connected,
+                })
+                .collect(),
+        );
+        Ok(())
+    }
+
+    /// Repoint the library at a server. Every screen has to be re-read; what
+    /// is playing keeps playing.
+    async fn connect_server(&mut self, id: &str) -> Result<(), Error> {
+        if let Err(e) = self.servers.connect(id).await {
+            let mut app = self.app.lock().await;
+            app.switcher.error = clean_status(&e.to_string());
+            return Ok(());
+        }
+        self.reload_library().await
+    }
+
+    async fn disconnect_server(&mut self) -> Result<(), Error> {
+        self.servers.disconnect().await?;
+        self.reload_library().await
+    }
+
+    /// Deleting the connected one drops back to the local library, so the
+    /// screens are re-read either way.
+    async fn delete_server(&mut self, id: &str) -> Result<(), Error> {
+        self.servers.delete(id).await?;
+        self.reload_library().await
+    }
+
+    async fn add_server(
+        &mut self,
+        kind: &str,
+        name: &str,
+        url: &str,
+        username: &str,
+        password: &str,
+    ) -> Result<(), Error> {
+        let name = if name.trim().is_empty() { url } else { name };
+        match self.servers.add(kind, name, url, username, password).await {
+            Ok(server) => {
+                // Saving one is only ever a step towards using it.
+                let id = server.id.clone();
+                {
+                    let mut app = self.app.lock().await;
+                    app.switcher.form = Default::default();
+                }
+                self.connect_server(&id).await?;
+                self.load_servers().await
+            }
+            Err(e) => {
+                let mut app = self.app.lock().await;
+                app.switcher.form.submitting = false;
+                app.switcher.form.error = clean_status(&e.to_string());
+                Ok(())
+            }
+        }
+    }
+
+    /// Everything on screen came from the old server, so it all goes.
+    async fn reload_library(&mut self) -> Result<(), Error> {
+        {
+            let mut app = self.app.lock().await;
+            app.switcher.error.clear();
+            app.library_cache = None;
+        }
+        self.load_servers().await?;
+        self.get_tracks().await?;
+        self.get_playlists().await
     }
 
     async fn get_playlists(&mut self) -> Result<(), Error> {

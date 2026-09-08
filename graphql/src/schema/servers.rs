@@ -97,9 +97,7 @@ impl ServersMutation {
         // demanding one here is what made Rocksky unusable.
         let url = match factory.fixed_url() {
             Some(fixed) => fixed.to_string(),
-            None if input.url.trim().is_empty() => {
-                return Err(Error::new("a server needs a url"))
-            }
+            None if input.url.trim().is_empty() => return Err(Error::new("a server needs a url")),
             None => input.url.clone(),
         };
 

@@ -131,10 +131,7 @@ impl ServersService for Servers {
             .registry()
             .get(&request.kind)
             .ok_or_else(|| {
-                tonic::Status::invalid_argument(format!(
-                    "unknown kind of server: {}",
-                    request.kind
-                ))
+                tonic::Status::invalid_argument(format!("unknown kind of server: {}", request.kind))
             })?;
 
         // A hosted backend has one address, and it is the factory's.

@@ -53,7 +53,14 @@ mod tests {
     #[test]
     fn every_builtin_is_reachable_by_kind() {
         let registry = builtin_registry();
-        for kind in ["subsonic", "jellyfin", "music-player", "kodi", "plex", "rocksky"] {
+        for kind in [
+            "subsonic",
+            "jellyfin",
+            "music-player",
+            "kodi",
+            "plex",
+            "rocksky",
+        ] {
             assert!(registry.get(kind).is_some(), "{kind} is not registered");
         }
     }

@@ -1489,7 +1489,8 @@ pub fn draw_renderer_picker_overlay(f: &mut Frame, app: &App) {
                     spans.push(Span::styled(
                         ch.to_string(),
                         if matched {
-                            base.fg(theme.statusline_search).add_modifier(Modifier::BOLD)
+                            base.fg(theme.statusline_search)
+                                .add_modifier(Modifier::BOLD)
                         } else {
                             base
                         },

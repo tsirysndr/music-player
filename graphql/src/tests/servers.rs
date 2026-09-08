@@ -27,8 +27,18 @@ async fn source_kinds_describe_themselves() {
         .iter()
         .map(|kind| kind["kind"].as_str().unwrap())
         .collect();
-    for expected in ["subsonic", "jellyfin", "music-player", "kodi", "plex", "rocksky"] {
-        assert!(names.contains(&expected), "{expected} is missing: {names:?}");
+    for expected in [
+        "subsonic",
+        "jellyfin",
+        "music-player",
+        "kodi",
+        "plex",
+        "rocksky",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} is missing: {names:?}"
+        );
     }
 
     let rocksky = kinds
@@ -40,7 +50,10 @@ async fn source_kinds_describe_themselves() {
     assert_eq!(rocksky["needsCredentials"], true);
 
     // Everything else takes a url, so the field stays.
-    let subsonic = kinds.iter().find(|kind| kind["kind"] == "subsonic").unwrap();
+    let subsonic = kinds
+        .iter()
+        .find(|kind| kind["kind"] == "subsonic")
+        .unwrap();
     assert!(subsonic["fixedUrl"].is_null());
 }
 
@@ -112,9 +125,7 @@ async fn an_unknown_kind_is_refused() {
 #[tokio::test]
 async fn nothing_is_connected_by_default() {
     let (schema, _, _, _) = setup_schema().await;
-    let resp = schema
-        .execute(r#"query { connectedServer { id } }"#)
-        .await;
+    let resp = schema.execute(r#"query { connectedServer { id } }"#).await;
     assert!(resp.errors.is_empty(), "{:?}", resp.errors);
     assert!(resp.data.into_json().unwrap()["connectedServer"].is_null());
 }

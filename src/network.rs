@@ -1,5 +1,4 @@
 use anyhow::Error;
-use serde_json::{json, Value};
 use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     servers::ServersClient, tracklist::TracklistClient,
@@ -7,6 +6,7 @@ use music_player_client::{
 use music_player_server::api::metadata::v1alpha1::{Album, Track};
 use music_player_server::api::music::v1alpha1::SmartPlaylist;
 use music_player_settings::{read_settings, Settings};
+use serde_json::{json, Value};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
 
@@ -42,7 +42,10 @@ pub enum IoEvent {
     /// The places the audio could come out.
     LoadRenderers,
     /// An empty id means "play here".
-    ActivateRenderer { id: String, cast: bool },
+    ActivateRenderer {
+        id: String,
+        cast: bool,
+    },
     AddServer {
         kind: String,
         name: String,

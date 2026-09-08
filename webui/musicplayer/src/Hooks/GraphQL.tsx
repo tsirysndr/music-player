@@ -201,12 +201,21 @@ export type Mutation = {
    * a `fm.atradio.station` record so it follows the account everywhere.
    */
   addRadioStation: RadioStation;
+  /** Save a server, or update the one already stored at that url. */
+  addServer: Server;
   addTrack: Array<Track>;
   addTrackToPlaylist: Playlist;
   addTracks: Scalars['Boolean']['output'];
   clearTracklist: Scalars['Boolean']['output'];
   connectToCastDevice: Device;
   connectToDevice: Device;
+  /**
+   * Point the library screens at a saved server.
+   *
+   * Connects first and swaps second, so a server that is unreachable leaves
+   * the previous one in place. Playback is untouched either way.
+   */
+  connectToServer: Server;
   createFolder: Folder;
   /**
    * Create a playlist.
@@ -218,11 +227,22 @@ export type Mutation = {
   createPlaylist: Playlist;
   deleteFolder: Folder;
   deletePlaylist: Playlist;
+  /**
+   * Forget a server. Disconnects first if it is the one in use, so the
+   * screens fall back to the local library rather than reading from
+   * something that is no longer listed.
+   */
+  deleteServer: Scalars['Boolean']['output'];
   disconnectFromCastDevice?: Maybe<Device>;
   disconnectFromDevice?: Maybe<Device>;
+  /** Back to the local library. Returns what was disconnected. */
+  disconnectFromServer?: Maybe<Server>;
   /**
-   * Forward a like/unlike to Rocksky (the like itself lives with the
-   * client; a missing `rocksky login` token makes this a silent no-op).
+   * Like or unlike a track.
+   *
+   * With a provider connected the like belongs to *that* server, so it goes
+   * there. A provider with no notion of likes says so rather than quietly
+   * writing an id to Rocksky that means nothing there.
    */
   likeTrack: Scalars['Boolean']['output'];
   movePlaylistToFolder: Folder;
@@ -254,6 +274,10 @@ export type Mutation = {
    */
   rescanExtensions: Array<Extension>;
   saveRadio: Scalars['Boolean']['output'];
+  /**
+   * Always the local music directory: a scan is about the files on this
+   * machine, whatever the screens happen to be pointed at.
+   */
   scan: Scalars['Boolean']['output'];
   seek: Scalars['Boolean']['output'];
   /**
@@ -305,6 +329,11 @@ export type MutationAddRadioStationArgs = {
 };
 
 
+export type MutationAddServerArgs = {
+  input: ServerInput;
+};
+
+
 export type MutationAddTrackArgs = {
   track: TrackInput;
 };
@@ -331,6 +360,11 @@ export type MutationConnectToDeviceArgs = {
 };
 
 
+export type MutationConnectToServerArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationCreateFolderArgs = {
   name: Scalars['String']['input'];
 };
@@ -350,6 +384,11 @@ export type MutationDeleteFolderArgs = {
 
 
 export type MutationDeletePlaylistArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteServerArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -555,6 +594,11 @@ export type Query = {
   checkRadioStream: StreamCheck;
   connectedCastDevice: Device;
   connectedDevice: Device;
+  /**
+   * The server the library screens are currently reading from, if any.
+   * `null` means the local library.
+   */
+  connectedServer?: Maybe<Server>;
   currentlyPlayingSong: CurrentlyPlayingSong;
   /**
    * Every installed extension, in id order. `filter` is a case-insensitive
@@ -575,11 +619,13 @@ export type Query = {
   getRepeat: Scalars['Boolean']['output'];
   getVolume: Scalars['Int']['output'];
   /**
-   * Tracks the user liked on Rocksky that exist in the local library.
+   * The tracks the user has liked.
    *
-   * The likes come from their atproto repo (see
-   * `music_player_storage::rocksky_likes`); only the ones matched to a local
-   * file have a track to return, so an unmatched like is simply absent.
+   * On a remote provider these are *its* likes — Subsonic's starred songs,
+   * Jellyfin's favourites. It must not fall back to the local list: those
+   * ids belong to a different library, so the rows would render but not
+   * play. A provider with no notion of likes returns nothing, which is an
+   * empty screen rather than a wrong one.
    */
   likedTracks: Array<Track>;
   listCastDevices: Array<Device>;
@@ -600,6 +646,15 @@ export type Query = {
    */
   rsqlFields: Array<RsqlField>;
   savedRadios: Array<RadioStation>;
+  savedServer?: Maybe<Server>;
+  /** Every saved server, with the connected one flagged. */
+  savedServers: Array<Server>;
+  /**
+   * Search wherever the library currently is.
+   *
+   * The local searcher indexes local files, so with a provider connected it
+   * would be answering about a library the user is not looking at.
+   */
   search: SearchResult;
   /**
    * What a smart-playlist filter would produce, without saving it.
@@ -609,6 +664,8 @@ export type Query = {
    * error carrying the offset of the offending character.
    */
   smartPlaylistPreview: SmartPlaylistPreview;
+  /** The kinds of server this build can talk to, straight from the registry. */
+  sourceKinds: Array<SourceKind>;
   track: Track;
   tracklistTracks: Tracklist;
   tracks: Array<Track>;
@@ -670,9 +727,20 @@ export type QueryPlaylistArgs = {
 };
 
 
+export type QueryPlaylistsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryRadiosArgs = {
   category?: InputMaybe<Scalars['String']['input']>;
   query?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QuerySavedServerArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -742,6 +810,42 @@ export type SearchResult = {
   tracks: Array<Track>;
 };
 
+/**
+ * A remote server the user has saved.
+ *
+ * Note the absence of `password`. It is stored, and it is sent when a server
+ * is added or edited, but it is never returned — so an edit form has to
+ * re-prompt for it rather than round-tripping a secret through a client.
+ */
+export type Server = {
+  __typename?: 'Server';
+  /**
+   * Whether this is the server the library screens are currently reading
+   * from.
+   */
+  connected: Scalars['Boolean']['output'];
+  /** Whether a password is stored, since the password itself is not exposed. */
+  hasPassword: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  /** The provider-registry key: `subsonic`, `jellyfin`, `music-player`, … */
+  kind: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+  username?: Maybe<Scalars['String']['output']>;
+};
+
+export type ServerInput = {
+  kind: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  /**
+   * Omit to keep whatever is already stored — the edit form never receives
+   * the current one, so a blank field cannot mean "clear it".
+   */
+  password?: InputMaybe<Scalars['String']['input']>;
+  url: Scalars['String']['input'];
+  username?: InputMaybe<Scalars['String']['input']>;
+};
+
 /** The three things a smart playlist is: a filter, an order, and a cap. */
 export type SmartPlaylistInput = {
   /**
@@ -767,6 +871,24 @@ export type SmartPlaylistPreview = {
   count: Scalars['Int']['output'];
   /** The first handful, so the form can show what it caught. */
   tracks: Array<Track>;
+};
+
+/**
+ * What a client needs to offer one kind of server in its add-server form.
+ *
+ * Comes straight from the provider registry, so a newly registered backend
+ * appears in every client without either of them being changed.
+ */
+export type SourceKind = {
+  __typename?: 'SourceKind';
+  defaultPort: Scalars['Int']['output'];
+  displayName: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  /**
+   * False for backends with no login — the form hides those fields rather
+   * than asking for something that will be ignored.
+   */
+  needsCredentials: Scalars['Boolean']['output'];
 };
 
 /**
@@ -1183,6 +1305,49 @@ export type GetFolderQueryVariables = Exact<{
 
 export type GetFolderQuery = { __typename?: 'Query', folder: { __typename?: 'Folder', id: string, name: string, playlists: Array<{ __typename?: 'Playlist', id: string, name: string, description?: string | null }> } };
 
+export type AddServerMutationVariables = Exact<{
+  input: ServerInput;
+}>;
+
+
+export type AddServerMutation = { __typename?: 'Mutation', addServer: { __typename?: 'Server', id: string, kind: string, name: string, url: string, username?: string | null, hasPassword: boolean, connected: boolean } };
+
+export type DeleteServerMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteServerMutation = { __typename?: 'Mutation', deleteServer: boolean };
+
+export type ConnectToServerMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type ConnectToServerMutation = { __typename?: 'Mutation', connectToServer: { __typename?: 'Server', id: string, kind: string, name: string, url: string, username?: string | null, hasPassword: boolean, connected: boolean } };
+
+export type DisconnectFromServerMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DisconnectFromServerMutation = { __typename?: 'Mutation', disconnectFromServer?: { __typename?: 'Server', id: string, name: string } | null };
+
+export type ServerFragmentFragment = { __typename?: 'Server', id: string, kind: string, name: string, url: string, username?: string | null, hasPassword: boolean, connected: boolean };
+
+export type GetSavedServersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetSavedServersQuery = { __typename?: 'Query', savedServers: Array<{ __typename?: 'Server', id: string, kind: string, name: string, url: string, username?: string | null, hasPassword: boolean, connected: boolean }> };
+
+export type GetSourceKindsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetSourceKindsQuery = { __typename?: 'Query', sourceKinds: Array<{ __typename?: 'SourceKind', kind: string, displayName: string, needsCredentials: boolean, defaultPort: number }> };
+
+export type GetConnectedServerQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetConnectedServerQuery = { __typename?: 'Query', connectedServer?: { __typename?: 'Server', id: string, kind: string, name: string, url: string, username?: string | null, hasPassword: boolean, connected: boolean } | null };
+
 export type ClearTracklistMutationVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1328,6 +1493,17 @@ export const AudioSettingsFieldsFragmentDoc = `
   fadeOutDuration
   fadeOutMixmode
   dithering
+}
+    `;
+export const ServerFragmentFragmentDoc = `
+    fragment ServerFragment on Server {
+  id
+  kind
+  name
+  url
+  username
+  hasPassword
+  connected
 }
     `;
 export const ConnectToDeviceDocument = `
@@ -3111,6 +3287,262 @@ useInfiniteGetFolderQuery.getKey = (variables: GetFolderQueryVariables) => ['Get
 
 
 useGetFolderQuery.fetcher = (variables: GetFolderQueryVariables, options?: RequestInit['headers']) => fetcher<GetFolderQuery, GetFolderQueryVariables>(GetFolderDocument, variables, options);
+
+export const AddServerDocument = `
+    mutation AddServer($input: ServerInput!) {
+  addServer(input: $input) {
+    ...ServerFragment
+  }
+}
+    ${ServerFragmentFragmentDoc}`;
+
+export const useAddServerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<AddServerMutation, TError, AddServerMutationVariables, TContext>) => {
+    
+    return useMutation<AddServerMutation, TError, AddServerMutationVariables, TContext>(
+      {
+    mutationKey: ['AddServer'],
+    mutationFn: (variables?: AddServerMutationVariables) => fetcher<AddServerMutation, AddServerMutationVariables>(AddServerDocument, variables)(),
+    ...options
+  }
+    )};
+
+useAddServerMutation.getKey = () => ['AddServer'];
+
+
+useAddServerMutation.fetcher = (variables: AddServerMutationVariables, options?: RequestInit['headers']) => fetcher<AddServerMutation, AddServerMutationVariables>(AddServerDocument, variables, options);
+
+export const DeleteServerDocument = `
+    mutation DeleteServer($id: ID!) {
+  deleteServer(id: $id)
+}
+    `;
+
+export const useDeleteServerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<DeleteServerMutation, TError, DeleteServerMutationVariables, TContext>) => {
+    
+    return useMutation<DeleteServerMutation, TError, DeleteServerMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteServer'],
+    mutationFn: (variables?: DeleteServerMutationVariables) => fetcher<DeleteServerMutation, DeleteServerMutationVariables>(DeleteServerDocument, variables)(),
+    ...options
+  }
+    )};
+
+useDeleteServerMutation.getKey = () => ['DeleteServer'];
+
+
+useDeleteServerMutation.fetcher = (variables: DeleteServerMutationVariables, options?: RequestInit['headers']) => fetcher<DeleteServerMutation, DeleteServerMutationVariables>(DeleteServerDocument, variables, options);
+
+export const ConnectToServerDocument = `
+    mutation ConnectToServer($id: ID!) {
+  connectToServer(id: $id) {
+    ...ServerFragment
+  }
+}
+    ${ServerFragmentFragmentDoc}`;
+
+export const useConnectToServerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<ConnectToServerMutation, TError, ConnectToServerMutationVariables, TContext>) => {
+    
+    return useMutation<ConnectToServerMutation, TError, ConnectToServerMutationVariables, TContext>(
+      {
+    mutationKey: ['ConnectToServer'],
+    mutationFn: (variables?: ConnectToServerMutationVariables) => fetcher<ConnectToServerMutation, ConnectToServerMutationVariables>(ConnectToServerDocument, variables)(),
+    ...options
+  }
+    )};
+
+useConnectToServerMutation.getKey = () => ['ConnectToServer'];
+
+
+useConnectToServerMutation.fetcher = (variables: ConnectToServerMutationVariables, options?: RequestInit['headers']) => fetcher<ConnectToServerMutation, ConnectToServerMutationVariables>(ConnectToServerDocument, variables, options);
+
+export const DisconnectFromServerDocument = `
+    mutation DisconnectFromServer {
+  disconnectFromServer {
+    id
+    name
+  }
+}
+    `;
+
+export const useDisconnectFromServerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<DisconnectFromServerMutation, TError, DisconnectFromServerMutationVariables, TContext>) => {
+    
+    return useMutation<DisconnectFromServerMutation, TError, DisconnectFromServerMutationVariables, TContext>(
+      {
+    mutationKey: ['DisconnectFromServer'],
+    mutationFn: (variables?: DisconnectFromServerMutationVariables) => fetcher<DisconnectFromServerMutation, DisconnectFromServerMutationVariables>(DisconnectFromServerDocument, variables)(),
+    ...options
+  }
+    )};
+
+useDisconnectFromServerMutation.getKey = () => ['DisconnectFromServer'];
+
+
+useDisconnectFromServerMutation.fetcher = (variables?: DisconnectFromServerMutationVariables, options?: RequestInit['headers']) => fetcher<DisconnectFromServerMutation, DisconnectFromServerMutationVariables>(DisconnectFromServerDocument, variables, options);
+
+export const GetSavedServersDocument = `
+    query GetSavedServers {
+  savedServers {
+    ...ServerFragment
+  }
+}
+    ${ServerFragmentFragmentDoc}`;
+
+export const useGetSavedServersQuery = <
+      TData = GetSavedServersQuery,
+      TError = unknown
+    >(
+      variables?: GetSavedServersQueryVariables,
+      options?: Omit<UseQueryOptions<GetSavedServersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetSavedServersQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetSavedServersQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetSavedServers'] : ['GetSavedServers', variables],
+    queryFn: fetcher<GetSavedServersQuery, GetSavedServersQueryVariables>(GetSavedServersDocument, variables),
+    ...options
+  }
+    )};
+
+useGetSavedServersQuery.getKey = (variables?: GetSavedServersQueryVariables) => variables === undefined ? ['GetSavedServers'] : ['GetSavedServers', variables];
+
+export const useInfiniteGetSavedServersQuery = <
+      TData = InfiniteData<GetSavedServersQuery>,
+      TError = unknown
+    >(
+      variables: GetSavedServersQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetSavedServersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetSavedServersQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetSavedServersQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetSavedServers.infinite'] : ['GetSavedServers.infinite', variables],
+      queryFn: (metaData) => fetcher<GetSavedServersQuery, GetSavedServersQueryVariables>(GetSavedServersDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetSavedServersQuery.getKey = (variables?: GetSavedServersQueryVariables) => variables === undefined ? ['GetSavedServers.infinite'] : ['GetSavedServers.infinite', variables];
+
+
+useGetSavedServersQuery.fetcher = (variables?: GetSavedServersQueryVariables, options?: RequestInit['headers']) => fetcher<GetSavedServersQuery, GetSavedServersQueryVariables>(GetSavedServersDocument, variables, options);
+
+export const GetSourceKindsDocument = `
+    query GetSourceKinds {
+  sourceKinds {
+    kind
+    displayName
+    needsCredentials
+    defaultPort
+  }
+}
+    `;
+
+export const useGetSourceKindsQuery = <
+      TData = GetSourceKindsQuery,
+      TError = unknown
+    >(
+      variables?: GetSourceKindsQueryVariables,
+      options?: Omit<UseQueryOptions<GetSourceKindsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetSourceKindsQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetSourceKindsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetSourceKinds'] : ['GetSourceKinds', variables],
+    queryFn: fetcher<GetSourceKindsQuery, GetSourceKindsQueryVariables>(GetSourceKindsDocument, variables),
+    ...options
+  }
+    )};
+
+useGetSourceKindsQuery.getKey = (variables?: GetSourceKindsQueryVariables) => variables === undefined ? ['GetSourceKinds'] : ['GetSourceKinds', variables];
+
+export const useInfiniteGetSourceKindsQuery = <
+      TData = InfiniteData<GetSourceKindsQuery>,
+      TError = unknown
+    >(
+      variables: GetSourceKindsQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetSourceKindsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetSourceKindsQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetSourceKindsQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetSourceKinds.infinite'] : ['GetSourceKinds.infinite', variables],
+      queryFn: (metaData) => fetcher<GetSourceKindsQuery, GetSourceKindsQueryVariables>(GetSourceKindsDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetSourceKindsQuery.getKey = (variables?: GetSourceKindsQueryVariables) => variables === undefined ? ['GetSourceKinds.infinite'] : ['GetSourceKinds.infinite', variables];
+
+
+useGetSourceKindsQuery.fetcher = (variables?: GetSourceKindsQueryVariables, options?: RequestInit['headers']) => fetcher<GetSourceKindsQuery, GetSourceKindsQueryVariables>(GetSourceKindsDocument, variables, options);
+
+export const GetConnectedServerDocument = `
+    query GetConnectedServer {
+  connectedServer {
+    ...ServerFragment
+  }
+}
+    ${ServerFragmentFragmentDoc}`;
+
+export const useGetConnectedServerQuery = <
+      TData = GetConnectedServerQuery,
+      TError = unknown
+    >(
+      variables?: GetConnectedServerQueryVariables,
+      options?: Omit<UseQueryOptions<GetConnectedServerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetConnectedServerQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetConnectedServerQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetConnectedServer'] : ['GetConnectedServer', variables],
+    queryFn: fetcher<GetConnectedServerQuery, GetConnectedServerQueryVariables>(GetConnectedServerDocument, variables),
+    ...options
+  }
+    )};
+
+useGetConnectedServerQuery.getKey = (variables?: GetConnectedServerQueryVariables) => variables === undefined ? ['GetConnectedServer'] : ['GetConnectedServer', variables];
+
+export const useInfiniteGetConnectedServerQuery = <
+      TData = InfiniteData<GetConnectedServerQuery>,
+      TError = unknown
+    >(
+      variables: GetConnectedServerQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetConnectedServerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetConnectedServerQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetConnectedServerQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetConnectedServer.infinite'] : ['GetConnectedServer.infinite', variables],
+      queryFn: (metaData) => fetcher<GetConnectedServerQuery, GetConnectedServerQueryVariables>(GetConnectedServerDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetConnectedServerQuery.getKey = (variables?: GetConnectedServerQueryVariables) => variables === undefined ? ['GetConnectedServer.infinite'] : ['GetConnectedServer.infinite', variables];
+
+
+useGetConnectedServerQuery.fetcher = (variables?: GetConnectedServerQueryVariables, options?: RequestInit['headers']) => fetcher<GetConnectedServerQuery, GetConnectedServerQueryVariables>(GetConnectedServerDocument, variables, options);
 
 export const ClearTracklistDocument = `
     mutation ClearTracklist {

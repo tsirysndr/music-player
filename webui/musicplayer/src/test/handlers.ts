@@ -102,6 +102,15 @@ export const handlers = [
   graphql.mutation("LikeTrack", () =>
     HttpResponse.json({ data: { likeTrack: true } })
   ),
+  graphql.query("GetSavedServers", () =>
+    HttpResponse.json({ data: { savedServers } })
+  ),
+  graphql.query("GetSourceKinds", () =>
+    HttpResponse.json({ data: { sourceKinds } })
+  ),
+  graphql.query("GetConnectedServer", () =>
+    HttpResponse.json({ data: { connectedServer: null } })
+  ),
   // Anything the app asks for that has no operation name (the hand-written
   // `fetcher` calls in the radio and liked pages) falls through to here.
   graphql.operation(() => HttpResponse.json({ data: {} })),
@@ -162,5 +171,53 @@ export const extensions = [
     libraryRead: true,
     status: "disabled",
     path: "/extensions/mood-predicate",
+  },
+];
+
+/** As the daemon's provider registry describes itself. */
+export const sourceKinds = [
+  {
+    __typename: "SourceKind",
+    kind: "subsonic",
+    displayName: "Subsonic / Navidrome",
+    needsCredentials: true,
+    defaultPort: 4533,
+  },
+  {
+    __typename: "SourceKind",
+    kind: "jellyfin",
+    displayName: "Jellyfin",
+    needsCredentials: true,
+    defaultPort: 8096,
+  },
+  {
+    __typename: "SourceKind",
+    kind: "music-player",
+    displayName: "music-player",
+    needsCredentials: false,
+    defaultPort: 5053,
+  },
+];
+
+export const savedServers = [
+  {
+    __typename: "Server",
+    id: "5f2b1c9d4e7a8b3c6d0e1f2a3b4c5d6e",
+    kind: "subsonic",
+    name: "Living room NAS",
+    url: "http://192.168.1.10:4533",
+    username: "tsiry",
+    hasPassword: true,
+    connected: false,
+  },
+  {
+    __typename: "Server",
+    id: "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d",
+    kind: "jellyfin",
+    name: "Media",
+    url: "http://media.home.lan:8096",
+    username: "tsiry",
+    hasPassword: true,
+    connected: false,
   },
 ];

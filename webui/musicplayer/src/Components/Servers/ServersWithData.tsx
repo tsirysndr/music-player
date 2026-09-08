@@ -1,85 +1,146 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  useListCastDevicesQuery,
-  useListDevicesQuery,
+  useAddServerMutation,
+  useConnectToServerMutation,
+  useDeleteServerMutation,
+  useDisconnectFromServerMutation,
+  useGetSavedServersQuery,
+  useGetSourceKindsQuery,
 } from "../../Hooks/GraphQL";
-import { useDevices } from "../../Hooks/useDevices";
+import AddServerForm, { type AddServerValues } from "./AddServerForm";
 import Servers, { type ServerItem } from "./Servers";
 
-/** The atoms carry `type`; the page wants the daemon's word for it, `kind`. */
-const toItem = (
-  device: { id: string; name: string; type: string },
-  cast: boolean
-): ServerItem => ({
-  id: device.id,
-  name: device.name,
-  kind: device.type,
-  cast,
-});
+/**
+ * Everything the library screens read changes when the connected server does,
+ * so a connect or disconnect invalidates the lot.
+ *
+ * Deliberately *not* a page reload, which is what the device-connect path used
+ * to do: audio is produced by the daemon, so a reload would not stop playback,
+ * but it tears down the subscriptions and flashes the whole app for no reason.
+ */
+const LIBRARY_QUERIES = [
+  "GetTracks",
+  "GetAlbums",
+  "GetArtists",
+  "GetAlbum",
+  "GetArtist",
+  "GetPlaylists",
+  "GetPlaylist",
+  "GetLikedTracks",
+  "Search",
+];
 
 const ServersWithData = () => {
-  const {
-    devices,
-    castDevices,
-    currentDevice,
-    currentCastDevice,
-    connectToDevice,
-    connectToCastDevice,
-    disconnectFromDevice,
-    disconnectFromCastDevice,
-  } = useDevices();
   const queryClient = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
+  const [formError, setFormError] = useState<string>();
 
-  // The lists themselves live in atoms fed by `useDevicesSync`; these two are
-  // only here for the loading state and so the refresh button has something
-  // to invalidate.
-  const { isLoading: devicesLoading } = useListDevicesQuery();
-  const { isLoading: castLoading } = useListCastDevicesQuery();
+  const { data, isLoading, refetch } = useGetSavedServersQuery();
+  const { data: kindData } = useGetSourceKindsQuery();
 
-  const connect = async (server: ServerItem) => {
-    setBusyId(server.id);
+  const refreshLibrary = async () => {
+    await refetch();
+    await Promise.all(
+      LIBRARY_QUERIES.map((name) =>
+        queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === name,
+        })
+      )
+    );
+  };
+
+  const addServer = useAddServerMutation();
+  const connect = useConnectToServerMutation();
+  const disconnect = useDisconnectFromServerMutation();
+  const remove = useDeleteServerMutation();
+
+  const servers: ServerItem[] = (data?.savedServers ?? []).map((server) => ({
+    id: server.id,
+    kind: server.kind,
+    name: server.name,
+    url: server.url,
+    username: server.username,
+    connected: server.connected,
+  }));
+
+  const connectTo = async (id: string) => {
+    setBusyId(id);
     setError(undefined);
     try {
-      if (server.cast) await connectToCastDevice({ id: server.id });
-      else await connectToDevice({ id: server.id });
+      await connect.mutateAsync({ id });
+      await refreshLibrary();
     } catch (cause) {
-      setError(
-        `Could not connect to ${server.name}: ${
-          cause instanceof Error ? cause.message : "unknown error"
-        }`
-      );
+      setError(message(cause));
+      throw cause;
     } finally {
       setBusyId(undefined);
     }
   };
 
   return (
-    <Servers
-      servers={devices.map((device) => toItem(device, false))}
-      castDevices={castDevices.map((device) => toItem(device, true))}
-      connectedId={currentCastDevice?.id ?? currentDevice?.id}
-      loading={devicesLoading || castLoading}
-      error={error}
-      busyId={busyId}
-      onConnect={connect}
-      onDisconnect={() => {
-        if (currentCastDevice) disconnectFromCastDevice();
-        if (currentDevice) disconnectFromDevice();
-      }}
-      onRefresh={() => {
-        setError(undefined);
-        queryClient.invalidateQueries({
-          queryKey: useListDevicesQuery.getKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: useListCastDevicesQuery.getKey(),
-        });
-      }}
-    />
+    <>
+      <Servers
+        servers={servers}
+        kinds={kindData?.sourceKinds ?? []}
+        loading={isLoading}
+        error={error}
+        busyId={busyId}
+        onAdd={() => {
+          setFormError(undefined);
+          setAddOpen(true);
+        }}
+        onConnect={(server) => {
+          connectTo(server.id).catch(() => {});
+        }}
+        onDisconnect={async () => {
+          setError(undefined);
+          try {
+            await disconnect.mutateAsync({});
+            await refreshLibrary();
+          } catch (cause) {
+            setError(message(cause));
+          }
+        }}
+        onDelete={async (server) => {
+          setError(undefined);
+          try {
+            await remove.mutateAsync({ id: server.id });
+            // Deleting the connected one drops back to the local library, so
+            // the screens have to be re-read either way.
+            await refreshLibrary();
+          } catch (cause) {
+            setError(message(cause));
+          }
+        }}
+      />
+      <AddServerForm
+        isOpen={addOpen}
+        kinds={kindData?.sourceKinds ?? []}
+        error={formError}
+        submitting={addServer.isPending || connect.isPending}
+        onClose={() => setAddOpen(false)}
+        onSubmit={async (values: AddServerValues) => {
+          setFormError(undefined);
+          try {
+            // Saved and connected in one go: adding a server is only ever a
+            // step towards using it.
+            const added = await addServer.mutateAsync({ input: values });
+            await connectTo(added.addServer.id);
+            setAddOpen(false);
+          } catch (cause) {
+            setFormError(message(cause));
+          }
+        }}
+      />
+    </>
   );
 };
+
+/** The daemon's own words, which say what actually went wrong. */
+const message = (cause: unknown) =>
+  cause instanceof Error ? cause.message : "Something went wrong";
 
 export default ServersWithData;

@@ -2008,8 +2008,7 @@ export component ServerRow inherits Rectangle {
 
     height: 56px;
     border-radius: Theme.control-radius;
-    background: root.server.connected ? Theme.selected-bg
-        : touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
+    background: touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
 
     touch := TouchArea {
         clicked => { root.connect(); }
@@ -2031,12 +2030,25 @@ export component ServerRow inherits Rectangle {
             alignment: center;
             spacing: 2px;
             horizontal-stretch: 1;
-            Text {
-                text: root.server.name;
-                color: Theme.text;
-                font-size: 13px;
-                font-weight: 600;
-                overflow: elide;
+            HorizontalLayout {
+                spacing: 8px;
+                // A dot, not a filled row: the row is still a row, this one
+                // just happens to be the live one.
+                if root.server.connected : Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    y: (parent.height - self.height) / 2;
+                    background: Theme.meter-low;
+                }
+                Text {
+                    text: root.server.name;
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 600;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                }
             }
             Text {
                 text: (root.server.kind == "jellyfin" ? "Jellyfin · " : "Subsonic · ") + root.server.url;

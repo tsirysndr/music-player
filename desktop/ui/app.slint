@@ -2628,7 +2628,7 @@ export component AppWindow inherits Window {
                         letter-spacing: 1px;
                     }
                     kind-dd := Dropdown {
-                        options: ["Subsonic / Navidrome", "Jellyfin"];
+                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player"];
                         current: 0;
                         menu-width: 190px;
                         selected(i) => { self.current = i; }
@@ -2640,9 +2640,17 @@ export component AppWindow inherits Window {
                 }
                 url-field := FormField {
                     label: "SERVER URL";
-                    placeholder: "http://192.168.1.10:4533";
+                    // The port each kind actually listens on, so the example is
+                    // one that would work rather than one to be edited.
+                    placeholder: kind-dd.current == 1 ? "http://192.168.1.10:8096"
+                        : kind-dd.current == 2 ? "http://192.168.1.10:5053"
+                        : "http://192.168.1.10:4533";
                 }
                 HorizontalLayout {
+                    // A peer daemon has no login, so asking for one would be
+                    // asking for something that gets ignored.
+                    visible: kind-dd.current != 2;
+                    height: kind-dd.current == 2 ? 0px : self.preferred-height;
                     spacing: 12px;
                     user-field := FormField {
                         label: "USERNAME";
@@ -2695,7 +2703,9 @@ export component AppWindow inherits Window {
                             clicked => {
                                 if (url-field.text != "") {
                                     root.server-add(
-                                        kind-dd.current == 1 ? "jellyfin" : "subsonic",
+                                        kind-dd.current == 1 ? "jellyfin"
+                                            : kind-dd.current == 2 ? "music-player"
+                                            : "subsonic",
                                         name-field.text == "" ? url-field.text : name-field.text,
                                         url-field.text,
                                         user-field.text,

@@ -49,7 +49,6 @@ describe("ServersWithData", () => {
 
     render();
     const connected = await row("Living room NAS");
-    expect(within(connected).getByText("Connected")).toBeInTheDocument();
     // The other row still offers to connect.
     const other = await row("Media");
     expect(
@@ -62,6 +61,38 @@ describe("ServersWithData", () => {
     expect(
       screen.getByRole("button", { name: "Use local library" })
     ).toBeInTheDocument();
+    // The row you are reading from is where you would look to stop.
+    expect(
+      within(connected).getByRole("button", { name: "Disconnect" })
+    ).toBeInTheDocument();
+  });
+
+  it("disconnects back to the local library", async () => {
+    const seen = vi.fn();
+    server.use(
+      graphql.query("GetSavedServers", () =>
+        HttpResponse.json({
+          data: {
+            savedServers: fixtures.savedServers.map((entry, index) => ({
+              ...entry,
+              connected: index === 0,
+            })),
+          },
+        })
+      ),
+      graphql.mutation("DisconnectFromServer", () => {
+        seen();
+        return HttpResponse.json({
+          data: { disconnectFromServer: { id: "a", name: "NAS" } },
+        });
+      })
+    );
+
+    const { user } = render();
+    await user.click(
+      await screen.findByRole("button", { name: "Disconnect" })
+    );
+    await waitFor(() => expect(seen).toHaveBeenCalled());
   });
 
   it("connects when a row is clicked", async () => {

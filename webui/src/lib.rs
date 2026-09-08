@@ -14,7 +14,6 @@ use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fs::NamedFile;
 use mime_guess::from_path;
-use music_player_renderer::CurrentReceiverDevice;
 use music_player_entity::track as track_entity;
 use music_player_graphql::{
     scan_devices,
@@ -23,6 +22,7 @@ use music_player_graphql::{
 };
 use music_player_playback::player::PlayerCommand;
 use music_player_provider::ProviderState;
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_settings::{get_application_directory, read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;

@@ -1,8 +1,10 @@
 use music_player_entity::{album, playlist, playlist_tracks, track};
+use music_player_provider::{Page, ProviderState};
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
 };
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::api::{
@@ -37,11 +39,12 @@ fn spec_of(smart: &SmartPlaylist) -> music_player_rsql::QuerySpec {
 
 pub struct Playlist {
     db: Database,
+    providers: Arc<ProviderState>,
 }
 
 impl Playlist {
-    pub fn new(db: Database) -> Self {
-        Self { db }
+    pub fn new(db: Database, providers: Arc<ProviderState>) -> Self {
+        Self { db, providers }
     }
 }
 
@@ -260,6 +263,18 @@ impl PlaylistService for Playlist {
         &self,
         _request: tonic::Request<FindAllRequest>,
     ) -> Result<tonic::Response<FindAllResponse>, tonic::Status> {
+        if let Some(current) = self.providers.current().await {
+            let playlists = current
+                .provider
+                .playlists(Page::default())
+                .await
+                .map_err(crate::library::provider_status)?;
+            let playlists = music_player_provider::url::decorate_all(playlists, &current.config);
+            return Ok(tonic::Response::new(FindAllResponse {
+                playlists: playlists.into_iter().map(Into::into).collect(),
+            }));
+        }
+
         let result = PlaylistRepository::new(self.db.get_connection())
             .find_all()
             .await
@@ -273,6 +288,21 @@ impl PlaylistService for Playlist {
         &self,
         request: tonic::Request<GetPlaylistDetailsRequest>,
     ) -> Result<tonic::Response<GetPlaylistDetailsResponse>, tonic::Status> {
+        if let Some(current) = self.providers.current().await {
+            let playlist = current
+                .provider
+                .playlist(&request.get_ref().id)
+                .await
+                .map_err(crate::library::provider_status)?;
+            let playlist = music_player_provider::url::decorate(playlist, &current.config);
+            return Ok(tonic::Response::new(GetPlaylistDetailsResponse {
+                id: playlist.id,
+                name: playlist.name,
+                description: playlist.description.unwrap_or_default(),
+                tracks: playlist.tracks.into_iter().map(Into::into).collect(),
+            }));
+        }
+
         let result = PlaylistRepository::new(self.db.get_connection())
             .find(&request.get_ref().id)
             .await

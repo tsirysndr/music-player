@@ -114,8 +114,8 @@ impl Jellyfin {
     }
 
     fn url(&self, path: &str, params: &[(&str, &str)]) -> Result<Url, ProviderError> {
-        let mut url = Url::parse(&format!("{}{}", self.base_url, path))
-            .map_err(ProviderError::other)?;
+        let mut url =
+            Url::parse(&format!("{}{}", self.base_url, path)).map_err(ProviderError::other)?;
         {
             let mut query = url.query_pairs_mut();
             for (key, value) in params {
@@ -440,7 +440,10 @@ impl MusicProvider for Jellyfin {
     }
 
     async fn set_liked(&self, id: &str, liked: bool) -> Result<(), ProviderError> {
-        let url = self.url(&format!("/Users/{}/FavoriteItems/{}", self.user_id, id), &[])?;
+        let url = self.url(
+            &format!("/Users/{}/FavoriteItems/{}", self.user_id, id),
+            &[],
+        )?;
         let request = if liked {
             http::client().post(url.as_str())
         } else {
@@ -484,7 +487,10 @@ impl ProviderFactory for JellyfinFactory {
         8096
     }
 
-    async fn connect(&self, config: &ProviderConfig) -> Result<Arc<dyn MusicProvider>, ProviderError> {
+    async fn connect(
+        &self,
+        config: &ProviderConfig,
+    ) -> Result<Arc<dyn MusicProvider>, ProviderError> {
         let mut client = Jellyfin::with_credentials(
             &config.url,
             config.username.as_deref().unwrap_or_default(),

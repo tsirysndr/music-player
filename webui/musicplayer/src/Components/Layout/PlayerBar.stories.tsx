@@ -31,6 +31,7 @@ const meta: Meta<typeof PlayerBar> = {
     onToggleLike: noop,
     onVolume: noop,
     onToggleMute: noop,
+    onOpenDevices: noop,
     onToggleQueue: noop,
     onOpenFullPlayer: noop,
     onOpenAudioSettings: noop,

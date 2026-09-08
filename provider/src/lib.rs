@@ -162,7 +162,8 @@ pub trait MusicProvider: Send + Sync + 'static {
     // ── required ────────────────────────────────────────────────────────────
 
     async fn albums(&self, filter: Option<&str>, page: Page) -> Result<Vec<Album>, ProviderError>;
-    async fn artists(&self, filter: Option<&str>, page: Page) -> Result<Vec<Artist>, ProviderError>;
+    async fn artists(&self, filter: Option<&str>, page: Page)
+        -> Result<Vec<Artist>, ProviderError>;
     async fn tracks(&self, filter: Option<&str>, page: Page) -> Result<Vec<Track>, ProviderError>;
     async fn album(&self, id: &str) -> Result<Album, ProviderError>;
     async fn artist(&self, id: &str) -> Result<Artist, ProviderError>;
@@ -190,10 +191,7 @@ pub trait MusicProvider: Send + Sync + 'static {
     /// server that can list albums but not artists should still find albums.
     async fn search(&self, keyword: &str, page: Page) -> Result<SearchResults, ProviderError> {
         Ok(SearchResults {
-            artists: self
-                .artists(Some(keyword), page)
-                .await
-                .unwrap_or_default(),
+            artists: self.artists(Some(keyword), page).await.unwrap_or_default(),
             albums: self.albums(Some(keyword), page).await.unwrap_or_default(),
             tracks: self.tracks(Some(keyword), page).await.unwrap_or_default(),
         })

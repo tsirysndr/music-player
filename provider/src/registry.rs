@@ -45,7 +45,10 @@ pub trait ProviderFactory: Send + Sync + 'static {
     /// Open a connection and prove it works. Returning `Ok` means the server
     /// answered — [`crate::ProviderState::connect`] will make it current only
     /// after this succeeds.
-    async fn connect(&self, config: &ProviderConfig) -> Result<Arc<dyn MusicProvider>, ProviderError>;
+    async fn connect(
+        &self,
+        config: &ProviderConfig,
+    ) -> Result<Arc<dyn MusicProvider>, ProviderError>;
 }
 
 #[derive(Default)]
@@ -166,7 +169,10 @@ mod tests {
         fn default_port(&self) -> u16 {
             8080
         }
-        async fn connect(&self, _: &ProviderConfig) -> Result<Arc<dyn MusicProvider>, ProviderError> {
+        async fn connect(
+            &self,
+            _: &ProviderConfig,
+        ) -> Result<Arc<dyn MusicProvider>, ProviderError> {
             Ok(Arc::new(Stub))
         }
     }

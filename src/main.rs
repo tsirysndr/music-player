@@ -404,7 +404,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let providers = {
         let mut registry = music_player_provider::ProviderRegistry::new();
         music_player_provider::register_builtin(&mut registry);
-        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(
+            registry,
+        )))
     };
     // Refuse to use ourselves as a provider: with gRPC reads routed through
     // one, that would recurse until something ran out.
@@ -433,6 +435,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = cmd_tx.lock().unwrap().send(PlayerCommand::RestoreQueue);
 
         let grpc_db = db.clone();
+        let grpc_providers = Arc::clone(&providers);
+        let ws_providers = Arc::clone(&providers);
         thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -444,6 +448,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Arc::clone(&cmd_tx),
                     Arc::clone(&peer_map),
                     grpc_db,
+                    grpc_providers,
                 )
                 .start(),
             ) {
@@ -461,7 +466,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build()
                 .unwrap();
             match runtime.block_on(
-                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, ws_db).start_ws(),
+                MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, ws_db, ws_providers)
+                    .start_ws(),
             ) {
                 Ok(_) => {}
                 Err(e) => {

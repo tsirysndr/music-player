@@ -41,7 +41,7 @@ async fn start_webui() {
             ));
             super::start_webui(cmd_tx, tracklist, providers).await
         })
-            .unwrap();
+        .unwrap();
     });
 
     thread::sleep(Duration::from_secs(5));

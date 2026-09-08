@@ -43,6 +43,9 @@ struct UiState {
     discovered: Vec<(String, String, u16)>,
     switcher_query: String,
     active_server: String,
+    /// The provider the daemon is reading its library from, as a url. Empty
+    /// means the daemon's own library.
+    active_provider: String,
     pl_detail_id: Option<String>,
     pl_detail_track_ids: Vec<String>,
     picker_query: String,
@@ -492,6 +495,12 @@ fn server_item(s: &servers::SavedServer, connected_url: &str) -> ServerItem {
     }
 }
 
+/// Remember which provider the daemon is reading from, so the switcher marks
+/// the right row.
+pub fn set_active_provider(url: &str) {
+    STATE.with(|s| s.borrow_mut().active_provider = url.to_string());
+}
+
 pub fn refresh_servers_model(app: &AppWindow) {
     let connected = app.get_provider_url().to_string();
     let items: Vec<ServerItem> = STATE.with(|s| {
@@ -712,14 +721,26 @@ pub fn ui_set_discovered(app: &AppWindow, found: Vec<(String, String, u16)>) {
     app.set_switcher_results(ModelRc::new(VecModel::from(switcher_results(&q))));
 }
 
+/// One switcher row.
+///
+/// "Connected" means the daemon is *reading its library* from this entry. With
+/// a remote provider connected that is never the local machine, which is what
+/// the switcher used to claim regardless.
 fn server_row(
     kind: &str,
     title: String,
     mut subtitle: String,
     id: String,
     active: &str,
+    provider: &str,
 ) -> PaletteItem {
-    if subtitle == active || id == active {
+    let connected = if provider.is_empty() {
+        subtitle == active || id == active
+    } else {
+        let same = |value: &str| value.trim_end_matches('/') == provider.trim_end_matches('/');
+        same(&subtitle) || same(&id)
+    };
+    if connected {
         subtitle = format!("{subtitle} · connected");
     }
     PaletteItem {
@@ -740,6 +761,7 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
     STATE.with(|s| {
         let st = s.borrow();
         let active = st.active_server.clone();
+        let provider = st.active_provider.clone();
         let mut out: Vec<PaletteItem> = Vec::new();
 
         if hit(&["this machine", "localhost", "127.0.0.1:5051", "embedded"]) {
@@ -749,6 +771,7 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
                 "127.0.0.1:5051".into(),
                 "127.0.0.1:5051".into(),
                 &active,
+                &provider,
             ));
         }
         for (name, host, port) in &st.discovered {
@@ -763,6 +786,7 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
                     addr.clone(),
                     addr,
                     &active,
+                    &provider,
                 ));
             }
         }
@@ -778,6 +802,7 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
                     srv.url.clone(),
                     format!("srv:{i}"),
                     &active,
+                    &provider,
                 ));
             }
         }
@@ -790,6 +815,7 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
                 "remote music-player".into(),
                 raw.to_string(),
                 &active,
+                &provider,
             ));
         }
         out
@@ -1335,6 +1361,12 @@ fn main() -> Result<(), slint::PlatformError> {
             let kind = item.kind.to_string();
             let id = item.id.to_string();
             if kind == "server" {
+                // Switching daemons also drops any remote provider: the new
+                // daemon has its own idea of what is connected.
+                STATE.with(|s| s.borrow_mut().active_provider.clear());
+                app.set_provider_name("".into());
+                app.set_provider_url("".into());
+                let _ = tx.send(rpc::Cmd::DisconnectProvider);
                 let (host, port) = match id.rsplit_once(':') {
                     Some((h, p)) => (h.to_string(), p.parse().unwrap_or(5051)),
                     None => (id.clone(), 5051),
@@ -1623,6 +1655,19 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             });
             refresh_servers_model(&app);
+        });
+    }
+    {
+        let tx = tx.clone();
+        let app_weak = app.as_weak();
+        app.on_server_disconnect(move || {
+            let app = app_weak.unwrap();
+            app.set_server_error("".into());
+            app.set_provider_name("".into());
+            app.set_provider_url("".into());
+            set_active_provider("");
+            refresh_servers_model(&app);
+            let _ = tx.send(rpc::Cmd::DisconnectProvider);
         });
     }
     {

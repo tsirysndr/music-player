@@ -41,11 +41,7 @@ impl ProviderConfig {
         }
     }
 
-    pub fn with_credentials(
-        mut self,
-        username: Option<String>,
-        password: Option<String>,
-    ) -> Self {
+    pub fn with_credentials(mut self, username: Option<String>, password: Option<String>) -> Self {
         // Empty strings are how a form says "no credentials"; normalising here
         // keeps every backend from having to check twice.
         self.username = username.filter(|value| !value.is_empty());
@@ -138,7 +134,10 @@ mod tests {
     fn the_id_survives_a_trailing_slash() {
         let bare = ProviderConfig::new("subsonic", "NAS", "http://nas.lan:4533");
         let slashed = ProviderConfig::new("subsonic", "NAS", "http://nas.lan:4533/");
-        assert_eq!(bare.id, slashed.id, "the same server added twice is one row");
+        assert_eq!(
+            bare.id, slashed.id,
+            "the same server added twice is one row"
+        );
         assert_eq!(slashed.url, "http://nas.lan:4533");
     }
 

@@ -87,7 +87,10 @@ impl ProviderState {
     /// previous one live and whatever is playing untouched. The write lock is
     /// held only for the pointer swap, never across a network request, so
     /// switching servers cannot block a read that is already in flight.
-    pub async fn connect(&self, config: ProviderConfig) -> Result<ConnectedProvider, ProviderError> {
+    pub async fn connect(
+        &self,
+        config: ProviderConfig,
+    ) -> Result<ConnectedProvider, ProviderError> {
         self.reject_self(&config).await?;
 
         let source = self.registry.connect(&config).await?;
@@ -197,7 +200,10 @@ mod tests {
         fn default_port(&self) -> u16 {
             80
         }
-        async fn connect(&self, config: &ProviderConfig) -> Result<Arc<dyn MusicProvider>, ProviderError> {
+        async fn connect(
+            &self,
+            config: &ProviderConfig,
+        ) -> Result<Arc<dyn MusicProvider>, ProviderError> {
             let n = self.calls.fetch_add(1, Ordering::SeqCst);
             if n >= self.ok_for {
                 return Err(ProviderError::Transport("connection refused".into()));
@@ -276,14 +282,22 @@ mod tests {
         state.add_own_address("192.168.1.10", 5053).await;
 
         let error = state
-            .connect(ProviderConfig::new("stub", "Me", "http://192.168.1.10:5053"))
+            .connect(ProviderConfig::new(
+                "stub",
+                "Me",
+                "http://192.168.1.10:5053",
+            ))
             .await
             .unwrap_err();
         assert!(error.to_string().contains("this server"));
 
         // A different port on the same host is a different server.
         assert!(state
-            .connect(ProviderConfig::new("stub", "Peer", "http://192.168.1.10:5055"))
+            .connect(ProviderConfig::new(
+                "stub",
+                "Peer",
+                "http://192.168.1.10:5055"
+            ))
             .await
             .is_ok());
     }

@@ -171,11 +171,7 @@ impl MusicProvider for MusicPlayer {
     async fn playlists(&self, page: Page) -> Result<Vec<Playlist>, ProviderError> {
         let query = "query { playlists { id name description } }";
         let playlists: Vec<RemotePlaylist> = self.query(query, json!({}), "playlists").await?;
-        Ok(page
-            .slice(playlists)
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        Ok(page.slice(playlists).into_iter().map(Into::into).collect())
     }
 
     async fn playlist(&self, id: &str) -> Result<Playlist, ProviderError> {

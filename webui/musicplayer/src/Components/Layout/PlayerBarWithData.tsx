@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { fetcher } from "../../Api/fetcher";
 import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
+import { useDevices } from "../../Hooks/useDevices";
 import { useVolume } from "../../Hooks/useVolume";
 import {
   audioSettingsOpenAtom,
@@ -60,13 +61,18 @@ const useRadioBookmark = (stationId?: string) => {
 };
 
 /** Connects the player bar to playback, likes, volume and the chrome flags. */
-const PlayerBarWithData = () => {
+const PlayerBarWithData = ({
+  onOpenDevices,
+}: {
+  onOpenDevices: () => void;
+}) => {
   const { nowPlaying, play, pause, next, previous, seek } = usePlayback();
   const { isLiked, toggleLike } = useLikes();
   const [queueOpen, setQueueOpen] = useAtom(queueOpenAtom);
   const [audioOpen, setAudioOpen] = useAtom(audioSettingsOpenAtom);
   const [fullPlayerOpen, setFullPlayer] = useAtom(fullPlayerOpenAtom);
   const { volume, muted, change: changeVolume, toggleMute } = useVolume();
+  const { currentCastDevice } = useDevices();
 
   const isRadio = !!nowPlaying?.id?.startsWith("radio:");
   const { bookmarked, toggle: toggleBookmark } = useRadioBookmark(
@@ -104,6 +110,8 @@ const PlayerBarWithData = () => {
       onToggleQueue={() => setQueueOpen((open) => !open)}
       onOpenFullPlayer={() => setFullPlayer(true)}
       onOpenAudioSettings={() => setAudioOpen((open) => !open)}
+      onOpenDevices={onOpenDevices}
+      castingTo={currentCastDevice?.name}
     />
   );
 };

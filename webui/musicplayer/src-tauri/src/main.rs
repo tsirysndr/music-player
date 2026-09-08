@@ -10,7 +10,6 @@ use futures::{
     future::Either::{Left, Right},
     stream::StreamExt,
 };
-use music_player_renderer::CurrentReceiverDevice;
 use music_player_graphql::{
     scan_devices,
     schema::{
@@ -22,6 +21,7 @@ use music_player_graphql::{
     MusicPlayerSchema,
 };
 use music_player_playback::player::{Player, PlayerEvent};
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;

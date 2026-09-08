@@ -6,14 +6,14 @@
 //! where the audio comes out is the receiver, a different trait behind
 //! different state, and nothing here can reach it.
 
+use super::objects::server::{Server, ServerInput, SourceKind};
+use super::provider;
 use async_graphql::*;
 use music_player_provider::ProviderConfig;
 use music_player_storage::{
     saved_servers::{self, NewServer},
     Database,
 };
-use super::objects::server::{Server, ServerInput, SourceKind};
-use super::provider;
 
 fn now() -> String {
     chrono::Utc::now().to_rfc3339()
@@ -91,7 +91,10 @@ impl ServersMutation {
             return Err(Error::new("a server needs a url"));
         }
         if provider::state(ctx).registry().get(&input.kind).is_none() {
-            return Err(Error::new(format!("unknown kind of server: {}", input.kind)));
+            return Err(Error::new(format!(
+                "unknown kind of server: {}",
+                input.kind
+            )));
         }
 
         let server = NewServer::new(input.kind, input.name, input.url)

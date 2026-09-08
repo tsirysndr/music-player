@@ -59,12 +59,14 @@ const ServerRow = ({
   kindLabel,
   busy,
   onConnect,
+  onDisconnect,
   onDelete,
 }: {
   server: ServerItem;
   kindLabel: string;
   busy: boolean;
   onConnect: () => void;
+  onDisconnect: () => void;
   onDelete: () => void;
 }) => {
   const Icon = KIND_ICON[server.kind] ?? Icons.server;
@@ -107,9 +109,11 @@ const ServerRow = ({
           Connecting…
         </span>
       ) : server.connected ? (
-        <span className="w-[76px] shrink-0 text-right text-[11px] font-semibold text-accent">
-          Connected
-        </span>
+        // Actionable rather than a label: the row you are reading from is
+        // where you would look to stop reading from it.
+        <Button variant="outline" onClick={onDisconnect}>
+          Disconnect
+        </Button>
       ) : (
         <IconButton
           icon={Icons.connect}
@@ -209,6 +213,7 @@ const Servers: FC<ServersProps> = ({
               kindLabel={label(server.kind)}
               busy={server.id === busyId}
               onConnect={() => onConnect(server)}
+              onDisconnect={onDisconnect}
               onDelete={() => onDelete(server)}
             />
           ))}

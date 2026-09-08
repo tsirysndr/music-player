@@ -8485,6 +8485,7 @@ dependencies = [
  "futures-util",
  "music-player-migration",
  "music-player-playback",
+ "music-player-provider",
  "music-player-scanner",
  "music-player-server",
  "music-player-settings",
@@ -8750,6 +8751,7 @@ dependencies = [
  "music-player-entity",
  "music-player-migration",
  "music-player-playback",
+ "music-player-provider",
  "music-player-rsql",
  "music-player-scanner",
  "music-player-settings",
@@ -11756,9 +11758,9 @@ dependencies = [
 
 [[package]]
 name = "rockbox-codecs"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96e85d18d48da42648993df4067ad25dabe38a255dee7ab808292cb71978591c"
+checksum = "60c0319e44b8c458680bb3f16eae7f47d065891086a341476af7f6a4cab4e6b9"
 dependencies = [
  "cc",
  "rockbox-metadata",
@@ -11775,18 +11777,18 @@ dependencies = [
 
 [[package]]
 name = "rockbox-metadata"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4d438a91e9bb4fe2243acfef1c135a229b6a64f95f48b0d7eaf7a936e5abb92"
+checksum = "db63af95f49518272074eb0f9f397ea6e841eed34d3f5f84e71a6fe2fa63f81e"
 dependencies = [
  "cc",
 ]
 
 [[package]]
 name = "rockbox-playback"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c650635d15737305f33bc4e52352dfbb34ac47e2853c61db3479a95526893e10"
+checksum = "362365474b246e1f1483f53d52c85d25365607424e3da3141c36e7d14c898706"
 dependencies = [
  "cpal",
  "quick-xml 0.37.5",

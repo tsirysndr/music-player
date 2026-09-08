@@ -5,9 +5,7 @@ use music_player_client::{
     library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
     tracklist::TracklistClient,
 };
-use music_player_types::types::{
-    Device, Playback, Track, MUSIC_PLAYER_DEVICE,
-};
+use music_player_types::types::{Device, Playback, Track, MUSIC_PLAYER_DEVICE};
 
 pub struct Client {
     pub library: LibraryClient,

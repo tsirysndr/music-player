@@ -6,8 +6,8 @@ use std::{
 use async_graphql::*;
 
 use futures_util::Stream;
-use music_player_renderer::CurrentReceiverDevice;
 use music_player_provider::ProviderConfig;
+use music_player_renderer::CurrentReceiverDevice;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::simple_broker::SimpleBroker;

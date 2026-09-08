@@ -39,11 +39,7 @@ impl NewServer {
         }
     }
 
-    pub fn with_credentials(
-        mut self,
-        username: Option<String>,
-        password: Option<String>,
-    ) -> Self {
+    pub fn with_credentials(mut self, username: Option<String>, password: Option<String>) -> Self {
         self.username = username.filter(|value| !value.trim().is_empty());
         self.password = password.filter(|value| !value.is_empty());
         self
@@ -117,9 +113,11 @@ pub async fn upsert(
 
     match existing {
         Some(_) => saved_server::Entity::update(row).exec(db).await?,
-        None => saved_server::Entity::insert(row)
-            .exec_with_returning(db)
-            .await?,
+        None => {
+            saved_server::Entity::insert(row)
+                .exec_with_returning(db)
+                .await?
+        }
     };
 
     get(db, &id)
@@ -146,7 +144,10 @@ pub async fn delete(db: &DatabaseConnection, id: &str) -> Result<bool, Error> {
 /// Returns how many rows it added.
 pub async fn import_legacy_once(db: &DatabaseConnection, now: &str) -> usize {
     let mut imported = 0;
-    for server in legacy_json_servers().into_iter().chain(legacy_settings_servers()) {
+    for server in legacy_json_servers()
+        .into_iter()
+        .chain(legacy_settings_servers())
+    {
         match get(db, &server.id()).await {
             Ok(Some(_)) => continue,
             Ok(None) => {}
@@ -221,9 +222,7 @@ fn legacy_settings_servers() -> Vec<NewServer> {
     let mut servers = Vec::new();
     let mut push = |kind: &str, name: &str, url: Option<String>, user, password| {
         if let Some(url) = url.filter(|url| !url.trim().is_empty()) {
-            servers.push(
-                NewServer::new(kind, name, url).with_credentials(user, password),
-            );
+            servers.push(NewServer::new(kind, name, url).with_credentials(user, password));
         }
     };
     push(

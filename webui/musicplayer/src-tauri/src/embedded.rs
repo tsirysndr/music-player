@@ -137,6 +137,17 @@ fn boot() {
     });
     music_player_server::media_controls::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
 
+    // One provider registry per process, shared by the gRPC server and the
+    // GraphQL/web server — otherwise the two disagree about which server the
+    // library screens read from.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+    };
+    let grpc_providers = Arc::clone(&providers);
+    let ws_providers = Arc::clone(&providers);
+
     let grpc_tracklist = Arc::clone(&tracklist);
     let grpc_cmd_tx = Arc::clone(&cmd_tx);
     let grpc_peers = Arc::clone(&peers);
@@ -147,7 +158,14 @@ fn boot() {
             .build()
             .expect("gRPC runtime");
         if let Err(error) = runtime.block_on(
-            MusicPlayerServer::new(grpc_tracklist, grpc_cmd_tx, grpc_peers, grpc_db).start(),
+            MusicPlayerServer::new(
+                grpc_tracklist,
+                grpc_cmd_tx,
+                grpc_peers,
+                grpc_db,
+                grpc_providers,
+            )
+            .start(),
         ) {
             tracing::error!("embedded gRPC server failed: {error}");
         }
@@ -163,7 +181,10 @@ fn boot() {
             .build()
             .expect("websocket runtime");
         if let Err(error) = runtime
-            .block_on(MusicPlayerServer::new(ws_tracklist, ws_cmd_tx, ws_peers, ws_db).start_ws())
+            .block_on(
+                MusicPlayerServer::new(ws_tracklist, ws_cmd_tx, ws_peers, ws_db, ws_providers)
+                    .start_ws(),
+            )
         {
             tracing::error!("embedded websocket server failed: {error}");
         }
@@ -171,13 +192,6 @@ fn boot() {
 
     // One provider registry, shared by every API surface so they cannot
     // disagree about which server the library screens are reading from.
-    let providers = {
-        let mut registry = music_player_provider::ProviderRegistry::new();
-        music_player_provider::register_builtin(&mut registry);
-        std::sync::Arc::new(music_player_provider::ProviderState::new(
-            std::sync::Arc::new(registry),
-        ))
-    };
 
     if let Err(error) = runtime.block_on(start_webui(cmd_tx, tracklist, providers)) {
         tracing::error!("embedded web UI failed: {error}");

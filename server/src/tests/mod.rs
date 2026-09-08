@@ -63,3 +63,13 @@ async fn ensure_test_library() {
         })
         .await;
 }
+
+/// A provider state with nothing connected, so the services take their
+/// local-library branch — which is what these tests exercise.
+pub(crate) fn local_only() -> std::sync::Arc<music_player_provider::ProviderState> {
+    let mut registry = music_player_provider::ProviderRegistry::new();
+    music_player_provider::register_builtin(&mut registry);
+    std::sync::Arc::new(music_player_provider::ProviderState::new(
+        std::sync::Arc::new(registry),
+    ))
+}

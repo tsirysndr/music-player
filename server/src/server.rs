@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::{self, Arc};
 
 use music_player_playback::player::PlayerCommand;
+use music_player_provider::ProviderState;
 use music_player_settings::{read_settings, Settings};
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
@@ -46,6 +47,8 @@ pub struct MusicPlayerServer {
     tracklist: Arc<std::sync::Mutex<TracklistState>>,
     cmd_tx: Arc<std::sync::Mutex<TokioUnboundedSender<PlayerCommand>>>,
     peer_map: PeerMap,
+    /// Where the library is read from, shared with the GraphQL schema.
+    providers: Arc<ProviderState>,
 }
 
 impl MusicPlayerServer {
@@ -54,12 +57,14 @@ impl MusicPlayerServer {
         cmd_tx: Arc<std::sync::Mutex<TokioUnboundedSender<PlayerCommand>>>,
         peer_map: PeerMap,
         db: Database,
+        providers: Arc<ProviderState>,
     ) -> Self {
         Self {
             db,
             tracklist,
             cmd_tx,
             peer_map,
+            providers,
         }
     }
 
@@ -78,7 +83,10 @@ impl MusicPlayerServer {
             .add_service(AddonsServiceServer::new(Addons::new(self.db.clone())))
             .add_service(CoreServiceServer::new(Core::default()))
             .add_service(HistoryServiceServer::new(History::new(self.db.clone())))
-            .add_service(LibraryServiceServer::new(Library::new(self.db.clone())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                self.db.clone(),
+                Arc::clone(&self.providers),
+            )))
             .add_service(MixerServiceServer::new(Mixer::new(Arc::clone(
                 &self.cmd_tx,
             ))))
@@ -86,7 +94,10 @@ impl MusicPlayerServer {
                 Arc::clone(&self.tracklist),
                 Arc::clone(&self.cmd_tx),
             )))
-            .add_service(PlaylistServiceServer::new(Playlist::new(self.db.clone())))
+            .add_service(PlaylistServiceServer::new(Playlist::new(
+                self.db.clone(),
+                Arc::clone(&self.providers),
+            )))
             .add_service(TracklistServiceServer::new(Tracklist::new(
                 Arc::clone(&self.tracklist),
                 Arc::clone(&self.cmd_tx),
@@ -117,7 +128,10 @@ impl MusicPlayerServer {
             .add_service(AddonsServiceServer::new(Addons::new(self.db.clone())))
             .add_service(CoreServiceServer::new(Core::default()))
             .add_service(HistoryServiceServer::new(History::new(self.db.clone())))
-            .add_service(LibraryServiceServer::new(Library::new(self.db.clone())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                self.db.clone(),
+                Arc::clone(&self.providers),
+            )))
             .add_service(MixerServiceServer::new(Mixer::new(Arc::clone(
                 &self.cmd_tx,
             ))))
@@ -125,7 +139,10 @@ impl MusicPlayerServer {
                 Arc::clone(&self.tracklist),
                 Arc::clone(&self.cmd_tx),
             )))
-            .add_service(PlaylistServiceServer::new(Playlist::new(self.db.clone())))
+            .add_service(PlaylistServiceServer::new(Playlist::new(
+                self.db.clone(),
+                Arc::clone(&self.providers),
+            )))
             .add_service(TracklistServiceServer::new(Tracklist::new(
                 Arc::clone(&self.tracklist),
                 Arc::clone(&self.cmd_tx),

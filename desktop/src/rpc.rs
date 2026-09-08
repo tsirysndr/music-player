@@ -69,6 +69,8 @@ pub enum Cmd {
     AudioSet(String, i32),
     EqBandSet(usize, i32),
     ConnectServer(SavedServer),
+    /// Read the library from the daemon's own files again.
+    DisconnectProvider,
     OpenPlaylist(String),
     /// Create a smart playlist, or convert nothing — the form only offers this
     /// when creating.
@@ -387,6 +389,9 @@ async fn session(
         app.set_status_text(display.into());
     });
 
+    // Whatever the daemon is already reading from — a restart must not claim
+    // the local library when a provider is connected.
+    load_connected_provider(weak).await;
     init_volume(channel, weak).await;
     init_audio_settings(channel, weak).await;
     load_library(channel, ep, weak, state).await?;
@@ -1202,8 +1207,7 @@ async fn connect_provider(
     server: &SavedServer,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const ADD: &str = r#"mutation($input: ServerInput!) { addServer(input: $input) { id } }"#;
-    const CONNECT: &str =
-        r#"mutation($id: ID!) { connectToServer(id: $id) { id name url kind } }"#;
+    const CONNECT: &str = r#"mutation($id: ID!) { connectToServer(id: $id) { id name url kind } }"#;
 
     let added = graphql(
         ADD,
@@ -1236,10 +1240,33 @@ async fn connect_provider(
     let _ = weak.upgrade_in_event_loop(move |app| {
         app.set_server_error("".into());
         app.set_provider_name(name.into());
-        app.set_provider_url(url.into());
+        app.set_provider_url(url.clone().into());
+        crate::set_active_provider(&url);
         crate::refresh_servers_model(&app);
     });
     Ok(())
+}
+
+/// Ask the daemon which provider it is reading from, if any.
+async fn load_connected_provider(weak: &Weak<AppWindow>) {
+    const QUERY: &str = r#"query { connectedServer { name url } }"#;
+    let (name, url) = match graphql(QUERY, serde_json::json!({})).await {
+        Ok(data) => {
+            let server = &data["connectedServer"];
+            (
+                server["name"].as_str().unwrap_or_default().to_string(),
+                server["url"].as_str().unwrap_or_default().to_string(),
+            )
+        }
+        // The daemon may not be up yet; the next connect will set it.
+        Err(_) => (String::new(), String::new()),
+    };
+    let _ = weak.upgrade_in_event_loop(move |app| {
+        app.set_provider_name(name.into());
+        app.set_provider_url(url.clone().into());
+        crate::set_active_provider(&url);
+        crate::refresh_servers_model(&app);
+    });
 }
 
 /// One GraphQL round trip to the daemon, with its in-body errors surfaced.
@@ -1867,6 +1894,17 @@ async fn cmd_loop(
                         };
                         load_tracks(&channel, vec![track], 0).await?;
                     }
+                }
+                Cmd::DisconnectProvider => {
+                    const DISCONNECT: &str =
+                        r#"mutation { disconnectFromServer { id } }"#;
+                    // A failure here just means nothing was connected.
+                    let _ = graphql(DISCONNECT, serde_json::json!({})).await;
+                    let ep = endpoints();
+                    if let Err(e) = load_library(&channel, &ep, &weak, &state).await {
+                        tracing::warn!("reloading the library failed: {e}");
+                    }
+                    load_playlists(&channel, &weak).await;
                 }
                 Cmd::ConnectServer(srv) => {
                     // Connecting is now the daemon's job: it makes the server

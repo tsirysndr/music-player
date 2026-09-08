@@ -54,6 +54,10 @@ export type PlayerBarProps = {
   onToggleQueue: () => void;
   onOpenFullPlayer: () => void;
   onOpenAudioSettings: () => void;
+  /** Opens the "play on" picker — where the audio comes out. */
+  onOpenDevices: () => void;
+  /** A cast target is playing, rather than this machine. */
+  castingTo?: string;
   onShuffle?: () => void;
   onRepeat?: () => void;
 };
@@ -97,6 +101,8 @@ const PlayerBar = ({
   onToggleQueue,
   onOpenFullPlayer,
   onOpenAudioSettings,
+  onOpenDevices,
+  castingTo,
   onShuffle,
   onRepeat,
 }: PlayerBarProps) => {
@@ -246,6 +252,16 @@ const PlayerBar = ({
 
       {/* VFD + volume */}
       <div className="hidden items-center gap-[10px] lg:flex">
+        {/* Where the audio comes out. The sidebar's status row is the other
+            question — where the library is read *from*. */}
+        <IconButton
+          icon={Icons.device}
+          iconSize={16}
+          accented={!!castingTo}
+          aria-label={castingTo ? `Playing on ${castingTo}` : "Play on"}
+          title={castingTo ? `Playing on ${castingTo}` : "Play on"}
+          onClick={onOpenDevices}
+        />
         <IconButton
           icon={Icons.equalizer}
           iconSize={16}

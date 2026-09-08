@@ -2004,6 +2004,7 @@ export component ExtensionRow inherits Rectangle {
 export component ServerRow inherits Rectangle {
     in property <ServerItem> server;
     callback connect;
+    callback disconnect;
     callback delete;
 
     height: 56px;
@@ -2064,12 +2065,27 @@ export component ServerRow inherits Rectangle {
             opacity: touch.has-hover ? 1 : 0.35;
             clicked => { root.delete(); }
         }
-        if root.server.connected : Text {
-            text: "Connected";
-            color: Theme.accent;
-            font-size: 11px;
-            font-weight: 700;
-            vertical-alignment: center;
+        // Actionable rather than a label: the row you are reading from is
+        // where you would look to stop reading from it.
+        if root.server.connected : Rectangle {
+            width: 96px;
+            height: 30px;
+            border-radius: 15px;
+            border-width: 1px;
+            border-color: Theme.border;
+            background: disc-touch.has-hover ? Theme.hover-bg : transparent;
+            y: (parent.height - self.height) / 2;
+            Text {
+                text: "Disconnect";
+                color: Theme.text-dim;
+                font-size: 11px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            disc-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.disconnect(); }
+            }
         }
         if !root.server.connected : IconButton {
             icon: Icons.plug-connected;

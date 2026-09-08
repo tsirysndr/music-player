@@ -31,7 +31,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::clone(&tracklist),
     );
 
-    MusicPlayerServer::new(tracklist, Arc::clone(&cmd_tx), Arc::clone(&peer_map), db)
+    // One provider registry per process, shared by the gRPC server and the
+    // GraphQL/web server — otherwise the two disagree about which server the
+    // library screens are reading from, which is exactly what left the Slint
+    // desktop showing local data after a switch.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        std::sync::Arc::new(music_player_provider::ProviderState::new(
+            std::sync::Arc::new(registry),
+        ))
+    };
+    MusicPlayerServer::new(
+        tracklist,
+        Arc::clone(&cmd_tx),
+        Arc::clone(&peer_map),
+        db,
+        providers,
+    )
         .start()
         .await?;
 

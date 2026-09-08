@@ -196,6 +196,34 @@ describe("AppShell", () => {
     });
   });
 
+  describe("the sidebar status row", () => {
+    /**
+     * It switches the *source* — where the library is read from. Where the
+     * audio comes out is the player bar's picker, and conflating the two is
+     * what made this row open the cast dialog.
+     */
+    it("goes to the servers page rather than opening the cast picker", async () => {
+      const { user } = setupPlaying(TRACK);
+
+      await user.click(
+        await screen.findByTitle("Choose which server the library is read from")
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "Servers", level: 1 })
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Play on")).toBeNull();
+    });
+
+    it("keeps the play-on picker on the player bar", async () => {
+      const { user } = setupPlaying(TRACK);
+      await user.click(await screen.findByRole("button", { name: "Play on" }));
+      expect(
+        await screen.findByRole("heading", { name: "Play on" })
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("the full player and the sidebar", () => {
     /** The canvas wants the window; the sidebar navigates a hidden page. */
     it("hides the sidebar while the full player is open", async () => {

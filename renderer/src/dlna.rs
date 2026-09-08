@@ -8,9 +8,7 @@ use crate::Player;
 use anyhow::Error;
 use async_trait::async_trait;
 use music_player_tracklist::Tracklist;
-use music_player_types::types::{
-    CurrentPlayback, Device, Playback, Track, UPNP_DLNA_DEVICE,
-};
+use music_player_types::types::{CurrentPlayback, Device, Playback, Track, UPNP_DLNA_DEVICE};
 use tokio::sync::mpsc;
 use upnp_client::{
     device_client::DeviceClient,
@@ -61,7 +59,6 @@ impl Dlna {
         ));
         Ok(Some(Box::new(player)))
     }
-
 }
 
 #[async_trait]

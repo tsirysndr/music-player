@@ -1,16 +1,11 @@
 import { useAtom, useAtomValue } from "jotai";
-import { useLocation } from "react-router-dom";
-import { useDevices } from "../../Hooks/useDevices";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useGetConnectedServerQuery } from "../../Hooks/GraphQL";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSkin } from "../../Providers/SkinProvider";
 import { serverConnectedAtom, sidebarOpenAtom } from "../../State";
 import { Icons, SidebarItem, cn } from "../UI";
 import { isActive, NAV } from "./navigation";
-
-export type SidebarProps = {
-  /** Opens the device picker; the shell owns the modal. */
-  onOpenDevices: () => void;
-};
 
 /**
  * The desktop client's sidebar: a wordmark, the library sections, the recent
@@ -19,13 +14,17 @@ export type SidebarProps = {
  * It collapses to zero width rather than unmounting, so the animation matches
  * the desktop's `animate width` and the scroll position survives a toggle.
  */
-const Sidebar = ({ onOpenDevices }: SidebarProps) => {
+const Sidebar = () => {
   const [open] = useAtom(sidebarOpenAtom);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { skinName, cycleSkin } = useSkin();
   const { recentPlaylists } = usePlaylist();
-  const { currentCastDevice } = useDevices();
   const connected = useAtomValue(serverConnectedAtom);
+  // Which server the library is being *read* from. Nothing to do with where
+  // the audio comes out — that is the "play on" picker, one row up.
+  const { data: server } = useGetConnectedServerQuery();
+  const provider = server?.connectedServer;
 
   return (
     <aside
@@ -88,14 +87,17 @@ const Sidebar = ({ onOpenDevices }: SidebarProps) => {
           </span>
         </button>
 
+        {/* The status row switches the *source* — where the library is read
+            from — which is what the desktop's does. Where the audio comes out
+            is a separate question, and a separate picker. */}
         <button
           type="button"
-          onClick={onOpenDevices}
+          onClick={() => navigate("/servers")}
+          title="Choose which server the library is read from"
           className="mt-[6px] flex h-[30px] items-center gap-2 rounded-control pl-4 pr-2 text-left hover:bg-hover"
         >
           {/* Green when we can reach the daemon, red when we cannot — the
-              desktop's rule. It is not about *which* output is selected;
-              playing here is as connected as casting is. */}
+              desktop's rule. */}
           <span
             aria-hidden="true"
             className={cn(
@@ -104,7 +106,7 @@ const Sidebar = ({ onOpenDevices }: SidebarProps) => {
             )}
           />
           <span className="truncate font-mono text-[10px] text-muted">
-            {currentCastDevice ? currentCastDevice.name : "this device"}
+            {provider ? provider.url : "this device"}
           </span>
         </button>
       </div>

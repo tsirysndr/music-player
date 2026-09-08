@@ -166,19 +166,32 @@ fn boot() {
         .unwrap()
         .send(music_player_playback::player::PlayerCommand::RestoreQueue);
 
+    // One provider registry per process, shared by the gRPC server and the
+    // GraphQL/web server — otherwise the two disagree about which server the
+    // library screens read from, which is what left the desktop showing local
+    // data after a switch.
+    let providers = {
+        let mut registry = music_player_provider::ProviderRegistry::new();
+        music_player_provider::register_builtin(&mut registry);
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+    };
+
     // gRPC server
     {
         let tracklist = Arc::clone(&tracklist);
         let cmd_tx = Arc::clone(&cmd_tx);
         let peer_map = Arc::clone(&peer_map);
         let db = db.clone();
+        let grpc_providers = Arc::clone(&providers);
         std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
             if let Err(e) =
-                runtime.block_on(MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db).start())
+                runtime.block_on(
+                    MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db, grpc_providers).start(),
+                )
             {
                 tracing::error!("gRPC server failed: {e}");
             }
@@ -191,28 +204,21 @@ fn boot() {
         let cmd_tx = Arc::clone(&cmd_tx);
         let peer_map = Arc::clone(&peer_map);
         let db = db.clone();
+        let ws_providers = Arc::clone(&providers);
         std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
             if let Err(e) =
-                runtime.block_on(MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db).start_ws())
+                runtime.block_on(
+                    MusicPlayerServer::new(tracklist, cmd_tx, peer_map, db, ws_providers).start_ws(),
+                )
             {
                 tracing::error!("websocket server failed: {e}");
             }
         });
     }
-
-    // One provider registry, shared by the gRPC and GraphQL surfaces so both
-    // route library reads through the same connected server.
-    let providers = {
-        let mut registry = music_player_provider::ProviderRegistry::new();
-        music_player_provider::register_builtin(&mut registry);
-        std::sync::Arc::new(music_player_provider::ProviderState::new(
-            std::sync::Arc::new(registry),
-        ))
-    };
 
     // Webui (GraphQL + /covers/ album art) — parks this thread forever.
     if let Err(e) = runtime.block_on(start_webui(cmd_tx, tracklist, providers)) {

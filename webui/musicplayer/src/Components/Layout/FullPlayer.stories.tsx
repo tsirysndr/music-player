@@ -90,6 +90,7 @@ export const OverThePlayerBar: Story = {
           onToggleLike={noop}
           onVolume={noop}
           onToggleMute={noop}
+          onOpenDevices={noop}
           onToggleQueue={noop}
           onOpenFullPlayer={() => setOpen(true)}
           onOpenAudioSettings={noop}

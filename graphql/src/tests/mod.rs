@@ -1,8 +1,8 @@
 use std::{env, sync::Arc};
 
 use async_graphql::Schema;
-use music_player_renderer::CurrentReceiverDevice;
 use music_player_playback::player::PlayerCommand;
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_storage::{searcher::Searcher, Database};
 use music_player_tracklist::Tracklist;
 use tokio::sync::{
@@ -38,7 +38,9 @@ pub async fn setup_schema() -> (
     let providers = {
         let mut registry = music_player_provider::ProviderRegistry::new();
         music_player_provider::register_builtin(&mut registry);
-        Arc::new(music_player_provider::ProviderState::new(Arc::new(registry)))
+        Arc::new(music_player_provider::ProviderState::new(Arc::new(
+            registry,
+        )))
     };
     let receiver_device = Arc::new(Mutex::new(CurrentReceiverDevice::new()));
 

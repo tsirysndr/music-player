@@ -16,7 +16,7 @@ async fn setup_client(
     let (tx, rx) = oneshot::channel();
     tokio::spawn(async move {
         Server::builder()
-            .add_service(LibraryServiceServer::new(Library::new(db)))
+            .add_service(LibraryServiceServer::new(Library::new(db, local_only())))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();
@@ -99,4 +99,12 @@ async fn search() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(response.tracks.len(), 1);
     assert_eq!(response.tracks[0].title, "Fire Squad");
     Ok(())
+}
+
+/// A provider state with nothing connected, so the service reads local files —
+/// which is what these tests are about.
+fn local_only() -> std::sync::Arc<music_player_provider::ProviderState> {
+    std::sync::Arc::new(music_player_provider::ProviderState::new(
+        std::sync::Arc::new(music_player_provider::ProviderRegistry::new()),
+    ))
 }

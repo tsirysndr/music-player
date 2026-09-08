@@ -176,7 +176,7 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-window text-fg">
-      <Sidebar onOpenDevices={() => setDevicesOpen(true)} />
+      <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Header {...header} />
@@ -189,7 +189,7 @@ const AppShell = ({ children, bare, ...header }: AppShellProps) => {
         >
           {children}
         </main>
-        <PlayerBarWithData />
+        <PlayerBarWithData onOpenDevices={() => setDevicesOpen(true)} />
         {/* Clears the fixed bottom tab bar on small screens. */}
         <div className="h-14 shrink-0 lg:hidden" />
       </div>

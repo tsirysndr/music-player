@@ -281,6 +281,8 @@ export component AppWindow inherits Window {
     callback server-add(string, string, string, string, string); // kind,name,url,user,pass
     callback server-delete(int);
     callback server-connect(int);
+    /// Read the library from the daemon's own files again.
+    callback server-disconnect();
     callback audio-set(string, int);
     callback eq-band-set(int, int);
     callback palette-query(string);
@@ -1161,6 +1163,7 @@ export component AppWindow inherits Window {
                                 root.server-error = "";
                                 root.server-connect(i);
                             }
+                            disconnect => { root.server-disconnect(); }
                             delete => { root.server-delete(i); }
                         }
                         if root.servers.length == 0 : Text {
@@ -1173,6 +1176,212 @@ export component AppWindow inherits Window {
                             color: Theme.meter-high;
                             font-size: 12px;
                         }
+                    }
+                }
+
+                if root.current-tab == 6 : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        height: 38px;
+                        spacing: 8px;
+                        for label[i] in ["Search", "Bookmarked", "Stations"] : Rectangle {
+                            width: 112px;
+                            background: tab-touch.has-hover ? Theme.hover-bg : transparent;
+                            Text { text: label; color: root.radio-tab == i ? Theme.accent : Theme.text-dim; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; font-weight: 600; }
+                            Rectangle { y: parent.height - 2px; height: 2px; width: parent.width; background: root.radio-tab == i ? Theme.accent : transparent; }
+                            tab-touch := TouchArea {
+                                clicked => {
+                                    root.radio-tab = i;
+                                    root.radio-category = "";
+                                    root.clear-radio-filter();
+                                    if (i != 0) {
+                                        root.radios = [];
+                                        root.radio-loading = true;
+                                    }
+                                    if (i == 1) {
+                                        root.radio-bookmarks();
+                                    }
+                                    if (i == 2) {
+                                        root.radio-stations();
+                                    }
+                                }
+                            }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        if root.radio-tab == 2 : IconButton {
+                            icon: Icons.circle-plus;
+                            icon-size: 17px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { root.open-add-station(); }
+                        }
+                        // Quick filter over the station list on screen.
+                        if root.radio-tab != 0 : RadioFilterBox {
+                            width: 190px;
+                            y: (parent.height - self.height) / 2;
+                            text: root.radio-filter;
+                            edited(value) => { root.set-radio-filter(value); }
+                        }
+                    }
+                    if root.radio-tab == 0 && root.radio-category == "" : Rectangle {
+                        height: 44px;
+                        background: transparent;
+                        Rectangle { y: parent.height - 1px; height: 1px; width: parent.width; background: Theme.border; }
+                        HorizontalLayout { padding-left: 4px; spacing: 10px; Image { source: Icons.search; colorize: Theme.text-muted; width: 19px; height: 19px; y: (parent.height - self.height) / 2; } Text { text: "Search radio stations…"; color: Theme.text-muted; font-size: 14px; vertical-alignment: center; } }
+                        TouchArea { clicked => { root.show-radio-search = true; radio-input.focus(); } mouse-cursor: text; }
+                    }
+                    if root.radio-tab == 0 && root.radio-category == "" : Flickable {
+                        vertical-stretch: 1;
+                        viewport-height: category-grid.preferred-height + 12px;
+                        category-grid := GridLayout {
+                            width: parent.width;
+                            spacing: 8px;
+                            Row { RadioCategoryTile { label:"Synthwave"; term:"synthwave"; icon:Icons.equalizer; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Lo-fi"; term:"lofi"; icon:Icons.volume; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Jazz"; term:"jazz"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Techno"; term:"techno"; icon:Icons.volume; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Ambient"; term:"ambient"; icon:Icons.equalizer; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Classical"; term:"classical"; icon:Icons.music; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Rock"; term:"rock"; icon:Icons.disc; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Pop"; term:"pop"; icon:Icons.artist; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Electronic"; term:"electronic"; icon:Icons.disc; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Hip-Hop"; term:"hip hop"; icon:Icons.disc; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Chillout"; term:"chill"; icon:Icons.heart; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Dance"; term:"dance"; icon:Icons.volume; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Reggae"; term:"reggae"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Metal"; term:"metal"; icon:Icons.disc; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"News"; term:"news"; icon:Icons.broadcast; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"World"; term:"world"; icon:Icons.broadcast; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"House"; term:"house"; icon:Icons.volume; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Trance"; term:"trance"; icon:Icons.equalizer; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Drum & Bass"; term:"drum and bass"; icon:Icons.volume; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Disco"; term:"disco"; icon:Icons.disc; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Funk"; term:"funk"; icon:Icons.disc; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Soul"; term:"soul"; icon:Icons.music; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"R&B"; term:"r&b"; icon:Icons.artist; icon-color:#9b6cff; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Blues"; term:"blues"; icon:Icons.music; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Country"; term:"country"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Folk"; term:"folk"; icon:Icons.music; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Punk"; term:"punk"; icon:Icons.disc; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Indie"; term:"indie"; icon:Icons.volume; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Latin"; term:"latin"; icon:Icons.music; icon-color:#f052d4; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"K-Pop"; term:"k-pop"; icon:Icons.artist; icon-color:#ff4fa3; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Gospel"; term:"gospel"; icon:Icons.music; icon-color:#f2c94c; selected(l,t)=>{root.open-radio-category(l,t);} } RadioCategoryTile { label:"Oldies"; term:"oldies"; icon:Icons.disc; icon-color:#39d9e8; selected(l,t)=>{root.open-radio-category(l,t);} } }
+                            Row { RadioCategoryTile { label:"Soundtrack"; term:"soundtrack"; icon:Icons.playlist; icon-color:#4d8dff; selected(l,t)=>{root.open-radio-category(l,t);} } Rectangle {} Rectangle {} Rectangle {} }
+                        }
+                    }
+                    if root.radio-tab == 0 && root.radio-category != "" : VerticalLayout {
+                        spacing: 8px;
+                        HorizontalLayout {
+                            height: 40px;
+                            spacing: 8px;
+                            IconButton {
+                                icon: Icons.chevron-left;
+                                icon-size: 17px;
+                                clicked => { root.radio-category = ""; root.clear-radio-filter(); }
+                            }
+                            Text { text: root.radio-category; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; horizontal-stretch: 1; }
+                            // Quick filter over the stations in this category.
+                            RadioFilterBox {
+                                width: 190px;
+                                y: (parent.height - self.height) / 2;
+                                text: root.radio-filter;
+                                edited(value) => { root.set-radio-filter(value); }
+                            }
+                        }
+                        if root.radio-loading : RadioSkeletonList { vertical-stretch: 1; }
+                        if !root.radio-loading : ListView { vertical-stretch: 1;
+                            for station in root.radios : RadioRow { station:station; play=>{root.radio-play(station.id);} bookmark=>{root.radio-bookmark(station.id);} }
+                        }
+                    }
+                    if root.radio-tab != 0 && root.radio-loading : RadioSkeletonList {
+                        vertical-stretch: 1;
+                    }
+                    if root.radio-tab != 0 && !root.radio-loading && root.radios.length > 0 : ListView {
+                        vertical-stretch: 1;
+                        for station in root.radios : RadioRow {
+                            station: station;
+                            play => { root.radio-play(station.id); }
+                            bookmark => { root.radio-bookmark(station.id); }
+                        }
+                    }
+                    if root.radio-tab != 0 && !root.radio-loading && root.radios.length == 0 : Text {
+                        text: root.radio-tab == 2
+                            ? "No station of your own yet. Add one with its stream url."
+                            : "No bookmarked station yet.";
+                        color: Theme.text-muted;
+                        font-size: 13px;
+                        vertical-stretch: 1;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // ── Extensions ─────────────────────────────────────────────
+                if root.current-tab == 7 : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    spacing: 10px;
+
+                    // One row: the state tabs at the left, the search and the
+                    // rescan button pushed to the far right, so it reads as a
+                    // single filter bar rather than two unrelated controls.
+                    HorizontalLayout {
+                        height: 34px;
+                        spacing: 6px;
+                        for label[i] in ["All", "Enabled", "Disabled"] : Rectangle {
+                            width: 74px;
+                            height: 26px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 13px;
+                            background: root.extension-state-filter == i
+                                ? Theme.selected-bg
+                                : (chip-touch.has-hover ? Theme.hover-bg : transparent);
+                            border-width: root.extension-state-filter == i ? 1px : 0px;
+                            border-color: Theme.accent.with-alpha(0.4);
+                            Text {
+                                text: label;
+                                color: root.extension-state-filter == i ? Theme.accent : Theme.text-dim;
+                                font-size: 11px;
+                                font-weight: root.extension-state-filter == i ? 600 : 400;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                            }
+                            chip-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.extension-state-filter = i;
+                                    root.extension-filter-changed(root.extension-filter);
+                                }
+                            }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        RadioFilterBox {
+                            width: 220px;
+                            y: (parent.height - self.height) / 2;
+                            placeholder: "Search extensions…";
+                            text: root.extension-filter;
+                            edited(value) => {
+                                root.extension-filter = value;
+                                root.extension-filter-changed(value);
+                            }
+                        }
+                        IconButton {
+                            icon: Icons.refresh;
+                            icon-size: 15px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => {
+                                root.extensions-loading = true;
+                                root.extensions-refresh();
+                            }
+                        }
+                    }
+
+                    if root.extensions-loading : RadioSkeletonList {
+                        rows: 4;
+                        vertical-stretch: 1;
+                    }
+                    if !root.extensions-loading && root.extensions.length > 0 : ListView {
+                        vertical-stretch: 1;
+                        for ext in root.extensions : Rectangle {
+                            height: ext.error != "" ? 116px : 100px;
+                            ExtensionRow {
+                                width: 100%;
+                                extension: ext;
+                                toggled(enabled) => {
+                                    root.extension-set-enabled(ext.id, enabled);
+                                }
+                            }
+                        }
+                    }
+                    if !root.extensions-loading && root.extensions.length == 0 : Text {
+                        text: root.extension-filter != "" || root.extension-state-filter != 0
+                            ? "No extension matches that filter."
+                            : "No extension installed. Create one with `music-player extension init <id>`.";
+                        color: Theme.text-muted;
+                        font-size: 12px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        vertical-stretch: 1;
                     }
                 }
 

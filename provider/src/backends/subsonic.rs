@@ -279,7 +279,11 @@ impl MusicProvider for Subsonic {
 
     /// `getArtists` returns the whole index in one go — there is no server-side
     /// paging for it — so the filter and the page are applied here.
-    async fn artists(&self, filter: Option<&str>, page: Page) -> Result<Vec<Artist>, ProviderError> {
+    async fn artists(
+        &self,
+        filter: Option<&str>,
+        page: Page,
+    ) -> Result<Vec<Artist>, ProviderError> {
         let url = self.api_url("getArtists", &[])?;
         let response = request(url).await?;
         let artists = response.artists.unwrap_or_default();
@@ -383,7 +387,11 @@ impl MusicProvider for Subsonic {
     }
 
     /// One search call rather than the trait's three.
-    async fn search(&self, keyword: &str, page: Page) -> Result<crate::SearchResults, ProviderError> {
+    async fn search(
+        &self,
+        keyword: &str,
+        page: Page,
+    ) -> Result<crate::SearchResults, ProviderError> {
         let limit = normalize_limit(page.limit);
         let url = self.api_url(
             "search3",
@@ -438,7 +446,10 @@ impl ProviderFactory for SubsonicFactory {
         4533
     }
 
-    async fn connect(&self, config: &ProviderConfig) -> Result<Arc<dyn MusicProvider>, ProviderError> {
+    async fn connect(
+        &self,
+        config: &ProviderConfig,
+    ) -> Result<Arc<dyn MusicProvider>, ProviderError> {
         let mut client = Subsonic::with_credentials(
             &config.url,
             config.username.as_deref().unwrap_or_default(),
@@ -860,7 +871,10 @@ mod tests {
                 .expect("getAlbumList2 failed");
             assert!(!albums.is_empty(), "expected at least one album");
 
-            let tracks = client.tracks(None, Page::new(0, 50)).await.expect("search3 failed");
+            let tracks = client
+                .tracks(None, Page::new(0, 50))
+                .await
+                .expect("search3 failed");
             assert!(!tracks.is_empty(), "expected at least one track");
             for track in &tracks {
                 assert!(track.uri.contains("/rest/stream?id="));
@@ -893,7 +907,10 @@ mod tests {
             let body = response.bytes().await.expect("stream body failed");
             assert!(!body.is_empty(), "expected stream bytes");
 
-            client.playlists(Page::new(0, 50)).await.expect("getPlaylists failed");
+            client
+                .playlists(Page::new(0, 50))
+                .await
+                .expect("getPlaylists failed");
         });
     }
 

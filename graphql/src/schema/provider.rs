@@ -11,7 +11,9 @@
 //! replaces used to do.
 
 use async_graphql::{Context, Error};
-use music_player_provider::{ConnectedProvider, Page, ProviderConfig, ProviderError, ProviderState};
+use music_player_provider::{
+    ConnectedProvider, Page, ProviderConfig, ProviderError, ProviderState,
+};
 use music_player_types::types::{RemoteCoverUrl, RemoteTrackUrl};
 use std::sync::Arc;
 

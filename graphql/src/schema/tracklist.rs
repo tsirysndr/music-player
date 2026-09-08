@@ -1,8 +1,8 @@
 use async_graphql::*;
 use futures_util::Stream;
-use music_player_renderer::CurrentReceiverDevice;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
 use music_player_playback::player::PlayerCommand;
+use music_player_renderer::CurrentReceiverDevice;
 use music_player_storage::repo::album::AlbumRepository;
 use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::playlist::PlaylistRepository;
@@ -95,11 +95,7 @@ impl TracklistMutation {
         let track: track_entity::Model;
 
         if let Some(current) = provider::connected(ctx).await {
-            let result = current
-                .provider
-                .track(&id)
-                .await
-                .map_err(provider::err)?;
+            let result = current.provider.track(&id).await.map_err(provider::err)?;
             track = provider::decorate(result, &current.config).into();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
@@ -269,11 +265,7 @@ impl TracklistMutation {
 
         if let Some(current) = provider::connected(ctx).await {
             let source_ip = current.provider.host().to_string();
-            let result = current
-                .provider
-                .track(&id)
-                .await
-                .map_err(provider::err)?;
+            let result = current.provider.track(&id).await.map_err(provider::err)?;
             track = provider::decorate(result, &current.config).into();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
@@ -345,11 +337,7 @@ impl TracklistMutation {
 
         if let Some(current) = provider::connected(ctx).await {
             let source_ip = current.provider.host().to_string();
-            let album = current
-                .provider
-                .album(&id)
-                .await
-                .map_err(provider::err)?;
+            let album = current.provider.album(&id).await.map_err(provider::err)?;
             let album: album_entity::Model = provider::decorate(album, &current.config).into();
             let tracks = album.tracks;
 
@@ -419,13 +407,8 @@ impl TracklistMutation {
 
         if let Some(current) = provider::connected(ctx).await {
             let source_ip = current.provider.host().to_string();
-            let artist = current
-                .provider
-                .artist(&id)
-                .await
-                .map_err(provider::err)?;
-            let artist: artist_entity::Model =
-                provider::decorate(artist, &current.config).into();
+            let artist = current.provider.artist(&id).await.map_err(provider::err)?;
+            let artist: artist_entity::Model = provider::decorate(artist, &current.config).into();
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;

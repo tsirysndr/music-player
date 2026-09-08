@@ -347,7 +347,7 @@ impl MusicProvider for Kodi {
                     id: file.file,
                     name: file.label,
                     description: None,
-            track_count: None,
+                    track_count: None,
                     tracks: vec![],
                 })
                 .collect(),

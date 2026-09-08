@@ -12,10 +12,9 @@ use crate::api::metadata::v1alpha1::{
 use crate::api::music::v1alpha1::{
     library_service_server::LibraryService, GetAlbumDetailsRequest, GetAlbumDetailsResponse,
     GetAlbumsRequest, GetAlbumsResponse, GetArtistDetailsRequest, GetArtistDetailsResponse,
-    GetArtistsRequest, GetArtistsResponse, GetTrackDetailsRequest, GetTrackDetailsResponse,
-    GetLikedTracksRequest, GetLikedTracksResponse, GetTracksRequest, GetTracksResponse,
-    LikeTrackRequest, LikeTrackResponse, ScanRequest,
-    ScanResponse, SearchRequest, SearchResponse,
+    GetArtistsRequest, GetArtistsResponse, GetLikedTracksRequest, GetLikedTracksResponse,
+    GetTrackDetailsRequest, GetTrackDetailsResponse, GetTracksRequest, GetTracksResponse,
+    LikeTrackRequest, LikeTrackResponse, ScanRequest, ScanResponse, SearchRequest, SearchResponse,
 };
 
 pub struct Library {
@@ -279,11 +278,9 @@ impl LibraryService for Library {
 
         // Locally a like lives in the user's atproto repo; only the ones
         // matched to a local file have a track to return.
-        let ids = music_player_storage::rocksky_likes::matched_track_ids(
-            self.db.get_connection(),
-        )
-        .await
-        .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let ids = music_player_storage::rocksky_likes::matched_track_ids(self.db.get_connection())
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let repository = TrackRepository::new(self.db.get_connection());
         let mut tracks = Vec::new();

@@ -182,7 +182,11 @@ pub mod api {
                     track_number: track.track_number.unwrap_or_default() as i32,
                     disc_number: track.disc_number as i32,
                     uri: track.uri,
-                    album: track.album.as_ref().map(|a| a.title.clone()).unwrap_or_default(),
+                    album: track
+                        .album
+                        .as_ref()
+                        .map(|a| a.title.clone())
+                        .unwrap_or_default(),
                     artist: track.artist,
                     artists: track.artists.into_iter().map(Into::into).collect(),
                 }

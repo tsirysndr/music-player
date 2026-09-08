@@ -6,7 +6,7 @@ import {
     SidebarItem, AlbumCard, TrackRow, TrackListHeader, ArtistRow,
     SearchButton, PaletteItem, PaletteRow, HelpRow,
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
-    DetailRow, ServerItem, FormField, ServerRow,
+    DetailRow, ServerItem, FormField, ServerRow, RendererItem, RendererRow,
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
     RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion,
     ExtensionItem, ExtensionRow
@@ -283,6 +283,15 @@ export component AppWindow inherits Window {
     callback server-connect(int);
     /// Read the library from the daemon's own files again.
     callback server-disconnect();
+
+    // ── Renderers (where the audio comes out) ───────────────────────────────
+    in-out property <bool> show-renderers: false;
+    in-out property <[RendererItem]> renderers: [];
+    /// The renderer currently playing, empty for this machine.
+    in-out property <string> current-renderer: "";
+    callback renderers-open();
+    /// id, cast — an empty id means "play here".
+    callback renderer-activate(string, bool);
     callback audio-set(string, int);
     callback eq-band-set(int, int);
     callback palette-query(string);
@@ -568,7 +577,10 @@ export component AppWindow inherits Window {
                 return accept;
             }
             if (event.text == Key.Escape) {
-                if (root.show-radio-search) {
+                if (root.show-renderers) {
+                    root.show-renderers = false;
+                    main-focus.focus();
+                } else if (root.show-radio-search) {
                     root.show-radio-search = false;
                     main-focus.focus();
                 } else if (root.show-full-player) {
@@ -1921,12 +1933,17 @@ export component AppWindow inherits Window {
                             y: (parent.height - self.height) / 2;
                             clicked => { root.show-audio = !root.show-audio; }
                         }
+                        // Where the audio comes out. The queue has the right
+                        // panel, so the miniplayer's slot is better spent here.
                         IconButton {
-                            icon: Icons.list-music;
-                            icon-size: 16px;
-                            accented: root.show-queue;
+                            icon: Icons.cast;
+                            icon-size: 17px;
+                            accented: root.current-renderer != "";
                             y: (parent.height - self.height) / 2;
-                            clicked => { root.show-queue = !root.show-queue; }
+                            clicked => {
+                                root.show-renderers = true;
+                                root.renderers-open();
+                            }
                         }
                         VfdDisplay {
                             y: (parent.height - self.height) / 2;
@@ -2635,6 +2652,88 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // ── Play to (renderers) ─────────────────────────────────────────────────
+    renderers-layer := Rectangle {
+        visible: root.show-renderers;
+        width: 100%;
+        height: 100%;
+        background: #000000a0;
+
+        TouchArea {
+            clicked => {
+                root.show-renderers = false;
+                main-focus.focus();
+            }
+        }
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: max(30px, (parent.height - self.height) / 2);
+            width: min(440px, parent.width - 60px);
+            height: min(420px, parent.height - 60px);
+            border-radius: 14px;
+            background: Theme.panel-bg;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 40px;
+            clip: true;
+
+            TouchArea {} // swallow clicks
+
+            VerticalLayout {
+                padding: 18px;
+                spacing: 8px;
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    padding-bottom: 4px;
+                    Image {
+                        source: Icons.cast;
+                        colorize: Theme.accent;
+                        width: 18px;
+                        height: 18px;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    Text {
+                        text: "Play to";
+                        color: Theme.text;
+                        font-size: 16px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Text {
+                        text: "esc to close";
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-family: Theme.font-mono;
+                        vertical-alignment: center;
+                    }
+                }
+
+                ListView {
+                    vertical-stretch: 1;
+                    for r in root.renderers : RendererRow {
+                        renderer: r;
+                        activate => {
+                            root.renderer-activate(r.id, r.cast);
+                            root.show-renderers = false;
+                        }
+                    }
+                }
+
+                // This machine is always an option, so an empty network is a
+                // note under the list rather than an empty state instead of it.
+                if root.renderers.length <= 1 : Text {
+                    text: "Chromecasts, UPnP/DLNA renderers and other music-player instances on this network show up here.";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
                 }
             }
         }

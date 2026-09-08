@@ -71,6 +71,10 @@ pub enum Cmd {
     ConnectServer(SavedServer),
     /// Read the library from the daemon's own files again.
     DisconnectProvider,
+    /// Fetch the places the audio could come out.
+    LoadRenderers,
+    /// id, is-cast. An empty id means "play here".
+    ActivateRenderer(String, bool),
     OpenPlaylist(String),
     /// Create a smart playlist, or convert nothing — the form only offers this
     /// when creating.
@@ -1247,6 +1251,64 @@ async fn connect_provider(
     Ok(())
 }
 
+/// The places the audio could come out, as the daemon sees them.
+///
+/// The daemon does the discovering — Chromecast, UPnP/DLNA and mDNS peers all
+/// arrive through it — so this is a read rather than a scan.
+async fn load_renderers(
+    weak: &Weak<AppWindow>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    const QUERY: &str = r#"query {
+        listCastDevices { id name app }
+        connectedCastDevice { id name }
+    }"#;
+    let data = graphql(QUERY, serde_json::json!({})).await?;
+    let devices: Vec<(String, String, String)> = data["listCastDevices"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .map(|row| {
+                    (
+                        row["id"].as_str().unwrap_or_default().to_string(),
+                        row["name"].as_str().unwrap_or_default().to_string(),
+                        row["app"].as_str().unwrap_or_default().to_string(),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    // The query errors rather than returning null when nothing is connected,
+    // so a missing field means "playing here".
+    let current = data["connectedCastDevice"]["id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+
+    let _ = weak.upgrade_in_event_loop(move |app| {
+        crate::ui_set_renderers(&app, devices, current);
+    });
+    Ok(())
+}
+
+async fn activate_renderer(
+    weak: &Weak<AppWindow>,
+    id: &str,
+    cast: bool,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if id.is_empty() {
+        const OFF: &str = r#"mutation { disconnectFromCastDevice { id } }"#;
+        // Failing here just means nothing was connected.
+        let _ = graphql(OFF, serde_json::json!({})).await;
+    } else if cast {
+        const ON: &str = r#"mutation($id: ID!) { connectToCastDevice(id: $id) { id } }"#;
+        graphql(ON, serde_json::json!({ "id": id })).await?;
+    } else {
+        const ON: &str = r#"mutation($id: ID!) { connectToDevice(id: $id) { id } }"#;
+        graphql(ON, serde_json::json!({ "id": id })).await?;
+    }
+    load_renderers(weak).await
+}
+
 /// Ask the daemon which provider it is reading from, if any.
 async fn load_connected_provider(weak: &Weak<AppWindow>) {
     const QUERY: &str = r#"query { connectedServer { name url } }"#;
@@ -1893,6 +1955,16 @@ async fn cmd_loop(
                             ..Default::default()
                         };
                         load_tracks(&channel, vec![track], 0).await?;
+                    }
+                }
+                Cmd::LoadRenderers => {
+                    if let Err(e) = load_renderers(&weak).await {
+                        tracing::warn!("could not list renderers: {e}");
+                    }
+                }
+                Cmd::ActivateRenderer(id, cast) => {
+                    if let Err(e) = activate_renderer(&weak, &id, cast).await {
+                        tracing::warn!("could not switch renderer: {e}");
                     }
                 }
                 Cmd::DisconnectProvider => {

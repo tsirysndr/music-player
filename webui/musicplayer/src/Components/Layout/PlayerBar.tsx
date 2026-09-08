@@ -255,11 +255,11 @@ const PlayerBar = ({
         {/* Where the audio comes out. The sidebar's status row is the other
             question — where the library is read *from*. */}
         <IconButton
-          icon={Icons.device}
-          iconSize={16}
+          icon={Icons.cast}
+          iconSize={17}
           accented={!!castingTo}
-          aria-label={castingTo ? `Playing on ${castingTo}` : "Play on"}
-          title={castingTo ? `Playing on ${castingTo}` : "Play on"}
+          aria-label={castingTo ? `Playing on ${castingTo}` : "Play to"}
+          title={castingTo ? `Playing on ${castingTo}` : "Play to"}
           onClick={onOpenDevices}
         />
         <IconButton
@@ -268,13 +268,6 @@ const PlayerBar = ({
           accented={audioSettingsOpen}
           aria-label="Audio settings"
           onClick={onOpenAudioSettings}
-        />
-        <IconButton
-          icon={Icons.listMusic}
-          iconSize={16}
-          accented={queueOpen}
-          aria-label="Play queue"
-          onClick={onToggleQueue}
         />
         <VfdDisplay
           // A live stream has no meaningful position, so the readout names
@@ -312,7 +305,8 @@ const PlayerBar = ({
         />
       </div>
 
-      {/* On a phone the queue button is the only chrome that fits. */}
+      {/* On a phone only one fits, and the queue has nowhere else to live
+          there — the right panel is a desktop layout. */}
       <IconButton
         icon={Icons.listMusic}
         iconSize={18}

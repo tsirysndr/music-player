@@ -495,6 +495,35 @@ fn server_item(s: &servers::SavedServer, connected_url: &str) -> ServerItem {
     }
 }
 
+/// The "play to" list: this machine first, then whatever the daemon found.
+pub fn ui_set_renderers(
+    app: &AppWindow,
+    devices: Vec<(String, String, String)>,
+    current: String,
+) {
+    let mut items = vec![RendererItem {
+        id: "".into(),
+        name: "This computer".into(),
+        kind: "local".into(),
+        cast: false,
+        playing: current.is_empty(),
+    }];
+    items.extend(devices.into_iter().map(|(id, name, app_kind)| {
+        let playing = id == current;
+        RendererItem {
+            playing,
+            // A peer daemon is reached over the device API, everything else
+            // over the cast one.
+            cast: app_kind != "music-player",
+            id: id.into(),
+            name: name.into(),
+            kind: app_kind.into(),
+        }
+    }));
+    app.set_current_renderer(current.into());
+    app.set_renderers(ModelRc::new(VecModel::from(items)));
+}
+
 /// Remember which provider the daemon is reading from, so the switcher marks
 /// the right row.
 pub fn set_active_provider(url: &str) {
@@ -1655,6 +1684,18 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             });
             refresh_servers_model(&app);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_renderers_open(move || {
+            let _ = tx.send(rpc::Cmd::LoadRenderers);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_renderer_activate(move |id, cast| {
+            let _ = tx.send(rpc::Cmd::ActivateRenderer(id.into(), cast));
         });
     }
     {

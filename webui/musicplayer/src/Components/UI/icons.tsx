@@ -59,6 +59,7 @@ export const Icons = {
   // ── Tabler, for what the desktop has no glyph for ───────────────────────
   device: IconDeviceSpeaker,
   connect: DESKTOP_ICONS.plugConnected,
+  cast: DESKTOP_ICONS.cast,
   check: IconCheck,
 } satisfies Record<string, IconComponent>;
 

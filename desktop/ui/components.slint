@@ -50,6 +50,18 @@ export struct PlaylistItem {
     count: int,
 }
 
+/// A place the audio can come out: a Chromecast, a UPnP/DLNA renderer, or
+/// another music-player daemon. A different question from a `ServerItem`,
+/// which is where the library is read *from*.
+export struct RendererItem {
+    id: string,
+    name: string,
+    kind: string, // "chromecast" | "dlna" | "music-player" | "local"
+    /// Reached over the cast API rather than the peer one.
+    cast: bool,
+    playing: bool,
+}
+
 export struct ServerItem {
     kind: string, // "subsonic" | "jellyfin" | "music-player" | ...
     name: string,
@@ -1997,6 +2009,64 @@ export component ExtensionRow inherits Rectangle {
             color: Theme.syntax-error;
             font-size: 10px;
             overflow: elide;
+        }
+    }
+}
+
+export component RendererRow inherits Rectangle {
+    in property <RendererItem> renderer;
+    callback activate;
+
+    height: 48px;
+    border-radius: Theme.control-radius;
+    background: root.renderer.playing ? Theme.selected-bg
+        : touch.has-hover ? Theme.hover-bg : transparent;
+
+    touch := TouchArea {
+        clicked => { root.activate(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        Image {
+            source: root.renderer.kind == "local" ? Icons.volume
+                : root.renderer.kind == "dlna" ? Icons.broadcast
+                : root.renderer.kind == "music-player" ? Icons.server
+                : Icons.cast;
+            colorize: root.renderer.playing ? Theme.accent : Theme.text-dim;
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.renderer.name;
+                color: Theme.text;
+                font-size: 13px;
+                overflow: elide;
+            }
+            Text {
+                text: root.renderer.kind == "local" ? "Local playback"
+                    : root.renderer.kind == "dlna" ? "UPnP / DLNA"
+                    : root.renderer.kind == "music-player" ? "music-player"
+                    : "Chromecast";
+                color: Theme.text-muted;
+                font-size: 11px;
+                overflow: elide;
+            }
+        }
+        if root.renderer.playing : Text {
+            text: "Playing";
+            color: Theme.accent;
+            font-size: 11px;
+            font-weight: 700;
+            vertical-alignment: center;
         }
     }
 }

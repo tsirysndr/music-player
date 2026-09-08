@@ -212,15 +212,17 @@ describe("AppShell", () => {
       expect(
         await screen.findByRole("heading", { name: "Servers", level: 1 })
       ).toBeInTheDocument();
-      expect(screen.queryByText("Play on")).toBeNull();
+      expect(screen.queryByText("Play to")).toBeNull();
     });
 
-    it("keeps the play-on picker on the player bar", async () => {
+    /** Renderers, not the queue: the queue has the right panel. */
+    it("keeps the play-to picker on the player bar", async () => {
       const { user } = setupPlaying(TRACK);
-      await user.click(await screen.findByRole("button", { name: "Play on" }));
+      await user.click(await screen.findByRole("button", { name: "Play to" }));
       expect(
-        await screen.findByRole("heading", { name: "Play on" })
+        await screen.findByRole("heading", { name: "Play to" })
       ).toBeInTheDocument();
+      expect(await screen.findByText("This computer")).toBeInTheDocument();
     });
   });
 

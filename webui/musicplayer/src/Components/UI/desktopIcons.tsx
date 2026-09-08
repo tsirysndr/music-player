@@ -49,6 +49,28 @@ export const Broadcast: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) =>
   </svg>
 );
 
+/** `desktop/assets/icons/cast.svg` */
+export const Cast: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M3 19h.01" />
+    <path d="M7 19a4 4 0 0 0 -4 -4" />
+    <path d="M11 19a8 8 0 0 0 -8 -8" />
+    <path d="M15 19h6" />
+    <path d="M3 7v-1a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-2" />
+  </svg>
+);
+
 /** `desktop/assets/icons/chevron-left.svg` */
 export const ChevronLeft: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
   <svg
@@ -708,6 +730,7 @@ export const Close: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
 export const DESKTOP_ICONS = {
   artist: Artist,
   broadcast: Broadcast,
+  cast: Cast,
   chevronLeft: ChevronLeft,
   circlePlus: CirclePlus,
   folder: Folder,

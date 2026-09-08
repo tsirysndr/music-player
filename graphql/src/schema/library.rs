@@ -244,20 +244,38 @@ impl LibraryQuery {
                 .search(&keyword, provider::page(None, Some(50)))
                 .await
             {
-                Ok(results) => SearchResult {
-                    artists: decorate_all(results.artists, &current.config)
-                        .into_iter()
-                        .map(Artist::from)
-                        .collect(),
-                    albums: decorate_all(results.albums, &current.config)
-                        .into_iter()
-                        .map(Album::from)
-                        .collect(),
-                    tracks: decorate_all(results.tracks, &current.config)
-                        .into_iter()
-                        .map(Track::from)
-                        .collect(),
-                },
+                Ok(results) => {
+                    // Stamped with the server's name so a client can tell the
+                    // two libraries apart and offer the actions that actually
+                    // work on each.
+                    let from = Some(current.config.name.clone());
+                    SearchResult {
+                        artists: decorate_all(results.artists, &current.config)
+                            .into_iter()
+                            .map(Artist::from)
+                            .map(|artist| Artist {
+                                source: from.clone(),
+                                ..artist
+                            })
+                            .collect(),
+                        albums: decorate_all(results.albums, &current.config)
+                            .into_iter()
+                            .map(Album::from)
+                            .map(|album| Album {
+                                source: from.clone(),
+                                ..album
+                            })
+                            .collect(),
+                        tracks: decorate_all(results.tracks, &current.config)
+                            .into_iter()
+                            .map(Track::from)
+                            .map(|track| Track {
+                                source: from.clone(),
+                                ..track
+                            })
+                            .collect(),
+                    }
+                }
                 Err(e) => {
                     tracing::warn!("searching {} failed: {e}", current.config.name);
                     SearchResult::default()

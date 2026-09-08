@@ -23,6 +23,8 @@ export type Album = {
   genres: Array<Scalars['String']['output']>;
   id: Scalars['String']['output'];
   releaseDate: Scalars['String']['output'];
+  /** Which library this row came from; `null` is this machine. */
+  source?: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   tracks: Array<Track>;
   year?: Maybe<Scalars['Int']['output']>;
@@ -44,6 +46,8 @@ export type Artist = {
   name: Scalars['String']['output'];
   picture: Scalars['String']['output'];
   songs: Array<Track>;
+  /** Which library this row came from; `null` is this machine. */
+  source?: Maybe<Scalars['String']['output']>;
   website: Scalars['String']['output'];
 };
 
@@ -668,6 +672,17 @@ export type Query = {
    *
    * The local searcher indexes local files, so with a provider connected it
    * would be answering about a library the user is not looking at.
+   * Search both libraries at once.
+   *
+   * With a provider connected the results are *federated*: the remote
+   * server and this machine's own index are queried together and the rows
+   * interleaved, so one search box covers everything reachable rather than
+   * silently describing only whichever library happens to be current.
+   *
+   * The two run concurrently — a remote round trip should not be paid on
+   * top of a local index scan — and a failure on either side yields that
+   * side's results as empty rather than failing the whole search: half an
+   * answer is worth more than none.
    */
   search: SearchResult;
   /**
@@ -968,6 +983,8 @@ export type Track = {
   discNumber: Scalars['Int']['output'];
   duration?: Maybe<Scalars['Float']['output']>;
   id: Scalars['String']['output'];
+  /** Which library this row came from; `null` is this machine. */
+  source?: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   trackNumber?: Maybe<Scalars['Int']['output']>;
   uri: Scalars['String']['output'];
@@ -1140,7 +1157,7 @@ export type SearchQueryVariables = Exact<{
 }>;
 
 
-export type SearchQuery = { __typename?: 'Query', search: { __typename?: 'SearchResult', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string }>, albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null }>, tracks: Array<{ __typename?: 'Track', id: string, title: string, artist: string, duration?: number | null, cover?: string | null, artistId: string, albumId: string, albumTitle: string }> } };
+export type SearchQuery = { __typename?: 'Query', search: { __typename?: 'SearchResult', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string, source?: string | null }>, albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null, source?: string | null }>, tracks: Array<{ __typename?: 'Track', id: string, title: string, artist: string, duration?: number | null, cover?: string | null, artistId: string, albumId: string, albumTitle: string, source?: string | null }> } };
 
 export type SetAudioSettingMutationVariables = Exact<{
   name: Scalars['String']['input'];
@@ -2354,12 +2371,14 @@ export const SearchDocument = `
       id
       name
       picture
+      source
     }
     albums {
       id
       title
       artist
       cover
+      source
     }
     tracks {
       id
@@ -2370,6 +2389,7 @@ export const SearchDocument = `
       artistId
       albumId
       albumTitle
+      source
     }
   }
 }

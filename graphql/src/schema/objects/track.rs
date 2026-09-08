@@ -18,6 +18,13 @@ pub struct TrackInput {
 
 #[derive(Default, Clone, Serialize)]
 pub struct Track {
+    /// The server this came from — its saved name — or `null` for this
+    /// machine's own library.
+    ///
+    /// Search is federated, so one result list holds rows from both. Without
+    /// this a client cannot tell them apart, and the actions that make sense
+    /// differ: a local track cannot be added to a remote server's playlist.
+    pub source: Option<String>,
     pub id: ID,
     pub title: String,
     pub duration: Option<f32>,
@@ -35,6 +42,11 @@ pub struct Track {
 
 #[Object]
 impl Track {
+    /// Which library this row came from; `null` is this machine.
+    async fn source(&self) -> &Option<String> {
+        &self.source
+    }
+
     async fn id(&self) -> &str {
         &self.id
     }
@@ -96,6 +108,8 @@ impl RemoteTrackUrl for Track {
             return self.clone();
         }
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             uri: format!("{}/tracks/{}", base_url, *self.id),
             ..self.clone()
         }
@@ -105,6 +119,8 @@ impl RemoteTrackUrl for Track {
 impl RemoteCoverUrl for Track {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             album: Album {
                 cover: match self.album.cover {
                     Some(ref cover) => match cover.starts_with("http") {
@@ -123,6 +139,8 @@ impl RemoteCoverUrl for Track {
 impl From<Model> for Track {
     fn from(model: Model) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             id: ID(model.id),
             title: model.title,
             uri: model.uri,
@@ -152,6 +170,8 @@ impl From<TrackInput> for Model {
 impl From<TrackType> for Track {
     fn from(song: TrackType) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             id: ID(song.id),
             title: song.title,
             artist: song.artist,
@@ -168,6 +188,8 @@ impl From<TrackType> for Track {
 impl From<types::Track> for Track {
     fn from(track: types::Track) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             id: ID(track.id),
             title: track.title,
             uri: track.uri,
@@ -212,6 +234,8 @@ impl From<types::Track> for Track {
 impl From<select_result::PlaylistTrack> for Track {
     fn from(result: select_result::PlaylistTrack) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             id: ID(result.track_id),
             title: result.track_title,
             duration: Some(result.track_duration),

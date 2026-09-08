@@ -13,11 +13,20 @@ import { usePlayTrack } from "../../Hooks/usePlayTrack";
 import { paletteOpenAtom, serverSwitcherOpenAtom } from "../../State";
 import {
   useAddServerMutation,
+  useAddTrackToPlaylistMutation,
+  usePlayAlbumMutation,
   useConnectToServerMutation,
   useDisconnectFromServerMutation,
   useGetSavedServersQuery,
 } from "../../Hooks/GraphQL";
-import { Icons, Toggle, type IconComponent } from "../UI";
+import {
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  Icons,
+  Toggle,
+  type IconComponent,
+} from "../UI";
 import {
   gql,
   STATION_FIELDS,
@@ -59,12 +68,38 @@ const CommandPaletteWithData = () => {
   // One overlay serves both: the switcher is the palette scoped to servers.
   const scope = switcherOpen ? ("servers" as const) : undefined;
   const queryClient = useQueryClient();
-  const { data: serverData } = useGetSavedServersQuery(undefined, {
-    enabled: scope === "servers",
-  });
+  // Not gated to the switcher any more: search is federated, so every result
+  // list needs to know which library is connected in order to label its rows
+  // and offer the actions that work on them.
+  const { data: serverData } = useGetSavedServersQuery();
   const connectedServer = (serverData?.savedServers ?? []).find(
     (server) => server.connected
   );
+  const addTrackToPlaylist = useAddTrackToPlaylistMutation().mutate;
+  const playAlbum = usePlayAlbumMutation().mutate;
+
+  /**
+   * A result's library, for the row's label. `null` from the daemon means this
+   * machine; it is only worth saying when there is another library to confuse
+   * it with.
+   */
+  const originLabel = (source?: string | null) =>
+    connectedServer ? (source ?? "this machine") : undefined;
+
+  /**
+   * The playlists a track from `source` could join.
+   *
+   * A playlist belongs to one library. With a server connected the playlists
+   * on offer are its own, so a local result has none it can join — and saying
+   * so by omission beats a row that saves and then will not play.
+   */
+  const playlistsFor = (source?: string | null) => {
+    const remote = !!source;
+    if (!!connectedServer !== remote) {
+      return [];
+    }
+    return playlistData?.playlists ?? [];
+  };
   const addServer = useAddServerMutation();
   const connect = useConnectToServerMutation();
   const disconnect = useDisconnectFromServerMutation();
@@ -186,7 +221,56 @@ const CommandPaletteWithData = () => {
         subtitle: track.artist,
         cover: track.cover ? `/covers/${track.cover}` : undefined,
         icon: Icons.music,
+        origin: originLabel(track.source),
         run: () => playTrack(track.id),
+        menu: (
+          <>
+            <ContextMenuItem
+              icon={Icons.play}
+              label="Play"
+              onClick={() => playTrack(track.id)}
+            />
+            {/* A playlist lives in one library, so a track can only join a
+                playlist from the same one. Offering it otherwise produces a
+                row that saves and then cannot be played. */}
+            {playlistsFor(track.source).length > 0 && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuLabel>Add to playlist</ContextMenuLabel>
+                {playlistsFor(track.source).map((playlist) => (
+                  <ContextMenuItem
+                    key={playlist.id}
+                    icon={Icons.listMusic}
+                    label={playlist.name}
+                    onClick={() =>
+                      addTrackToPlaylist({
+                        playlistId: playlist.id,
+                        trackId: track.id,
+                      })
+                    }
+                  />
+                ))}
+              </>
+            )}
+            {track.albumId && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  icon={Icons.disc}
+                  label="Go to album"
+                  onClick={() => navigate(`/albums/${track.albumId}`)}
+                />
+              </>
+            )}
+            {track.artistId && (
+              <ContextMenuItem
+                icon={Icons.artist}
+                label="Go to artist"
+                onClick={() => navigate(`/artists/${track.artistId}`)}
+              />
+            )}
+          </>
+        ),
       }));
 
     // Albums and artists go to their page rather than playing: opening one is
@@ -201,6 +285,27 @@ const CommandPaletteWithData = () => {
         cover: album.cover ? `/covers/${album.cover}` : undefined,
         icon: Icons.disc,
         run: () => navigate(`/albums/${album.id}`),
+        origin: originLabel(album.source),
+        menu: (
+          <>
+            <ContextMenuItem
+              icon={Icons.play}
+              label="Play"
+              onClick={() => playAlbum({ albumId: album.id, shuffle: false })}
+            />
+            <ContextMenuItem
+              icon={Icons.shuffle}
+              label="Shuffle"
+              onClick={() => playAlbum({ albumId: album.id, shuffle: true })}
+            />
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              icon={Icons.disc}
+              label="Go to album"
+              onClick={() => navigate(`/albums/${album.id}`)}
+            />
+          </>
+        ),
       }));
 
     const artists: PaletteEntry[] = (search?.search.artists ?? [])
@@ -212,6 +317,7 @@ const CommandPaletteWithData = () => {
         cover: artist.picture,
         icon: Icons.artist,
         run: () => navigate(`/artists/${artist.id}`),
+        origin: originLabel(artist.source),
       }));
 
     // Matched here rather than on the daemon: both lists are short and already

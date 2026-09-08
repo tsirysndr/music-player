@@ -16,6 +16,18 @@
         "description": null,
         "fields": [
           {
+            "name": "source",
+            "description": "Which library this row came from; `null` is this machine.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "id",
             "description": null,
             "args": [],
@@ -191,6 +203,18 @@
         "name": "Artist",
         "description": null,
         "fields": [
+          {
+            "name": "source",
+            "description": "Which library this row came from; `null` is this machine.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
           {
             "name": "id",
             "description": null,
@@ -4099,7 +4123,7 @@
           },
           {
             "name": "search",
-            "description": "Search wherever the library currently is.\n\nThe local searcher indexes local files, so with a provider connected it\nwould be answering about a library the user is not looking at.",
+            "description": "Search wherever the library currently is.\n\nThe local searcher indexes local files, so with a provider connected it\nwould be answering about a library the user is not looking at.\nSearch both libraries at once.\n\nWith a provider connected the results are *federated*: the remote\nserver and this machine's own index are queried together and the rows\ninterleaved, so one search box covers everything reachable rather than\nsilently describing only whichever library happens to be current.\n\nThe two run concurrently — a remote round trip should not be paid on\ntop of a local index scan — and a failure on either side yields that\nside's results as empty rather than failing the whole search: half an\nanswer is worth more than none.",
             "args": [
               {
                 "name": "keyword",
@@ -5955,6 +5979,18 @@
         "name": "Track",
         "description": null,
         "fields": [
+          {
+            "name": "source",
+            "description": "Which library this row came from; `null` is this machine.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
           {
             "name": "id",
             "description": null,

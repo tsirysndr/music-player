@@ -99,12 +99,14 @@ export const SEARCH = gql`
         id
         name
         picture
+        source
       }
       albums {
         id
         title
         artist
         cover
+        source
       }
       tracks {
         id
@@ -115,6 +117,7 @@ export const SEARCH = gql`
         artistId
         albumId
         albumTitle
+        source
       }
     }
   }

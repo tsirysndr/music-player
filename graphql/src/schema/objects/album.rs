@@ -7,6 +7,13 @@ use super::track::Track;
 
 #[derive(Default, Clone, Serialize)]
 pub struct Album {
+    /// The server this came from — its saved name — or `null` for this
+    /// machine's own library.
+    ///
+    /// Search is federated, so one result list holds rows from both. Without
+    /// this a client cannot tell them apart, and the actions that make sense
+    /// differ: a local track cannot be added to a remote server's playlist.
+    pub source: Option<String>,
     pub id: ID,
     pub title: String,
     pub cover: Option<String>,
@@ -19,6 +26,11 @@ pub struct Album {
 
 #[Object]
 impl Album {
+    /// Which library this row came from; `null` is this machine.
+    async fn source(&self) -> &Option<String> {
+        &self.source
+    }
+
     async fn id(&self) -> &str {
         &self.id
     }
@@ -55,6 +67,8 @@ impl Album {
 impl RemoteCoverUrl for Album {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             cover: self
                 .cover
                 .clone()
@@ -70,6 +84,8 @@ impl RemoteCoverUrl for Album {
 impl RemoteTrackUrl for Album {
     fn with_remote_track_url(&self, base_url: &str) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             tracks: self
                 .tracks
                 .iter()
@@ -83,6 +99,8 @@ impl RemoteTrackUrl for Album {
 impl From<Model> for Album {
     fn from(model: Model) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             id: ID(model.id),
             title: model.title,
             cover: model.cover,
@@ -97,6 +115,8 @@ impl From<Model> for Album {
 impl From<AlbumType> for Album {
     fn from(album: AlbumType) -> Self {
         Self {
+            // Set by the search resolver; everything else is local.
+            source: None,
             id: ID(album.id),
             title: album.title,
             cover: album.cover,

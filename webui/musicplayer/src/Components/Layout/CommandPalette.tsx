@@ -1,5 +1,13 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Artwork, Dialog, Icons, cn, type IconComponent } from "../UI";
+import {
+  Artwork,
+  ContextMenu,
+  Dialog,
+  IconButton,
+  Icons,
+  cn,
+  type IconComponent,
+} from "../UI";
 
 export type PaletteKind =
   | "track"
@@ -26,6 +34,14 @@ export type PaletteEntry = {
    * button, because a button cannot contain another one.
    */
   action?: ReactNode;
+  /**
+   * What the "…" menu offers for this row. Empty or absent means no menu:
+   * what a result can *do* depends on where it came from, and a menu of
+   * things that will not work is worse than none.
+   */
+  menu?: ReactNode;
+  /** Where the row came from, shown when the two libraries are merged. */
+  origin?: string;
 };
 
 export type CommandPaletteProps = {
@@ -216,12 +232,35 @@ const CommandPalette = ({
                         </span>
                       )}
                     </span>
+                    {/* Where it came from, when both libraries are in the
+                        list — otherwise the two "Fire Squad"s are
+                        indistinguishable. */}
+                    {entry.origin && (
+                      <span className="shrink-0 truncate text-[10px] text-muted">
+                        {entry.origin}
+                      </span>
+                    )}
                     <span className="shrink-0 font-mono text-[10px] text-muted">
                       {KIND_LABEL[entry.kind]}
                     </span>
                   </button>
                   {entry.action && (
                     <span className="ml-3 shrink-0">{entry.action}</span>
+                  )}
+                  {entry.menu && (
+                    <span className="ml-1 shrink-0">
+                      <ContextMenu
+                        trigger={
+                          <IconButton
+                            icon={Icons.ellipsis}
+                            iconSize={15}
+                            aria-label={`More actions for ${entry.title}`}
+                          />
+                        }
+                      >
+                        {entry.menu}
+                      </ContextMenu>
+                    </span>
                   )}
                 </li>
               ))

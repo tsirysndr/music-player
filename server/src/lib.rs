@@ -37,18 +37,17 @@ pub mod api {
                     id: model.id,
                     name: model.name,
                     playlists: model.playlists.into_iter().map(Into::into).collect(),
-                    ..Default::default()
                 }
             }
         }
 
-        impl Into<Playlist> for GetPlaylistDetailsResponse {
-            fn into(self) -> Playlist {
+        impl From<GetPlaylistDetailsResponse> for Playlist {
+            fn from(val: GetPlaylistDetailsResponse) -> Self {
                 Playlist {
-                    id: self.id,
-                    name: self.name,
-                    description: Some(self.description),
-                    tracks: self.tracks.into_iter().map(Into::into).collect(),
+                    id: val.id,
+                    name: val.name,
+                    description: Some(val.description),
+                    tracks: val.tracks.into_iter().map(Into::into).collect(),
                 }
             }
         }
@@ -81,18 +80,17 @@ pub mod api {
                     name: model.name,
                     description: model.description.unwrap_or_default(),
                     tracks: model.tracks.into_iter().map(Into::into).collect(),
-                    ..Default::default()
                 }
             }
         }
 
-        impl Into<types::Playlist> for Playlist {
-            fn into(self) -> types::Playlist {
+        impl From<Playlist> for types::Playlist {
+            fn from(val: Playlist) -> Self {
                 types::Playlist {
-                    id: self.id,
-                    name: self.name,
-                    description: Some(self.description),
-                    tracks: self.tracks.into_iter().map(Into::into).collect(),
+                    id: val.id,
+                    name: val.name,
+                    description: Some(val.description),
+                    tracks: val.tracks.into_iter().map(Into::into).collect(),
                 }
             }
         }
@@ -184,7 +182,6 @@ pub mod api {
                 Self {
                     id: model.id,
                     name: model.name,
-                    ..Default::default()
                 }
             }
         }
@@ -194,7 +191,6 @@ pub mod api {
                 Self {
                     id: artist.id,
                     name: artist.name,
-                    ..Default::default()
                 }
             }
         }
@@ -214,55 +210,49 @@ pub mod api {
             }
         }
 
-        impl Into<types::Track> for ArtistSong {
-            fn into(self) -> types::Track {
+        impl From<ArtistSong> for types::Track {
+            fn from(val: ArtistSong) -> Self {
                 types::Track {
-                    id: self.id,
-                    title: self.title,
-                    duration: Some(self.duration),
-                    track_number: Some(u32::try_from(self.track_number).unwrap_or_default()),
-                    disc_number: u32::try_from(self.disc_number).unwrap_or_default(),
-                    artists: self.artists.into_iter().map(Into::into).collect(),
-                    album: match self.album {
-                        Some(album) => Some(album.into()),
-                        None => None,
-                    },
-                    artist: self.artist,
+                    id: val.id,
+                    title: val.title,
+                    duration: Some(val.duration),
+                    track_number: Some(u32::try_from(val.track_number).unwrap_or_default()),
+                    disc_number: u32::try_from(val.disc_number).unwrap_or_default(),
+                    artists: val.artists.into_iter().map(Into::into).collect(),
+                    album: val.album.map(|album| album.into()),
+                    artist: val.artist,
                     ..Default::default()
                 }
             }
         }
 
-        impl Into<types::Track> for Track {
-            fn into(self) -> types::Track {
+        impl From<Track> for types::Track {
+            fn from(val: Track) -> Self {
                 types::Track {
-                    id: self.id,
-                    title: self.title,
-                    uri: self.uri,
-                    duration: Some(self.duration),
-                    track_number: Some(u32::try_from(self.track_number).unwrap_or_default()),
-                    disc_number: u32::try_from(self.disc_number).unwrap_or_default(),
-                    artists: self.artists.into_iter().map(Into::into).collect(),
-                    artist: self.artist,
-                    album: match self.album {
-                        Some(album) => Some(album.into()),
-                        None => None,
-                    },
+                    id: val.id,
+                    title: val.title,
+                    uri: val.uri,
+                    duration: Some(val.duration),
+                    track_number: Some(u32::try_from(val.track_number).unwrap_or_default()),
+                    disc_number: u32::try_from(val.disc_number).unwrap_or_default(),
+                    artists: val.artists.into_iter().map(Into::into).collect(),
+                    artist: val.artist,
+                    album: val.album.map(|album| album.into()),
                 }
             }
         }
 
-        impl Into<track::Model> for Track {
-            fn into(self) -> track::Model {
+        impl From<Track> for track::Model {
+            fn from(val: Track) -> Self {
                 track::Model {
-                    id: self.id,
-                    title: self.title,
-                    uri: self.uri,
-                    duration: Some(self.duration),
-                    track: Some(u32::try_from(self.track_number).unwrap_or_default()),
-                    artists: self.artists.into_iter().map(Into::into).collect(),
-                    artist: self.artist,
-                    album: self.album.unwrap().into(),
+                    id: val.id,
+                    title: val.title,
+                    uri: val.uri,
+                    duration: Some(val.duration),
+                    track: Some(u32::try_from(val.track_number).unwrap_or_default()),
+                    artists: val.artists.into_iter().map(Into::into).collect(),
+                    artist: val.artist,
+                    album: val.album.unwrap().into(),
                     ..Default::default()
                 }
             }
@@ -279,33 +269,30 @@ pub mod api {
                     disc_number: i32::try_from(track.disc_number).unwrap(),
                     artists: track.artists.into_iter().map(Into::into).collect(),
                     artist: track.artist,
-                    album: match track.album {
-                        Some(album) => Some(album.into()),
-                        None => None,
-                    },
+                    album: track.album.map(|album| album.into()),
                     ..Default::default()
                 }
             }
         }
 
-        impl Into<types::Artist> for Artist {
-            fn into(self) -> types::Artist {
+        impl From<Artist> for types::Artist {
+            fn from(val: Artist) -> Self {
                 types::Artist {
-                    id: self.id,
-                    name: self.name,
-                    picture: Some(self.picture),
-                    albums: self.albums.into_iter().map(Into::into).collect(),
-                    songs: self.songs.into_iter().map(Into::into).collect(),
+                    id: val.id,
+                    name: val.name,
+                    picture: Some(val.picture),
+                    albums: val.albums.into_iter().map(Into::into).collect(),
+                    songs: val.songs.into_iter().map(Into::into).collect(),
                 }
             }
         }
 
-        impl Into<artist::Model> for Artist {
-            fn into(self) -> artist::Model {
+        impl From<Artist> for artist::Model {
+            fn from(val: Artist) -> Self {
                 artist::Model {
-                    id: self.id,
-                    name: self.name,
-                    albums: self.albums.into_iter().map(Into::into).collect(),
+                    id: val.id,
+                    name: val.name,
+                    albums: val.albums.into_iter().map(Into::into).collect(),
                     ..Default::default()
                 }
             }
@@ -322,53 +309,53 @@ pub mod api {
             }
         }
 
-        impl Into<types::Artist> for SongArtist {
-            fn into(self) -> types::Artist {
+        impl From<SongArtist> for types::Artist {
+            fn from(val: SongArtist) -> Self {
                 types::Artist {
-                    id: self.id,
-                    name: self.name,
+                    id: val.id,
+                    name: val.name,
                     ..Default::default()
                 }
             }
         }
 
-        impl Into<types::Track> for Song {
-            fn into(self) -> types::Track {
+        impl From<Song> for types::Track {
+            fn from(val: Song) -> Self {
                 types::Track {
-                    id: self.id,
-                    title: self.title,
-                    duration: Some(self.duration),
-                    track_number: Some(u32::try_from(self.track_number).unwrap_or_default()),
-                    disc_number: u32::try_from(self.disc_number).unwrap_or_default(),
-                    artists: self.artists.into_iter().map(Into::into).collect(),
+                    id: val.id,
+                    title: val.title,
+                    duration: Some(val.duration),
+                    track_number: Some(u32::try_from(val.track_number).unwrap_or_default()),
+                    disc_number: u32::try_from(val.disc_number).unwrap_or_default(),
+                    artists: val.artists.into_iter().map(Into::into).collect(),
                     ..Default::default()
                 }
             }
         }
 
-        impl Into<types::Album> for Album {
-            fn into(self) -> types::Album {
+        impl From<Album> for types::Album {
+            fn from(val: Album) -> Self {
                 types::Album {
-                    id: self.id,
-                    title: self.title,
-                    cover: Some(self.cover),
-                    artist: self.artist.clone(),
-                    year: Some(u32::try_from(self.year).unwrap_or_default()),
-                    artist_id: Some(format!("{:x}", md5::compute(self.artist.as_str()))),
-                    tracks: self.tracks.into_iter().map(Into::into).collect(),
+                    id: val.id,
+                    title: val.title,
+                    cover: Some(val.cover),
+                    artist: val.artist.clone(),
+                    year: Some(u32::try_from(val.year).unwrap_or_default()),
+                    artist_id: Some(format!("{:x}", md5::compute(val.artist.as_str()))),
+                    tracks: val.tracks.into_iter().map(Into::into).collect(),
                 }
             }
         }
 
-        impl Into<album::Model> for Album {
-            fn into(self) -> album::Model {
+        impl From<Album> for album::Model {
+            fn from(val: Album) -> Self {
                 album::Model {
-                    id: self.id,
-                    title: self.title,
-                    cover: Some(self.cover),
-                    artist: self.artist.clone(),
-                    year: Some(u32::try_from(self.year).unwrap_or_default()),
-                    artist_id: Some(format!("{:x}", md5::compute(self.artist.as_str()))),
+                    id: val.id,
+                    title: val.title,
+                    cover: Some(val.cover),
+                    artist: val.artist.clone(),
+                    year: Some(u32::try_from(val.year).unwrap_or_default()),
+                    artist_id: Some(format!("{:x}", md5::compute(val.artist.as_str()))),
                     ..Default::default()
                 }
             }

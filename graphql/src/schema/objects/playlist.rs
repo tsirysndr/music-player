@@ -77,7 +77,7 @@ impl From<Model> for Playlist {
 
 impl From<Vec<select_result::PlaylistTrack>> for Playlist {
     fn from(result: Vec<select_result::PlaylistTrack>) -> Self {
-        if result.len() == 0 {
+        if result.is_empty() {
             return Self::default();
         }
         Self {

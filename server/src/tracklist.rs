@@ -52,7 +52,7 @@ impl TracklistService for Tracklist {
             .all(self.db.get_connection())
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
-        if result.len() == 0 {
+        if result.is_empty() {
             return Err(tonic::Status::not_found("Track not found"));
         }
 

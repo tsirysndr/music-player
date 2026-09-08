@@ -158,10 +158,7 @@ impl Player {
     pub async fn await_end_of_track(&self) {
         let mut channel = self.get_player_event_channel();
         while let Some(event) = channel.recv().await {
-            if matches!(
-                event,
-                PlayerEvent::EndOfTrack { .. } | PlayerEvent::Stopped { .. }
-            ) {
+            if matches!(event, PlayerEvent::EndOfTrack { .. } | PlayerEvent::Stopped) {
                 return;
             }
         }
@@ -859,8 +856,8 @@ impl PlayerInternal {
 
     fn handle_play_track_at(&mut self, index: usize) {
         let (current_track, _) = self.tracklist.lock().unwrap().play_track_at(index);
-        if current_track.is_some() {
-            self.handle_command_load(&current_track.unwrap().uri);
+        if let Some(current_track) = current_track {
+            self.handle_command_load(&current_track.uri);
         }
     }
 
@@ -899,6 +896,11 @@ impl PlayerInternal {
 }
 
 #[derive(Debug)]
+// One variant carries a decoded track and dwarfs the rest. Boxing it would
+// shrink the channel's element, but every construction and match site across
+// the workspace would have to change for a message that is not sent in bulk —
+// deliberately left as-is.
+#[allow(clippy::large_enum_variant)]
 pub enum PlayerCommand {
     Load {
         track_id: String,
@@ -1045,6 +1047,11 @@ pub fn apply_audio_settings(engine: &Engine, audio: &AudioSettings) {
 }
 
 #[derive(Debug, Clone)]
+// One variant carries a decoded track and dwarfs the rest. Boxing it would
+// shrink the channel's element, but every construction and match site across
+// the workspace would have to change for a message that is not sent in bulk —
+// deliberately left as-is.
+#[allow(clippy::large_enum_variant)]
 pub enum PlayerEvent {
     Stopped,
     Started,

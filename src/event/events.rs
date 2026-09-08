@@ -38,7 +38,6 @@ impl Events {
     pub fn new(tick_rate: u64) -> Events {
         Events::with_config(EventConfig {
             tick_rate: Duration::from_millis(tick_rate),
-            ..Default::default()
         })
     }
 

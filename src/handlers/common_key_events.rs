@@ -68,7 +68,7 @@ pub fn on_high_press_handler() -> usize {
 
 pub fn on_middle_press_handler<T>(selection_data: &[T]) -> usize {
     let mut index = selection_data.len() / 2;
-    if selection_data.len() % 2 == 0 {
+    if selection_data.len().is_multiple_of(2) {
         index -= 1;
     }
     index

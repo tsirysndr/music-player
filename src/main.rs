@@ -318,7 +318,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |event| {
             let peers = cloned_peer_map.lock().unwrap();
 
-            let broadcast_recipients = peers.iter().map(|(_, ws_sink)| ws_sink);
+            let broadcast_recipients = peers.values();
 
             match event {
                 PlayerEvent::CurrentTrack {
@@ -414,7 +414,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // one, that would recurse until something ran out.
     if let Ok(config) = read_settings() {
         if let Ok(settings) = config.try_deserialize::<Settings>() {
-            let port = settings.http_port as u16;
+            let port = settings.http_port;
             for host in ["127.0.0.1", "localhost", "::1"] {
                 providers.add_own_address(host, port).await;
             }
@@ -508,7 +508,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::main]
-async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IoEvent>, network: &mut Network) {
+async fn start_tokio(io_rx: std::sync::mpsc::Receiver<IoEvent>, network: &mut Network) {
     while let Ok(io_event) = io_rx.recv() {
         // Network errors (e.g. the server going away mid-session) must not
         // crash the UI thread's worker; they are simply dropped.
@@ -614,27 +614,22 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
         let app = app.clone();
         thread::spawn(move || loop {
             let ev = rx.recv();
-            if ev.is_ok() {
-                let event = ev.unwrap();
+            if let Ok(event) = ev {
                 let runtime = tokio::runtime::Builder::new_multi_thread()
                     .enable_all()
                     .build()
                     .unwrap();
-                match event.event_type.as_str() {
-                    "current_track" => {
-                        let mut app = runtime.block_on(app.lock());
-                        let track_event: TrackEvent = serde_json::from_str(&event.data).unwrap();
-                        let track = track_event.track.unwrap();
-                        app.instant_since_last_current_playback_poll = Instant::now();
-                        app.current_playback_context = Some(CurrentlyPlaybackContext {
-                            track: Some(track.into()),
-                            is_playing: track_event.is_playing,
-                            index: track_event.index,
-                            position_ms: track_event.position_ms,
-                            ..Default::default()
-                        });
-                    }
-                    _ => {}
+                if event.event_type.as_str() == "current_track" {
+                    let mut app = runtime.block_on(app.lock());
+                    let track_event: TrackEvent = serde_json::from_str(&event.data).unwrap();
+                    let track = track_event.track.unwrap();
+                    app.instant_since_last_current_playback_poll = Instant::now();
+                    app.current_playback_context = Some(CurrentlyPlaybackContext {
+                        track: Some(track.into()),
+                        is_playing: track_event.is_playing,
+                        index: track_event.index,
+                        position_ms: track_event.position_ms,
+                    });
                 }
             }
             thread::sleep(Duration::from_millis(10));
@@ -645,8 +640,7 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
 async fn connect_to_server() -> bool {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
-    match LibraryClient::new(settings.host, settings.port).await {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    LibraryClient::new(settings.host, settings.port)
+        .await
+        .is_ok()
 }

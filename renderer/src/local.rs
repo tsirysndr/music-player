@@ -21,6 +21,12 @@ pub struct Local {
     port: u16,
 }
 
+impl Default for Local {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Local {
     pub fn new() -> Self {
         Self {

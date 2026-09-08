@@ -168,7 +168,7 @@ impl LibraryService for Library {
             }));
         }
 
-        let results = ArtistRepository::new(&self.db.get_connection())
+        let results = ArtistRepository::new(self.db.get_connection())
             .find_all(filter, Some(offset as u64), Some(limit as u64))
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -203,7 +203,7 @@ impl LibraryService for Library {
             }));
         }
 
-        let results = AlbumRepository::new(&self.db.get_connection())
+        let results = AlbumRepository::new(self.db.get_connection())
             .find_all(filter, Some(offset as u64), Some(limit as u64))
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -240,7 +240,7 @@ impl LibraryService for Library {
             }));
         }
 
-        let tracks = TrackRepository::new(&self.db.get_connection())
+        let tracks = TrackRepository::new(self.db.get_connection())
             .find_all(filter, Some(offset as u64), limit as u64)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -284,7 +284,7 @@ impl LibraryService for Library {
             }));
         }
 
-        let track = TrackRepository::new(&self.db.get_connection())
+        let track = TrackRepository::new(self.db.get_connection())
             .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -308,7 +308,7 @@ impl LibraryService for Library {
             }));
         }
 
-        let album = AlbumRepository::new(&self.db.get_connection())
+        let album = AlbumRepository::new(self.db.get_connection())
             .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -336,7 +336,7 @@ impl LibraryService for Library {
             }));
         }
 
-        let artist = ArtistRepository::new(&self.db.get_connection())
+        let artist = ArtistRepository::new(self.db.get_connection())
             .find(&id)
             .await
             .map_err(|e| tonic::Status::internal(e.to_string()))?;

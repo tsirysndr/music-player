@@ -60,14 +60,14 @@ async fn play() -> Result<(), Box<dyn std::error::Error>> {
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     let (__, _, _, is_playing) = client.current().await.unwrap();
-    assert_eq!(is_playing, false);
+    assert!(!is_playing);
 
     client.play().await.unwrap();
 
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     let (__, _, _, is_playing) = client.current().await.unwrap();
-    assert_eq!(is_playing, true);
+    assert!(is_playing);
 
     tx.send(()).unwrap();
     jh.await.unwrap();
@@ -116,7 +116,7 @@ async fn pause() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = PlaybackClient::new(host.clone(), port).await.unwrap();
 
     let (_, _, _, is_playing) = client.current().await?;
-    assert_eq!(is_playing, true);
+    assert!(is_playing);
 
     client.pause().await.unwrap();
 
@@ -124,7 +124,7 @@ async fn pause() -> Result<(), Box<dyn std::error::Error>> {
 
     let (_, _, _, is_playing) = client.current().await?;
 
-    assert_eq!(is_playing, false);
+    assert!(!is_playing);
 
     tx.send(()).unwrap();
     jh.await.unwrap();
@@ -178,7 +178,7 @@ async fn stop() -> Result<(), Box<dyn std::error::Error>> {
 
     let (current_track, _, _, is_playing) = client.current().await?;
 
-    assert_eq!(is_playing, false);
+    assert!(!is_playing);
     assert_eq!(current_track, None);
 
     tx.send(()).unwrap();

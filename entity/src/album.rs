@@ -53,10 +53,7 @@ impl From<&Song> for ActiveModel {
             id: ActiveValue::set(id),
             title: ActiveValue::Set(song.album.clone()),
             artist: ActiveValue::Set(song.album_artist.clone()),
-            artist_id: ActiveValue::Set(Some(format!(
-                "{:x}",
-                md5::compute(song.album_artist.to_owned())
-            ))),
+            artist_id: ActiveValue::Set(Some(format!("{:x}", md5::compute(&song.album_artist)))),
             year: ActiveValue::Set(song.year),
             cover: ActiveValue::Set(song.cover.clone()),
             // Preserved across rescans: the atproto link is set by the likes
@@ -90,16 +87,16 @@ impl From<AlbumType> for Model {
     }
 }
 
-impl Into<AlbumType> for Model {
-    fn into(self) -> AlbumType {
+impl From<Model> for AlbumType {
+    fn from(val: Model) -> Self {
         AlbumType {
-            id: self.id,
-            title: self.title,
-            cover: self.cover,
-            artist: self.artist,
-            artist_id: self.artist_id,
-            year: self.year,
-            tracks: self.tracks.into_iter().map(Into::into).collect(),
+            id: val.id,
+            title: val.title,
+            cover: val.cover,
+            artist: val.artist,
+            artist_id: val.artist_id,
+            year: val.year,
+            tracks: val.tracks.into_iter().map(Into::into).collect(),
         }
     }
 }

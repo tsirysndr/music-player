@@ -337,7 +337,7 @@ pub fn get_application_directory() -> String {
             format!("{}/music-player", config_dir.to_str().unwrap())
         }
     };
-    let path = env::var("MUSIC_PLAYER_APPLICATION_DIRECTORY").unwrap_or_else(|_| config_dir);
+    let path = env::var("MUSIC_PLAYER_APPLICATION_DIRECTORY").unwrap_or(config_dir);
     let albums = format!("{}/albums", path);
     let artists = format!("{}/artists", path);
     let playlists = format!("{}/playlists", path);

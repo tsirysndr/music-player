@@ -248,6 +248,9 @@ enum Artist {
     Name,
 }
 
+// `Track::Track` is the `track` *column* — the variant name is the SQL
+// identifier, so renaming it would rename the column.
+#[allow(clippy::enum_variant_names)]
 #[derive(Iden)]
 enum Track {
     Table,

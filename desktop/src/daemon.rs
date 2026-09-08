@@ -126,7 +126,7 @@ fn boot() {
                     data: serde_json::to_string(&track_event).unwrap(),
                 };
                 let peers = broadcast_peers.lock().unwrap();
-                for (_, recp) in peers.iter() {
+                for recp in peers.values() {
                     let _ =
                         recp.unbounded_send(Message::text(serde_json::to_string(&msg).unwrap()));
                 }

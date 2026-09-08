@@ -27,6 +27,12 @@ pub struct Subsonic {
     connected: bool,
 }
 
+impl Default for Subsonic {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Subsonic {
     pub fn new() -> Self {
         let salt = generate_salt();

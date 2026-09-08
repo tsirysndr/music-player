@@ -267,7 +267,7 @@ async fn play() {
         .await
         .unwrap();
     let response = response.into_inner();
-    assert_eq!(response.is_playing, true);
+    assert!(response.is_playing);
 
     client
         .pause(tonic::Request::new(PauseRequest {}))
@@ -281,7 +281,7 @@ async fn play() {
         .await
         .unwrap();
     let response = response.into_inner();
-    assert_eq!(response.is_playing, false);
+    assert!(!response.is_playing);
 
     client
         .play(tonic::Request::new(PlayRequest {}))
@@ -295,7 +295,7 @@ async fn play() {
         .await
         .unwrap();
     let response = response.into_inner();
-    assert_eq!(response.is_playing, true);
+    assert!(response.is_playing);
 
     tx.send(()).unwrap();
     jh.await.unwrap();
@@ -352,7 +352,7 @@ async fn pause() {
         .await
         .unwrap();
     let response = response.into_inner();
-    assert_eq!(response.is_playing, true);
+    assert!(response.is_playing);
 
     client
         .pause(tonic::Request::new(PauseRequest {}))
@@ -366,7 +366,7 @@ async fn pause() {
         .await
         .unwrap();
     let response = response.into_inner();
-    assert_eq!(response.is_playing, false);
+    assert!(!response.is_playing);
 
     tx.send(()).unwrap();
     jh.await.unwrap();

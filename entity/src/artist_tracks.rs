@@ -35,10 +35,7 @@ impl From<&Song> for ActiveModel {
                 "{:x}",
                 md5::compute(format!("{}{}", song.artist, song.uri.as_ref().unwrap()))
             )),
-            artist_id: ActiveValue::Set(format!(
-                "{:x}",
-                md5::compute(song.album_artist.to_owned())
-            )),
+            artist_id: ActiveValue::Set(format!("{:x}", md5::compute(&song.album_artist))),
             track_id: ActiveValue::Set(format!("{:x}", md5::compute(song.uri.as_ref().unwrap()))),
         }
     }

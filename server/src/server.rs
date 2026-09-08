@@ -198,7 +198,7 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
         );
         let peers = peer_map.lock().unwrap();
         // We want to broadcast the message to everyone except ourselves.
-        let broadcast_recipients = peers.iter().map(|(_, ws_sink)| ws_sink);
+        let broadcast_recipients = peers.values();
 
         for recp in broadcast_recipients {
             recp.unbounded_send(msg.clone()).unwrap();
@@ -212,6 +212,6 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
     pin_mut!(broadcast_incoming, receive_from_others);
     future::select(broadcast_incoming, receive_from_others).await;
 
-    println!("{} disconnected", &addr);
+    println!("{} disconnected", addr);
     peer_map.lock().unwrap().remove(&addr);
 }

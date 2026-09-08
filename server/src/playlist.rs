@@ -101,7 +101,6 @@ impl PlaylistService for Playlist {
                         id: saved.id,
                         name: saved.name,
                         tracks: vec![],
-                        ..Default::default()
                     }));
                 }
                 for track in request.get_ref().tracks.iter() {
@@ -111,16 +110,14 @@ impl PlaylistService for Playlist {
                         track_id: ActiveValue::set(track.id.clone()),
                         created_at: ActiveValue::set(chrono::Utc::now()),
                     };
-                    match item.insert(self.db.get_connection()).await {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
+                    // A row that will not insert is not worth failing the
+                    // whole create over — the playlist itself is saved.
+                    let _ = item.insert(self.db.get_connection()).await;
                 }
                 Ok(tonic::Response::new(CreateResponse {
                     id: saved.id,
                     name: saved.name,
                     tracks: request.get_ref().tracks.clone(),
-                    ..Default::default()
                 }))
             }
             Err(e) => Err(tonic::Status::internal(e.to_string())),
@@ -177,7 +174,6 @@ impl PlaylistService for Playlist {
                                     ..Default::default()
                                 })
                                 .collect(),
-                            ..Default::default()
                         })
                     })
                     .map_err(|_| tonic::Status::internal("Failed to get playlist items"))
@@ -202,7 +198,6 @@ impl PlaylistService for Playlist {
                 tonic::Response::new(RenameResponse {
                     id: updated.id,
                     name: updated.name,
-                    ..Default::default()
                 })
             })
             .map_err(|_| tonic::Status::internal("Failed to rename playlist"))

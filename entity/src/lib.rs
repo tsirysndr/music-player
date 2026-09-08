@@ -40,27 +40,27 @@ pub mod select_result {
         pub track_uri: String,
     }
 
-    impl Into<Track> for PlaylistTrack {
-        fn into(self) -> Track {
+    impl From<PlaylistTrack> for Track {
+        fn from(val: PlaylistTrack) -> Self {
             Track {
-                id: self.track_id,
-                title: self.track_title,
-                duration: Some(self.track_duration),
-                track_number: self.track_number,
-                uri: self.track_uri,
+                id: val.track_id,
+                title: val.track_title,
+                duration: Some(val.track_duration),
+                track_number: val.track_number,
+                uri: val.track_uri,
                 artists: vec![Artist {
-                    id: self.artist_id,
-                    name: self.artist_name,
+                    id: val.artist_id,
+                    name: val.artist_name,
                     ..Default::default()
                 }],
                 album: Some(Album {
-                    id: self.album_id,
-                    title: self.album_title,
-                    cover: self.album_cover,
-                    year: self.album_year,
+                    id: val.album_id,
+                    title: val.album_title,
+                    cover: val.album_cover,
+                    year: val.album_year,
                     ..Default::default()
                 }),
-                artist: self.track_artist,
+                artist: val.track_artist,
                 ..Default::default()
             }
         }

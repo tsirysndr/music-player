@@ -96,7 +96,7 @@ impl RemoteTrackUrl for Track {
             return self.clone();
         }
         Self {
-            uri: format!("{}/tracks/{}", base_url, self.id.to_string()),
+            uri: format!("{}/tracks/{}", base_url, *self.id),
             ..self.clone()
         }
     }
@@ -136,14 +136,14 @@ impl From<Model> for Track {
     }
 }
 
-impl Into<Model> for TrackInput {
-    fn into(self) -> Model {
+impl From<TrackInput> for Model {
+    fn from(val: TrackInput) -> Self {
         Model {
-            id: self.id.0,
-            title: self.title,
-            uri: self.uri,
-            duration: self.duration,
-            track: self.track_number,
+            id: val.id.0,
+            title: val.title,
+            uri: val.uri,
+            duration: val.duration,
+            track: val.track_number,
             ..Default::default()
         }
     }
@@ -205,7 +205,6 @@ impl From<types::Track> for Track {
                 Some(album) => album.cover,
                 None => None,
             },
-            ..Default::default()
         }
     }
 }

@@ -95,7 +95,7 @@ impl PlaylistQuery {
                 .find_with_related(playlist_entity::Entity)
                 .all(db.get_connection())
                 .await?;
-        if results.len() == 0 {
+        if results.is_empty() {
             return Err(Error::new("Folder not found"));
         }
         let (mut folder, playlists) = results[0].clone();

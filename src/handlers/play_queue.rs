@@ -34,11 +34,9 @@ pub fn handler(key: Key, app: &mut App) {
                     common_key_events::on_low_press_handler(&app.track_table.tracks);
             }
         }
-        Key::Enter => {
-            if !app.track_table.tracks.is_empty() {
-                app.dispatch(IoEvent::PlayTrackAt(app.track_table.selected_index));
-                app.dispatch(IoEvent::GetCurrentPlayback);
-            }
+        Key::Enter if !app.track_table.tracks.is_empty() => {
+            app.dispatch(IoEvent::PlayTrackAt(app.track_table.selected_index));
+            app.dispatch(IoEvent::GetCurrentPlayback);
         }
         _ => (),
     }

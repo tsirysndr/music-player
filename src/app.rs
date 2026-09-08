@@ -457,7 +457,8 @@ impl App {
                     });
                 }
             }
-            matched.sort_by(|a, b| b.score.cmp(&a.score));
+            // Descending: the best match leads.
+            matched.sort_by_key(|result| std::cmp::Reverse(result.score));
             matched
         };
 

@@ -59,7 +59,7 @@ fn playlist_track_to_track() {
         artist_name: "Metro Boomin, Travis Scott, Future".to_string(),
         track_id: "36d052a19ff3535bf32dab9727410d18".to_string(),
         track_title: "Lock On Me".to_string(),
-        track_duration: 174.8209991455078,
+        track_duration: 174.821,
         track_number: Some(13),
         track_artist: "Metro Boomin, Travis Scott, Future".to_string(),
         track_genre: None,
@@ -79,6 +79,6 @@ fn playlist_track_to_track() {
     );
     assert_eq!(track.album_title, "HEROES & VILLAINS".to_owned());
     assert_eq!(track.album.year, Some(2022));
-    assert_eq!(track.duration, Some(174.8209991455078));
+    assert_eq!(track.duration, Some(174.821));
     assert_eq!(track.track_number, Some(13));
 }

@@ -8,11 +8,17 @@ use std::thread;
 
 use music_player_settings::{read_settings, Settings};
 
-pub const SERVICE_NAME: &'static str = "_music-player._tcp.local.";
+pub const SERVICE_NAME: &str = "_music-player._tcp.local.";
 
 pub struct MdnsResponder {
     responder: libmdns::Responder,
     svc: Vec<libmdns::Service>,
+}
+
+impl Default for MdnsResponder {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MdnsResponder {
@@ -82,15 +88,12 @@ pub fn register(name: &str, port: u16) {
 
 pub fn discover(service_name: &str) -> impl Stream<Item = ServiceInfo> {
     let mdns = ServiceDaemon::new().unwrap();
-    let receiver = mdns.browse(&service_name).expect("Failed to browse");
+    let receiver = mdns.browse(service_name).expect("Failed to browse");
 
     stream! {
         while let Ok(event) = receiver.recv() {
-            match event {
-                ServiceEvent::ServiceResolved(info) => {
-                    yield info;
-                }
-                _ => {}
+            if let ServiceEvent::ServiceResolved(info) = event {
+                yield info;
             }
         }
     }

@@ -64,13 +64,13 @@ impl Related<super::track::Entity> for Entity {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-impl Into<PlaylistType> for Model {
-    fn into(self) -> PlaylistType {
+impl From<Model> for PlaylistType {
+    fn from(val: Model) -> Self {
         PlaylistType {
-            id: self.id,
-            name: self.name,
-            description: self.description,
-            tracks: self.tracks.into_iter().map(Into::into).collect(),
+            id: val.id,
+            name: val.name,
+            description: val.description,
+            tracks: val.tracks.into_iter().map(Into::into).collect(),
         }
     }
 }

@@ -46,7 +46,7 @@ pub async fn setup_new_params(
 
     let db = Database::new().await;
 
-    return (cmd_tx, cmd_rx, tracklist, db, addr, url);
+    (cmd_tx, cmd_rx, tracklist, db, addr, url)
 }
 
 static TEST_LIBRARY: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();

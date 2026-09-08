@@ -56,10 +56,7 @@ fn song_to_track() {
     );
     assert_eq!(
         track.artist_id,
-        ActiveValue::Set(Some(format!(
-            "{:x}",
-            md5::compute(song.album_artist.to_owned())
-        )))
+        ActiveValue::Set(Some(format!("{:x}", md5::compute(&song.album_artist))))
     );
 }
 
@@ -81,7 +78,7 @@ fn playlist_track_to_track() {
         album_cover: Some("27234641d4f5f9e0832affa79b9f62d8.jpg".to_owned()),
         artist_id: "0afe1226a5a75408acb57e97bd5feca1".to_owned(),
         artist_name: "Lil Uzi Vert".to_owned(),
-        track_duration: 195.41299438476562,
+        track_duration: 195.413,
     };
     let track = track_entity::Model::from(playlist_track.clone());
     assert_eq!(track.id, playlist_track.track_id);

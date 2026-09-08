@@ -30,6 +30,12 @@ pub struct CurrentPlayback {
     pub current: Option<Playback>,
 }
 
+impl Default for CurrentPlayback {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CurrentPlayback {
     pub fn new() -> Self {
         Self { current: None }
@@ -119,8 +125,8 @@ impl From<&AudioMetadata> for Song {
             genre: tag_or_none(&meta.genre),
             year: meta.year,
             track: meta.track_number,
-            bitrate: (meta.bitrate > 0).then(|| meta.bitrate),
-            sample_rate: (meta.sample_rate > 0).then(|| meta.sample_rate),
+            bitrate: (meta.bitrate > 0).then_some(meta.bitrate),
+            sample_rate: (meta.sample_rate > 0).then_some(meta.sample_rate),
             bit_depth: None,
             channels: None,
             duration: meta.duration,
@@ -227,7 +233,7 @@ impl From<ServiceInfo> for Device {
             let settings = config.try_deserialize::<Settings>().unwrap();
 
             let is_current_device = device_id == settings.device_id
-                && srv.get_fullname().split("-").collect::<Vec<&str>>()[0].to_owned() == "http";
+                && srv.get_fullname().split("-").collect::<Vec<&str>>()[0] == "http";
 
             let mut addresses = srv.get_addresses().iter();
             let mut ip = addresses.next().unwrap().to_string();
@@ -367,13 +373,13 @@ pub struct Folder {
     pub playlists: Vec<Playlist>,
 }
 
-impl Into<Metadata> for Track {
-    fn into(self) -> Metadata {
+impl From<Track> for Metadata {
+    fn from(val: Track) -> Self {
         Metadata {
-            title: self.title,
-            artist: Some(self.artist),
-            album: self.album.clone().map(|a| a.title),
-            album_art_uri: self.album.map(|a| a.cover.unwrap()),
+            title: val.title,
+            artist: Some(val.artist),
+            album: val.album.clone().map(|a| a.title),
+            album_art_uri: val.album.map(|a| a.cover.unwrap()),
             ..Default::default()
         }
     }
@@ -404,10 +410,10 @@ impl RemoteTrackUrl for Track {
 impl RemoteCoverUrl for Track {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
         Self {
-            album: match self.album {
-                Some(ref album) => Some(album.with_remote_cover_url(base_url)),
-                None => None,
-            },
+            album: self
+                .album
+                .as_ref()
+                .map(|album| album.with_remote_cover_url(base_url)),
             ..self.clone()
         }
     }

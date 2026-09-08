@@ -109,8 +109,11 @@ fn read_varint(bytes: &[u8]) -> Option<(usize, usize)> {
     None
 }
 
+/// A CAR archive's roots, and its blocks keyed by CID.
+type CarBlocks = (Vec<cid::Cid>, HashMap<cid::Cid, Vec<u8>>);
+
 /// Index every block in a CARv1 archive by CID.
-fn car_blocks(car: &[u8]) -> Result<(Vec<cid::Cid>, HashMap<cid::Cid, Vec<u8>>), Error> {
+fn car_blocks(car: &[u8]) -> Result<CarBlocks, Error> {
     let (header_len, width) = read_varint(car).ok_or_else(|| anyhow!("truncated CAR header"))?;
     let header_end = width
         .checked_add(header_len)

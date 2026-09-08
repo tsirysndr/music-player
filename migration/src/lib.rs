@@ -74,7 +74,7 @@ pub async fn run() {
     match env::consts::OS {
         "android" => {
             let db = &Database::connect(&url).await.unwrap();
-            Migrator::up(&db, None).await.unwrap();
+            Migrator::up(db, None).await.unwrap();
         }
         _ => {
             cli::run_cli(Migrator).await;

@@ -20,7 +20,7 @@ fn new_empty() {
     assert_eq!(tracklist.played.len(), 0);
     assert_eq!(tracklist.current_track, None);
     assert_eq!(tracklist.playback_state.position_ms, 0);
-    assert_eq!(tracklist.playback_state.is_playing, false);
+    assert!(!tracklist.playback_state.is_playing);
 }
 
 #[test]

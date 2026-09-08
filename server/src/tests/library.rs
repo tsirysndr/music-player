@@ -238,7 +238,7 @@ async fn get_album_details() {
             .unwrap();
     });
 
-    let url = format!("http://{}", addr.to_string());
+    let url = format!("http://{}", addr);
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 

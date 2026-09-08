@@ -96,7 +96,7 @@ impl ExtensionsMutation {
 
         // Refuse an id that is not installed rather than storing a row that
         // will never match anything.
-        if !installed_ids().iter().any(|installed| *installed == id) {
+        if !installed_ids().contains(&id) {
             return Err(Error::new(format!("no extension '{id}' is installed")));
         }
 

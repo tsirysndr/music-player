@@ -142,10 +142,7 @@ impl From<&Song> for ActiveModel {
             duration: ActiveValue::Set(Some(song.duration.as_secs_f32())),
             uri: ActiveValue::Set(song.uri.clone().unwrap_or_default()),
             album_id: ActiveValue::Set(Some(album_id(&song.album, &song.album_artist))),
-            artist_id: ActiveValue::Set(Some(format!(
-                "{:x}",
-                md5::compute(song.album_artist.to_owned())
-            ))),
+            artist_id: ActiveValue::Set(Some(format!("{:x}", md5::compute(&song.album_artist)))),
             // Preserved across rescans: the atproto link is set by the likes
             // importer, not by the scanner.
             aturi: ActiveValue::NotSet,
@@ -211,28 +208,28 @@ impl From<TrackType> for Model {
     }
 }
 
-impl Into<TrackType> for Model {
-    fn into(self) -> TrackType {
+impl From<Model> for TrackType {
+    fn from(val: Model) -> Self {
         TrackType {
-            id: self.id,
-            title: self.title,
-            artist: self.artist,
-            uri: self.uri,
-            duration: self.duration,
-            album: Some(self.album.into()),
-            artists: self.artists.into_iter().map(Into::into).collect(),
+            id: val.id,
+            title: val.title,
+            artist: val.artist,
+            uri: val.uri,
+            duration: val.duration,
+            album: Some(val.album.into()),
+            artists: val.artists.into_iter().map(Into::into).collect(),
             ..Default::default()
         }
     }
 }
 
-impl Into<Metadata> for Model {
-    fn into(self) -> Metadata {
+impl From<Model> for Metadata {
+    fn from(val: Model) -> Self {
         Metadata {
-            title: self.title,
-            artist: Some(self.artist),
-            album: Some(self.album.title),
-            album_art_uri: self.album.cover,
+            title: val.title,
+            artist: Some(val.artist),
+            album: Some(val.album.title),
+            album_art_uri: val.album.cover,
             ..Default::default()
         }
     }

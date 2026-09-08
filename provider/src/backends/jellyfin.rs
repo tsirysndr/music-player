@@ -27,6 +27,12 @@ pub struct Jellyfin {
     host: String,
 }
 
+impl Default for Jellyfin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Jellyfin {
     pub fn new() -> Self {
         Self {

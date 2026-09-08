@@ -427,7 +427,7 @@ fn build_plugin(
         );
     }
 
-    Ok(builder.build()?)
+    builder.build()
 }
 
 #[derive(serde::Deserialize, Default)]

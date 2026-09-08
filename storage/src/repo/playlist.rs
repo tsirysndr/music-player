@@ -66,7 +66,7 @@ impl PlaylistRepository {
                     .all(&self.db)
                     .await?;
 
-                if results.len() == 0 {
+                if results.is_empty() {
                     return Err(Error::msg("Playlist not found"));
                 }
                 results

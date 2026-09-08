@@ -83,9 +83,7 @@ impl ProviderRegistry {
     pub fn get(&self, kind: &str) -> Option<Arc<dyn ProviderFactory>> {
         self.factories
             .iter()
-            .find(|factory| {
-                factory.kind() == kind || factory.aliases().iter().any(|alias| *alias == kind)
-            })
+            .find(|factory| factory.kind() == kind || factory.aliases().contains(&kind))
             .cloned()
     }
 

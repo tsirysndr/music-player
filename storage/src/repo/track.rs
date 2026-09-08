@@ -19,7 +19,7 @@ impl TrackRepository {
                 .find_with_related(artist_entity::Entity)
                 .all(&self.db)
                 .await?;
-        if results.len() == 0 {
+        if results.is_empty() {
             return Err(Error::msg("Track not found"));
         }
         let track = results[0].0.clone();

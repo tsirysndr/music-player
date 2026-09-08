@@ -169,7 +169,7 @@ impl RendererPicker {
                     ));
                 }
             }
-            matched.sort_by(|a, b| b.0.cmp(&a.0));
+            matched.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
             self.results = matched.into_iter().map(|(_, result)| result).collect();
         }
         self.selected_index = self

@@ -42,7 +42,7 @@ impl ActiveModelBehavior for ActiveModel {}
 
 impl From<&Song> for ActiveModel {
     fn from(song: &Song) -> Self {
-        let id = format!("{:x}", md5::compute(song.album_artist.to_owned()));
+        let id = format!("{:x}", md5::compute(&song.album_artist));
         Self {
             id: ActiveValue::set(id),
             name: ActiveValue::Set(song.album_artist.clone()),
@@ -64,11 +64,11 @@ impl From<ArtistType> for Model {
     }
 }
 
-impl Into<ArtistType> for Model {
-    fn into(self) -> ArtistType {
+impl From<Model> for ArtistType {
+    fn from(val: Model) -> Self {
         ArtistType {
-            id: self.id,
-            name: self.name,
+            id: val.id,
+            name: val.name,
             ..Default::default()
         }
     }

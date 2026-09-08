@@ -79,16 +79,16 @@ async fn parse_music_library(enable_log: bool) -> Result<Vec<Song>, Error> {
 async fn save_songs(db: &Database, songs: &[Song]) -> Result<(), Error> {
     let txn = db.get_connection().begin().await?;
     for song in songs {
-        let item: artist::ActiveModel = song.try_into().unwrap();
+        let item: artist::ActiveModel = song.into();
         item.insert(&txn).await.ok();
 
-        let item: album::ActiveModel = song.try_into().unwrap();
+        let item: album::ActiveModel = song.into();
         let id = album_id(&song.album, &song.album_artist);
         if album::Entity::find_by_id(id).one(&txn).await?.is_none() {
             item.insert(&txn).await?;
         }
 
-        let mut item: track::ActiveModel = song.try_into().unwrap();
+        let mut item: track::ActiveModel = song.into();
         let id = format!(
             "{:x}",
             md5::compute(song.uri.as_deref().unwrap_or_default())
@@ -106,7 +106,7 @@ async fn save_songs(db: &Database, songs: &[Song]) -> Result<(), Error> {
             item.insert(&txn).await?;
         }
 
-        let item: artist_tracks::ActiveModel = song.try_into().unwrap();
+        let item: artist_tracks::ActiveModel = song.into();
         item.insert(&txn).await.ok();
     }
     txn.commit().await?;

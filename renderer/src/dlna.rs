@@ -25,6 +25,12 @@ pub struct Dlna {
     current_playback: Arc<Mutex<CurrentPlayback>>,
 }
 
+impl Default for Dlna {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Dlna {
     pub fn new() -> Self {
         Self {
@@ -269,7 +275,6 @@ where
         content_type,
         object_class: Some(ObjectClass::Audio),
         autoplay: true,
-        ..Default::default()
     }
 }
 
@@ -300,7 +305,10 @@ impl DlnaPlayer {
         let device_client =
             futures::executor::block_on(DeviceClient::new(location.as_str()).unwrap().connect())
                 .unwrap();
-        let player_internal = Arc::new(Mutex::new(DlnaPlayerInternal {
+        // Async-aware, because both loops below hold it across a network call.
+        // A std mutex there blocks whichever task the executor picks up next,
+        // and these two run on the same runtime.
+        let player_internal = Arc::new(tokio::sync::Mutex::new(DlnaPlayerInternal {
             client: MediaRendererClient::new(device_client),
             tracklist,
             current_playback,
@@ -312,7 +320,7 @@ impl DlnaPlayer {
                 while let Some(cmd) = cmd_rx.recv().await {
                     player_internal_clone
                         .lock()
-                        .unwrap()
+                        .await
                         .handle_command(cmd)
                         .await
                         .unwrap();
@@ -324,11 +332,7 @@ impl DlnaPlayer {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(async {
                 loop {
-                    player_internal
-                        .lock()
-                        .unwrap()
-                        .update_current_playback()
-                        .await;
+                    player_internal.lock().await.update_current_playback().await;
                     tokio::time::sleep(Duration::from_millis(200)).await;
                 }
             });
@@ -377,11 +381,11 @@ impl DlnaPlayerInternal {
             .map(|(i, t)| (t.clone(), (i + 1) as i32))
             .collect();
         let (current_track, index) = tracklist.current_track();
-        return match current_track {
+        match current_track {
             Some(track) => Ok(Playback {
                 current_track: Some(track.clone().into()),
                 index: index as u32,
-                position_ms: position * 1000 as u32,
+                position_ms: position * 1000_u32,
                 is_playing: transport_info.current_transport_state == "PLAYING",
                 current_item_id: Some(index as i32),
                 items,
@@ -394,7 +398,7 @@ impl DlnaPlayerInternal {
                 current_item_id: None,
                 items: vec![],
             }),
-        };
+        }
     }
 
     async fn handle_play(&self) -> Result<(), Error> {
@@ -410,9 +414,14 @@ impl DlnaPlayerInternal {
     }
 
     async fn handle_next(&self) -> Result<(), Error> {
-        let mut tracklist = self.tracklist.lock().unwrap();
-        if tracklist.next_track().is_some() {
-            drop(tracklist);
+        // The guard is confined to a block: everything after it is a network
+        // round trip, and a std mutex held across an await blocks whichever
+        // task the executor happens to run next.
+        let advanced = {
+            let mut tracklist = self.tracklist.lock().unwrap();
+            tracklist.next_track().is_some()
+        };
+        if advanced {
             self.client.next().await?;
             tokio::time::sleep(Duration::from_secs(1)).await;
             self.preload_next_track().await?;
@@ -421,16 +430,22 @@ impl DlnaPlayerInternal {
     }
 
     async fn handle_previous(&self) -> Result<(), Error> {
-        let mut tracklist = self.tracklist.lock().unwrap();
-        if tracklist.previous_track().is_some() {
-            let (current_track, _) = tracklist.current_track();
-            let current_track = current_track.unwrap();
-            let options = build_load_options(current_track.clone(), &current_track.uri).await;
-            self.client.load(&current_track.uri, options).await?;
-            drop(tracklist);
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            self.preload_next_track().await?;
-        }
+        let current_track = {
+            let mut tracklist = self.tracklist.lock().unwrap();
+            if tracklist.previous_track().is_none() {
+                return Ok(());
+            }
+            // Cloned out so the guard is gone before the network calls below.
+            tracklist.current_track().0
+        };
+        let Some(current_track) = current_track else {
+            return Ok(());
+        };
+
+        let options = build_load_options(current_track.clone(), &current_track.uri).await;
+        self.client.load(&current_track.uri, options).await?;
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        self.preload_next_track().await?;
         Ok(())
     }
 
@@ -439,12 +454,17 @@ impl DlnaPlayerInternal {
     }
 
     async fn handle_load(&mut self, track: Track) -> Result<(), Error> {
-        let mut tracklist = self.tracklist.lock().unwrap();
-        tracklist.load_tracks(vec![track.clone().into()]);
+        let current_track = {
+            let mut tracklist = self.tracklist.lock().unwrap();
+            tracklist.load_tracks(vec![track.clone().into()]);
+            tracklist.play_track_at(0);
+            tracklist.current_track().0
+        };
+        let Some(current_track) = current_track else {
+            return Ok(());
+        };
+
         let options = build_load_options(track.clone(), &track.uri).await;
-        tracklist.play_track_at(0);
-        let (current_track, _) = tracklist.current_track();
-        let current_track = current_track.unwrap();
         self.client.load(&current_track.uri, options).await?;
         Ok(())
     }
@@ -473,18 +493,19 @@ impl DlnaPlayerInternal {
         tracks: Vec<Track>,
         start_index: Option<i32>,
     ) -> Result<(), Error> {
-        let mut tracklist = self.tracklist.lock().unwrap();
-        tracklist.load_tracks(tracks.into_iter().map(Into::into).collect());
-        let start_index = start_index.unwrap_or(0);
-        let (current_track, _) = tracklist.play_track_at(start_index as usize);
-        let current_track = current_track.unwrap();
+        let current_track = {
+            let mut tracklist = self.tracklist.lock().unwrap();
+            tracklist.load_tracks(tracks.into_iter().map(Into::into).collect());
+            tracklist.play_track_at(start_index.unwrap_or(0) as usize).0
+        };
+        let Some(current_track) = current_track else {
+            return Ok(());
+        };
 
         let options = build_load_options(current_track.clone(), &current_track.uri).await;
-
         self.client.load(&current_track.uri, options).await?;
         // sleep to wait for the track to be loaded
         tokio::time::sleep(Duration::from_secs(3)).await;
-        drop(tracklist);
         self.preload_next_track().await?;
         Ok(())
     }

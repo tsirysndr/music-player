@@ -40,6 +40,12 @@ pub struct Chromecast<'a> {
     cmd_tx: Option<mpsc::UnboundedSender<CastPlayerCommand>>,
 }
 
+impl<'a> Default for Chromecast<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> Chromecast<'a> {
     pub fn new() -> Self {
         Self {
@@ -250,7 +256,7 @@ impl<'a> Player for Chromecast<'a> {
             })
             .collect::<Vec<Media>>();
 
-        let transport_id = self.transport_id.as_ref().map(|id| id.as_str()).unwrap();
+        let transport_id = self.transport_id.as_deref().unwrap();
 
         if let Some(cast_device) = &self.client {
             cast_device.media.queue_load(
@@ -349,6 +355,10 @@ impl<'a> From<Device> for Chromecast<'a> {
 }
 
 #[derive(Debug)]
+// As with `PlayerCommand`: one variant carries a track and the rest carry
+// nothing. Boxing it would change every send and match site for a message
+// that is not sent in bulk.
+#[allow(clippy::large_enum_variant)]
 pub enum CastPlayerCommand {
     Play,
     Pause,
@@ -442,14 +452,14 @@ impl<'a> CastPlayerInternal<'a> {
                 }
             }
         }
-        return Ok(Playback {
+        Ok(Playback {
             current_track: None,
             index: 0,
             position_ms: 0,
             is_playing: false,
             current_item_id: None,
             items: vec![],
-        });
+        })
     }
 
     fn parse_status(&self, status: &StatusEntry) -> Result<Playback, Error> {
@@ -503,60 +513,57 @@ impl<'a> CastPlayerInternal<'a> {
             })
             .collect::<Vec<(Track, i32)>>();
 
-        match metadata {
-            Metadata::MusicTrack(metadata) => {
-                let cover = metadata.images.first().map(|x| x.url.clone());
-                let track = Track {
-                    id: media
-                        .content_id
-                        .clone()
-                        .split("/")
-                        .last()
-                        .unwrap()
-                        .to_string(),
-                    uri: media.content_id.clone(),
-                    title: metadata.title.clone().unwrap(),
-                    artists: vec![Artist {
-                        id: format!("{:x}", md5::compute(metadata.artist.clone().unwrap())),
-                        name: metadata.artist.clone().unwrap(),
-                        ..Default::default()
-                    }],
-                    album: Some(Album {
-                        id: cover
-                            .clone()
-                            .map(|x| {
-                                x.split("/")
-                                    .last()
-                                    .map(|x| x.split(".").next().unwrap())
-                                    .unwrap()
-                                    .to_string()
-                            })
-                            .unwrap_or_default(),
-                        title: metadata.album_name.clone().unwrap(),
-                        cover,
-                        ..Default::default()
-                    }),
-                    track_number: metadata.track_number,
-                    disc_number: metadata.disc_number.unwrap_or(0),
-                    duration: media.duration,
+        if let Metadata::MusicTrack(metadata) = metadata {
+            let cover = metadata.images.first().map(|x| x.url.clone());
+            let track = Track {
+                id: media
+                    .content_id
+                    .clone()
+                    .split("/")
+                    .last()
+                    .unwrap()
+                    .to_string(),
+                uri: media.content_id.clone(),
+                title: metadata.title.clone().unwrap(),
+                artists: vec![Artist {
+                    id: format!("{:x}", md5::compute(metadata.artist.clone().unwrap())),
+                    name: metadata.artist.clone().unwrap(),
                     ..Default::default()
-                };
-                return Ok(Playback {
-                    current_track: Some(track),
-                    index: 0,
-                    position_ms: status
-                        .current_time
-                        .map(|x| (x * 1000.0) as u32)
-                        .unwrap_or(0),
-                    is_playing: true,
-                    items,
-                    current_item_id: status.current_item_id,
-                });
-            }
-            _ => {}
+                }],
+                album: Some(Album {
+                    id: cover
+                        .clone()
+                        .map(|x| {
+                            x.split("/")
+                                .last()
+                                .map(|x| x.split(".").next().unwrap())
+                                .unwrap()
+                                .to_string()
+                        })
+                        .unwrap_or_default(),
+                    title: metadata.album_name.clone().unwrap(),
+                    cover,
+                    ..Default::default()
+                }),
+                track_number: metadata.track_number,
+                disc_number: metadata.disc_number.unwrap_or(0),
+                duration: media.duration,
+                ..Default::default()
+            };
+            return Ok(Playback {
+                current_track: Some(track),
+                index: 0,
+                position_ms: status
+                    .current_time
+                    .map(|x| (x * 1000.0) as u32)
+                    .unwrap_or(0),
+                is_playing: true,
+                items,
+                current_item_id: status.current_item_id,
+            });
         }
 
-        return Ok(Playback {
+        Ok(Playback {
             current_track: Some(Track {
                 uri: status
                     .media
@@ -570,7 +577,7 @@ impl<'a> CastPlayerInternal<'a> {
             is_playing: true,
             current_item_id: status.current_item_id,
             items,
-        });
+        })
     }
 
     fn current_app_session(&self) -> Result<(String, i32, String), Error> {
@@ -698,7 +705,7 @@ impl<'a> CastPlayerInternal<'a> {
             items,
             before,
         )?;
-        return Ok(());
+        Ok(())
     }
 
     fn handle_disconnect(&self) -> Result<(), Error> {

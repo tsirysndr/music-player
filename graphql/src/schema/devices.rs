@@ -65,7 +65,7 @@ impl DevicesQuery {
         let devices = devices
             .iter()
             .filter(|device| device.is_source_device)
-            .map(|srv| types::Device::from(srv.clone()).is_connected(connected.as_ref()))
+            .map(|srv| srv.clone().is_connected(connected.as_ref()))
             .map(Into::into)
             .collect();
         Ok(devices)
@@ -131,9 +131,7 @@ impl DevicesMutation {
             .map_err(provider::err)?;
 
         SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
-        Ok(types::Device::from(device.clone())
-            .is_connected(Some(&device))
-            .into())
+        Ok(device.clone().is_connected(Some(&device)).into())
     }
 
     async fn disconnect_from_device(&self, ctx: &Context<'_>) -> Result<Option<Device>, Error> {
@@ -160,8 +158,7 @@ impl DevicesMutation {
                 && (device.service == "grpc" || device.app == "dlna" || device.app == "chromecast")
         }) {
             Some(device) => {
-                let current_device =
-                    types::Device::from(device.clone()).is_connected(Some(&device.clone()));
+                let current_device = device.clone().is_connected(Some(&device.clone()));
                 io_device.set_receiver_device(current_device.clone());
 
                 let player_type = match device.app.as_str() {
@@ -171,7 +168,7 @@ impl DevicesMutation {
                 };
 
                 let receiver = connect_to_cast_device(
-                    types::Device::from(device.clone()).is_connected(Some(&device.clone())),
+                    device.clone().is_connected(Some(&device.clone())),
                     player_type,
                 )
                 .await?;
@@ -183,9 +180,7 @@ impl DevicesMutation {
 
                 SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
 
-                Ok(types::Device::from(device.clone())
-                    .is_connected(Some(&device.clone()))
-                    .into())
+                Ok(device.clone().is_connected(Some(&device.clone())).into())
             }
             None => Err(Error::new("Device not found")),
         }

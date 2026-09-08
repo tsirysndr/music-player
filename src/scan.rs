@@ -11,7 +11,7 @@ use music_player_entity::track;
 pub async fn auto_scan_music_library(db: Database) {
     match track::Entity::find().all(db.clone().get_connection()).await {
         Ok(result) => {
-            if result.len() == 0 {
+            if result.is_empty() {
                 scan_music_library(false, db).await.unwrap_or_default();
             }
         }

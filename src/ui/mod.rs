@@ -1669,7 +1669,7 @@ fn draw_table(
                         {
                             if track_playing_offset_index == (i as u32 + 1) {
                                 formatted_row[title_idx] =
-                                    format!("▶ {}", &formatted_row[title_idx]);
+                                    format!("▶ {}", formatted_row[title_idx]);
                                 style = Style::default()
                                     .fg(app.user_config.theme.active)
                                     .add_modifier(Modifier::BOLD);
@@ -1684,7 +1684,7 @@ fn draw_table(
                         if let Some(track) = &current_playback.track {
                             if track.id == item.id {
                                 formatted_row[title_idx] =
-                                    format!("▶ {}", &formatted_row[title_idx]);
+                                    format!("▶ {}", formatted_row[title_idx]);
                                 style = Style::default()
                                     .fg(app.user_config.theme.active)
                                     .add_modifier(Modifier::BOLD);

@@ -27,7 +27,7 @@ async fn load_tracklist() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -41,7 +41,7 @@ async fn load_tracklist() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -85,7 +85,7 @@ fn play() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -99,7 +99,7 @@ fn play() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -120,7 +120,7 @@ fn play() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, true);
+    assert!(state.is_playing);
 
     cmd_tx.lock().unwrap().send(PlayerCommand::Pause).unwrap();
 
@@ -128,7 +128,7 @@ fn play() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, false);
+    assert!(!state.is_playing);
 
     cmd_tx.lock().unwrap().send(PlayerCommand::Play).unwrap();
 
@@ -136,7 +136,7 @@ fn play() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, true);
+    assert!(state.is_playing);
 }
 
 #[test]
@@ -156,7 +156,7 @@ fn pause() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -170,7 +170,7 @@ fn pause() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -191,7 +191,7 @@ fn pause() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, true);
+    assert!(state.is_playing);
 
     cmd_tx.lock().unwrap().send(PlayerCommand::Pause).unwrap();
 
@@ -199,7 +199,7 @@ fn pause() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, false);
+    assert!(!state.is_playing);
 }
 
 #[test]
@@ -219,7 +219,7 @@ fn stop() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -233,7 +233,7 @@ fn stop() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -254,7 +254,7 @@ fn stop() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, true);
+    assert!(state.is_playing);
 
     cmd_tx.lock().unwrap().send(PlayerCommand::Stop).unwrap();
 
@@ -262,7 +262,7 @@ fn stop() {
 
     let state = tracklist.lock().unwrap().playback_state();
 
-    assert_eq!(state.is_playing, false);
+    assert!(!state.is_playing);
 }
 
 #[test]
@@ -282,7 +282,7 @@ fn next() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -296,7 +296,7 @@ fn next() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -345,7 +345,7 @@ fn previous() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -359,7 +359,7 @@ fn previous() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -420,7 +420,7 @@ fn clear() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -434,7 +434,7 @@ fn clear() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -485,7 +485,7 @@ fn play_track_at() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -499,7 +499,7 @@ fn play_track_at() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -552,7 +552,7 @@ fn play_next() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -566,7 +566,7 @@ fn play_next() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -600,7 +600,7 @@ fn play_next() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -636,7 +636,7 @@ fn current_track() {
             title: "Wet Dreamz".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(1),
-            duration: Some(239.38099670410156),
+            duration: Some(239.381),
             uri: "/tmp/audio/03 - J. Cole - Wet Dreamz(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -650,7 +650,7 @@ fn current_track() {
             title: "Fire Squad".to_owned(),
             artist: "J. Cole".to_owned(),
             track: Some(2),
-            duration: Some(288.2380065917969),
+            duration: Some(288.238),
             uri: "/tmp/audio/06 - J. Cole - Fire Squad(Explicit).m4a".to_owned(),
             album: Album {
                 id: "ecd3fb5214ef4faf77a0eba4eedb2638".to_owned(),
@@ -686,7 +686,7 @@ fn playback_state() {
     );
 
     let state = tracklist.lock().unwrap().playback_state();
-    assert_eq!(state.is_playing, false);
+    assert!(!state.is_playing);
 }
 
 fn setup_new_params() -> (
@@ -698,5 +698,5 @@ fn setup_new_params() -> (
     let cmd_tx = Arc::new(Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(Mutex::new(cmd_rx));
     let tracklist = Arc::new(Mutex::new(Tracklist::new_empty()));
-    return (cmd_tx, cmd_rx, tracklist);
+    (cmd_tx, cmd_rx, tracklist)
 }

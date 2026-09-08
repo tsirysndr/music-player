@@ -26,7 +26,6 @@ impl TracklistClient {
                 id: id.to_string(),
                 ..Default::default()
             }),
-            ..Default::default()
         });
         self.client.add_track(request).await?;
         Ok(())
@@ -47,27 +46,20 @@ impl TracklistClient {
     }
 
     pub async fn clear(&mut self) -> Result<(), Error> {
-        let request = tonic::Request::new(ClearTracklistRequest {
-            ..Default::default()
-        });
+        let request = tonic::Request::new(ClearTracklistRequest {});
         self.client.clear_tracklist(request).await?;
         Ok(())
     }
 
     pub async fn list(&mut self) -> Result<(Vec<Track>, Vec<Track>), Error> {
-        let request = tonic::Request::new(GetTracklistTracksRequest {
-            ..Default::default()
-        });
+        let request = tonic::Request::new(GetTracklistTracksRequest {});
         let response = self.client.get_tracklist_tracks(request).await?;
         let response = response.into_inner();
         Ok((response.previous_tracks, response.next_tracks))
     }
 
     pub async fn remove(&mut self, position: u32) -> Result<(), Error> {
-        let request = tonic::Request::new(RemoveTrackAtRequest {
-            position,
-            ..Default::default()
-        });
+        let request = tonic::Request::new(RemoveTrackAtRequest { position });
         self.client.remove_track_at(request).await?;
         Ok(())
     }

@@ -75,10 +75,18 @@ pub async fn resolve_handle(handle: &str) -> Option<String> {
     Some(resolved.did)
 }
 
-/// Whose repo to read, without needing any session: the `rocksky login` token,
-/// else the password-auth identifier from the environment (used as-is when it
-/// is already a DID, otherwise resolved as a handle).
+/// Whose repo to read, without needing any session: the account signed in
+/// through the app, else the `rocksky login` token, else the password-auth
+/// identifier from the environment (used as-is when it is already a DID,
+/// otherwise resolved as a handle).
+///
+/// The signed-in account comes first because it is the one the user chose most
+/// recently and can see on screen — a stale CLI token silently winning over it
+/// would read as the app ignoring the sign-in.
 pub async fn resolve_did() -> Option<String> {
+    if let Some(profile) = crate::atradio::profile() {
+        return Some(profile.did);
+    }
     if let Some(did) = token_did() {
         return Some(did);
     }

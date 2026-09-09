@@ -16,6 +16,21 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+/** Who is signed in, as a client needs to render it. */
+export type Account = {
+  __typename?: 'Account';
+  /**
+   * Absent is normal — plenty of accounts have no avatar, and a client
+   * draws initials instead.
+   */
+  avatar?: Maybe<Scalars['String']['output']>;
+  did: Scalars['String']['output'];
+  /** Absent for accounts that set none, where the handle is the name. */
+  displayName?: Maybe<Scalars['String']['output']>;
+  /** Without the leading `@`; whether to show one is the client's choice. */
+  handle: Scalars['String']['output'];
+};
+
 export type Album = {
   __typename?: 'Album';
   artist: Scalars['String']['output'];
@@ -342,6 +357,19 @@ export type Mutation = {
   setMute: Scalars['Boolean']['output'];
   setVolume: Scalars['Boolean']['output'];
   shuffle: Scalars['Boolean']['output'];
+  /**
+   * Sign in with a handle and an app password.
+   *
+   * An app password, not the account password: atproto issues them for
+   * exactly this, they can be revoked one at a time, and the daemon has no
+   * browser to run an OAuth flow in.
+   */
+  signIn: Account;
+  /**
+   * Forget the session. Scrobbling and station sync stop with it — they are
+   * the same session, not separate logins.
+   */
+  signOut: Scalars['Boolean']['output'];
   stop: Scalars['Boolean']['output'];
   /**
    * Bookmark or unbookmark whatever station is playing, and report the new
@@ -556,6 +584,12 @@ export type MutationSetVolumeArgs = {
 };
 
 
+export type MutationSignInArgs = {
+  handle: Scalars['String']['input'];
+  password: Scalars['String']['input'];
+};
+
+
 export type MutationUpdateSmartPlaylistArgs = {
   id: Scalars['ID']['input'];
   smart: SmartPlaylistInput;
@@ -622,6 +656,13 @@ export type PositionMilliseconds = {
 
 export type Query = {
   __typename?: 'Query';
+  /**
+   * The account signed in right now. `null` means nobody is.
+   *
+   * An `atradio login` at the terminal shows up here too: there is one
+   * session, however it was established.
+   */
+  account?: Maybe<Account>;
   album: Album;
   albums: Array<Album>;
   artist: Artist;
@@ -1064,6 +1105,26 @@ export type TracklistChanged = {
   track?: Maybe<Track>;
   tracklist: Tracklist;
 };
+
+export type SignInMutationVariables = Exact<{
+  handle: Scalars['String']['input'];
+  password: Scalars['String']['input'];
+}>;
+
+
+export type SignInMutation = { __typename?: 'Mutation', signIn: { __typename?: 'Account', did: string, handle: string, displayName?: string | null, avatar?: string | null } };
+
+export type SignOutMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SignOutMutation = { __typename?: 'Mutation', signOut: boolean };
+
+export type AccountFragmentFragment = { __typename?: 'Account', did: string, handle: string, displayName?: string | null, avatar?: string | null };
+
+export type GetAccountQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetAccountQuery = { __typename?: 'Query', account?: { __typename?: 'Account', did: string, handle: string, displayName?: string | null, avatar?: string | null } | null };
 
 export type ConnectToDeviceMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1525,6 +1586,14 @@ export type GetTracklistQueryVariables = Exact<{ [key: string]: never; }>;
 export type GetTracklistQuery = { __typename?: 'Query', tracklistTracks: { __typename?: 'Tracklist', previousTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }>, nextTracks: Array<{ __typename?: 'Track', id: string, title: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } }> }, currentlyPlayingSong: { __typename?: 'CurrentlyPlayingSong', index: number, isPlaying: boolean, positionMs: number, track?: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', name: string }>, album: { __typename?: 'Album', title: string } } | null } };
 
 
+export const AccountFragmentFragmentDoc = `
+    fragment AccountFragment on Account {
+  did
+  handle
+  displayName
+  avatar
+}
+    `;
 export const AlbumFragmentFragmentDoc = `
     fragment AlbumFragment on Album {
   id
@@ -1617,6 +1686,106 @@ export const ServerFragmentFragmentDoc = `
   connected
 }
     `;
+export const SignInDocument = `
+    mutation SignIn($handle: String!, $password: String!) {
+  signIn(handle: $handle, password: $password) {
+    ...AccountFragment
+  }
+}
+    ${AccountFragmentFragmentDoc}`;
+
+export const useSignInMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<SignInMutation, TError, SignInMutationVariables, TContext>) => {
+    
+    return useMutation<SignInMutation, TError, SignInMutationVariables, TContext>(
+      {
+    mutationKey: ['SignIn'],
+    mutationFn: (variables?: SignInMutationVariables) => fetcher<SignInMutation, SignInMutationVariables>(SignInDocument, variables)(),
+    ...options
+  }
+    )};
+
+useSignInMutation.getKey = () => ['SignIn'];
+
+
+useSignInMutation.fetcher = (variables: SignInMutationVariables, options?: RequestInit['headers']) => fetcher<SignInMutation, SignInMutationVariables>(SignInDocument, variables, options);
+
+export const SignOutDocument = `
+    mutation SignOut {
+  signOut
+}
+    `;
+
+export const useSignOutMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<SignOutMutation, TError, SignOutMutationVariables, TContext>) => {
+    
+    return useMutation<SignOutMutation, TError, SignOutMutationVariables, TContext>(
+      {
+    mutationKey: ['SignOut'],
+    mutationFn: (variables?: SignOutMutationVariables) => fetcher<SignOutMutation, SignOutMutationVariables>(SignOutDocument, variables)(),
+    ...options
+  }
+    )};
+
+useSignOutMutation.getKey = () => ['SignOut'];
+
+
+useSignOutMutation.fetcher = (variables?: SignOutMutationVariables, options?: RequestInit['headers']) => fetcher<SignOutMutation, SignOutMutationVariables>(SignOutDocument, variables, options);
+
+export const GetAccountDocument = `
+    query GetAccount {
+  account {
+    ...AccountFragment
+  }
+}
+    ${AccountFragmentFragmentDoc}`;
+
+export const useGetAccountQuery = <
+      TData = GetAccountQuery,
+      TError = unknown
+    >(
+      variables?: GetAccountQueryVariables,
+      options?: Omit<UseQueryOptions<GetAccountQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetAccountQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetAccountQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetAccount'] : ['GetAccount', variables],
+    queryFn: fetcher<GetAccountQuery, GetAccountQueryVariables>(GetAccountDocument, variables),
+    ...options
+  }
+    )};
+
+useGetAccountQuery.getKey = (variables?: GetAccountQueryVariables) => variables === undefined ? ['GetAccount'] : ['GetAccount', variables];
+
+export const useInfiniteGetAccountQuery = <
+      TData = InfiniteData<GetAccountQuery>,
+      TError = unknown
+    >(
+      variables: GetAccountQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetAccountQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetAccountQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetAccountQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetAccount.infinite'] : ['GetAccount.infinite', variables],
+      queryFn: (metaData) => fetcher<GetAccountQuery, GetAccountQueryVariables>(GetAccountDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetAccountQuery.getKey = (variables?: GetAccountQueryVariables) => variables === undefined ? ['GetAccount.infinite'] : ['GetAccount.infinite', variables];
+
+
+useGetAccountQuery.fetcher = (variables?: GetAccountQueryVariables, options?: RequestInit['headers']) => fetcher<GetAccountQuery, GetAccountQueryVariables>(GetAccountDocument, variables, options);
+
 export const ConnectToDeviceDocument = `
     mutation ConnectToDevice($id: ID!) {
   connectToDevice(id: $id) {

@@ -327,6 +327,26 @@ export const ListMusic: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) =>
   </svg>
 );
 
+/** `desktop/assets/icons/logout.svg` */
+export const Logout: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+    <path d="M9 12h12l-3 -3" />
+    <path d="M18 15l3 -3" />
+  </svg>
+);
+
 /** `desktop/assets/icons/music.svg` */
 export const Music: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
   <svg
@@ -725,6 +745,26 @@ export const Trash: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
   </svg>
 );
 
+/** `desktop/assets/icons/user-circle.svg` */
+export const UserCircle: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+    <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+    <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
+  </svg>
+);
+
 /** `desktop/assets/icons/volume-2.svg` */
 export const Volume: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
   <svg
@@ -805,6 +845,7 @@ export const DESKTOP_ICONS = {
   heart: Heart,
   jellyfin: Jellyfin,
   listMusic: ListMusic,
+  logout: Logout,
   music: Music,
   navidrome: Navidrome,
   next: Next,
@@ -825,6 +866,7 @@ export const DESKTOP_ICONS = {
   settings: Settings,
   shuffle: Shuffle,
   trash: Trash,
+  userCircle: UserCircle,
   volume: Volume,
   volumeMute: VolumeMute,
   close: Close,

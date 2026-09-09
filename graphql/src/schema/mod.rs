@@ -10,6 +10,7 @@ use self::{
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
     playlist::{PlaylistMutation, PlaylistQuery, PlaylistSubscription},
+    account::{AccountMutation, AccountQuery},
     radio::{RadioMutation, RadioQuery},
     servers::{ServersMutation, ServersQuery},
     tracklist::{TracklistMutation, TracklistQuery, TracklistSubscription},
@@ -23,6 +24,7 @@ pub mod history;
 pub mod library;
 pub mod mixer;
 pub mod objects;
+pub mod account;
 pub mod playback;
 pub mod playlist;
 pub mod provider;
@@ -41,6 +43,7 @@ pub struct Query(
     RadioQuery,
     ExtensionsQuery,
     ServersQuery,
+    AccountQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -54,6 +57,7 @@ pub struct Mutation(
     RadioMutation,
     ExtensionsMutation,
     ServersMutation,
+    AccountMutation,
 );
 
 #[derive(MergedSubscription, Default)]

@@ -61,6 +61,8 @@ export const Icons = {
   connect: DESKTOP_ICONS.plugConnected,
   cast: DESKTOP_ICONS.cast,
   genre: DESKTOP_ICONS.guitarPick,
+  user: DESKTOP_ICONS.userCircle,
+  logout: DESKTOP_ICONS.logout,
   chromecast: DESKTOP_ICONS.chromecast,
   deviceSpeaker: DESKTOP_ICONS.deviceSpeaker,
   check: IconCheck,

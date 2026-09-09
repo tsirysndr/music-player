@@ -115,6 +115,10 @@ export const handlers = [
   graphql.query("GetGenreTracks", () =>
     HttpResponse.json({ data: { genreTracks: [] } })
   ),
+  // Nobody signed in by default, which is what a fresh install looks like.
+  graphql.query("GetAccount", () =>
+    HttpResponse.json({ data: { account: null } })
+  ),
   // Anything the app asks for that has no operation name (the hand-written
   // `fetcher` calls in the radio and liked pages) falls through to here.
   graphql.operation(() => HttpResponse.json({ data: {} })),

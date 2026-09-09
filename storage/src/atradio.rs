@@ -68,6 +68,54 @@ fn reset_agent() {
     *agent_cell().write().unwrap() = Arc::new(AtradioAgent::new(session_path()));
 }
 
+/// The profile of the session on disk, if there is one.
+pub fn profile() -> Option<atradio_sdk::Profile> {
+    agent().profile()
+}
+
+/// Establish a session from a handle and an app password.
+///
+/// Writes the shared session file, so this is also what turns on scrobbling
+/// and station sync — there is one session, not one per feature.
+pub async fn sign_in(
+    identifier: &str,
+    password: &str,
+) -> Result<atradio_sdk::Profile, Error> {
+    // Any existing session is dropped first: `login_password` resumes one when
+    // it can, which would silently sign in as whoever was already there.
+    agent().logout();
+    reset_agent();
+    agent()
+        .login_password(identifier, password)
+        .await
+        .map_err(|e| Error::msg(sign_in_message(&e)))
+}
+
+/// Forget the session, on disk and in memory.
+pub fn sign_out() {
+    agent().logout();
+    reset_agent();
+}
+
+/// What went wrong, in words a person can act on.
+///
+/// The SDK erases jacquard's own errors to a string, so the useful cases are
+/// recognised by name; anything else is passed through rather than replaced
+/// with something vaguer.
+fn sign_in_message(e: &atradio_sdk::SdkError) -> String {
+    let raw = e.to_string();
+    if raw.contains("AuthenticationRequired") || raw.contains("Invalid identifier or password") {
+        return "that handle and app password did not match".to_string();
+    }
+    if raw.contains("AccountTakedown") {
+        return "that account has been taken down".to_string();
+    }
+    if raw.contains("RateLimit") {
+        return "too many attempts — wait a minute and try again".to_string();
+    }
+    raw
+}
+
 /// True when a session file exists or password credentials are in the
 /// environment — i.e. write-through is configured. It does not prove the
 /// credentials work; [`ensure_session`] is what actually establishes a session.

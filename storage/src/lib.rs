@@ -6,6 +6,7 @@ use music_player_settings::{read_settings, Settings};
 use sea_orm::{sea_query, ConnectOptions, ConnectionTrait, DatabaseConnection};
 
 pub mod atproto;
+pub mod account;
 pub mod atradio;
 pub mod extension_state;
 pub mod radio_resolve;

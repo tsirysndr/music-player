@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useGetConnectedServerQuery } from "../../Hooks/GraphQL";
 import { usePlaylist } from "../../Hooks/usePlaylist";
 import { useSkin } from "../../Providers/SkinProvider";
+import AccountBlock from "../Account/AccountBlock";
 import {
   serverConnectedAtom,
   serverSwitcherOpenAtom,
@@ -113,6 +114,12 @@ const Sidebar = () => {
             {provider ? provider.url : "this device"}
           </span>
         </button>
+
+        {/* Below the daemon row, because it is about *who* rather than about
+            what this client is connected to. */}
+        <div className="mt-2 border-t border-line pt-2">
+          <AccountBlock />
+        </div>
       </div>
     </aside>
   );

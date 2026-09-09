@@ -147,6 +147,7 @@ pub mod api {
                     track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
                     bitrate: model.bitrate.unwrap_or_default(),
                     sample_rate: model.sample_rate.unwrap_or_default(),
+                    liked: model.liked,
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
                     artist: model.artist,
@@ -277,6 +278,10 @@ pub mod api {
                     // remote track show no bitrate and probe the stream for it.
                     bitrate: Some(val.bitrate).filter(|rate| *rate > 0),
                     sample_rate: Some(val.sample_rate).filter(|rate| *rate > 0),
+                    // Rides along so a queued track still knows whether the
+                    // source has it liked; without it the heart falls back to
+                    // a snapshot list, which can always be incomplete.
+                    liked: val.liked,
                     album: val.album.map(Into::into).unwrap_or_default(),
                     ..Default::default()
                 }

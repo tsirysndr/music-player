@@ -442,6 +442,9 @@ impl<'a> Network<'a> {
             index,
             position_ms,
             is_playing,
+            // The TUI does not render these yet; the daemon is the source.
+            shuffle: false,
+            repeat_mode: 0,
         });
         app.is_fetching_current_playback = false;
         Ok(())

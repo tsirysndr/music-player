@@ -380,17 +380,25 @@ impl MusicProvider for Subsonic {
     }
 
     /// Subsonic's starred songs, which is what a "like" is on this server.
+    ///
+    /// `getStarred2` is not a paged endpoint — it returns every star in one
+    /// response — so this pages the result rather than the request, and a
+    /// limit of zero means all of it. Running it through `normalize_limit`,
+    /// which exists to respect the 500-row ceiling Subsonic's *paged*
+    /// endpoints have, silently truncated the list at 500: past that, likes
+    /// simply did not exist as far as any client could tell.
     async fn liked_tracks(&self, page: Page) -> Result<Vec<Track>, ProviderError> {
         let url = self.api_url("getStarred2", &[])?;
         let response = request(url).await?;
         let starred = response.starred2.unwrap_or_default();
-        Ok(starred
-            .song
-            .iter()
-            .skip(page.offset.max(0) as usize)
-            .take(normalize_limit(page.limit) as usize)
-            .map(|song| self.map_song(song))
-            .collect())
+        let songs = starred.song.iter().skip(page.offset.max(0) as usize);
+        Ok(match page.limit {
+            limit if limit > 0 => songs
+                .take(limit as usize)
+                .map(|song| self.map_song(song))
+                .collect(),
+            _ => songs.map(|song| self.map_song(song)).collect(),
+        })
     }
 
     async fn set_liked(&self, id: &str, liked: bool) -> Result<(), ProviderError> {
@@ -706,6 +714,29 @@ mod tests {
         let mut client = Subsonic::with_credentials("https://music.example.com/", "demo", "demo");
         client.salt = "abcdef123456".to_string();
         client
+    }
+
+    /// The regression: `getStarred2` returns every star in one response, so
+    /// running it through the paged endpoints' 500-row ceiling silently threw
+    /// the rest away — and past 500 likes, hearts were simply wrong.
+    #[test]
+    fn every_star_is_returned() {
+        let songs: Vec<serde_json::Value> = (0..640)
+            .map(|i| serde_json::json!({ "id": i.to_string(), "title": format!("t{i}") }))
+            .collect();
+        let body: ResponseBody = serde_json::from_value(serde_json::json!({
+            "status": "ok",
+            "starred2": { "song": songs },
+        }))
+        .unwrap();
+
+        let starred = body.starred2.expect("starred2 is present");
+        assert_eq!(starred.song.len(), 640);
+
+        let client = Subsonic::new();
+        // Zero means all of them, which is what the clients ask for.
+        let all: Vec<_> = starred.song.iter().map(|s| client.map_song(s)).collect();
+        assert_eq!(all.len(), 640, "the list must not be capped at 500");
     }
 
     /// `getStarred2` is what a Subsonic "like" is, so its envelope has to

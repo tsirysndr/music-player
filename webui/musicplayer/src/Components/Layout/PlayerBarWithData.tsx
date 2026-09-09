@@ -4,6 +4,7 @@ import { fetcher } from "../../Api/fetcher";
 import { useLikes } from "../../Hooks/useLikes";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { useDevices } from "../../Hooks/useDevices";
+import { useLevels } from "../../Hooks/useLevels";
 import { useVolume } from "../../Hooks/useVolume";
 import {
   audioSettingsOpenAtom,
@@ -73,6 +74,9 @@ const PlayerBarWithData = ({
   const [fullPlayerOpen, setFullPlayer] = useAtom(fullPlayerOpenAtom);
   const { volume, muted, change: changeVolume, toggleMute } = useVolume();
   const { currentCastDevice } = useDevices();
+  // Real levels, from the daemon's measurement of the audio leaving the
+  // output. These were two constants, which is why the meter never moved.
+  const levels = useLevels(!!nowPlaying?.isPlaying);
 
   const isRadio = !!nowPlaying?.id?.startsWith("radio:");
   const { bookmarked, toggle: toggleBookmark } = useRadioBookmark(
@@ -87,6 +91,8 @@ const PlayerBarWithData = ({
       cover={nowPlaying?.cover}
       stopped={!nowPlaying?.title}
       playing={!!nowPlaying?.isPlaying}
+      vuLeft={levels.left}
+      vuRight={levels.right}
       progress={nowPlaying?.progress ?? 0}
       duration={nowPlaying?.duration ?? 0}
       isRadio={isRadio}

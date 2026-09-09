@@ -1841,6 +1841,8 @@ mod tests {
                 index: 0,
                 position_ms: 1000,
                 is_playing: true,
+                shuffle: false,
+                repeat_mode: 0,
             });
             app.song_progress_ms = 1000;
             app.push_navigation_stack(route, block);

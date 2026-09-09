@@ -2693,6 +2693,13 @@ pub struct GetCurrentlyPlayingSongResponse {
     pub position_ms: u32,
     #[prost(bool, tag = "4")]
     pub is_playing: bool,
+    /// The playback modes, so a client can restore its own controls to what
+    /// the daemon is actually doing rather than assuming "off".
+    #[prost(bool, tag = "5")]
+    pub shuffle: bool,
+    /// 0 off, 1 all, 2 one.
+    #[prost(int32, tag = "6")]
+    pub repeat_mode: i32,
 }
 /// Output levels for a meter, measured on the PCM leaving the device.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]

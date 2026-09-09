@@ -68,6 +68,10 @@ impl PlaybackService for Playback {
     ) -> Result<tonic::Response<GetCurrentlyPlayingSongResponse>, tonic::Status> {
         let (track, index) = self.tracklist.lock().unwrap().current_track();
         let playback_state = self.tracklist.lock().unwrap().playback_state();
+        let (shuffle, repeat_mode) = {
+            let tracklist = self.tracklist.lock().unwrap();
+            (tracklist.shuffle_enabled(), tracklist.repeat_mode())
+        };
 
         if track.is_none() {
             let response = GetCurrentlyPlayingSongResponse {
@@ -75,6 +79,8 @@ impl PlaybackService for Playback {
                 index: 0,
                 position_ms: 0,
                 is_playing: false,
+                shuffle,
+                repeat_mode,
             };
             return Ok(tonic::Response::new(response));
         }
@@ -85,6 +91,8 @@ impl PlaybackService for Playback {
                 index: 0,
                 position_ms: 0,
                 is_playing: false,
+                shuffle,
+                repeat_mode,
             };
             return Ok(tonic::Response::new(response));
         }
@@ -95,6 +103,8 @@ impl PlaybackService for Playback {
             index: index as u32,
             position_ms: playback_state.position_ms,
             is_playing: playback_state.is_playing,
+            shuffle,
+            repeat_mode,
         };
         Ok(tonic::Response::new(response))
     }

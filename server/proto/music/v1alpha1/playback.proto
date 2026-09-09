@@ -11,6 +11,11 @@ message GetCurrentlyPlayingSongResponse {
     uint32 index = 2;
     uint32 position_ms = 3;
     bool is_playing = 4;
+    // The playback modes, so a client can restore its own controls to what
+    // the daemon is actually doing rather than assuming "off".
+    bool shuffle = 5;
+    // 0 off, 1 all, 2 one.
+    int32 repeat_mode = 6;
 }
 
 // Output levels for a meter, measured on the PCM leaving the device.

@@ -32,6 +32,13 @@ pub struct Tracklist {
     current_track: Option<Track>,
     playback_state: PlaybackState,
     levels: Levels,
+    /// The playback modes, so a client can *read* them rather than only set
+    /// them. Held here because the player owns them and every API layer needs
+    /// to report them — without this each client kept its own copy, which
+    /// started at "off" on every launch however the session had ended.
+    shuffle: bool,
+    /// 0 off, 1 all, 2 one.
+    repeat_mode: i32,
 }
 
 impl Tracklist {
@@ -42,6 +49,8 @@ impl Tracklist {
             current_track: None,
             playback_state: PlaybackState::default(),
             levels: Levels::default(),
+            shuffle: false,
+            repeat_mode: 0,
         }
     }
     pub fn new_empty() -> Self {
@@ -51,6 +60,8 @@ impl Tracklist {
             current_track: None,
             playback_state: PlaybackState::default(),
             levels: Levels::default(),
+            shuffle: false,
+            repeat_mode: 0,
         }
     }
 
@@ -190,6 +201,19 @@ impl Tracklist {
 
     pub fn set_levels(&mut self, levels: Levels) {
         self.levels = levels;
+    }
+
+    pub fn shuffle_enabled(&self) -> bool {
+        self.shuffle
+    }
+
+    pub fn repeat_mode(&self) -> i32 {
+        self.repeat_mode
+    }
+
+    pub fn set_modes(&mut self, shuffle: bool, repeat_mode: i32) {
+        self.shuffle = shuffle;
+        self.repeat_mode = repeat_mode;
     }
 
     pub fn set_playback_state(&mut self, playback_state: PlaybackState) {

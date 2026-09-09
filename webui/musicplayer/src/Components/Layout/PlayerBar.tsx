@@ -58,6 +58,9 @@ export type PlayerBarProps = {
   onOpenDevices: () => void;
   /** A cast target is playing, rather than this machine. */
   castingTo?: string;
+  /** VU levels, 0..1. These were hardcoded, so the meter never moved. */
+  vuLeft?: number;
+  vuRight?: number;
   onShuffle?: () => void;
   onRepeat?: () => void;
 };
@@ -103,6 +106,8 @@ const PlayerBar = ({
   onOpenAudioSettings,
   onOpenDevices,
   castingTo,
+  vuLeft = 0,
+  vuRight = 0,
   onShuffle,
   onRepeat,
 }: PlayerBarProps) => {
@@ -276,8 +281,8 @@ const PlayerBar = ({
           infoText={isRadio ? "internet radio" : (album ?? "—")}
           playing={playing}
           stopped={stopped}
-          vuLeft={playing ? 0.55 : 0}
-          vuRight={playing ? 0.5 : 0}
+          vuLeft={vuLeft}
+          vuRight={vuRight}
           // Shown wherever the bar is in its desktop layout, as on the desktop
           // client. It narrows between lg and xl so the transport keeps room.
           className="w-[168px] xl:w-[220px]"

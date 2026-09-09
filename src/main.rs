@@ -629,6 +629,10 @@ async fn listen_for_player_events(app: &Arc<Mutex<App>>) {
                         is_playing: track_event.is_playing,
                         index: track_event.index,
                         position_ms: track_event.position_ms,
+                        // A websocket track event carries no modes; the next
+                        // poll of the daemon supplies them.
+                        shuffle: false,
+                        repeat_mode: 0,
                     });
                 }
             }

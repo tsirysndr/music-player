@@ -349,6 +349,16 @@ impl PlayerInternal {
 
     /// Write the queue snapshot (or remove it when the queue is empty).
     /// No-op until persistence was armed by `RestoreQueue`.
+    /// Mirror the playback modes onto the tracklist, which is what the API
+    /// layers read. Without this a client could set them but never see them,
+    /// so every launch showed "off" whatever the session had been.
+    fn publish_modes(&self) {
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_modes(self.shuffle, self.repeat_mode);
+    }
+
     fn save_queue(&mut self) {
         if !self.resume {
             return;
@@ -363,6 +373,8 @@ impl PlayerInternal {
             played,
             tracks,
             position_ms: self.position_ms,
+            shuffle: self.shuffle,
+            repeat_mode: self.repeat_mode,
         };
         match serde_json::to_string(&saved) {
             Ok(json) => {
@@ -388,6 +400,12 @@ impl PlayerInternal {
         if saved.played.is_empty() && saved.tracks.is_empty() {
             return;
         }
+        // Restored before the tracklist, so the modes are already in force
+        // when the queue lands rather than being applied on the next command.
+        self.shuffle = saved.shuffle;
+        self.repeat_mode = saved.repeat_mode.clamp(0, 2);
+        self.publish_modes();
+
         let current_uri = saved.played.last().map(|t| t.uri.clone());
         self.tracklist
             .lock()
@@ -695,6 +713,7 @@ impl PlayerInternal {
             // current track + one lookahead), so shuffle/repeat act here.
             PlayerCommand::SetShuffle(enabled) => {
                 self.shuffle = enabled;
+                self.publish_modes();
                 if enabled {
                     self.tracklist.lock().unwrap().shuffle();
                 }
@@ -702,6 +721,7 @@ impl PlayerInternal {
             }
             PlayerCommand::SetRepeat(mode) => {
                 self.repeat_mode = mode.clamp(0, 2);
+                self.publish_modes();
                 // Repeat-one must drop the lookahead (the engine has to stop
                 // at track end); leaving it re-queues the lookahead.
                 self.resync_engine_next();
@@ -1028,6 +1048,13 @@ struct SavedQueue {
     played: Vec<Track>,
     tracks: Vec<Track>,
     position_ms: u32,
+    /// Shuffle and repeat, so a restart resumes the session as it was rather
+    /// than silently reverting to off. Defaulted so a queue written by an
+    /// older build still loads.
+    #[serde(default)]
+    shuffle: bool,
+    #[serde(default)]
+    repeat_mode: i32,
 }
 
 fn queue_file() -> PathBuf {

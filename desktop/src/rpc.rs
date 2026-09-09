@@ -448,6 +448,7 @@ async fn session(
             .into_inner();
 
         let playing = now.is_playing;
+        let (shuffle, repeat_mode) = (now.shuffle, now.repeat_mode);
         let liked_now = {
             let mut st = state.lock().await;
             st.playing = playing;
@@ -592,6 +593,10 @@ async fn session(
             app.set_now_album(album.into());
             app.set_now_path(path.into());
             app.set_now_liked(liked_now);
+            // The daemon's modes, not this side's guess: they survive a
+            // restart, and every client should show what is actually in force.
+            app.set_shuffle(shuffle);
+            app.set_repeat_mode(repeat_mode);
             app.set_now_track_id(track_id.into());
             app.set_now_is_radio(is_radio);
             if station_changed || !is_radio {
@@ -920,7 +925,9 @@ async fn load_library(
     let remote_liked = match lib
         .get_liked_tracks(GetLikedTracksRequest {
             offset: 0,
-            limit: 500,
+            // Every one of them: this set decides which hearts light, so a
+            // ceiling here is a heart that is wrong past that many likes.
+            limit: 0,
         })
         .await
     {

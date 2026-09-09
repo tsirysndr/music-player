@@ -34,6 +34,14 @@ pub struct Model {
     pub artists: Vec<artist::Model>,
     #[sea_orm(ignore)]
     pub album: album::Model,
+    /// Whether the source that produced this track has it liked.
+    ///
+    /// Not a column: a local like lives in the user's atproto repo, and a
+    /// remote one on that server. It rides along so a queued track still knows
+    /// its own state — without it the flag died here and the heart fell back
+    /// to a snapshot list, which is why some tracks lit and some did not.
+    #[sea_orm(ignore)]
+    pub liked: Option<bool>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

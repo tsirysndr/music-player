@@ -294,6 +294,19 @@ export component AppWindow inherits Window {
     callback server-connect(int);
     /// Read the library from the daemon's own files again.
     callback server-disconnect();
+
+    // ── Account (atproto) ───────────────────────────────────────────────────
+    /// Empty when nobody is signed in.
+    in-out property <string> account-handle: "";
+    in-out property <string> account-name: "";
+    in-out property <image> account-avatar;
+    in-out property <bool> account-has-avatar: false;
+    in-out property <bool> show-signin: false;
+    in-out property <bool> signin-busy: false;
+    /// Why the daemon refused. Empty when it did not.
+    in-out property <string> signin-error: "";
+    callback sign-in(string, string); // handle, app password
+    callback sign-out();
     /// Re-read the saved servers from the daemon.
     callback servers-refresh();
 
@@ -605,7 +618,10 @@ export component AppWindow inherits Window {
                 return accept;
             }
             if (event.text == Key.Escape) {
-                if (root.show-renderers) {
+                if (root.show-signin) {
+                    root.show-signin = false;
+                    main-focus.focus();
+                } else if (root.show-renderers) {
                     root.show-renderers = false;
                     main-focus.focus();
                 } else if (root.show-radio-search) {
@@ -828,6 +844,99 @@ export component AppWindow inherits Window {
                     status-touch := TouchArea {
                         mouse-cursor: pointer;
                         clicked => { root.open-server-switcher(); }
+                    }
+                }
+
+                // The account, below the daemon row: that one is about what
+                // this client is connected to, this one about who you are.
+                Rectangle {
+                    visible: !root.show-full-player;
+                    height: 1px;
+                    background: Theme.border;
+                }
+                account-row := Rectangle {
+                    visible: !root.show-full-player;
+                    height: 44px;
+                    border-radius: Theme.control-radius;
+                    background: account-touch.has-hover ? Theme.hover-bg : transparent;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 10px;
+                        spacing: 10px;
+
+                        if root.account-handle == "" : Image {
+                            source: Icons.user-circle;
+                            colorize: Theme.text-dim;
+                            width: 18px;
+                            height: 18px;
+                            y: (parent.height - self.height) / 2;
+                        }
+                        if root.account-handle != "" && root.account-has-avatar : Image {
+                            source: root.account-avatar;
+                            width: 26px;
+                            height: 26px;
+                            y: (parent.height - self.height) / 2;
+                        }
+                        // Initials stand in: plenty of accounts have no avatar.
+                        if root.account-handle != "" && !root.account-has-avatar : Rectangle {
+                            width: 26px;
+                            height: 26px;
+                            border-radius: 13px;
+                            background: Theme.panel-bg;
+                            y: (parent.height - self.height) / 2;
+                            Text {
+                                text: root.account-name != ""
+                                    ? root.account-name.to-uppercase()
+                                    : root.account-handle.to-uppercase();
+                                color: Theme.text-dim;
+                                font-size: 10px;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                overflow: clip;
+                            }
+                        }
+
+                        if root.account-handle == "" : Text {
+                            text: "Sign in";
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        if root.account-handle != "" : VerticalLayout {
+                            alignment: center;
+                            spacing: 1px;
+                            horizontal-stretch: 1;
+                            Text {
+                                text: root.account-name != ""
+                                    ? root.account-name : root.account-handle;
+                                color: Theme.text;
+                                font-size: 12px;
+                                font-weight: 600;
+                                overflow: elide;
+                            }
+                            // Muted: the name above is what the eye lands on.
+                            Text {
+                                text: "@" + root.account-handle;
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                                overflow: elide;
+                            }
+                        }
+                    }
+
+                    account-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            if (root.account-handle == "") {
+                                root.signin-error = "";
+                                root.show-signin = true;
+                            } else {
+                                root.sign-out();
+                            }
+                        }
                     }
                 }
             }
@@ -2772,6 +2881,142 @@ export component AppWindow inherits Window {
                                 norm: root.fade-out-duration / 15.0;
                                 default-norm: 2.0 / 15.0;
                                 changed(p) => { root.audio-set("fade_out_duration", round(p * 15)); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Sign in (atproto) ───────────────────────────────────────────────────
+    signin-layer := Rectangle {
+        visible: root.show-signin;
+        width: 100%;
+        height: 100%;
+        background: #000000a0;
+
+        TouchArea {
+            clicked => {
+                root.show-signin = false;
+                main-focus.focus();
+            }
+        }
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: max(40px, (parent.height - self.height) / 2);
+            width: min(420px, parent.width - 60px);
+            height: 372px;
+            border-radius: 14px;
+            background: Theme.panel-bg;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 40px;
+            clip: true;
+
+            TouchArea {} // swallow clicks
+
+            VerticalLayout {
+                padding: 18px;
+                spacing: 12px;
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    Image {
+                        source: Icons.user-circle;
+                        colorize: Theme.accent;
+                        width: 18px;
+                        height: 18px;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    Text {
+                        text: "Sign in with Atmosphere";
+                        color: Theme.text;
+                        font-size: 16px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                }
+
+                signin-handle := FormField {
+                    label: "HANDLE";
+                    placeholder: "@atmosphere.handle";
+                }
+                signin-password := FormField {
+                    label: "APP PASSWORD";
+                    password: true;
+                    placeholder: "xxxx-xxxx-xxxx-xxxx";
+                }
+
+                Text {
+                    text: "An app password, not your account password — create one in your PDS settings. Signing in also enables scrobbling and station sync, which share this session.";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: "No account yet? music-player is part of the Atmosphere. Create an Atmosphere account on Bluesky to get started.";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+                if root.signin-error != "" : Text {
+                    text: root.signin-error;
+                    color: Theme.meter-high;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                HorizontalLayout {
+                    alignment: end;
+                    spacing: 10px;
+                    height: 34px;
+                    Rectangle {
+                        width: 92px;
+                        border-radius: 17px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        background: signin-cancel-touch.has-hover ? Theme.hover-bg : transparent;
+                        Text {
+                            text: "Cancel";
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        signin-cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.show-signin = false;
+                                main-focus.focus();
+                            }
+                        }
+                    }
+                    Rectangle {
+                        width: 106px;
+                        border-radius: 17px;
+                        background: root.signin-busy
+                            ? Theme.panel-raised
+                            : (signin-submit-touch.has-hover ? Theme.accent.brighter(0.15) : Theme.accent);
+                        Text {
+                            text: root.signin-busy ? "Signing in…" : "Sign in";
+                            color: root.signin-busy ? Theme.text-muted : #ffffff;
+                            font-size: 12px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        signin-submit-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                if (!root.signin-busy) {
+                                    root.signin-busy = true;
+                                    root.sign-in(signin-handle.text, signin-password.text);
+                                }
                             }
                         }
                     }

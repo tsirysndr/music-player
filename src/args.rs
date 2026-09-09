@@ -42,22 +42,26 @@ fn cache(matches: &ArgMatches) -> CmdResult {
     match matches.subcommand() {
         Some(("clear", _)) => {
             let freed = track_cache::clear();
+            println!("{}", track_cache::cache_dir().display().to_string().dimmed());
             println!(
-                "Cleared {} track{} ({})",
-                freed.tracks,
+                "Cleared {} track{} ({} freed)",
+                freed.tracks.to_string().bright_green(),
                 if freed.tracks == 1 { "" } else { "s" },
-                track_cache::format_bytes(freed.bytes)
+                track_cache::format_bytes(freed.bytes).bright_green()
             );
         }
         // `ls` or nothing: showing what is there is the harmless default.
         _ => {
             let usage = track_cache::usage();
-            println!("{}", track_cache::cache_dir().display());
+            // The path first, and dimmed: it is what you need to inspect or
+            // delete the cache by hand, but it is not the answer to "how much
+            // is it using".
+            println!("{}", track_cache::cache_dir().display().to_string().dimmed());
             println!(
                 "{} track{}, {}",
-                usage.tracks,
+                usage.tracks.to_string().bright_green(),
                 if usage.tracks == 1 { "" } else { "s" },
-                track_cache::format_bytes(usage.bytes)
+                track_cache::format_bytes(usage.bytes).bright_green()
             );
         }
     }

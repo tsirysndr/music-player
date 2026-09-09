@@ -82,6 +82,10 @@ pub enum Cmd {
     /// server *and* the local index — which filtering this side's cached
     /// library could never be: that cache is one page of a remote library.
     Search(String),
+    /// Who is signed in, if anyone.
+    LoadAccount,
+    SignIn { handle: String, password: String },
+    SignOut,
     /// Fetch the saved servers from the daemon.
     LoadServers,
     AddServer {
@@ -439,6 +443,7 @@ async fn session(
     // the local library when a provider is connected.
     load_connected_provider(weak).await;
     let _ = load_servers(weak).await;
+    load_account(weak).await;
     tokio::spawn(stream_levels(channel.clone(), weak.clone()));
     init_volume(channel, weak).await;
     init_audio_settings(channel, weak).await;
@@ -1474,6 +1479,67 @@ async fn connect_provider(
     Ok(())
 }
 
+/// Who is signed in, and their avatar.
+///
+/// The daemon is the authority: an `atradio login` at the terminal, or
+/// credentials in the environment, count as signed in here too — there is one
+/// session, however it was established.
+async fn load_account(weak: &Weak<AppWindow>) {
+    const QUERY: &str = r#"query { account { handle displayName avatar } }"#;
+    let (handle, name, avatar_url) = match graphql(QUERY, serde_json::json!({})).await {
+        Ok(data) => {
+            let account = &data["account"];
+            (
+                account["handle"].as_str().unwrap_or_default().to_string(),
+                account["displayName"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_string(),
+                account["avatar"].as_str().map(str::to_owned),
+            )
+        }
+        Err(_) => (String::new(), String::new(), None),
+    };
+
+    // Fetched before touching the UI so the row appears complete rather than
+    // filling in a beat later.
+    let avatar = match &avatar_url {
+        Some(url) => fetch_avatar(url).await,
+        None => None,
+    };
+
+    let _ = weak.upgrade_in_event_loop(move |app| {
+        app.set_account_handle(handle.into());
+        app.set_account_name(name.into());
+        match avatar {
+            Some((width, height, rgba)) => {
+                let mut buffer =
+                    slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(width, height);
+                buffer.make_mut_bytes().copy_from_slice(&rgba);
+                app.set_account_avatar(slint::Image::from_rgba8(buffer));
+                app.set_account_has_avatar(true);
+            }
+            None => app.set_account_has_avatar(false),
+        }
+    });
+}
+
+/// Download and decode an avatar.
+///
+/// Returns raw pixels rather than a `slint::Image`: the image type is not
+/// `Send`, so it has to be built on the UI thread.
+async fn fetch_avatar(url: &str) -> Option<(u32, u32, Vec<u8>)> {
+    let bytes = http().get(url).send().await.ok()?.bytes().await.ok()?;
+    tokio::task::spawn_blocking(move || {
+        let image = image::load_from_memory(&bytes).ok()?;
+        let thumb = image.thumbnail(64, 64).to_rgba8();
+        Some((thumb.width(), thumb.height(), thumb.into_raw()))
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
 /// The saved servers, as the daemon has them.
 async fn load_servers(
     weak: &Weak<AppWindow>,
@@ -2286,6 +2352,41 @@ async fn cmd_loop(
                     let _ = weak.upgrade_in_event_loop(move |app| {
                         crate::ui_set_search_hits(&app, tracks, albums, artists);
                     });
+                }
+                Cmd::LoadAccount => {
+                    load_account(&weak).await;
+                }
+                Cmd::SignIn { handle, password } => {
+                    const MUTATION: &str = r#"mutation($handle: String!, $password: String!) {
+                        signIn(handle: $handle, password: $password) { did }
+                    }"#;
+                    let result = graphql(
+                        MUTATION,
+                        serde_json::json!({ "handle": handle, "password": password }),
+                    )
+                    .await;
+                    match result {
+                        Ok(_) => {
+                            let _ = weak.upgrade_in_event_loop(|app| {
+                                app.set_signin_busy(false);
+                                app.set_signin_error("".into());
+                                app.set_show_signin(false);
+                            });
+                            load_account(&weak).await;
+                        }
+                        Err(e) => {
+                            let message = e.to_string();
+                            let _ = weak.upgrade_in_event_loop(move |app| {
+                                app.set_signin_busy(false);
+                                app.set_signin_error(message.into());
+                            });
+                        }
+                    }
+                }
+                Cmd::SignOut => {
+                    const MUTATION: &str = r#"mutation { signOut }"#;
+                    let _ = graphql(MUTATION, serde_json::json!({})).await;
+                    load_account(&weak).await;
                 }
                 Cmd::LoadServers => {
                     if let Err(e) = load_servers(&weak).await {

@@ -1763,6 +1763,21 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        app.on_sign_in(move |handle, password| {
+            let _ = tx.send(rpc::Cmd::SignIn {
+                handle: handle.into(),
+                password: password.into(),
+            });
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_sign_out(move || {
+            let _ = tx.send(rpc::Cmd::SignOut);
+        });
+    }
+    {
+        let tx = tx.clone();
         app.on_renderers_open(move || {
             let _ = tx.send(rpc::Cmd::LoadRenderers);
         });

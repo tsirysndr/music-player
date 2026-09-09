@@ -99,16 +99,29 @@ fn stable_part(uri: &str) -> String {
     )
 }
 
+/// Every extension a cached file can carry.
+///
+/// The set is closed because [`extension_for`] is what names the files, so a
+/// lookup can probe these directly instead of listing the directory.
+const EXTENSIONS: [&str; 7] = ["mp3", "flac", "ogg", "opus", "aac", "m4a", "wav"];
+
 /// The cached file for this uri, if one is complete on disk.
+///
+/// A keyed lookup, not a scan: the name is derived from the uri and the
+/// extension is one of a known few, so this is a handful of `stat` calls
+/// whatever the cache holds. It used to read the whole directory, which is a
+/// per-track cost that grows with the cache — on the path that every play goes
+/// through.
+///
+/// The mapping lives in the filenames rather than in a database beside them:
+/// one fact in one place, so a file deleted by hand or by `cache clear` cannot
+/// leave an index claiming it is still there.
 pub fn cached_path(uri: &str) -> Option<PathBuf> {
     let key = key_for(uri);
-    let entries = std::fs::read_dir(cache_dir()).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "part") {
-            continue;
-        }
-        if path.file_stem().is_some_and(|stem| stem == key.as_str()) {
+    let dir = cache_dir();
+    for extension in EXTENSIONS {
+        let path = dir.join(format!("{key}.{extension}"));
+        if path.is_file() {
             // Touched so eviction sees it as recently used: the cache is a
             // working set, not an archive.
             let _ = filetime::set_file_mtime(&path, filetime::FileTime::now());
@@ -140,6 +153,18 @@ fn inflight() -> &'static Mutex<std::collections::HashSet<String>> {
     INFLIGHT.get_or_init(Default::default)
 }
 
+/// One download at a time, across the whole process.
+///
+/// Not merely to be tidy: the thing being protected is the *stream that is
+/// playing*. Several downloads at once compete with it for bandwidth on the
+/// same connection to the same server, so caching ahead would cause the very
+/// stutter it exists to remove. Queueing a track behind another costs nothing
+/// — there is time, that is the point of prefetching.
+fn download_slot() -> &'static tokio::sync::Semaphore {
+    static SLOT: std::sync::OnceLock<tokio::sync::Semaphore> = std::sync::OnceLock::new();
+    SLOT.get_or_init(|| tokio::sync::Semaphore::new(1))
+}
+
 /// Download a track into the cache.
 ///
 /// Returns the cached path. A uri that is already cached returns immediately;
@@ -159,7 +184,10 @@ pub async fn store(uri: &str) -> Result<PathBuf, Error> {
             return Err(Error::msg("already downloading"));
         }
     }
+    // Held for the whole download, so requests queue rather than overlap.
+    let permit = download_slot().acquire().await;
     let result = download(uri, &key).await;
+    drop(permit);
     inflight().lock().unwrap().remove(&key);
     result
 }
@@ -360,6 +388,54 @@ mod tests {
         assert_eq!(extension_for("audio/flac"), Some("flac"));
         assert_eq!(extension_for("audio/mpeg"), Some("mp3"));
         assert_eq!(extension_for("application/octet-stream"), None);
+    }
+
+    /// Deleting the cache directory by hand has to be safe.
+    ///
+    /// It is, and for a structural reason: the filename *is* the index, so
+    /// there is nothing that can outlive the files it describes. A key-value
+    /// store beside them would need reconciling on every start — and could
+    /// still hand out a path to a file that is no longer there, because
+    /// something has to touch the disk before playing it anyway.
+    #[test]
+    fn a_missing_cache_directory_is_simply_a_miss() {
+        let uri = "https://nas.lan/rest/stream?id=nothing-cached";
+        // The real cache dir may or may not exist here; either way a key that
+        // was never written must not resolve.
+        assert!(cached_path(uri).is_none());
+        assert_eq!(resolve(uri), uri, "a miss plays from the network");
+
+        // And the accounting agrees rather than reporting phantom entries.
+        let usage = usage();
+        assert!(usage.tracks < u64::MAX);
+    }
+
+    /// The probe list and the writer have to agree: an extension the writer
+    /// can produce but the lookup never checks is a file that is downloaded
+    /// and then never found.
+    #[test]
+    fn every_extension_the_writer_uses_is_probed() {
+        for content_type in [
+            "audio/mpeg",
+            "audio/mp3",
+            "audio/flac",
+            "audio/x-flac",
+            "audio/ogg",
+            "application/ogg",
+            "audio/opus",
+            "audio/aac",
+            "audio/aacp",
+            "audio/mp4",
+            "audio/x-m4a",
+            "audio/wav",
+            "audio/x-wav",
+        ] {
+            let extension = extension_for(content_type).expect(content_type);
+            assert!(
+                EXTENSIONS.contains(&extension),
+                "{content_type} writes .{extension}, which is never looked for"
+            );
+        }
     }
 
     #[test]

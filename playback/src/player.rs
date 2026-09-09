@@ -10,7 +10,10 @@ use rockbox_playback::{
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -18,6 +21,25 @@ use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tracing::error;
 
 pub type PlayerResult = Result<(), anyhow::Error>;
+
+/// Cache a finite remote track, in the background.
+///
+/// Detached, and serialised by the cache itself: several downloads at once
+/// would compete with the playing stream for the same connection, which is the
+/// stutter this whole mechanism exists to remove.
+fn cache_in_background(uri: &str) {
+    if !music_player_storage::track_cache::is_cacheable(uri) {
+        return;
+    }
+    let uri = uri.to_string();
+    tokio::spawn(async move {
+        // "already downloading" and "already cached" both land here; neither
+        // is worth a warning.
+        if let Err(e) = music_player_storage::track_cache::store(&uri).await {
+            tracing::debug!("could not cache: {e}");
+        }
+    });
+}
 
 /// Minimum change in position before a `TrackTimePosition` event is broadcast.
 const POSITION_BROADCAST_STEP_MS: u32 = 250;
@@ -117,6 +139,7 @@ impl Player {
                 last_queue_save: Instant::now(),
                 stopped_ticks: 0,
                 prefetched: None,
+                prefetch_landed: Arc::new(AtomicBool::new(false)),
                 icy_station: None,
                 icy_last: None,
             })
@@ -296,6 +319,11 @@ struct PlayerInternal {
     /// The uri the prefetch was last started for, so a tick every 100ms does
     /// not start the same download ten times a second.
     prefetched: Option<String>,
+    /// Set by a finished prefetch. The engine's lookahead is queued when the
+    /// *current* track starts — long before the next one has been downloaded —
+    /// so without re-syncing it the engine still opens the network stream for
+    /// a track that is by then sitting on disk, and the cut stays audible.
+    prefetch_landed: Arc<AtomicBool>,
     /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
     /// decode failure still ends the track instead of wedging the queue.
     stopped_ticks: u32,
@@ -382,9 +410,13 @@ impl PlayerInternal {
         }
 
         self.prefetched = Some(next.uri.clone());
+        let landed = Arc::clone(&self.prefetch_landed);
         tokio::spawn(async move {
             match music_player_storage::track_cache::store(&next.uri).await {
-                Ok(_) => tracing::debug!(track = %next.title, "prefetched the next track"),
+                Ok(_) => {
+                    tracing::debug!(track = %next.title, "prefetched the next track");
+                    landed.store(true, Ordering::Relaxed);
+                }
                 // "already downloading" lands here too, which is why this is
                 // debug rather than a warning.
                 Err(e) => tracing::debug!("could not prefetch: {e}"),
@@ -455,6 +487,7 @@ impl PlayerInternal {
             .unwrap()
             .restore(saved.played, saved.tracks, saved.position_ms);
         let Some(uri) = current_uri else { return };
+        let uri = music_player_storage::track_cache::resolve(&uri);
         self.engine.stop();
         self.engine.set_queue(vec![uri]);
         self.engine.play();
@@ -491,6 +524,11 @@ impl PlayerInternal {
         // Published every tick so a meter has something current to read; the
         // engine measures the PCM it actually hands to the output.
         self.maybe_prefetch_next(&status);
+        // A prefetch finished: re-point the lookahead at the file it just
+        // wrote, replacing the network url queued when this track started.
+        if self.prefetch_landed.swap(false, Ordering::Relaxed) {
+            self.resync_engine_next();
+        }
         self.tracklist
             .lock()
             .unwrap()
@@ -788,7 +826,12 @@ impl PlayerInternal {
             return;
         }
         if let Some(next) = self.tracklist.lock().unwrap().peek_next() {
-            self.engine.insert_last(next.uri);
+            // Through the cache, like every other uri handed to the engine.
+            // Missing it here is what left the cut audible: the prefetch had
+            // the file, and the engine still opened the network stream for
+            // the lookahead — which is the transition the cache exists for.
+            self.engine
+                .insert_last(music_player_storage::track_cache::resolve(&next.uri));
         }
     }
 
@@ -841,6 +884,13 @@ impl PlayerInternal {
     }
 
     fn handle_command_load_tracklist(&mut self, tracks: Vec<Track>, start_index: Option<usize>) {
+        // Appending one track — "add to queue" — is worth caching for the same
+        // reason as play-next. A whole tracklist is not: that is a library's
+        // worth of downloads for tracks that may never be reached, and the
+        // half-way prefetch will get them as they approach.
+        if let [single] = tracks.as_slice() {
+            cache_in_background(&single.uri);
+        }
         self.tracklist.lock().unwrap().queue(tracks);
         if self.shuffle {
             self.tracklist.lock().unwrap().shuffle();
@@ -964,6 +1014,10 @@ impl PlayerInternal {
     }
 
     fn handle_play_next(&mut self, track: Track) {
+        // Inserting a track is a statement that it will be played soon, so it
+        // is worth having on disk before then — the same reason the next track
+        // is prefetched. Queued behind any download already running.
+        cache_in_background(&track.uri);
         self.tracklist.lock().unwrap().insert_next(track);
         self.resync_engine_next();
     }

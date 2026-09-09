@@ -936,59 +936,83 @@ async fn load_library(
     // server has its own ceiling — Subsonic's is 500 rows — and it applies it
     // silently, so a single large request returned 500 albums and looked like
     // a library with 500 albums in it.
-    let mut albums = Vec::new();
-    loop {
-        let page = lib
-            .get_albums(GetAlbumsRequest {
-                limit: PAGE,
-                offset: albums.len() as i32,
-                filter: String::new(),
-            })
-            .await?
-            .into_inner()
-            .albums;
-        let short = page.len() < PAGE as usize;
-        albums.extend(page);
-        if short {
-            break;
+    //
+    // The three listings run *concurrently*. They are independent, and against
+    // a remote server each page is a round trip measured in seconds: fetched
+    // one after another, opening the app on a library of a few thousand tracks
+    // meant a minute of watching a loading skeleton, because the waits added
+    // up. Run together the wait is the slowest one rather than the sum.
+    async fn page_to_end<T, F, Fut>(mut fetch: F) -> Result<Vec<T>, tonic::Status>
+    where
+        F: FnMut(i32) -> Fut,
+        Fut: std::future::Future<Output = Result<Vec<T>, tonic::Status>>,
+    {
+        let mut all = Vec::new();
+        loop {
+            let page = fetch(all.len() as i32).await?;
+            // A short page is the last one. Asking again would be a round trip
+            // to be told the same thing.
+            let short = page.len() < PAGE as usize;
+            all.extend(page);
+            if short {
+                return Ok(all);
+            }
         }
     }
 
-    let mut artists = Vec::new();
-    loop {
-        let page = lib
-            .get_artists(GetArtistsRequest {
-                limit: PAGE,
-                offset: artists.len() as i32,
-                filter: String::new(),
-            })
-            .await?
-            .into_inner()
-            .artists;
-        let short = page.len() < PAGE as usize;
-        artists.extend(page);
-        if short {
-            break;
+    let albums = page_to_end({
+        let mut lib = lib.clone();
+        move |offset| {
+            let mut lib = lib.clone();
+            async move {
+                Ok(lib
+                    .get_albums(GetAlbumsRequest {
+                        limit: PAGE,
+                        offset,
+                        filter: String::new(),
+                    })
+                    .await?
+                    .into_inner()
+                    .albums)
+            }
         }
-    }
+    });
+    let artists = page_to_end({
+        let mut lib = lib.clone();
+        move |offset| {
+            let mut lib = lib.clone();
+            async move {
+                Ok(lib
+                    .get_artists(GetArtistsRequest {
+                        limit: PAGE,
+                        offset,
+                        filter: String::new(),
+                    })
+                    .await?
+                    .into_inner()
+                    .artists)
+            }
+        }
+    });
+    let tracks = page_to_end({
+        let mut lib = lib.clone();
+        move |offset| {
+            let mut lib = lib.clone();
+            async move {
+                Ok(lib
+                    .get_tracks(GetTracksRequest {
+                        limit: PAGE,
+                        offset,
+                        filter: String::new(),
+                    })
+                    .await?
+                    .into_inner()
+                    .tracks)
+            }
+        }
+    });
 
-    let mut tracks = Vec::new();
-    loop {
-        let page = lib
-            .get_tracks(GetTracksRequest {
-                limit: PAGE,
-                offset: tracks.len() as i32,
-                filter: String::new(),
-            })
-            .await?
-            .into_inner()
-            .tracks;
-        let short = page.len() < PAGE as usize;
-        tracks.extend(page);
-        if short {
-            break;
-        }
-    }
+    let (albums, artists, tracks) = tokio::try_join!(albums, artists, tracks)?;
 
     let full: Vec<FullTrack> = tracks
         .iter()

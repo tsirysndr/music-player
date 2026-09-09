@@ -183,7 +183,12 @@ async fn scan() -> CmdResult {
     // It decodes each new track in full, so a first scan of a large library
     // takes a while. The tracks are already indexed and playable by this point;
     // what is still running only fills in two columns.
-    let analysed = music_player_scanner::analyse_missing_key_and_bpm(&db).await;
+    let analysed = music_player_scanner::analyse_missing_key_and_bpm(
+        &db,
+        // Full speed: the user is watching this command and waiting for it.
+        music_player_scanner::Pace::Foreground,
+    )
+    .await;
     if analysed > 0 {
         println!(
             "{} track{} analysed for key and tempo",

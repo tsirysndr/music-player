@@ -10,6 +10,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DbBackend, EntityTrait,
     QueryFilter, Statement, TransactionTrait,
 };
+use std::time::{Duration, Instant};
 use std::{
     fs::File,
     io::{Read, Seek, SeekFrom, Write},
@@ -209,6 +210,31 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     Ok(songs)
 }
 
+/// How hard an analysis pass is allowed to work.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Pace {
+    /// As fast as the machine allows. For `music-player scan`, where the user
+    /// is watching it and nothing else is going on.
+    Foreground,
+    /// A fraction of one core, with the rest of the time given back.
+    ///
+    /// A whole library is hours of decoding, and at full speed it saturates a
+    /// core and writes to the same database every screen is reading from — so
+    /// the player it is supposed to be improving becomes unusable while it
+    /// runs. Slower and out of the way is strictly better here: nothing is
+    /// waiting on the result.
+    Background,
+}
+
+/// How much of the time a background pass may spend working, as a divisor of
+/// the idle time that follows each track: 3 means one part working to three
+/// parts idle, so roughly a quarter of one core.
+const BACKGROUND_REST: u32 = 3;
+
+/// The longest it will pause between tracks, however slow the last one was.
+/// Without a ceiling a single huge file would stall the pass for minutes.
+const MAX_REST: Duration = Duration::from_secs(5);
+
 /// How many tracks are fetched from the database at a time.
 ///
 /// A paging size, not a limit on the work: the pass keeps asking for the next
@@ -226,7 +252,7 @@ const ANALYSIS_PAGE: u64 = 500;
 /// things: `music-player scan` is a command that exits when it returns, so a
 /// detached task there would be killed before it decoded anything — the reason
 /// a scan left every key null. The daemon, which keeps running, spawns it.
-pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
+pub async fn analyse_missing_key_and_bpm(db: &Database, pace: Pace) -> usize {
     let conn = db.get_connection();
 
     // Anything already analysed but not yet copied onto its track row. One
@@ -270,6 +296,7 @@ pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
             // nothing else to show for it, and a pass that printed only a total
             // at the end is indistinguishable from one that has hung.
             let index = done + failed + 1;
+            let started = Instant::now();
             match music_player_storage::track_analysis::ensure(conn, "", track).await {
                 Ok(analysis) => {
                     done += 1;
@@ -294,6 +321,14 @@ pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
                     );
                 }
             }
+
+            // Give the machine back to whatever the user is actually doing.
+            // Proportional to the work just done, so a big file rests longer
+            // than a small one and the ratio holds however fast the disk is.
+            if pace == Pace::Background {
+                let rest = (started.elapsed() * BACKGROUND_REST).min(MAX_REST);
+                tokio::time::sleep(rest).await;
+            }
         }
     }
 
@@ -304,7 +339,7 @@ pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
 /// The same pass, detached — for the daemon, which outlives it.
 pub fn spawn_key_and_bpm_analysis(db: Database) {
     tokio::spawn(async move {
-        analyse_missing_key_and_bpm(&db).await;
+        analyse_missing_key_and_bpm(&db, Pace::Background).await;
     });
 }
 

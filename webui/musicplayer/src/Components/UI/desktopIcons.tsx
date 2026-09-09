@@ -238,6 +238,25 @@ export const Extension: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) =>
   </svg>
 );
 
+/** `desktop/assets/icons/guitar-pick.svg` */
+export const GuitarPick: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={stroke}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M12 3c4.97 0 9 2.686 9 6c0 3.314 -4.5 12 -9 12s-9 -8.686 -9 -12c0 -3.314 4.03 -6 9 -6z" />
+    <path d="M12 3c1.657 0 3 2.686 3 6c0 3.314 -1.5 12 -3 12s-3 -8.686 -3 -12c0 -3.314 1.343 -6 3 -6z" />
+  </svg>
+);
+
 /** `desktop/assets/icons/heart-outline.svg` */
 export const HeartOutline: FC<IconProps> = ({ size = 24, stroke = 2, ...props }) => (
   <svg
@@ -781,6 +800,7 @@ export const DESKTOP_ICONS = {
   ellipsis: Ellipsis,
   equalizer: Equalizer,
   extension: Extension,
+  guitarPick: GuitarPick,
   heartOutline: HeartOutline,
   heart: Heart,
   jellyfin: Jellyfin,

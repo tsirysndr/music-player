@@ -1,12 +1,17 @@
 use async_graphql::*;
 use music_player_storage::{
-    repo::{album::AlbumRepository, artist::ArtistRepository, track::TrackRepository},
+    repo::{
+        album::AlbumRepository, artist::ArtistRepository, genre::GenreRepository,
+        track::TrackRepository,
+    },
     searcher::Searcher,
     Database,
 };
 use std::sync::Arc;
 
-use super::objects::{album::Album, artist::Artist, search_result::SearchResult, track::Track};
+use super::objects::{
+    album::Album, artist::Artist, genre::Genre, search_result::SearchResult, track::Track,
+};
 use super::provider::{self, decorate_all};
 
 /// The library, from wherever it currently comes.
@@ -189,6 +194,65 @@ impl LibraryQuery {
         let album = AlbumRepository::new(db.get_connection()).find(&id).await?;
 
         Ok(album.into())
+    }
+
+    /// The genres in the library.
+    ///
+    /// From the connected server when it has them, else this machine's own
+    /// table — a server that cannot list genres should show the local ones
+    /// rather than an empty screen.
+    async fn genres(
+        &self,
+        ctx: &Context<'_>,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Genre>, Error> {
+        if let Some(current) = provider::connected(ctx).await {
+            if current.provider.capabilities().genres {
+                let genres = current
+                    .provider
+                    .genres(provider::page(offset, limit))
+                    .await
+                    .map_err(provider::err)?;
+                return Ok(genres.into_iter().map(Genre::from).collect());
+            }
+        }
+
+        let db = ctx.data::<Database>().unwrap();
+        let results = GenreRepository::new(db.get_connection())
+            .find_all(offset.map(|x| x as u64), limit.map(|x| x as u64))
+            .await?;
+        Ok(results.into_iter().map(Into::into).collect())
+    }
+
+    /// The tracks in one genre.
+    async fn genre_tracks(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        offset: Option<i32>,
+        limit: Option<i32>,
+    ) -> Result<Vec<Track>, Error> {
+        let id = id.to_string();
+        if let Some(current) = provider::connected(ctx).await {
+            if current.provider.capabilities().genres {
+                let tracks = current
+                    .provider
+                    .genre_tracks(&id, provider::page(offset, limit))
+                    .await
+                    .map_err(provider::err)?;
+                return Ok(decorate_all(tracks, &current.config)
+                    .into_iter()
+                    .map(Track::from)
+                    .collect());
+            }
+        }
+
+        let db = ctx.data::<Database>().unwrap();
+        let tracks = GenreRepository::new(db.get_connection())
+            .tracks(&id, offset.map(|x| x as u64), limit.map(|x| x as u64))
+            .await?;
+        Ok(tracks.into_iter().map(Into::into).collect())
     }
 
     /// Search wherever the library currently is.

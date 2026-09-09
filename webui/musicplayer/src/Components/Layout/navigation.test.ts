@@ -8,6 +8,7 @@ describe("NAV", () => {
     expect(NAV.map((section) => section.to)).toEqual([
       "/albums",
       "/artists",
+      "/genres",
       "/tracks",
       "/liked",
       "/playlists",

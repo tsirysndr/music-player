@@ -4,6 +4,7 @@ pub mod current_track;
 pub mod device;
 pub mod extension;
 pub mod folder;
+pub mod genre;
 pub mod lyrics;
 pub mod player_state;
 pub mod playlist;

@@ -5,6 +5,8 @@ import AlbumsPage from "./Containers/Albums";
 import ArtistDetailsPage from "./Containers/ArtistDetails";
 import ArtistsPage from "./Containers/Artists";
 import ExtensionsPage from "./Containers/Extensions";
+import GenreDetailPage from "./Components/Genres/GenreDetailWithData";
+import GenresPage from "./Components/Genres";
 import FolderPage from "./Containers/Folder";
 import LikedPage from "./Containers/Liked";
 import PlaylistPage from "./Containers/Playlist";
@@ -23,6 +25,8 @@ function App() {
         <Route path="/" element={<TracksPage />} />
         <Route path="/tracks" element={<TracksPage />} />
         <Route path="/artists" element={<ArtistsPage />} />
+        <Route path="/genres" element={<GenresPage />} />
+        <Route path="/genres/:id" element={<GenreDetailPage />} />
         <Route path="/albums" element={<AlbumsPage />} />
         <Route path="/albums/:id" element={<AlbumDetailsPage />} />
         <Route path="/artists/:id" element={<ArtistDetailsPage />} />

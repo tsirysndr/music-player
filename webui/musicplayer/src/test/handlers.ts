@@ -111,6 +111,10 @@ export const handlers = [
   graphql.query("GetConnectedServer", () =>
     HttpResponse.json({ data: { connectedServer: null } })
   ),
+  graphql.query("GetGenres", () => HttpResponse.json({ data: { genres } })),
+  graphql.query("GetGenreTracks", () =>
+    HttpResponse.json({ data: { genreTracks: [] } })
+  ),
   // Anything the app asks for that has no operation name (the hand-written
   // `fetcher` calls in the radio and liked pages) falls through to here.
   graphql.operation(() => HttpResponse.json({ data: {} })),
@@ -250,4 +254,12 @@ export const savedServers = [
     hasPassword: true,
     connected: false,
   },
+];
+
+export const genres = [
+  { __typename: "Genre", id: "g1", name: "Hip Hop", trackCount: 42 },
+  { __typename: "Genre", id: "g2", name: "Shoegaze", trackCount: 1 },
+  // A remote server that reports no count sends zero, which is "unknown"
+  // rather than "empty".
+  { __typename: "Genre", id: "g3", name: "Ambient", trackCount: 0 },
 ];

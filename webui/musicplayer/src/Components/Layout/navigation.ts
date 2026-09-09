@@ -12,6 +12,7 @@ export type NavEntry = {
 export const NAV: NavEntry[] = [
   { to: "/albums", label: "Albums", icon: Icons.disc },
   { to: "/artists", label: "Artists", icon: Icons.artist },
+  { to: "/genres", label: "Genres", icon: Icons.genre },
   { to: "/tracks", label: "Tracks", icon: Icons.listMusic, matches: ["/"] },
   { to: "/liked", label: "Liked", icon: Icons.heart },
   {
@@ -48,6 +49,7 @@ export const titleForPath = (pathname: string) => {
   if (pathname.startsWith("/folders/")) return "Folder";
   if (pathname.startsWith("/search")) return "Search";
   if (pathname.startsWith("/liked")) return "Liked tracks";
+  if (pathname.startsWith("/genres/")) return "Genre";
   const entry = NAV.find((candidate) => isActive(pathname, candidate));
   return entry?.label ?? "Music Player";
 };

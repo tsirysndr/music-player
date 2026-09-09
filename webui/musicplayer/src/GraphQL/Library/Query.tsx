@@ -122,3 +122,28 @@ export const SEARCH = gql`
     }
   }
 `;
+
+export const GET_GENRES = gql`
+  query GetGenres($offset: Int, $limit: Int) {
+    genres(offset: $offset, limit: $limit) {
+      id
+      name
+      trackCount
+    }
+  }
+`;
+
+export const GET_GENRE_TRACKS = gql`
+  query GetGenreTracks($id: ID!, $offset: Int, $limit: Int) {
+    genreTracks(id: $id, offset: $offset, limit: $limit) {
+      id
+      title
+      artist
+      duration
+      cover
+      artistId
+      albumId
+      albumTitle
+    }
+  }
+`;

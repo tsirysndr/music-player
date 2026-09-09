@@ -197,6 +197,27 @@ export type FolderChanged = {
   playlist?: Maybe<Playlist>;
 };
 
+export type Genre = {
+  __typename?: 'Genre';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  trackCount: Scalars['Int']['output'];
+};
+
+/** Output levels for a meter, measured on the PCM leaving the device. */
+export type Levels = {
+  __typename?: 'Levels';
+  /** 0..1 RMS over one output buffer. */
+  left: Scalars['Float']['output'];
+  /**
+   * The same signal below roughly 200 Hz, which is what makes a meter move
+   * with the bass rather than with whatever is loudest.
+   */
+  lowLeft: Scalars['Float']['output'];
+  lowRight: Scalars['Float']['output'];
+  right: Scalars['Float']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   /**
@@ -629,6 +650,16 @@ export type Query = {
   extensions: Array<Extension>;
   folder: Folder;
   folders: Array<Folder>;
+  /** The tracks in one genre. */
+  genreTracks: Array<Track>;
+  /**
+   * The genres in the library.
+   *
+   * From the connected server when it has them, else this machine's own
+   * table — a server that cannot list genres should show the local ones
+   * rather than an empty screen.
+   */
+  genres: Array<Genre>;
   getMute: Scalars['Boolean']['output'];
   getNextTrack?: Maybe<Track>;
   getPlayerState: PlayerState;
@@ -737,6 +768,19 @@ export type QueryExtensionsArgs = {
 
 export type QueryFolderArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QueryGenreTracksArgs = {
+  id: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryGenresArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -946,6 +990,15 @@ export type Subscription = {
   currentlyPlayingSong: Track;
   folder: FolderChanged;
   folders: Array<Folder>;
+  /**
+   * Output levels for a meter, pushed at 20 Hz.
+   *
+   * A stream rather than a field: a meter wants tens of updates a second,
+   * and the poll a client would otherwise ride on is far slower. Read from
+   * the tracklist, which the player writes each tick, so this adds no work
+   * to the audio path.
+   */
+  levels: Levels;
   onConnected: ConnectedDevice;
   onDisconnected: DisconnectedDevice;
   onNewDevice: Device;
@@ -1159,6 +1212,23 @@ export type SearchQueryVariables = Exact<{
 
 export type SearchQuery = { __typename?: 'Query', search: { __typename?: 'SearchResult', artists: Array<{ __typename?: 'Artist', id: string, name: string, picture: string, source?: string | null }>, albums: Array<{ __typename?: 'Album', id: string, title: string, artist: string, cover?: string | null, source?: string | null }>, tracks: Array<{ __typename?: 'Track', id: string, title: string, artist: string, duration?: number | null, cover?: string | null, artistId: string, albumId: string, albumTitle: string, source?: string | null }> } };
 
+export type GetGenresQueryVariables = Exact<{
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetGenresQuery = { __typename?: 'Query', genres: Array<{ __typename?: 'Genre', id: string, name: string, trackCount: number }> };
+
+export type GetGenreTracksQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetGenreTracksQuery = { __typename?: 'Query', genreTracks: Array<{ __typename?: 'Track', id: string, title: string, artist: string, duration?: number | null, cover?: string | null, artistId: string, albumId: string, albumTitle: string }> };
+
 export type SetAudioSettingMutationVariables = Exact<{
   name: Scalars['String']['input'];
   value: Scalars['Int']['input'];
@@ -1228,6 +1298,11 @@ export type CurrentlyPlayingSongChangedSubscriptionVariables = Exact<{ [key: str
 
 
 export type CurrentlyPlayingSongChangedSubscription = { __typename?: 'Subscription', currentlyPlayingSong: { __typename?: 'Track', id: string, trackNumber?: number | null, title: string, artist: string, duration?: number | null, artists: Array<{ __typename?: 'Artist', id: string, name: string }>, album: { __typename?: 'Album', id: string, title: string, cover?: string | null } } };
+
+export type OnLevelsSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnLevelsSubscription = { __typename?: 'Subscription', levels: { __typename?: 'Levels', left: number, right: number, lowLeft: number, lowRight: number } };
 
 export type CreatePlaylistMutationVariables = Exact<{
   name: Scalars['String']['input'];
@@ -2437,6 +2512,115 @@ useInfiniteSearchQuery.getKey = (variables: SearchQueryVariables) => ['Search.in
 
 useSearchQuery.fetcher = (variables: SearchQueryVariables, options?: RequestInit['headers']) => fetcher<SearchQuery, SearchQueryVariables>(SearchDocument, variables, options);
 
+export const GetGenresDocument = `
+    query GetGenres($offset: Int, $limit: Int) {
+  genres(offset: $offset, limit: $limit) {
+    id
+    name
+    trackCount
+  }
+}
+    `;
+
+export const useGetGenresQuery = <
+      TData = GetGenresQuery,
+      TError = unknown
+    >(
+      variables?: GetGenresQueryVariables,
+      options?: Omit<UseQueryOptions<GetGenresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetGenresQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetGenresQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['GetGenres'] : ['GetGenres', variables],
+    queryFn: fetcher<GetGenresQuery, GetGenresQueryVariables>(GetGenresDocument, variables),
+    ...options
+  }
+    )};
+
+useGetGenresQuery.getKey = (variables?: GetGenresQueryVariables) => variables === undefined ? ['GetGenres'] : ['GetGenres', variables];
+
+export const useInfiniteGetGenresQuery = <
+      TData = InfiniteData<GetGenresQuery>,
+      TError = unknown
+    >(
+      variables: GetGenresQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetGenresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetGenresQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetGenresQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? variables === undefined ? ['GetGenres.infinite'] : ['GetGenres.infinite', variables],
+      queryFn: (metaData) => fetcher<GetGenresQuery, GetGenresQueryVariables>(GetGenresDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetGenresQuery.getKey = (variables?: GetGenresQueryVariables) => variables === undefined ? ['GetGenres.infinite'] : ['GetGenres.infinite', variables];
+
+
+useGetGenresQuery.fetcher = (variables?: GetGenresQueryVariables, options?: RequestInit['headers']) => fetcher<GetGenresQuery, GetGenresQueryVariables>(GetGenresDocument, variables, options);
+
+export const GetGenreTracksDocument = `
+    query GetGenreTracks($id: ID!, $offset: Int, $limit: Int) {
+  genreTracks(id: $id, offset: $offset, limit: $limit) {
+    id
+    title
+    artist
+    duration
+    cover
+    artistId
+    albumId
+    albumTitle
+  }
+}
+    `;
+
+export const useGetGenreTracksQuery = <
+      TData = GetGenreTracksQuery,
+      TError = unknown
+    >(
+      variables: GetGenreTracksQueryVariables,
+      options?: Omit<UseQueryOptions<GetGenreTracksQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetGenreTracksQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetGenreTracksQuery, TError, TData>(
+      {
+    queryKey: ['GetGenreTracks', variables],
+    queryFn: fetcher<GetGenreTracksQuery, GetGenreTracksQueryVariables>(GetGenreTracksDocument, variables),
+    ...options
+  }
+    )};
+
+useGetGenreTracksQuery.getKey = (variables: GetGenreTracksQueryVariables) => ['GetGenreTracks', variables];
+
+export const useInfiniteGetGenreTracksQuery = <
+      TData = InfiniteData<GetGenreTracksQuery>,
+      TError = unknown
+    >(
+      variables: GetGenreTracksQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetGenreTracksQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetGenreTracksQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetGenreTracksQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? ['GetGenreTracks.infinite', variables],
+      queryFn: (metaData) => fetcher<GetGenreTracksQuery, GetGenreTracksQueryVariables>(GetGenreTracksDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetGenreTracksQuery.getKey = (variables: GetGenreTracksQueryVariables) => ['GetGenreTracks.infinite', variables];
+
+
+useGetGenreTracksQuery.fetcher = (variables: GetGenreTracksQueryVariables, options?: RequestInit['headers']) => fetcher<GetGenreTracksQuery, GetGenreTracksQueryVariables>(GetGenreTracksDocument, variables, options);
+
 export const SetAudioSettingDocument = `
     mutation SetAudioSetting($name: String!, $value: Int!) {
   setAudioSetting(name: $name, value: $value) {
@@ -2753,6 +2937,16 @@ export const CurrentlyPlayingSongChangedDocument = `
   }
 }
     ${TrackFragmentFragmentDoc}`;
+export const OnLevelsDocument = `
+    subscription OnLevels {
+  levels {
+    left
+    right
+    lowLeft
+    lowRight
+  }
+}
+    `;
 export const CreatePlaylistDocument = `
     mutation CreatePlaylist($name: String!, $description: String, $smart: SmartPlaylistInput) {
   createPlaylist(name: $name, description: $description, smart: $smart) {

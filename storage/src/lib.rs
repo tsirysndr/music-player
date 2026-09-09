@@ -5,8 +5,8 @@ use music_player_entity::{album as album_entity, artist as artist_entity, track 
 use music_player_settings::{read_settings, Settings};
 use sea_orm::{sea_query, ConnectOptions, ConnectionTrait, DatabaseConnection};
 
-pub mod atproto;
 pub mod account;
+pub mod atproto;
 pub mod atradio;
 pub mod extension_state;
 pub mod radio_resolve;

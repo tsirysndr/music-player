@@ -77,10 +77,7 @@ pub fn profile() -> Option<atradio_sdk::Profile> {
 ///
 /// Writes the shared session file, so this is also what turns on scrobbling
 /// and station sync — there is one session, not one per feature.
-pub async fn sign_in(
-    identifier: &str,
-    password: &str,
-) -> Result<atradio_sdk::Profile, Error> {
+pub async fn sign_in(identifier: &str, password: &str) -> Result<atradio_sdk::Profile, Error> {
     // Any existing session is dropped first: `login_password` resumes one when
     // it can, which would silently sign in as whoever was already there.
     agent().logout();

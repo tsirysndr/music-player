@@ -4,18 +4,19 @@ use music_player_renderer::{chromecast::Chromecast, dlna::Dlna, local::Local, Pl
 use music_player_types::types::Device;
 
 use self::{
+    account::{AccountMutation, AccountQuery},
     devices::{DevicesMutation, DevicesQuery, DevicesSubscription},
     extensions::{ExtensionsMutation, ExtensionsQuery},
     library::{LibraryMutation, LibraryQuery},
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
     playlist::{PlaylistMutation, PlaylistQuery, PlaylistSubscription},
-    account::{AccountMutation, AccountQuery},
     radio::{RadioMutation, RadioQuery},
     servers::{ServersMutation, ServersQuery},
     tracklist::{TracklistMutation, TracklistQuery, TracklistSubscription},
 };
 
+pub mod account;
 pub mod addons;
 pub mod core;
 pub mod devices;
@@ -24,7 +25,6 @@ pub mod history;
 pub mod library;
 pub mod mixer;
 pub mod objects;
-pub mod account;
 pub mod playback;
 pub mod playlist;
 pub mod provider;

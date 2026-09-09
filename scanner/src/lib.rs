@@ -229,6 +229,14 @@ const ANALYSIS_PAGE: u64 = 500;
 pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
     let conn = db.get_connection();
 
+    // Anything already analysed but not yet copied onto its track row. One
+    // statement, no decoding — and it has to come first, because the pass below
+    // only visits tracks that have never been analysed at all.
+    let filled = music_player_storage::track_analysis::backfill_key_and_bpm(conn).await;
+    if filled > 0 {
+        info!("key and tempo: filled in {filled} tracks from stored analysis");
+    }
+
     let total = music_player_storage::track_analysis::unanalysed_local_count(conn).await as usize;
     if total == 0 {
         return 0;
@@ -236,28 +244,32 @@ pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
     info!(tracks = total, "analysing key and tempo");
 
     let mut done = 0usize;
-    let mut index = 0usize;
-    // Re-queried each time rather than paged with an offset: every track that
-    // succeeds stops being unanalysed, so the "next page" is always the front
-    // of the list. An offset would skip past everything already done and leave
-    // most of the library untouched.
+    // Tracks that could not be analysed at all — a missing file, a codec we do
+    // not read. A success writes a row and the track leaves the query; a
+    // failure does not, so it would sit at the head of every page and be
+    // retried for ever. Counting them is what the offset skips past.
+    let mut failed = 0usize;
+
     loop {
-        let pending =
-            music_player_storage::track_analysis::unanalysed_local_tracks(conn, ANALYSIS_PAGE)
-                .await;
+        let pending = music_player_storage::track_analysis::unanalysed_local_tracks(
+            conn,
+            failed as u64,
+            ANALYSIS_PAGE,
+        )
+        .await;
         if pending.is_empty() {
             break;
         }
-        let before = done;
+
         for track in &pending {
-            index += 1;
-            // `ensure` serialises on its own semaphore, so this stays one decode at
-            // a time however many callers there are — it must not compete with the
-            // audio that is playing.
+            // `ensure` serialises on its own semaphore, so this stays one
+            // decode at a time however many callers there are — it must not
+            // compete with the audio that is playing.
             //
-            // Logged per track, and at info: this is minutes of work with nothing
-            // else to show for it, and a scan that printed only a total at the end
-            // is indistinguishable from one that has hung.
+            // Logged per track, and at info: this is minutes of work with
+            // nothing else to show for it, and a pass that printed only a total
+            // at the end is indistinguishable from one that has hung.
+            let index = done + failed + 1;
             match music_player_storage::track_analysis::ensure(conn, "", track).await {
                 Ok(analysis) => {
                     done += 1;
@@ -275,24 +287,13 @@ pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
                     );
                 }
                 Err(cause) => {
+                    failed += 1;
                     info!(
                         "[{index}/{total}] {} — {}  could not analyse: {cause}",
                         track.artist, track.title
                     );
                 }
             }
-        }
-
-        // Nothing in a whole batch succeeded, so the same rows would come back
-        // for ever. Every remaining track is one that cannot be analysed —
-        // a missing file, an unsupported codec — and retrying is not going to
-        // change that.
-        if done == before {
-            info!(
-                "stopping: none of the remaining {} tracks could be analysed",
-                pending.len()
-            );
-            break;
         }
     }
 

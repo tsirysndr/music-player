@@ -118,12 +118,18 @@ pub async fn put(
 /// the time a queued request is reached, the track it wanted may already have
 /// been analysed by whatever was ahead of it.
 pub async fn ensure(db: &DatabaseConnection, source: &str, track: &TrackRef) -> Result<Analysis> {
+    // A cached analysis still writes the track's own columns, because the row
+    // may predate them — a library analysed before `track.key` existed has
+    // every value stored here and none of it on the tracks. Returning early
+    // without this is what left those columns empty on a rescan.
     if let Some(analysis) = get(db, source, &track.id).await {
+        write_back_key_and_bpm(db, &track.id, &analysis).await;
         return Ok(analysis);
     }
 
     let _permit = slot().acquire().await?;
     if let Some(analysis) = get(db, source, &track.id).await {
+        write_back_key_and_bpm(db, &track.id, &analysis).await;
         return Ok(analysis);
     }
 
@@ -174,39 +180,91 @@ async fn write_back_key_and_bpm(db: &DatabaseConnection, track_id: &str, analysi
     }
 }
 
-/// How many local tracks still have no key or tempo.
+/// Copy stored analysis onto the track rows that are missing it.
 ///
-/// Counted separately from the listing so a pass can report real progress —
-/// "3 of 4812" — rather than progress through whichever page it happens to
-/// be holding.
-pub async fn unanalysed_local_count(db: &DatabaseConnection) -> u64 {
-    use music_player_entity::track;
+/// Costs one statement and no decoding: the answers are already in
+/// `track_analysis`, they simply never reached the two columns a track listing
+/// reads. That happens to every track analysed before those columns existed,
+/// and to any library where the analysis rows outlived a change to them.
+///
+/// Returns how many rows it filled in.
+pub async fn backfill_key_and_bpm(db: &DatabaseConnection) -> u64 {
+    use sea_orm::{ConnectionTrait, Statement};
+
+    // Only rows that are actually missing something, so a rescan of a library
+    // already in step writes nothing at all.
+    let sql = r#"
+        UPDATE track
+           SET key = COALESCE(track.key, (SELECT ta.key FROM track_analysis ta
+                                           WHERE ta.track_id = track.id AND ta.source = '')),
+               bpm = COALESCE(track.bpm, (SELECT ta.bpm FROM track_analysis ta
+                                           WHERE ta.track_id = track.id AND ta.source = ''))
+         WHERE (track.key IS NULL OR track.bpm IS NULL)
+           AND EXISTS (SELECT 1 FROM track_analysis ta
+                        WHERE ta.track_id = track.id AND ta.source = ''
+                          AND (ta.key IS NOT NULL OR ta.bpm IS NOT NULL))
+    "#;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        sql.to_owned(),
+    ))
+    .await
+    .map(|result| result.rows_affected())
+    .unwrap_or(0)
+}
+
+/// Local tracks that have never been analysed.
+///
+/// "Never analysed" — no row in `track_analysis` — rather than "has no key",
+/// and the distinction is the difference between a pass that finishes and one
+/// that never does. Plenty of tracks analyse perfectly well and yield no key:
+/// a spoken intro, something atonal, a recording too short to hear a tonic in.
+/// Those keep a null key for ever, so a pass that looked for null keys would
+/// offer them again on every page, find the cached result, count it as done and
+/// go round again — which is exactly what it did.
+fn never_analysed() -> sea_orm::Select<music_player_entity::track::Entity> {
+    use music_player_entity::{track, track_analysis};
+    use sea_orm::sea_query::{Expr, Query};
+
+    let analysed = Query::select()
+        .column(track_analysis::Column::TrackId)
+        .from(track_analysis::Entity)
+        // The local library, whose ids are the ones in `track`.
+        .and_where(Expr::col(track_analysis::Column::Source).eq(""))
+        .to_owned();
 
     track::Entity::find()
-        .filter(
-            sea_orm::Condition::any()
-                .add(track::Column::Key.is_null())
-                .add(track::Column::Bpm.is_null()),
-        )
-        .count(db)
-        .await
-        .unwrap_or(0) as u64
+        .filter(Expr::col(track::Column::Id).not_in_subquery(analysed))
+        // Stable, so paging by offset walks the list rather than shuffling it.
+        .order_by_asc(track::Column::Id)
+}
+
+/// How many local tracks have never been analysed.
+///
+/// Counted separately from the listing so a pass can report real progress —
+/// "3 of 4812" — rather than progress through whichever page it is holding.
+pub async fn unanalysed_local_count(db: &DatabaseConnection) -> u64 {
+    never_analysed().count(db).await.unwrap_or(0) as u64
 }
 
 /// Tracks in the local library that have no key or tempo yet.
 ///
 /// The list the background pass works through. Ordered oldest-first so a
 /// resumed pass continues where it left off rather than starting again.
-pub async fn unanalysed_local_tracks(db: &DatabaseConnection, limit: u64) -> Vec<TrackRef> {
-    use music_player_entity::track;
-
-    track::Entity::find()
-        .filter(
-            sea_orm::Condition::any()
-                .add(track::Column::Key.is_null())
-                .add(track::Column::Bpm.is_null()),
-        )
-        .order_by_asc(track::Column::Id)
+/// A page of local tracks that have never been analysed.
+///
+/// `offset` exists for the tracks that *cannot* be analysed — a missing file, a
+/// codec symphonia does not read. A success writes a row and the track leaves
+/// this list, but a failure does not, so it stays at the head and would be
+/// retried on every page. Skipping the failures counted so far walks past them.
+pub async fn unanalysed_local_tracks(
+    db: &DatabaseConnection,
+    offset: u64,
+    limit: u64,
+) -> Vec<TrackRef> {
+    never_analysed()
+        .offset(offset)
         .limit(limit)
         .all(db)
         .await

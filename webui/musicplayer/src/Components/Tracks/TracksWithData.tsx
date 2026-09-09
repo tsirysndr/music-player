@@ -45,6 +45,8 @@ const TracksWithData: FC = () => {
         album: track.album.title,
         albumId: track.album.id,
         duration: formatTime((track.duration ?? 0) * 1000),
+        key: track.key,
+        bpm: track.bpm,
         liked: isLiked(track.id),
       })),
     [data, formatTime, isLiked]

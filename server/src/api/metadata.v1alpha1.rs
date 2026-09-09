@@ -28,6 +28,10 @@ pub struct Song {
     pub album: ::prost::alloc::string::String,
     #[prost(string, tag = "10")]
     pub artist: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "11")]
+    pub key: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(float, optional, tag = "12")]
+    pub bpm: ::core::option::Option<f32>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Album {
@@ -127,4 +131,14 @@ pub struct Track {
     /// not say — which is different from "not liked".
     #[prost(bool, optional, tag = "13")]
     pub liked: ::core::option::Option<bool>,
+    /// Musical key in Camelot notation, e.g. "8A". Camelot rather than "A minor"
+    /// because adjacent numbers mix, which is why anyone wants to see it.
+    ///
+    /// Absent when the track has not been analysed. Only the daemon's own library
+    /// has these — a remote provider's tracks are not rows it can analyse — which
+    /// is why clients only offer the column when reading from a music-player.
+    #[prost(string, optional, tag = "14")]
+    pub key: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(float, optional, tag = "15")]
+    pub bpm: ::core::option::Option<f32>,
 }

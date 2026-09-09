@@ -38,6 +38,8 @@ const SearchResultsWithData: FC = () => {
         album: track.album,
         albumId: track.albumId,
         duration: formatTime((track.duration ?? 0) * 1000),
+        key: track.key,
+        bpm: track.bpm,
         liked: isLiked(track.id),
       }))}
       albums={results.albums.map((album) => ({

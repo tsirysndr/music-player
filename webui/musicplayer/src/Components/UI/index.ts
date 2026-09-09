@@ -59,3 +59,8 @@ export { default as TrackRow, TrackListHeader } from "./TrackRow";
 export type { PlaylistOption, TrackRowItem } from "./TrackRow";
 export { default as VfdDisplay } from "./VfdDisplay";
 export { default as Waveform } from "./Waveform";
+export { keyColorFor } from "./keyColor";
+export {
+  LibraryAnalysisProvider,
+  useLibraryAnalysis,
+} from "./LibraryAnalysis";

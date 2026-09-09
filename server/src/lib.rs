@@ -149,6 +149,8 @@ pub mod api {
                     bitrate: model.bitrate.unwrap_or_default(),
                     sample_rate: model.sample_rate.unwrap_or_default(),
                     liked: model.liked,
+                    key: model.key,
+                    bpm: model.bpm,
                     artists: model.artists.into_iter().map(Into::into).collect(),
                     album: Some(model.album.into()),
                     artist: model.artist,
@@ -170,6 +172,8 @@ pub mod api {
                     uri: model.uri,
                     album: model.album.title.clone(),
                     artist: model.artist,
+                    key: model.key,
+                    bpm: model.bpm,
                     artists: model.artists.into_iter().map(Into::into).collect(),
                 }
             }
@@ -190,6 +194,10 @@ pub mod api {
                         .map(|a| a.title.clone())
                         .unwrap_or_default(),
                     artist: track.artist,
+                    // A remote provider's tracks are not analysed here, so
+                    // there is nothing to report rather than a zero to show.
+                    key: None,
+                    bpm: None,
                     artists: track.artists.into_iter().map(Into::into).collect(),
                 }
             }
@@ -283,6 +291,11 @@ pub mod api {
                     // source has it liked; without it the heart falls back to
                     // a snapshot list, which can always be incomplete.
                     liked: val.liked,
+                    // Same reason: the queue shows these columns too, and a
+                    // track that lost them on the way in would show blanks
+                    // where the library shows a key.
+                    key: val.key,
+                    bpm: val.bpm,
                     album: val.album.map(Into::into).unwrap_or_default(),
                     ..Default::default()
                 }

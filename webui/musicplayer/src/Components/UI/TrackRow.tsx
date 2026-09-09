@@ -7,6 +7,8 @@ import ContextMenu, {
 } from "./ContextMenu";
 import IconButton from "./IconButton";
 import { Icons } from "./icons";
+import { keyColorFor } from "./keyColor";
+import { useLibraryAnalysis } from "./LibraryAnalysis";
 import LikeButton from "./LikeButton";
 
 export type TrackRowItem = {
@@ -23,6 +25,9 @@ export type TrackRowItem = {
   /** Which disc it sits on. Only meaningful on a multi-disc album. */
   discNumber?: number | null;
   liked?: boolean;
+  /** Camelot notation, e.g. "8A". Absent when the track has not been analysed. */
+  key?: string | null;
+  bpm?: number | null;
 };
 
 export type PlaylistOption = { id: string; name: string };
@@ -43,6 +48,11 @@ export type TrackRowProps = {
   onAddToPlaylist?: (playlistId: string) => void;
   onBrowsePlaylists?: () => void;
   onRemove?: () => void;
+  /**
+   * Show the key and tempo columns. Defaults to what the connected library can
+   * answer; set explicitly only to override that, as a story does.
+   */
+  showAnalysis?: boolean;
 };
 
 /**
@@ -58,11 +68,27 @@ const COLS = {
   title: "min-w-0 flex-[45]",
   artist: "hidden min-w-0 flex-[28] md:block",
   album: "hidden min-w-0 flex-[27] lg:block",
+  key: "w-10 shrink-0 text-right",
+  bpm: "w-11 shrink-0 text-right",
   time: "w-11 shrink-0 text-right",
   actions: "w-[64px] shrink-0",
 };
 
-export const TrackListHeader = ({ className }: { className?: string }) => (
+export const TrackListHeader = ({
+  className,
+  showAnalysis,
+}: {
+  className?: string;
+  /**
+   * Whether the library can report a key and a tempo at all. Only a
+   * music-player daemon analyses its own tracks — against Subsonic or Jellyfin
+   * the columns are hidden rather than shown blank for every row.
+   */
+  showAnalysis?: boolean;
+}) => {
+  const fromLibrary = useLibraryAnalysis();
+  const show = showAnalysis ?? fromLibrary;
+  return (
   <div
     className={cn(
       "flex h-[30px] items-center gap-3 border-b border-line px-3",
@@ -74,10 +100,13 @@ export const TrackListHeader = ({ className }: { className?: string }) => (
     <span className={COLS.title}>TITLE</span>
     <span className={COLS.artist}>ARTIST</span>
     <span className={COLS.album}>ALBUM</span>
+    {show && <span className={COLS.key}>KEY</span>}
+    {show && <span className={COLS.bpm}>BPM</span>}
     <span className={COLS.time}>TIME</span>
     <span className={COLS.actions} />
   </div>
-);
+  );
+};
 
 /**
  * The desktop's `TrackRow`. Clicking anywhere plays; the heart and the "…"
@@ -100,8 +129,12 @@ const TrackRow = ({
   onAddToPlaylist,
   onBrowsePlaylists,
   onRemove,
+  showAnalysis,
 }: TrackRowProps) => {
   const navigate = useNavigate();
+  const fromLibrary = useLibraryAnalysis();
+  const show = showAnalysis ?? fromLibrary;
+  const keyColor = keyColorFor(track.key);
   const hasMenu =
     onPlayNext || onAddToQueue || track.albumId || onAddToPlaylist || onRemove;
 
@@ -120,10 +153,21 @@ const TrackRow = ({
         }
       }}
       className={cn(
-        "group/row flex h-[42px] cursor-pointer items-center gap-3 rounded-control px-3",
+        "group/row relative flex h-[42px] cursor-pointer items-center gap-3 rounded-control px-3",
         current ? "bg-selected" : "hover:bg-hover"
       )}
     >
+      {/* The key as a colour on the row's left edge, the way a DJ tool shows
+          it: finding what mixes is a matter of spotting neighbouring colours,
+          which is faster than reading two-character labels down a column. */}
+      {show && keyColor && (
+        <span
+          aria-hidden="true"
+          data-testid="key-marker"
+          style={{ backgroundColor: keyColor }}
+          className="absolute inset-y-[6px] left-0 w-[3px] rounded-full"
+        />
+      )}
       <span className={cn(COLS.number, "font-mono text-xs text-muted")}>
         {current ? (
           <Icons.music size={13} className="ml-auto text-accent" />
@@ -171,6 +215,24 @@ const TrackRow = ({
           track.album
         )}
       </span>
+
+      {show && (
+        // Nothing at all when unknown: a key is either known or it is not, and
+        // a placeholder here invites reading it as a value.
+        <span
+          className={cn(COLS.key, "font-mono text-xs font-semibold")}
+          style={keyColor ? { color: keyColor } : undefined}
+        >
+          {track.key ?? ""}
+        </span>
+      )}
+      {show && (
+        // A dash here, unlike the key: a blank in a numeric column reads as
+        // something having gone wrong.
+        <span className={cn(COLS.bpm, "font-mono text-xs text-muted")}>
+          {track.bpm ? Math.round(track.bpm) : "-"}
+        </span>
+      )}
 
       <span className={cn(COLS.time, "font-mono text-xs text-muted")}>
         {track.duration}

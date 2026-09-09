@@ -219,6 +219,11 @@ pub struct TrackData {
     pub disc: i32,
     pub track_no: i32,
     pub album_id: String,
+    /// Camelot notation, e.g. "8A". Empty when not analysed, or when the
+    /// library is a source that does not analyse.
+    pub key: String,
+    /// Empty when unknown.
+    pub bpm: String,
 }
 
 #[derive(Clone, Debug)]
@@ -838,6 +843,10 @@ pub fn track_data(t: &TrackProto, index: i32) -> TrackData {
         disc: t.disc_number,
         track_no: t.track_number,
         album_id: t.album.as_ref().map(|a| a.id.clone()).unwrap_or_default(),
+        key: t.key.clone().unwrap_or_default(),
+        // Rounded here rather than in the cell: a tempo is read as a whole
+        // number, and "127.9384" in a narrow column is unreadable.
+        bpm: t.bpm.map(|bpm| format!("{:.0}", bpm)).unwrap_or_default(),
     }
 }
 
@@ -1715,19 +1724,30 @@ async fn activate_renderer(
 
 /// Ask the daemon which provider it is reading from, if any.
 async fn load_connected_provider(weak: &Weak<AppWindow>) {
-    const QUERY: &str = r#"query { connectedServer { name url } }"#;
-    let (name, url) = match graphql(QUERY, serde_json::json!({})).await {
+    const QUERY: &str = r#"query { connectedServer { name url kind } }"#;
+    let (name, url, kind) = match graphql(QUERY, serde_json::json!({})).await {
         Ok(data) => {
             let server = &data["connectedServer"];
             (
                 server["name"].as_str().unwrap_or_default().to_string(),
                 server["url"].as_str().unwrap_or_default().to_string(),
+                // `null` for the daemon's own library, which counts as a
+                // music-player for what the key and tempo columns need.
+                server["kind"]
+                    .as_str()
+                    .map(str::to_string)
+                    .unwrap_or_else(|| "music-player".to_string()),
             )
         }
         // The daemon may not be up yet; the next connect will set it.
-        Err(_) => (String::new(), String::new()),
+        Err(_) => (String::new(), String::new(), "music-player".to_string()),
     };
+    // Only a music-player daemon analyses its own library, so only it can
+    // answer for a key or a tempo. Against Subsonic or Jellyfin the columns are
+    // hidden rather than shown empty for every row.
+    let analyses = kind == "music-player";
     let _ = weak.upgrade_in_event_loop(move |app| {
+        app.set_provider_analyses(analyses);
         app.set_provider_name(name.into());
         app.set_provider_url(url.clone().into());
         crate::set_active_provider(&url);
@@ -2638,7 +2658,24 @@ async fn ticker(weak: Weak<AppWindow>) {
                     // mid-bounce, which reads as the app having hung.
                     vec![0.0; EQ_BARS]
                 };
+                // Caps hold the level a transient reached and fall at a
+                // constant rate, so a hit that has already decayed is still
+                // visible for a moment instead of vanishing with the bar.
+                let previous: Vec<f32> = {
+                    use slint::Model;
+                    app.get_eq_peaks().iter().collect()
+                };
+                let peaks: Vec<f32> = targets
+                    .iter()
+                    .enumerate()
+                    .map(|(i, target)| {
+                        let falling = previous.get(i).copied().unwrap_or(0.0) - 0.012;
+                        target.max(falling).clamp(0.0, 1.0)
+                    })
+                    .collect();
+
                 app.set_eq_bars(slint::ModelRc::new(slint::VecModel::from(targets)));
+                app.set_eq_peaks(slint::ModelRc::new(slint::VecModel::from(peaks)));
                 app.set_waveform_progress(app.get_progress());
             }
             if app.get_playing() {
@@ -2719,7 +2756,7 @@ async fn stream_levels(channel: Channel, weak: Weak<AppWindow>) {
 }
 
 /// How many bars the full player's equalizer draws.
-pub const EQ_BARS: usize = 28;
+pub const EQ_BARS: usize = 96;
 
 /// How many bars its waveform draws.
 ///

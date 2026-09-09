@@ -59,6 +59,65 @@ export const barTargets = (
   });
 };
 
+/**
+ * The theme's accent, as canvas can use it.
+ *
+ * A plain hex custom property, so it has to be read from the computed style
+ * rather than written into canvas as `var(...)` — canvas resolves no CSS.
+ * Cached and refreshed rarely: `getComputedStyle` forces a style
+ * recalculation, and doing that sixty times a second to read one value that
+ * changes when the user picks a different skin is waste.
+ *
+ * One flat colour, not a gradient: the bars are already distinguished by
+ * height, and a vertical ramp on top of that reads as a second, competing
+ * signal rather than as reinforcement.
+ */
+const readColor = (() => {
+  let cached = "#ff2d95";
+  let readAt = 0;
+
+  return (now: number) => {
+    if (now - readAt < 1000) return cached;
+    readAt = now;
+    cached =
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--accent")
+        .trim() || cached;
+    return cached;
+  };
+})();
+
+/** How tall a floating peak cap is. */
+const CAP_HEIGHT = 3;
+/** How far a cap floats above a bar it is still resting on. */
+const CAP_GAP = 3;
+
+/**
+ * A bar with rounded top corners and square feet.
+ *
+ * Square at the bottom because the bars sit on an edge — rounding there would
+ * leave a visible gap under every one of them.
+ */
+const roundedTop = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) => {
+  const r = Math.min(radius, width / 2, height);
+  ctx.beginPath();
+  ctx.moveTo(x, y + height);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height);
+  ctx.closePath();
+  ctx.fill();
+};
+
 /** Fast up, slow down — the ballistics that make bars look like sound. */
 const ease = (current: number, target: number) =>
   target > current
@@ -77,7 +136,7 @@ const EqualizerBars = ({
   left,
   right,
   playing = true,
-  bars = 28,
+  bars = 96,
   className,
 }: EqualizerBarsProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,17 +176,14 @@ const EqualizerBars = ({
         : new Array(bars).fill(0);
 
       const slot = width / bars;
-      const barWidth = Math.max(1, slot * 0.62);
+      // Nearly touching: with this many bars a wide gap reads as a row of
+      // separate objects rather than as one moving surface.
+      const barWidth = Math.max(1, slot * 0.88);
       const offset = (slot - barWidth) / 2;
+      const radius = Math.min(barWidth / 2, 2);
 
-      // One gradient across the whole display rather than a colour per bar:
-      // the bars are already distinguished by height, and colouring by level as
-      // well fights the shape instead of reinforcing it.
-      const gradient = ctx.createLinearGradient(0, height, 0, 0);
-      gradient.addColorStop(0, "rgb(var(--meter-low))");
-      gradient.addColorStop(0.6, "rgb(var(--meter-mid))");
-      gradient.addColorStop(1, "rgb(var(--meter-high))");
-      ctx.fillStyle = gradient;
+      const color = readColor(now);
+      ctx.fillStyle = color;
 
       for (let i = 0; i < bars; i++) {
         heights[i] = ease(heights[i], targets[i]);
@@ -136,15 +192,19 @@ const EqualizerBars = ({
         peaks[i] = Math.max(heights[i], peaks[i] - 0.012);
 
         const barHeight = Math.max(2, heights[i] * height);
-        ctx.fillRect(offset + i * slot, height - barHeight, barWidth, barHeight);
+        roundedTop(ctx, offset + i * slot, height - barHeight, barWidth, barHeight, radius);
       }
 
-      ctx.fillStyle = "rgb(var(--meter-high))";
+      // Caps float clear of the bar rather than sitting on it, so a transient
+      // that has already decayed is still visible as the level it reached.
+      ctx.globalAlpha = 0.55;
       for (let i = 0; i < bars; i++) {
         if (peaks[i] <= 0.02) continue;
-        const y = Math.min(height - 2, height - peaks[i] * height);
-        ctx.fillRect(offset + i * slot, y, barWidth, 2);
+        const gap = peaks[i] - heights[i] > 0.02 ? 0 : CAP_GAP;
+        const y = Math.max(0, Math.min(height - CAP_HEIGHT, height - peaks[i] * height - gap));
+        roundedTop(ctx, offset + i * slot, y, barWidth, CAP_HEIGHT, radius);
       }
+      ctx.globalAlpha = 1;
     };
 
     frame = requestAnimationFrame(draw);

@@ -197,7 +197,89 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     {
         tracing::warn!("smart playlist refresh failed: {e}");
     }
+
+    // Key and tempo are deliberately *not* run from here.
+    //
+    // They decode every new track in full, which is minutes of work for a
+    // library of any size, and the right way to do that differs by caller: a
+    // command that exits must await it, a daemon that keeps running should
+    // detach it. A library function that spawned work as a side effect could
+    // serve neither, and did both at once when the two were combined.
+
     Ok(songs)
+}
+
+/// How many tracks one pass will work through.
+///
+/// A bound rather than "all of them": a first scan of a large library would
+/// otherwise be hours of decoding queued up in one task with no way to see the
+/// end of it. The next scan picks up where this left off, because the pass only
+/// ever looks at tracks that still have no key.
+pub const ANALYSIS_BATCH: u64 = 500;
+
+/// Fill in key and tempo for tracks that have none. Returns how many it did.
+///
+/// Skips anything already analysed, so running this over a library that has
+/// been through it costs one query and nothing else.
+///
+/// Awaitable rather than only spawnable, because the two callers need opposite
+/// things: `music-player scan` is a command that exits when it returns, so a
+/// detached task there would be killed before it decoded anything — the reason
+/// a scan left every key null. The daemon, which keeps running, spawns it.
+pub async fn analyse_missing_key_and_bpm(db: &Database, limit: u64) -> usize {
+    let conn = db.get_connection();
+    let pending = music_player_storage::track_analysis::unanalysed_local_tracks(conn, limit).await;
+    if pending.is_empty() {
+        return 0;
+    }
+    info!(tracks = pending.len(), "analysing key and tempo");
+
+    let total = pending.len();
+    let mut done = 0usize;
+    for (index, track) in pending.iter().enumerate() {
+        // `ensure` serialises on its own semaphore, so this stays one decode at
+        // a time however many callers there are — it must not compete with the
+        // audio that is playing.
+        //
+        // Logged per track, and at info: this is minutes of work with nothing
+        // else to show for it, and a scan that printed only a total at the end
+        // is indistinguishable from one that has hung.
+        match music_player_storage::track_analysis::ensure(conn, "", track).await {
+            Ok(analysis) => {
+                done += 1;
+                info!(
+                    "[{}/{total}] {} — {}  {}  {}",
+                    index + 1,
+                    track.artist,
+                    track.title,
+                    // A track can decode fine and still have no clear key or
+                    // tempo; saying so is more useful than printing a zero.
+                    analysis.key.as_deref().unwrap_or("--"),
+                    analysis
+                        .bpm
+                        .map(|bpm| format!("{bpm:.0} BPM"))
+                        .unwrap_or_else(|| "--- BPM".to_string()),
+                );
+            }
+            Err(cause) => {
+                info!(
+                    "[{}/{total}] {} — {}  could not analyse: {cause}",
+                    index + 1,
+                    track.artist,
+                    track.title
+                );
+            }
+        }
+    }
+    info!("key and tempo: {done}/{total} tracks analysed");
+    done
+}
+
+/// The same pass, detached — for the daemon, which outlives it.
+pub fn spawn_key_and_bpm_analysis(db: Database) {
+    tokio::spawn(async move {
+        analyse_missing_key_and_bpm(&db, ANALYSIS_BATCH).await;
+    });
 }
 
 /// Index every track's genre tag into the `genre` and `track_genres` tables.
@@ -221,7 +303,6 @@ pub async fn index_track_genres(db: &Database) -> Result<(), Error> {
             let row = genre::ActiveModel {
                 id: ActiveValue::Set(genre_id.clone()),
                 name: ActiveValue::Set(name.clone()),
-                ..Default::default()
             };
             let _ = genre::Entity::insert(row)
                 .on_conflict(
@@ -345,7 +426,6 @@ async fn link_artist_genres(
         let row = genre::ActiveModel {
             id: ActiveValue::Set(genre_id.clone()),
             name: ActiveValue::Set(name.trim().to_string()),
-            ..Default::default()
         };
         let _ = genre::Entity::insert(row)
             .on_conflict(

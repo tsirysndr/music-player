@@ -61,6 +61,8 @@ const GenreDetailWithData = () => {
         artistId: track.artistId ?? undefined,
         cover: track.cover ?? undefined,
         duration: formatTime((track.duration ?? 0) * 1000),
+        key: track.key,
+        bpm: track.bpm,
       })),
     [data, formatTime]
   );

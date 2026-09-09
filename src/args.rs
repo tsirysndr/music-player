@@ -172,9 +172,29 @@ async fn open(matches: &ArgMatches) -> CmdResult {
 async fn scan() -> CmdResult {
     migration::apply().await;
     let db = Database::new().await;
-    scan_music_library(true, db)
+    scan_music_library(true, db.clone())
         .await
         .map_err(|e| e.to_string())?;
+
+    // Awaited, not spawned: this command exits as soon as it returns, so a
+    // background task would be killed before it decoded anything — which is
+    // exactly why a scan used to leave every key and tempo null.
+    //
+    // It decodes each new track in full, so a first scan of a large library
+    // takes a while. The tracks are already indexed and playable by this point;
+    // what is still running only fills in two columns.
+    let analysed = music_player_scanner::analyse_missing_key_and_bpm(
+        &db,
+        music_player_scanner::ANALYSIS_BATCH,
+    )
+    .await;
+    if analysed > 0 {
+        println!(
+            "{} track{} analysed for key and tempo",
+            analysed.to_string().bright_green(),
+            if analysed == 1 { "" } else { "s" }
+        );
+    }
     Ok(())
 }
 

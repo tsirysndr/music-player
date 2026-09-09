@@ -22,4 +22,12 @@ message Track {
   // Whether the source has it starred/favourited. Absent when the source did
   // not say — which is different from "not liked".
   optional bool liked = 13;
+  // Musical key in Camelot notation, e.g. "8A". Camelot rather than "A minor"
+  // because adjacent numbers mix, which is why anyone wants to see it.
+  //
+  // Absent when the track has not been analysed. Only the daemon's own library
+  // has these — a remote provider's tracks are not rows it can analyse — which
+  // is why clients only offer the column when reading from a music-player.
+  optional string key = 14;
+  optional float bpm = 15;
 }

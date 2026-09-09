@@ -161,6 +161,7 @@ mod tests {
             window: vec![],
             sample_rate: 44_100.0,
             duration: 0.0,
+            tags: Default::default(),
         };
         assert!(loudness(&empty).is_err());
     }
@@ -176,6 +177,7 @@ mod tests {
             window: vec![],
             sample_rate: 44_100.0,
             duration: 4.0,
+            tags: Default::default(),
         };
         assert!(loudness(&silent).is_err());
     }
@@ -199,6 +201,7 @@ mod tests {
                 window: vec![],
                 sample_rate: 44_100.0,
                 duration: 4.0,
+                tags: Default::default(),
             }
         };
 

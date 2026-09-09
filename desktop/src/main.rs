@@ -85,6 +85,22 @@ fn track_item_with(t: &rpc::TrackData, liked_ids: &std::collections::HashSet<Str
         },
         liked: liked_ids.contains(&t.id),
         album_id: t.album_id.clone().into(),
+        key: t.key.clone().into(),
+        bpm: t.bpm.clone().into(),
+        // Resolved here rather than in the markup: Slint has no colour
+        // arithmetic, and the mapping is the same one the web client uses.
+        key_color: key_color(&t.key),
+    }
+}
+
+/// The colour a key is drawn in, or transparent when there is no key.
+///
+/// Transparent rather than a grey: an unanalysed track should show no marker at
+/// all, not a marker that says "unknown".
+fn key_color(key: &str) -> slint::Color {
+    match music_player_analysis::key_color::rgb_for(key) {
+        Some((r, g, b)) => slint::Color::from_rgb_u8(r, g, b),
+        None => slint::Color::from_argb_u8(0, 0, 0, 0),
     }
 }
 

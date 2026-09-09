@@ -22,6 +22,39 @@ use tracing::error;
 
 pub type PlayerResult = Result<(), anyhow::Error>;
 
+/// Work out a local track's key and tempo, if they are not known yet.
+///
+/// Playing a track is the strongest possible signal that its row is worth
+/// filling in — it is the one the user is looking at. Detached and serialised
+/// behind the same single analysis slot as everything else, so this never
+/// competes with the audio it was triggered by.
+///
+/// Local files only. A remote track is not a row in the `track` table, so there
+/// is nothing to write these to.
+fn analyse_in_background(track: &Track) {
+    if track.uri.starts_with("http://") || track.uri.starts_with("https://") {
+        return;
+    }
+    if track.key.is_some() && track.bpm.is_some() {
+        return;
+    }
+
+    let reference = music_player_storage::track_analysis::TrackRef {
+        id: track.id.clone(),
+        uri: track.uri.clone(),
+        artist: track.artist.clone(),
+        title: track.title.clone(),
+    };
+    tokio::spawn(async move {
+        let db = music_player_storage::shared().await;
+        if let Err(cause) =
+            music_player_storage::track_analysis::ensure(db.get_connection(), "", &reference).await
+        {
+            tracing::debug!(track = %reference.title, %cause, "could not analyse");
+        }
+    });
+}
+
 /// Cache a finite remote track, in the background.
 ///
 /// Detached, and serialised by the cache itself: several downloads at once
@@ -871,6 +904,10 @@ impl PlayerInternal {
 
         self.send_event(PlayerEvent::Playing {});
         let (track, position) = self.tracklist.lock().unwrap().current_track();
+        // The track being played is the one worth knowing the key of.
+        if let Some(track) = track.as_ref() {
+            analyse_in_background(track);
+        }
         self.tracklist
             .lock()
             .unwrap()

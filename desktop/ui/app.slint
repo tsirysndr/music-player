@@ -78,6 +78,16 @@ export component AppWindow inherits Window {
     // tick. Computed in Rust rather than here because it is the same shaping
     // the web client uses, and one description of it is enough.
     in-out property <[float]> eq-bars: [];
+    // The level each bar most recently reached, for the floating caps.
+    in-out property <[float]> eq-peaks: [];
+    // Whether the library being read can report a key and a tempo. Only a
+    // music-player daemon analyses its own tracks; against Subsonic or
+    // Jellyfin the columns are hidden rather than shown blank for every row.
+    in-out property <bool> provider-analyses: true;
+    // Whether the equalizer is drawn. On by default — it is the point of the
+    // full player for most people — and `v` turns it off for anyone who wants
+    // only the artwork.
+    in-out property <bool> show-equalizer: true;
     in-out property <float> volume: 0.75;
     // Muted at the daemon, which keeps `volume` — unmuting restores the level
     // rather than guessing one.
@@ -611,6 +621,10 @@ export component AppWindow inherits Window {
                 root.toggle-mute();
                 return accept;
             }
+            if (event.text == "v") {
+                root.show-equalizer = !root.show-equalizer;
+                return accept;
+            }
             if (event.text == "f") {
                 // The full player is a canvas for the current track's art and
                 // title; with nothing playing there is nothing to show, so the
@@ -1098,15 +1112,18 @@ export component AppWindow inherits Window {
                 if root.current-tab == 2 && root.library-loading : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
-                    TrackListHeader {}
+                    TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                     TrackSkeletonList { rows: 12; }
                 }
                 if root.current-tab == 2 && !root.library-loading : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
-                    TrackListHeader {}
+                    TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                     ListView {
                         for t[i] in root.tracks : TrackRow {
+                            show-analysis: root.provider-analyses;
                             track: t;
                             current: !root.stopped && t.title == root.now-title && t.artist == root.now-artist;
                             play => { root.play-track-at(t.index); }
@@ -1125,15 +1142,18 @@ export component AppWindow inherits Window {
                 if root.current-tab == 3 && root.library-loading : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
-                    TrackListHeader {}
+                    TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                     TrackSkeletonList { rows: 10; }
                 }
                 if root.current-tab == 3 && !root.library-loading : VerticalLayout {
                     x: 24px;
                     width: parent.width - 48px;
-                    TrackListHeader {}
+                    TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                     ListView {
                         for t[i] in root.liked : TrackRow {
+                            show-analysis: root.provider-analyses;
                             track: t;
                             current: !root.stopped && t.title == root.now-title && t.artist == root.now-artist;
                             play => { root.play-liked-at(t.index); }
@@ -1301,7 +1321,8 @@ export component AppWindow inherits Window {
                             clicked => { root.playlist-play(root.pl-detail.id); }
                         }
                     }
-                    TrackListHeader {}
+                    TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                     if root.pl-detail-loading : TrackSkeletonList {
                         rows: 8;
                         vertical-stretch: 1;
@@ -1311,6 +1332,7 @@ export component AppWindow inherits Window {
                         for t[i] in root.pl-detail-tracks : Rectangle {
                             height: 42px;
                             TrackRow {
+                            show-analysis: root.provider-analyses;
                                 width: 100%;
                                 height: 42px;
                                 track: t;
@@ -1749,8 +1771,10 @@ export component AppWindow inherits Window {
                                 if root.artist-detail-tracks.length > 0 : SectionHeader {
                                     title: "SONGS";
                                 }
-                                if root.artist-detail-tracks.length > 0 : TrackListHeader {}
+                                if root.artist-detail-tracks.length > 0 : TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                                 for t[i] in root.artist-detail-tracks : TrackRow {
+                            show-analysis: root.provider-analyses;
                                     track: t;
                                     height: 42px;
                                     current: !root.stopped && t.title == root.now-title && t.artist == root.now-artist;
@@ -1907,7 +1931,8 @@ export component AppWindow inherits Window {
                             }
                         }
 
-                        TrackListHeader {}
+                        TrackListHeader {
+                            show-analysis: root.provider-analyses;}
                         if root.detail-loading : TrackSkeletonList {
                             rows: 8;
                             vertical-stretch: 1;
@@ -1945,6 +1970,7 @@ export component AppWindow inherits Window {
                                     }
                                 }
                                 if !r.is-header : TrackRow {
+                            show-analysis: root.provider-analyses;
                                     width: 100%;
                                     height: 42px;
                                     use-track-no: true;
@@ -2250,18 +2276,39 @@ export component AppWindow inherits Window {
             image-fit: cover;
             opacity: 0.48;
         }
-        Rectangle { width: parent.width; height: parent.height; background: #08060dbb; }
+        // Tinted with the window colour rather than a fixed near-black: the
+        // controls on this canvas are themed, and a dark scrim under a light
+        // skin left all of them dark on dark.
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: Theme.window-bg.with-alpha(0.78);
+        }
         IconButton { x: 22px; y: 22px + root.titlebar-inset; icon: Icons.chevron-left; icon-size: 20px; width: 42px; height: 42px; clicked => { root.show-full-player = false; } }
+        // One width for the artwork, the waveform and the equalizer, so the
+        // three read as a single column rather than three stacked things.
+        //
+        // Bounded by the *height* as well as the width, because the artwork is
+        // square: a column as wide as the window would be taller than it, and
+        // the art would be cropped or pushed off the bottom.
+        property <length> column-width: min(480px, parent.width - 180px, parent.height - 250px);
+
         VerticalLayout {
-            x: max(90px, (parent.width - 480px) / 2);
+            x: (parent.width - self.width) / 2;
             y: 70px;
-            width: min(480px, parent.width - 180px);
-            height: parent.height - 110px;
+            width: full-player.column-width;
+            // Reclaims the equalizer's strip when it is hidden, so the artwork
+            // grows rather than leaving a gap where it was.
+            height: parent.height - (root.show-equalizer ? 174px : 110px);
             alignment: center;
             spacing: 16px;
             Rectangle {
-                // Leaves room for the waveform and the equalizer below.
-                width: min(parent.width, parent.height - 210px);
+                // The full column width, so it lines up with the waveform below
+                // it exactly. It was sized off the container height before,
+                // which made it both smaller than the waveform and, since a
+                // width inside a VerticalLayout does not centre, sat to one
+                // side of it.
+                width: parent.width;
                 height: self.width;
                 background: Theme.art-placeholder;
                 clip: true;
@@ -2312,26 +2359,54 @@ export component AppWindow inherits Window {
                 }
             }
 
-            // Live equalizer, driven by the levels the daemon measures on the
-            // audio leaving the output — so it moves with what is actually
-            // heard, including on a cast device this app never decodes.
-            Rectangle {
-                height: 32px;
-                opacity: 0.9;
-                HorizontalLayout {
-                    width: parent.width;
-                    height: parent.height;
-                    alignment: stretch;
-                    spacing: 2px;
-                    for level in root.eq-bars : Rectangle {
+        }
+
+        // Full-bleed along the bottom edge, flush against the miniplayer
+        // rather than boxed into the column above. The equalizer is the audio
+        // leaving the machine, not a property of the track — so it spans the
+        // window, while the waveform, which *is* the track, stays with the art.
+        Rectangle {
+            visible: root.show-equalizer;
+            x: 0;
+            y: parent.height - self.height;
+            width: parent.width;
+            height: 64px;
+            opacity: 0.9;
+            HorizontalLayout {
+                width: parent.width;
+                height: parent.height;
+                alignment: stretch;
+                // Nearly touching: with this many bars a wide gap reads as a
+                // row of separate objects rather than one moving surface.
+                spacing: 1px;
+                for level[i] in root.eq-bars : Rectangle {
+                    // A flat colour, not a ramp: the bars are distinguished by
+                    // height already, and a gradient on top of that reads as a
+                    // second signal competing with the first.
+                    Rectangle {
+                        width: parent.width;
                         height: max(2px, level * parent.height);
                         y: parent.height - self.height;
-                        border-radius: 1px;
-                        background: @linear-gradient(0deg,
-                            Theme.meter-low 0%, Theme.meter-mid 60%, Theme.meter-high 100%);
-                        // Smooths between ticks, which arrive at 20 Hz — without
-                        // it the bars step visibly rather than moving.
+                        border-top-left-radius: 2px;
+                        border-top-right-radius: 2px;
+                        background: Theme.accent;
+                        // Smooths between ticks, which arrive at 20 Hz —
+                        // without it the bars step visibly rather than moving.
                         animate height { duration: 90ms; easing: ease-out; }
+                    }
+                    // The cap floats clear of the bar rather than resting on
+                    // it, so a peak that has already decayed still shows the
+                    // level it reached.
+                    Rectangle {
+                        property <float> peak: root.eq-peaks[i];
+                        visible: self.peak > 0.02;
+                        width: parent.width;
+                        height: 3px;
+                        y: max(0px, parent.height - self.peak * parent.height - 3px);
+                        border-radius: 1.5px;
+                        background: Theme.accent;
+                        opacity: 0.55;
+                        animate y { duration: 90ms; easing: ease-out; }
                     }
                 }
             }
@@ -4337,6 +4412,7 @@ export component AppWindow inherits Window {
                 HelpRow { keys: "s"; label: "Cycle skin"; }
                 HelpRow { keys: "q"; label: "Show / hide the play queue"; }
                 HelpRow { keys: "b"; label: "Show / hide the sidebar"; }
+                HelpRow { keys: "v"; label: "Show / hide the equalizer"; }
                 HelpRow { keys: "+ / -"; label: "Volume up / down"; }
                 HelpRow { keys: "m"; label: "Mute / unmute"; }
                 HelpRow { keys: "f"; label: "Fullscreen player (while playing)"; }

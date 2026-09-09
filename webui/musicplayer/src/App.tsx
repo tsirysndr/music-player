@@ -15,30 +15,37 @@ import RadioPage from "./Containers/Radio";
 import SearchPage from "./Containers/Search";
 import ServersPage from "./Containers/Servers";
 import TracksPage from "./Containers/Tracks";
-
+import { LibraryAnalysisProvider } from "./Components/UI";
+import { useLibraryAnalyses } from "./Hooks/useLibraryAnalyses";
 
 function App() {
+  // Whether the connected library can answer for a key and a tempo. One query
+  // for the whole app, rather than one per track list.
+  const analyses = useLibraryAnalyses();
+
   return (
     <BrowserRouter>
       <AppStateSync />
-      <Routes>
-        <Route path="/" element={<TracksPage />} />
-        <Route path="/tracks" element={<TracksPage />} />
-        <Route path="/artists" element={<ArtistsPage />} />
-        <Route path="/genres" element={<GenresPage />} />
-        <Route path="/genres/:id" element={<GenreDetailPage />} />
-        <Route path="/albums" element={<AlbumsPage />} />
-        <Route path="/albums/:id" element={<AlbumDetailsPage />} />
-        <Route path="/artists/:id" element={<ArtistDetailsPage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/folders/:id" element={<FolderPage />} />
-        <Route path="/playlists" element={<PlaylistsPage />} />
-        <Route path="/playlists/:id" element={<PlaylistPage />} />
-        <Route path="/liked" element={<LikedPage />} />
-        <Route path="/radio" element={<RadioPage />} />
-        <Route path="/extensions" element={<ExtensionsPage />} />
-        <Route path="/servers" element={<ServersPage />} />
-      </Routes>
+      <LibraryAnalysisProvider value={analyses}>
+        <Routes>
+          <Route path="/" element={<TracksPage />} />
+          <Route path="/tracks" element={<TracksPage />} />
+          <Route path="/artists" element={<ArtistsPage />} />
+          <Route path="/genres" element={<GenresPage />} />
+          <Route path="/genres/:id" element={<GenreDetailPage />} />
+          <Route path="/albums" element={<AlbumsPage />} />
+          <Route path="/albums/:id" element={<AlbumDetailsPage />} />
+          <Route path="/artists/:id" element={<ArtistDetailsPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/folders/:id" element={<FolderPage />} />
+          <Route path="/playlists" element={<PlaylistsPage />} />
+          <Route path="/playlists/:id" element={<PlaylistPage />} />
+          <Route path="/liked" element={<LikedPage />} />
+          <Route path="/radio" element={<RadioPage />} />
+          <Route path="/extensions" element={<ExtensionsPage />} />
+          <Route path="/servers" element={<ServersPage />} />
+        </Routes>
+      </LibraryAnalysisProvider>
     </BrowserRouter>
   );
 }

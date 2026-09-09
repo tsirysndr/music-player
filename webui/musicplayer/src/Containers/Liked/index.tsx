@@ -24,11 +24,14 @@ type LikedTrack = {
   duration?: number;
   artists: { id: string }[];
   album: { id: string; title: string; cover?: string };
+  /** Null unless the daemon's own library has analysed the track. */
+  key?: string | null;
+  bpm?: number | null;
 };
 
 const query = `query($offset:Int,$limit:Int){
   likedTracks(offset:$offset,limit:$limit){
-    id title artist duration
+    id title artist duration key bpm
     artists { id }
     album { id title cover }
   }
@@ -106,6 +109,8 @@ export default function LikedPage() {
         album: track.album.title,
         albumId: track.album.id,
         duration: formatTime((track.duration || 0) * 1000),
+        key: track.key,
+        bpm: track.bpm,
         liked: isLiked(track.id),
       }));
   }, [tracks, filter, formatTime, isLiked]);

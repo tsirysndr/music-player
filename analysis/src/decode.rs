@@ -32,6 +32,8 @@ pub struct Decoded {
     pub sample_rate: f32,
     /// Seconds decoded. Zero when the container lied and nothing came out.
     pub duration: f32,
+    /// Key and tempo as the file states them, when it does.
+    pub tags: crate::tags::Tags,
 }
 
 /// How much audio the tempo and mood detectors get.
@@ -63,13 +65,29 @@ pub fn decode(bytes: &[u8], extension_hint: Option<&str>) -> Result<Decoded> {
     }
 
     let stream = MediaSourceStream::new(Box::new(Cursor::new(bytes.to_vec())), Default::default());
-    let probed = symphonia::default::get_probe().format(
+    let mut probed = symphonia::default::get_probe().format(
         &hint,
         stream,
         &FormatOptions::default(),
         &MetadataOptions::default(),
     )?;
+    // Read before the audio: a tag is a better answer than a re-derivation,
+    // and the probe has already parsed the container to find it.
+    let mut tags = probed
+        .metadata
+        .get()
+        .and_then(|mut m| m.skip_to_latest().map(crate::tags::read))
+        .unwrap_or_default();
     let mut format = probed.format;
+    // Some containers carry metadata on the format reader rather than the
+    // probe, so both are consulted before giving up on a tag.
+    if tags.key.is_none() || tags.bpm.is_none() {
+        if let Some(revision) = format.metadata().skip_to_latest() {
+            let extra = crate::tags::read(revision);
+            tags.key = tags.key.or(extra.key);
+            tags.bpm = tags.bpm.or(extra.bpm);
+        }
+    }
 
     let track = format
         .default_track()
@@ -97,6 +115,7 @@ pub fn decode(bytes: &[u8], extension_hint: Option<&str>) -> Result<Decoded> {
         window: Vec::new(),
         sample_rate,
         duration: 0.0,
+        tags,
     };
 
     let mut buffer: Option<SampleBuffer<f32>> = None;

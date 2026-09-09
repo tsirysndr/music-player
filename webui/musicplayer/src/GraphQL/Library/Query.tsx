@@ -61,6 +61,8 @@ export const GET_ARTIST = gql`
           cover
         }
         duration
+        key
+        bpm
       }
       albums {
         ...AlbumFragment
@@ -86,6 +88,8 @@ export const GET_ALBUM = gql`
         }
         duration
         uri
+        key
+        bpm
       }
     }
   }
@@ -113,6 +117,8 @@ export const SEARCH = gql`
         title
         artist
         duration
+        key
+        bpm
         cover
         artistId
         albumId
@@ -140,6 +146,8 @@ export const GET_GENRE_TRACKS = gql`
       title
       artist
       duration
+      key
+      bpm
       cover
       artistId
       albumId

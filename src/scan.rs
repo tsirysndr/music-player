@@ -41,8 +41,11 @@ pub async fn periodic_scan_music_library() {
     loop {
         tokio::time::sleep(interval).await;
         let db = Database::new().await;
-        if let Err(e) = scan_music_library(false, db).await {
+        if let Err(e) = scan_music_library(false, db.clone()).await {
             error!("Library refresh failed: {}", e);
         }
+        // Detached here, unlike the `scan` command: this loop runs inside a
+        // daemon that outlives it, and the next refresh is a long way off.
+        music_player_scanner::spawn_key_and_bpm_analysis(db);
     }
 }

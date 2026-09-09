@@ -65,6 +65,8 @@ const AlbumDetailsWithData: FC = () => {
       trackNumber: track.trackNumber,
       discNumber: track.discNumber,
       duration: formatTime((track.duration ?? 0) * 1000),
+      key: track.key,
+      bpm: track.bpm,
       liked: isLiked(track.id),
     })),
   };

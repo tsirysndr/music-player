@@ -24,6 +24,9 @@ pub struct Model {
     pub waveform: Option<Vec<u8>>,
     pub bpm: Option<f32>,
     pub bpm_confidence: Option<f32>,
+    /// Camelot notation, e.g. "8A".
+    pub key: Option<String>,
+    pub key_confidence: Option<f32>,
     pub valence: Option<f32>,
     pub arousal: Option<f32>,
     /// A json array of `[label, confidence]`.

@@ -29,6 +29,8 @@ const PlaylistWithData: FC = () => {
       album: track.albumTitle,
       albumId: track.albumId,
       duration: formatTime((track.duration ?? 0) * 1000),
+      key: track.key,
+      bpm: track.bpm,
       liked: isLiked(track.id),
     })),
   };

@@ -13,6 +13,15 @@ export struct TrackItem {
     track-no: int, // metadata track number (falls back to index + 1)
     liked: bool,
     album-id: string,
+    // Camelot notation, e.g. "8A". Empty when the track has not been analysed —
+    // shown as nothing at all, because a guess or a dash is worse than a blank
+    // in a column a DJ scans down.
+    key: string,
+    // Empty when unknown; the column shows "-" for it, unlike the key, because
+    // a missing number in a numeric column reads as an error otherwise.
+    bpm: string,
+    // The colour of this key on the circle of fifths, for the row's left edge.
+    key-color: color,
 }
 
 export struct AlbumItem {
@@ -957,7 +966,11 @@ export component AlbumCard inherits Rectangle {
 // of each cell's intrinsic width, so columns drift per row.)
 
 export component TrackListHeader inherits Rectangle {
-    property <length> flexible: root.width - 24px - 60px - 30px - 44px - 64px;
+    // Matches the rows below: the two must add up to the same widths or the
+    // columns drift apart.
+    in property <bool> show-analysis: false;
+    property <length> analysis-width: root.show-analysis ? 96px : 0px;
+    property <length> flexible: root.width - 24px - 60px - 30px - 44px - 64px - root.analysis-width;
 
     height: 30px;
     HorizontalLayout {
@@ -1000,6 +1013,24 @@ export component TrackListHeader inherits Rectangle {
             overflow: elide;
             width: root.flexible * 0.27;
         }
+        if root.show-analysis : Text {
+            text: "KEY";
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 40px;
+        }
+        if root.show-analysis : Text {
+            text: "BPM";
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 44px;
+        }
         Text {
             text: "TIME";
             color: Theme.text-muted;
@@ -1025,6 +1056,9 @@ export component TrackRow inherits Rectangle {
     // Album detail shows the METADATA track number; flat lists show the
     // row position.
     in property <bool> use-track-no: false;
+    // Whether the library can report a key and a tempo at all. Hidden rather
+    // than blank against a source that never fills them.
+    in property <bool> show-analysis: false;
     in property <[PlaylistItem]> playlists: [];
     callback play;
     callback like-toggled;
@@ -1034,12 +1068,25 @@ export component TrackRow inherits Rectangle {
     callback add-to-playlist(string);
     callback browse-playlists;
 
-    property <length> flexible: root.width - 24px - 60px - 30px - 44px - 64px;
+    property <length> analysis-width: root.show-analysis ? 96px : 0px;
+    property <length> flexible: root.width - 24px - 60px - 30px - 44px - 64px - root.analysis-width;
 
     height: 42px;
     border-radius: Theme.control-radius;
     background: root.current ? Theme.selected-bg
         : touch.has-hover ? Theme.hover-bg : transparent;
+
+    // The key as a colour on the row's left edge, the way a DJ tool shows it:
+    // scanning a list for what mixes is a matter of spotting neighbouring
+    // colours, which is faster than reading two-character labels.
+    if root.show-analysis && root.track.key != "" : Rectangle {
+        x: 0;
+        y: 6px;
+        width: 3px;
+        height: parent.height - 12px;
+        border-radius: 1.5px;
+        background: root.track.key-color;
+    }
 
     HorizontalLayout {
         padding-left: 12px;
@@ -1094,6 +1141,29 @@ export component TrackRow inherits Rectangle {
             vertical-alignment: center;
             overflow: elide;
             width: root.flexible * 0.27;
+        }
+        if root.show-analysis : Text {
+            // Nothing at all when unknown: a key is either known or it is not,
+            // and a placeholder in this column invites reading it as a value.
+            text: root.track.key;
+            color: root.track.key != "" ? root.track.key-color : Theme.text-muted;
+            font-size: 12px;
+            font-family: Theme.font-mono;
+            font-weight: 600;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 40px;
+        }
+        if root.show-analysis : Text {
+            // A dash here, unlike the key: a blank in a numeric column reads
+            // as something having gone wrong.
+            text: root.track.bpm != "" ? root.track.bpm : "-";
+            color: Theme.text-muted;
+            font-size: 12px;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 44px;
         }
         Text {
             text: root.track.duration;

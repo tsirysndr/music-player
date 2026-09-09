@@ -25,6 +25,11 @@ export const TRACK_FRAGMENT = gql`
     title
     artist
     duration
+    # Null unless the daemon's own library has analysed the track. Selected in
+    # the fragment so every list that shows tracks can show the columns, rather
+    # than only the ones that remembered to ask.
+    key
+    bpm
   }
 `;
 
@@ -42,6 +47,8 @@ export const PLAYLIST_FRAGMENT = gql`
       albumId
       cover
       duration
+      key
+      bpm
     }
   }
 `;

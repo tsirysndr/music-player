@@ -11,7 +11,8 @@ use anyhow::{Error, Result};
 use music_player_analysis::Analysis;
 use music_player_entity::track_analysis::{self, id_for};
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
+    ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, Set,
 };
 
 /// Enough of a track to analyse it and to remember what it was.
@@ -71,6 +72,8 @@ pub async fn put(
         waveform: Set(Some(analysis.waveform.clone())),
         bpm: Set(analysis.bpm),
         bpm_confidence: Set(analysis.bpm_confidence),
+        key: Set(analysis.key.clone()),
+        key_confidence: Set(analysis.key_confidence),
         valence: Set(analysis.valence),
         arousal: Set(analysis.arousal),
         moods: Set(serde_json::to_string(&analysis.moods).ok()),
@@ -91,6 +94,8 @@ pub async fn put(
                     track_analysis::Column::Waveform,
                     track_analysis::Column::Bpm,
                     track_analysis::Column::BpmConfidence,
+                    track_analysis::Column::Key,
+                    track_analysis::Column::KeyConfidence,
                     track_analysis::Column::Valence,
                     track_analysis::Column::Arousal,
                     track_analysis::Column::Moods,
@@ -132,7 +137,69 @@ pub async fn ensure(db: &DatabaseConnection, source: &str, track: &TrackRef) -> 
     .await??;
 
     put(db, source, track, &analysis).await?;
+    // The local `track` row carries key and tempo too, so a track listing is
+    // one query rather than a join per page. Only the local library has rows to
+    // write to; for a remote provider this finds nothing and does nothing.
+    write_back_key_and_bpm(db, &track.id, &analysis).await;
     Ok(analysis)
+}
+
+/// Copy the key and tempo onto the track row, if there is one.
+///
+/// Best-effort: the analysis is already stored and useful, and a track that is
+/// not in the local table — every track of a remote provider — is the normal
+/// case rather than a failure.
+async fn write_back_key_and_bpm(db: &DatabaseConnection, track_id: &str, analysis: &Analysis) {
+    use music_player_entity::track;
+
+    if analysis.key.is_none() && analysis.bpm.is_none() {
+        return;
+    }
+    let update = track::ActiveModel {
+        id: Set(track_id.to_string()),
+        key: match &analysis.key {
+            Some(key) => Set(Some(key.clone())),
+            // Nothing found is not a reason to clear what is there: an earlier
+            // pass may have got an answer this one did not.
+            None => sea_orm::ActiveValue::NotSet,
+        },
+        bpm: match analysis.bpm {
+            Some(bpm) => Set(Some(bpm)),
+            None => sea_orm::ActiveValue::NotSet,
+        },
+        ..Default::default()
+    };
+    if let Err(cause) = track::Entity::update(update).exec(db).await {
+        tracing::debug!(%track_id, %cause, "could not store key and bpm on the track");
+    }
+}
+
+/// Tracks in the local library that have no key or tempo yet.
+///
+/// The list the background pass works through. Ordered oldest-first so a
+/// resumed pass continues where it left off rather than starting again.
+pub async fn unanalysed_local_tracks(db: &DatabaseConnection, limit: u64) -> Vec<TrackRef> {
+    use music_player_entity::track;
+
+    track::Entity::find()
+        .filter(
+            sea_orm::Condition::any()
+                .add(track::Column::Key.is_null())
+                .add(track::Column::Bpm.is_null()),
+        )
+        .order_by_asc(track::Column::Id)
+        .limit(limit)
+        .all(db)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|row| TrackRef {
+            id: row.id,
+            uri: row.uri,
+            artist: row.artist,
+            title: row.title,
+        })
+        .collect()
 }
 
 /// How much of a library has been analysed.
@@ -190,6 +257,8 @@ fn from_row(row: track_analysis::Model) -> Analysis {
         waveform: row.waveform.unwrap_or_default(),
         bpm: row.bpm,
         bpm_confidence: row.bpm_confidence,
+        key: row.key,
+        key_confidence: row.key_confidence,
         valence: row.valence,
         arousal: row.arousal,
         moods: row
@@ -295,6 +364,8 @@ mod tests {
             valence: Some(0.3),
             arousal: Some(0.7),
             moods: vec![("energetic".into(), 0.9), ("bright".into(), 0.4)],
+            key: Some("8A".into()),
+            key_confidence: Some(0.7),
             lufs: Some(-9.5),
             true_peak_db: Some(-0.8),
             duration: 214.0,

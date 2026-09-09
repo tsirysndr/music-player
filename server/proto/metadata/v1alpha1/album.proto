@@ -19,6 +19,8 @@ message Song {
   string uri = 8;
   string album = 9;
   string artist = 10;
+  optional string key = 11;
+  optional float bpm = 12;
 }
 
 message Album {

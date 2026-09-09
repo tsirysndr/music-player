@@ -30,6 +30,12 @@ pub struct Model {
     /// When the scanner first saw this file. Null for tracks that were already
     /// in the library before the column existed.
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// Musical key in Camelot notation, e.g. "8A". Null until the track has
+    /// been analysed — which is not the same as a track with no clear key, but
+    /// both display as nothing, because a guess is worse than a blank.
+    pub key: Option<String>,
+    /// Tempo. Null until analysed.
+    pub bpm: Option<f32>,
     #[sea_orm(ignore)]
     pub artists: Vec<artist::Model>,
     #[sea_orm(ignore)]
@@ -158,6 +164,11 @@ impl From<&Song> for ActiveModel {
             // must not move it, or "recently added" would list the whole
             // library after every scan.
             created_at: ActiveValue::Set(Some(chrono::Utc::now())),
+            // Left alone by the scanner: analysis costs a decode per track and
+            // runs separately. `NotSet` rather than `Set(None)` so a rescan
+            // does not throw away a key that took a minute to work out.
+            key: ActiveValue::NotSet,
+            bpm: ActiveValue::NotSet,
         }
     }
 }

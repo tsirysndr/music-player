@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { resourceUriResolver } from "../../ResourceUriResolver";
-import { Artwork, EqualizerBars, IconButton, Icons, Waveform } from "../UI";
+import { Artwork, cn, EqualizerBars, IconButton, Icons, Waveform } from "../UI";
 
 export type FullPlayerProps = {
   open: boolean;
@@ -48,10 +48,21 @@ const FullPlayer = ({
   levels,
   isPlaying = true,
 }: FullPlayerProps) => {
+  // On by default — it is most of the point of the full player — with `v` for
+  // anyone who wants the artwork alone.
+  const [showEqualizer, setShowEqualizer] = useState(true);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      // Not while typing: the command palette and the filter boxes are real
+      // text inputs, and a bare letter must reach them rather than the canvas.
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, [contenteditable]")) return;
+      if (event.key === "v" && !event.metaKey && !event.ctrlKey) {
+        setShowEqualizer((shown) => !shown);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -74,8 +85,15 @@ const FullPlayer = ({
           className="absolute -inset-10 scale-110 bg-cover bg-center opacity-[0.48] blur-3xl"
         />
       )}
-      {/* The scrim the desktop lays over the blur, so the art below reads. */}
-      <div className="absolute inset-0 bg-[#08060d]/[0.73]" />
+      {/* The scrim over the blur, so the art below reads without drowning
+          everything on top of it.
+
+          The window colour rather than a fixed near-black: this canvas is full
+          of themed controls — the waveform, the back button, the equalizer —
+          and a dark scrim under a light skin left every one of them dark on
+          dark. Tinting with the skin's own background keeps the surface a
+          shade of what the theme expects, whichever skin is on. */}
+      <div className="absolute inset-0 bg-window/[0.78]" />
 
       <IconButton
         icon={Icons.chevronLeft}
@@ -86,7 +104,14 @@ const FullPlayer = ({
         className="absolute left-[22px] top-[22px] z-10"
       />
 
-      <div className="relative flex h-full flex-col items-center justify-center gap-7 px-[70px] py-[54px]">
+      <div
+        className={cn(
+          "relative flex h-full flex-col items-center justify-center gap-7 px-[70px] pt-[54px]",
+          // Reclaims the equalizer's strip when it is hidden, so the artwork
+          // grows rather than leaving a gap where it was.
+          showEqualizer ? "pb-[86px]" : "pb-[54px]"
+        )}
+      >
         <Artwork
           src={cover}
           alt={title}
@@ -110,15 +135,23 @@ const FullPlayer = ({
               />
             </div>
           )}
-          <div className="h-[34px] w-full opacity-90">
-            <EqualizerBars
-              left={levels?.left ?? 0}
-              right={levels?.right ?? 0}
-              playing={isPlaying}
-            />
-          </div>
         </div>
       </div>
+
+      {/* Full-bleed along the bottom edge, flush against the player bar rather
+          than boxed into the column above. The equalizer is the audio leaving
+          the machine, not a property of the track — so it spans the window,
+          and the waveform, which *is* the track, stays with the artwork. */}
+      {showEqualizer && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[64px]">
+          <EqualizerBars
+            left={levels?.left ?? 0}
+            right={levels?.right ?? 0}
+            playing={isPlaying}
+            bars={96}
+          />
+        </div>
+      )}
     </div>
   );
 };

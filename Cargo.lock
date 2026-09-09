@@ -7903,6 +7903,7 @@ dependencies = [
  "image",
  "md5",
  "mdns-sd 0.11.5",
+ "music-player-analysis",
  "music-player-discovery",
  "music-player-entity",
  "music-player-extensions",

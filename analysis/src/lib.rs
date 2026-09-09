@@ -12,6 +12,8 @@
 
 mod decode;
 mod features;
+pub mod key_color;
+pub mod tags;
 mod waveform;
 
 pub use decode::{decode, Decoded};
@@ -44,6 +46,11 @@ pub struct Analysis {
     pub arousal: Option<f32>,
     /// Mood labels with confidences, as the detector named them.
     pub moods: Vec<(String, f32)>,
+    /// The musical key in Camelot notation, e.g. `"8A"`. Camelot rather than
+    /// "A minor" because adjacent numbers mix, which is the reason to know it.
+    pub key: Option<String>,
+    /// How much to believe the key, 0–1.
+    pub key_confidence: Option<f32>,
     /// Integrated loudness, LUFS. The EBU R128 measure — what "as loud as" means
     /// when comparing two tracks.
     pub lufs: Option<f32>,
@@ -103,12 +110,44 @@ pub fn analyze(bytes: &[u8], extension_hint: Option<&str>) -> Result<Analysis> {
         Err(cause) => tracing::debug!(%cause, "no loudness"),
     }
 
-    match features::tempo(&decoded) {
-        Ok((bpm, confidence)) => {
+    // Same again for tempo, and for the same reason — though detection does
+    // rather better here, so this mostly just saves the work.
+    match decoded.tags.bpm {
+        Some(bpm) => {
             analysis.bpm = Some(bpm);
-            analysis.bpm_confidence = Some(confidence);
+            analysis.bpm_confidence = Some(0.95);
         }
-        Err(cause) => tracing::debug!(%cause, "no tempo"),
+        None => match features::tempo(&decoded) {
+            Ok((bpm, confidence)) => {
+                analysis.bpm = Some(bpm);
+                analysis.bpm_confidence = Some(confidence);
+            }
+            Err(cause) => tracing::debug!(%cause, "no tempo"),
+        },
+    }
+
+    // The file's own key, when it has one. Detection only fills the gap.
+    //
+    // Not merely a shortcut: correlation-based detection picks the tonic well
+    // and the *mode* poorly, and mode is not a small error — F major is 7B and
+    // F minor is 4A, at opposite ends of the wheel. A tag written by a DJ tool
+    // says which outright, and is what every other tool in the user's library
+    // is already showing.
+    match decoded.tags.key.clone() {
+        Some(key) => {
+            analysis.key = Some(key);
+            // Stated rather than estimated. Not 1.0: a tag can be wrong too,
+            // and a caller weighing this against a measurement should not be
+            // told it is beyond question.
+            analysis.key_confidence = Some(0.95);
+        }
+        None => match features::key(&decoded) {
+            Ok((key, confidence)) => {
+                analysis.key = Some(key);
+                analysis.key_confidence = Some(confidence);
+            }
+            Err(cause) => tracing::debug!(%cause, "no key"),
+        },
     }
 
     match features::mood(&decoded) {

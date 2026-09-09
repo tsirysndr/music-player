@@ -38,6 +38,14 @@ pub struct Track {
     pub artist_id: String,
     pub album_id: String,
     pub album_title: String,
+    /// Musical key in Camelot notation, e.g. "8A". Camelot rather than "A
+    /// minor" because adjacent numbers mix, which is why it is worth a column.
+    ///
+    /// `null` when the track has not been analysed — and only the daemon's own
+    /// library ever has these, since a remote provider's tracks are not rows it
+    /// can analyse.
+    pub key: Option<String>,
+    pub bpm: Option<f32>,
 }
 
 #[Object]
@@ -98,6 +106,14 @@ impl Track {
     async fn album_title(&self) -> &str {
         &self.album_title
     }
+
+    async fn key(&self) -> Option<&str> {
+        self.key.as_deref()
+    }
+
+    async fn bpm(&self) -> Option<f32> {
+        self.bpm
+    }
 }
 
 impl RemoteTrackUrl for Track {
@@ -149,6 +165,8 @@ impl From<Model> for Track {
             artists: model.artists.into_iter().map(Into::into).collect(),
             album: model.album.into(),
             artist: model.artist,
+            key: model.key,
+            bpm: model.bpm,
             ..Default::default()
         }
     }
@@ -215,6 +233,11 @@ impl From<types::Track> for Track {
                 Some(album) => album.title,
                 None => String::new(),
             },
+            // A remote provider's tracks are not analysed here. Null rather
+            // than a placeholder: the client hides the columns entirely for a
+            // source that cannot fill them.
+            key: None,
+            bpm: None,
             album_id: match track.album.clone() {
                 Some(album) => album.id,
                 None => String::new(),

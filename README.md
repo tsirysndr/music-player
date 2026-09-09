@@ -74,9 +74,11 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - [Search](#search)
 - [Configuration](#configuration)
   - [Audio output](#audio-output)
+  - [Track cache](#track-cache)
   - [Subsonic / Navidrome & Jellyfin](#subsonic--navidrome--jellyfin)
   - [Rocksky scrobbling](#rocksky-scrobbling)
   - [AT Protocol sync](#at-protocol-sync)
+- [AI agents (MCP)](#ai-agents-mcp)
 - [Casting](#casting)
 - [Star History](#star-history)
 
@@ -340,6 +342,7 @@ tunein_url = "https://opml.radiotime.com"
 scrobble = true    # Rocksky scrobbling
 atproto = true     # AT Protocol sync (bookmarks, likes, listening status)
 atproto_car_max_age_hours = 24  # re-download the atproto repo archive at most once a day
+cache = false      # cache remote tracks on disk before they play (see Track cache)
 ```
 
 The library can also be refreshed manually at any time — `music-player scan` from the CLI, or the `scan` mutation in GraphQL. Re-scans only pick up what's new; existing entries are untouched.
@@ -355,6 +358,30 @@ audio_output = "fifo:/tmp/mp.pcm"  # named pipe
 audio_output = "unix:/tmp/mp.sock" # unix socket
 audio_output = "tcp:0.0.0.0:9000"  # tcp socket, e.g.: ffplay -f s16le -ar 44100 -ac 2 tcp://host:9000
 ```
+
+### Track cache
+
+Playing from a remote server fetches each track as it starts, so there is a short
+cut at every track change while the next stream opens. With `cache = true` the
+daemon downloads the next track once the current one is halfway through, and
+plays it from disk instead:
+
+```toml
+cache = true
+```
+
+Off by default: it spends gigabytes of your disk on copies of audio you already
+have on a server, which is your decision to make rather than the default. Only
+finite streams are cached — internet radio has no end and no next track.
+
+```bash
+music-player cache        # where it is, and how much it holds
+music-player cache clear  # delete it all
+```
+
+The cache holds 2 GB before evicting whatever was played least recently;
+`MUSIC_PLAYER_CACHE_MAX_BYTES` changes that. Files are named by a hash of the
+track, so deleting the directory by hand is safe — it is simply empty again.
 
 ### Subsonic / Navidrome & Jellyfin
 
@@ -419,6 +446,35 @@ music-player --force-car-sync
 atproto_force_car_sync = true   # force it on every start
 atproto_car_max_age_hours = 24  # otherwise re-download only once a day (0 = every start)
 ```
+
+## AI agents (MCP)
+
+`music-player mcp` serves the [Model Context Protocol](https://modelcontextprotocol.io)
+on stdin/stdout, so Claude, Codex, Copilot and anything else that speaks MCP can
+run the player: ask what is on, search the library, work the transport, and build
+a queue. It drives a running daemon over the same gRPC API the desktop and the
+TUI use, so a set an agent queues is the queue every client shows.
+
+Register it with Claude Code:
+
+```bash
+claude mcp add music-player -- music-player mcp
+```
+
+or, for hosts configured by file:
+
+```json
+{
+  "mcpServers": {
+    "music-player": { "command": "music-player", "args": ["mcp"] }
+  }
+}
+```
+
+`skills/music-player/SKILL.md` goes further: it is a [skill](https://code.claude.com/docs/en/skills)
+that teaches an agent to *DJ* rather than merely to call the tools — queue
+instead of interrupt, sequence a set deliberately, and work from what the
+library actually holds. Copy it into `~/.claude/skills/music-player/`.
 
 ## Casting
 

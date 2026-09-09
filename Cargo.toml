@@ -27,6 +27,7 @@ members = [
   "scanner",
   "server",
   "settings",
+  "mcp",
   "provider",
   "renderer",
   "storage",
@@ -77,6 +78,10 @@ version = "0.2.1"
 
 [dependencies.music-player-tracklist]
 path = "tracklist"
+version = "0.2.1"
+
+[dependencies.music-player-mcp]
+path = "mcp"
 version = "0.2.1"
 
 [dependencies.music-player-client]

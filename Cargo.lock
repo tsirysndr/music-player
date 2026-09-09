@@ -7796,6 +7796,7 @@ dependencies = [
  "music-player-entity",
  "music-player-extensions",
  "music-player-graphql",
+ "music-player-mcp",
  "music-player-migration",
  "music-player-playback",
  "music-player-provider",
@@ -7989,6 +7990,21 @@ dependencies = [
  "tracing",
  "upnp-client",
  "url",
+]
+
+[[package]]
+name = "music-player-mcp"
+version = "0.2.1"
+dependencies = [
+ "anyhow",
+ "jsonrpsee-types",
+ "music-player-client",
+ "music-player-server",
+ "music-player-types",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

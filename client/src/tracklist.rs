@@ -4,7 +4,7 @@ use music_player_server::api::{
     music::v1alpha1::{
         tracklist_service_client::TracklistServiceClient, AddTrackRequest, AddTracksRequest,
         ClearTracklistRequest, GetTracklistTracksRequest, LoadTracksRequest, PlayNextRequest,
-        PlayTrackAtRequest, RemoveTrackAtRequest,
+        PlayTrackAtRequest, RemoveTrackAtRequest, SetRepeatRequest, ShuffleRequest,
     },
 };
 use music_player_types::types;
@@ -31,15 +31,13 @@ impl TracklistClient {
         Ok(())
     }
 
-    pub async fn add_tracks(&mut self, ids: &[&str]) -> Result<(), Error> {
+    /// Append tracks to the end of the queue.
+    ///
+    /// Whole tracks, not ids: the daemon appends what it is given rather than
+    /// looking ids up locally, so this works against a remote library too.
+    pub async fn add_tracks(&mut self, tracks: Vec<types::Track>) -> Result<(), Error> {
         let request = tonic::Request::new(AddTracksRequest {
-            tracks: ids
-                .iter()
-                .map(|id| Track {
-                    id: id.to_string(),
-                    ..Default::default()
-                })
-                .collect(),
+            tracks: tracks.into_iter().map(Into::into).collect(),
         });
         self.client.add_tracks(request).await?;
         Ok(())
@@ -61,6 +59,22 @@ impl TracklistClient {
     pub async fn remove(&mut self, position: u32) -> Result<(), Error> {
         let request = tonic::Request::new(RemoveTrackAtRequest { position });
         self.client.remove_track_at(request).await?;
+        Ok(())
+    }
+
+    /// Turn shuffle on or off. Shuffling reorders the tracks that have not
+    /// played yet, so it never disturbs what is playing now.
+    pub async fn shuffle(&mut self, enabled: bool) -> Result<(), Error> {
+        let request = tonic::Request::new(ShuffleRequest { enabled });
+        self.client.shuffle(request).await?;
+        Ok(())
+    }
+
+    /// `0` off, `1` repeat the queue, `2` repeat the current track — the modes
+    /// the daemon's tracklist understands.
+    pub async fn set_repeat(&mut self, mode: i32) -> Result<(), Error> {
+        let request = tonic::Request::new(SetRepeatRequest { mode });
+        self.client.set_repeat(request).await?;
         Ok(())
     }
 

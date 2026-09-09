@@ -42,7 +42,10 @@ fn cache(matches: &ArgMatches) -> CmdResult {
     match matches.subcommand() {
         Some(("clear", _)) => {
             let freed = track_cache::clear();
-            println!("{}", track_cache::cache_dir().display().to_string().dimmed());
+            println!(
+                "{}",
+                track_cache::cache_dir().display().to_string().dimmed()
+            );
             println!(
                 "Cleared {} track{} ({} freed)",
                 freed.tracks.to_string().bright_green(),
@@ -56,15 +59,37 @@ fn cache(matches: &ArgMatches) -> CmdResult {
             // The path first, and dimmed: it is what you need to inspect or
             // delete the cache by hand, but it is not the answer to "how much
             // is it using".
-            println!("{}", track_cache::cache_dir().display().to_string().dimmed());
+            println!(
+                "{}",
+                track_cache::cache_dir().display().to_string().dimmed()
+            );
             println!(
                 "{} track{}, {}",
                 usage.tracks.to_string().bright_green(),
                 if usage.tracks == 1 { "" } else { "s" },
                 track_cache::format_bytes(usage.bytes).bright_green()
             );
+            // Otherwise "0 tracks" reads as a cache that is not working,
+            // rather than one that was never asked for. Said after the figures
+            // so that files left by an earlier run are still accounted for.
+            if !track_cache::enabled() {
+                println!(
+                    "{}",
+                    "caching is off — set `cache = true` in settings.toml".dimmed()
+                );
+            }
         }
     }
+    Ok(())
+}
+
+/// Serve MCP on stdin/stdout.
+///
+/// Nothing may be printed here: stdout is the protocol, and a stray line would
+/// be a parse error at the host rather than a message anyone reads.
+async fn mcp(settings: &Settings) -> CmdResult {
+    let session = music_player_mcp::Session::new(settings.host.clone(), settings.port);
+    music_player_mcp::serve(session).await?;
     Ok(())
 }
 
@@ -78,6 +103,7 @@ pub async fn parse_args(matches: ArgMatches) -> CmdResult {
         Some(("albums", m)) => albums(m, &settings).await,
         Some(("artists", _)) => artists(&settings).await,
         Some(("cache", m)) => cache(m),
+        Some(("mcp", _)) => mcp(&settings).await,
         Some(("tracks", _)) => tracks(&settings).await,
         Some(("search", m)) => search(m, &settings).await,
         Some(("playlist", m)) => playlist(m, &settings).await,

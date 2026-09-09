@@ -84,7 +84,10 @@ pub enum Cmd {
     Search(String),
     /// Who is signed in, if anyone.
     LoadAccount,
-    SignIn { handle: String, password: String },
+    SignIn {
+        handle: String,
+        password: String,
+    },
     SignOut,
     /// Fetch the saved servers from the daemon.
     LoadServers,
@@ -1513,8 +1516,7 @@ async fn load_account(weak: &Weak<AppWindow>) {
         app.set_account_name(name.into());
         match avatar {
             Some((width, height, rgba)) => {
-                let mut buffer =
-                    slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(width, height);
+                let mut buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(width, height);
                 buffer.make_mut_bytes().copy_from_slice(&rgba);
                 app.set_account_avatar(slint::Image::from_rgba8(buffer));
                 app.set_account_has_avatar(true);

@@ -81,11 +81,37 @@ impl TracklistService for Tracklist {
         Ok(tonic::Response::new(response))
     }
 
+    /// Append tracks to the queue.
+    ///
+    /// Takes whole tracks rather than ids, unlike `AddTrack`. Ids would have to
+    /// be looked up here, against a local table that holds nothing when a
+    /// remote provider is connected — so the caller sends what it already has
+    /// from the listing it is adding from, and this works whatever the library
+    /// is.
     async fn add_tracks(
         &self,
-        _req: tonic::Request<AddTracksRequest>,
+        request: tonic::Request<AddTracksRequest>,
     ) -> Result<tonic::Response<AddTracksResponse>, tonic::Status> {
-        unimplemented!()
+        let tracks = request
+            .into_inner()
+            .tracks
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<track::Model>>();
+
+        if !tracks.is_empty() {
+            self.cmd_tx
+                .lock()
+                .unwrap()
+                .send(PlayerCommand::LoadTracklist {
+                    tracks,
+                    // Appending: wherever playback is, it stays there.
+                    start_index: None,
+                })
+                .map_err(|e| tonic::Status::internal(e.to_string()))?;
+        }
+
+        Ok(tonic::Response::new(AddTracksResponse {}))
     }
 
     async fn clear_tracklist(

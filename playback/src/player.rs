@@ -28,7 +28,9 @@ pub type PlayerResult = Result<(), anyhow::Error>;
 /// would compete with the playing stream for the same connection, which is the
 /// stutter this whole mechanism exists to remove.
 fn cache_in_background(uri: &str) {
-    if !music_player_storage::track_cache::is_cacheable(uri) {
+    if !music_player_storage::track_cache::enabled()
+        || !music_player_storage::track_cache::is_cacheable(uri)
+    {
         return;
     }
     let uri = uri.to_string();
@@ -405,7 +407,9 @@ impl PlayerInternal {
         if self.prefetched.as_deref() == Some(next.uri.as_str()) {
             return;
         }
-        if !music_player_storage::track_cache::is_cacheable(&next.uri) {
+        if !music_player_storage::track_cache::enabled()
+            || !music_player_storage::track_cache::is_cacheable(&next.uri)
+        {
             return;
         }
 

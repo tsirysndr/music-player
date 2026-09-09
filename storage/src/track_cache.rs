@@ -40,6 +40,46 @@ fn max_bytes() -> u64 {
         .unwrap_or(DEFAULT_MAX_BYTES)
 }
 
+/// Whether caching is turned on at all.
+///
+/// Off unless `cache = true` is set in settings.toml. Writing gigabytes of the
+/// user's disk is not something to begin doing on their behalf, however useful
+/// it is once asked for.
+///
+/// Read once. Settings are not reloaded anywhere else while the daemon runs,
+/// and a cache that switched on halfway through would be a surprise rather than
+/// a feature — but more practically, this is on the path of every play, and
+/// re-reading a file there to learn something that cannot change is waste.
+pub fn enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        let configured = music_player_settings::read_settings()
+            .ok()
+            .and_then(|config| {
+                config
+                    .try_deserialize::<music_player_settings::Settings>()
+                    .ok()
+            })
+            .is_some_and(|settings| settings.cache);
+        decide(
+            std::env::var("MUSIC_PLAYER_CACHE").ok().as_deref(),
+            configured,
+        )
+    })
+}
+
+/// The rule `enabled` applies, kept apart from the reading of it.
+///
+/// `MUSIC_PLAYER_CACHE` wins over the file so the feature can be tried for one
+/// run without editing settings, and so a test can pin it without depending on
+/// whatever the machine happens to have configured.
+fn decide(env: Option<&str>, configured: bool) -> bool {
+    match env {
+        Some(value) => !matches!(value, "" | "0" | "false"),
+        None => configured,
+    }
+}
+
 /// Whether a uri is something this cache can hold.
 ///
 /// Local files are already local. A live stream has no end — caching one would
@@ -136,7 +176,10 @@ pub fn cached_path(uri: &str) -> Option<PathBuf> {
 /// Every play goes through this, so a track that was prefetched is played
 /// from disk without the caller having to know whether it was.
 pub fn resolve(uri: &str) -> String {
-    if !is_cacheable(uri) {
+    // Turned off means not used, not merely not written. Playing from files a
+    // previously-enabled run left behind would make "cache = false" mean
+    // something different on a machine that had once had it on.
+    if !enabled() || !is_cacheable(uri) {
         return uri.to_string();
     }
     match cached_path(uri) {
@@ -170,6 +213,11 @@ fn download_slot() -> &'static tokio::sync::Semaphore {
 /// Returns the cached path. A uri that is already cached returns immediately;
 /// one that is already downloading returns without starting a second.
 pub async fn store(uri: &str) -> Result<PathBuf, Error> {
+    if !enabled() {
+        return Err(Error::msg(
+            "caching is off (set `cache = true` to enable it)",
+        ));
+    }
     if !is_cacheable(uri) {
         return Err(Error::msg("not a cacheable uri"));
     }
@@ -337,6 +385,24 @@ pub fn is_cached_path(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Off unless asked for, and the environment overrides the file.
+    ///
+    /// Tests the rule rather than calling `enabled`: that memoises once per
+    /// process and reads the developer's real settings.toml, so asserting on it
+    /// would be asserting about this machine.
+    #[test]
+    fn caching_is_off_until_it_is_turned_on() {
+        assert!(!decide(None, false));
+        assert!(decide(None, true));
+
+        // The override works in both directions — including turning off a
+        // cache that settings.toml turns on.
+        assert!(decide(Some("1"), false));
+        assert!(!decide(Some("0"), true));
+        assert!(!decide(Some("false"), true));
+        assert!(!decide(Some(""), true));
+    }
 
     /// A live stream has no end, so caching one would fill the disk.
     #[test]

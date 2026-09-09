@@ -120,6 +120,18 @@ A simple music player written in Rust — single binary, zero dependency"#,
                 .subcommand(Command::new("clear").about("Delete every cached track")),
         )
         .subcommand(
+            Command::new("mcp")
+                .about("Serve the Model Context Protocol on stdin/stdout, so an AI agent can DJ")
+                .long_about(
+                    "Serve the Model Context Protocol on stdin/stdout.\n\n\
+                     Not run by hand: an agent host (Claude Code, Claude Desktop, Codex, \
+                     Copilot) spawns it and speaks JSON-RPC over the pipe. It controls a \
+                     running daemon, so start `music-player` first.\n\n\
+                     To register it with Claude Code:\n  \
+                     claude mcp add music-player -- music-player mcp",
+                ),
+        )
+        .subcommand(
             Command::new("playlist")
                 .subcommand(Command::new("ls").about("List all playlists"))
                 .subcommand(
@@ -271,15 +283,27 @@ A simple music player written in Rust — single binary, zero dependency"#,
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Parsed before logging is set up, because where the logs go depends on it.
+    let matches = cli().get_matches();
+
     // A dependency may have installed a global dispatcher already; ours is
     // best-effort. sqlx logs every statement at INFO, hence the directive.
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,sqlx=warn".into()),
-        )
-        .try_init();
-    let matches = cli().get_matches();
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "info,sqlx=warn".into());
+    if matches!(matches.subcommand(), Some(("mcp", _))) {
+        // Under MCP, stdout carries JSON-RPC and nothing else: a log line
+        // written there lands in the middle of the stream and the host reads it
+        // as a malformed message. Colour goes too — the host's log pane shows
+        // escape codes rather than interpreting them.
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_writer(std::io::stderr)
+            .with_ansi(false)
+            .try_init();
+    } else {
+        let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
+    }
+
     if matches.get_flag("force-car-sync") {
         music_player_storage::repo_sync::force_download();
     }

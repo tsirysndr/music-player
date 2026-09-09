@@ -153,6 +153,15 @@ pub struct Settings {
     /// pulled again. 0 means every start.
     #[serde(default = "default_car_max_age_hours")]
     pub atproto_car_max_age_hours: u64,
+    /// Cache remote tracks on disk shortly before they play, so a track change
+    /// does not wait on the network.
+    ///
+    /// Off by default. It is the one feature here that spends the user's disk —
+    /// gigabytes of it, holding copies of audio they already have on a server —
+    /// and that is not a thing to start doing because someone installed a music
+    /// player. Turning it on is a decision; `music-player cache` shows the cost.
+    #[serde(default)]
+    pub cache: bool,
     /// Register as a Rocksky remote-player device (needs `rocksky login`),
     /// so the daemon shows up in the web/desktop miniplayer device picker.
     #[serde(default = "default_true")]
@@ -258,6 +267,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         atproto: true,
         atproto_force_car_sync: false,
         atproto_car_max_age_hours: default_car_max_age_hours(),
+        cache: false,
         remote_player: true,
         typesense: None,
         audio: AudioSettings::default(),
@@ -309,6 +319,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             "atproto_car_max_age_hours",
             default_car_max_age_hours() as i64,
         )?
+        .set_default("cache", false)?
         .set_default("remote_player", true)?
         .build()
 }

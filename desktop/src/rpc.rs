@@ -3,7 +3,7 @@
 //! queue state are polled (1 s) instead of followed.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::sync::{LazyLock, RwLock as StdRwLock};
 use std::time::Duration;
@@ -289,6 +289,10 @@ static CHAN: LazyLock<StdRwLock<Channel>> = LazyLock::new(|| StdRwLock::new(make
 
 /// Bumped on every server switch; polling loops compare generations and
 /// reconnect when it moved.
+/// Bumped per palette keystroke, so a pending search can tell it has been
+/// superseded.
+static SEARCH_GEN: AtomicUsize = AtomicUsize::new(0);
+
 static SWITCH_GEN: AtomicU64 = AtomicU64::new(0);
 
 fn make_channel() -> Channel {
@@ -2244,6 +2248,18 @@ async fn cmd_loop(
                     }
                 }
                 Cmd::Search(query) => {
+                    // Debounced: the palette sends one of these per keystroke,
+                    // and search is federated — the connected server *and* the
+                    // local index — so "sabbath" would be seven round trips
+                    // answering one question, six of them already stale when
+                    // they land. Waiting for a pause, then checking nothing
+                    // newer arrived, issues exactly one.
+                    let generation = SEARCH_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+                    tokio::time::sleep(Duration::from_millis(250)).await;
+                    if SEARCH_GEN.load(Ordering::SeqCst) != generation {
+                        return Ok(());
+                    }
+
                     let mut lib = LibraryServiceClient::new(channel.clone());
                     let Ok(response) = lib.search(SearchRequest { query }).await else {
                         // A failed search leaves the palette showing whatever

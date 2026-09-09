@@ -114,6 +114,12 @@ A simple music player written in Rust — single binary, zero dependency"#,
         )
         .subcommand(Command::new("artists").about("List all artists"))
         .subcommand(
+            Command::new("cache")
+                .about("The on-disk cache of remote track audio")
+                .subcommand(Command::new("ls").about("How much the cache is holding"))
+                .subcommand(Command::new("clear").about("Delete every cached track")),
+        )
+        .subcommand(
             Command::new("playlist")
                 .subcommand(Command::new("ls").about("List all playlists"))
                 .subcommand(

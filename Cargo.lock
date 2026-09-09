@@ -8009,6 +8009,7 @@ dependencies = [
  "futures-util",
  "music-player-entity",
  "music-player-settings",
+ "music-player-storage",
  "music-player-tracklist",
  "rockbox-playback",
  "serde",
@@ -8155,6 +8156,7 @@ dependencies = [
  "cid",
  "directories",
  "dirs",
+ "filetime",
  "futures-util",
  "ipld-core",
  "itertools 0.10.5",
@@ -8174,6 +8176,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.24.0",
  "tracing",
+ "url",
 ]
 
 [[package]]

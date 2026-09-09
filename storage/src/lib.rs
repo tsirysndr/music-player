@@ -17,6 +17,7 @@ pub mod rocksky_likes;
 pub mod saved_servers;
 pub mod searcher;
 pub mod smart_playlist;
+pub mod track_cache;
 
 pub mod repo;
 

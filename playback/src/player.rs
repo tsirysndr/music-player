@@ -116,6 +116,7 @@ impl Player {
                 resume: false,
                 last_queue_save: Instant::now(),
                 stopped_ticks: 0,
+                prefetched: None,
                 icy_station: None,
                 icy_last: None,
             })
@@ -292,6 +293,9 @@ struct PlayerInternal {
     resume: bool,
     /// Last time the queue snapshot was written while playing.
     last_queue_save: Instant,
+    /// The uri the prefetch was last started for, so a tick every 100ms does
+    /// not start the same download ten times a second.
+    prefetched: Option<String>,
     /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
     /// decode failure still ends the track instead of wedging the queue.
     stopped_ticks: u32,
@@ -349,6 +353,45 @@ impl PlayerInternal {
 
     /// Write the queue snapshot (or remove it when the queue is empty).
     /// No-op until persistence was armed by `RestoreQueue`.
+    /// Download the next track once the current one is half played.
+    ///
+    /// Half, rather than near the end: a track takes time to fetch, and
+    /// starting at 90% leaves no margin on a slow connection — which is the
+    /// short cut at every track change this exists to remove. Half is late
+    /// enough that a skipped track has usually been skipped by then, so the
+    /// bandwidth is rarely wasted.
+    ///
+    /// Detached, and at most one at a time: the cache refuses a second
+    /// download of the same uri, and this returns without waiting either way.
+    /// Nothing here may block the tick that drives playback.
+    fn maybe_prefetch_next(&mut self, status: &rockbox_playback::Status) {
+        let duration = status.duration.as_millis() as u32;
+        let position = status.position.as_millis() as u32;
+        if duration == 0 || position * 2 < duration {
+            return;
+        }
+
+        let Some(next) = self.tracklist.lock().unwrap().tracks().1.first().cloned() else {
+            return;
+        };
+        if self.prefetched.as_deref() == Some(next.uri.as_str()) {
+            return;
+        }
+        if !music_player_storage::track_cache::is_cacheable(&next.uri) {
+            return;
+        }
+
+        self.prefetched = Some(next.uri.clone());
+        tokio::spawn(async move {
+            match music_player_storage::track_cache::store(&next.uri).await {
+                Ok(_) => tracing::debug!(track = %next.title, "prefetched the next track"),
+                // "already downloading" lands here too, which is why this is
+                // debug rather than a warning.
+                Err(e) => tracing::debug!("could not prefetch: {e}"),
+            }
+        });
+    }
+
     /// Mirror the playback modes onto the tracklist, which is what the API
     /// layers read. Without this a client could set them but never see them,
     /// so every launch showed "off" whatever the session had been.
@@ -447,6 +490,7 @@ impl PlayerInternal {
         let status = self.engine.status();
         // Published every tick so a meter has something current to read; the
         // engine measures the PCM it actually hands to the output.
+        self.maybe_prefetch_next(&status);
         self.tracklist
             .lock()
             .unwrap()
@@ -760,6 +804,11 @@ impl PlayerInternal {
     }
 
     fn handle_command_load(&mut self, uri: &str) {
+        // The cached copy when there is one. Every play goes through this, so
+        // a track the prefetch already fetched starts from disk without the
+        // caller knowing whether it did.
+        let uri = music_player_storage::track_cache::resolve(uri);
+        let uri = uri.as_str();
         self.engine.stop();
         self.engine.set_queue(vec![uri.to_string()]);
         self.engine.play();

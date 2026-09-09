@@ -8,6 +8,7 @@ import {
   useSearchQuery,
   useSetExtensionEnabledMutation,
 } from "../../Hooks/GraphQL";
+import { useDebounced } from "../../Hooks/useDebounced";
 import { useDevices } from "../../Hooks/useDevices";
 import { usePlayTrack } from "../../Hooks/usePlayTrack";
 import { paletteOpenAtom, serverSwitcherOpenAtom } from "../../State";
@@ -158,12 +159,16 @@ const CommandPaletteWithData = () => {
   } = useDevices();
 
   const needle = query.trim().toLowerCase();
+  // The query the daemon is asked, which settles after typing stops. The
+  // rows the client can match itself still use `needle`, so filtering feels
+  // immediate while the network is asked once.
+  const searchTerm = useDebounced(query.trim());
 
   // Only ask the daemon once there is something to search for; an empty
   // palette would otherwise fetch the whole library every time it opens.
   const { data: search, isFetching } = useSearchQuery(
-    { keyword: query.trim() },
-    { enabled: open && needle.length > 0 }
+    { keyword: searchTerm },
+    { enabled: open && searchTerm.length > 0 }
   );
   const { data: playlistData } = useGetPlaylistsQuery(undefined, {
     enabled: open,

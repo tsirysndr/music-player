@@ -32,6 +32,38 @@ enum Transport {
     Stop,
 }
 
+/// The on-disk cache of remote track audio.
+///
+/// Local: it describes files on *this* machine, so it needs no daemon and
+/// works whether or not one is running.
+fn cache(matches: &ArgMatches) -> CmdResult {
+    use music_player_storage::track_cache;
+
+    match matches.subcommand() {
+        Some(("clear", _)) => {
+            let freed = track_cache::clear();
+            println!(
+                "Cleared {} track{} ({})",
+                freed.tracks,
+                if freed.tracks == 1 { "" } else { "s" },
+                track_cache::format_bytes(freed.bytes)
+            );
+        }
+        // `ls` or nothing: showing what is there is the harmless default.
+        _ => {
+            let usage = track_cache::usage();
+            println!("{}", track_cache::cache_dir().display());
+            println!(
+                "{} track{}, {}",
+                usage.tracks,
+                if usage.tracks == 1 { "" } else { "s" },
+                track_cache::format_bytes(usage.bytes)
+            );
+        }
+    }
+    Ok(())
+}
+
 pub async fn parse_args(matches: ArgMatches) -> CmdResult {
     let config = read_settings().unwrap();
     let settings = config.try_deserialize::<Settings>().unwrap();
@@ -41,6 +73,7 @@ pub async fn parse_args(matches: ArgMatches) -> CmdResult {
         Some(("scan", _)) => scan().await,
         Some(("albums", m)) => albums(m, &settings).await,
         Some(("artists", _)) => artists(&settings).await,
+        Some(("cache", m)) => cache(m),
         Some(("tracks", _)) => tracks(&settings).await,
         Some(("search", m)) => search(m, &settings).await,
         Some(("playlist", m)) => playlist(m, &settings).await,

@@ -19,6 +19,8 @@ export type AlbumsProps = {
   onShuffleAlbum: (id: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  /** A further page is in flight. */
+  loadingMore?: boolean;
 };
 
 /**
@@ -35,6 +37,7 @@ const Albums: FC<AlbumsProps> = ({
   onShuffleAlbum,
   onLoadMore,
   hasMore,
+  loadingMore,
 }) => (
   <AppShell>
     <PageToolbar
@@ -67,7 +70,11 @@ const Albums: FC<AlbumsProps> = ({
             />
           ))}
         </div>
-        <LoadMore hasMore={hasMore} onLoadMore={onLoadMore} />
+        <LoadMore
+          hasMore={hasMore}
+          loading={loadingMore}
+          onLoadMore={onLoadMore}
+        />
       </>
     )}
   </AppShell>

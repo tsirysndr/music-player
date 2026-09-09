@@ -37,7 +37,14 @@ use sea_orm::EntityTrait;
 
 /// All albums/artists/tracks in one page — a limit of 0 means "none" on the
 /// server side, so ask for effectively-everything instead.
-const PAGE: i32 = 100_000;
+/// One request's worth of library rows.
+///
+/// Sized to what a remote server will actually return in one page — Subsonic
+/// caps at 500 and applies it silently — so the loops that use this can tell
+/// "that is all there is" from "that is all you may have at once" by whether
+/// the page came back short. Asking for 100,000 could not: it always came
+/// back short, at 500.
+const PAGE: i32 = 500;
 
 // ── Commands from UI callbacks ──────────────────────────────────────────────
 
@@ -882,33 +889,63 @@ async fn load_library(
     }
     let mut lib = LibraryServiceClient::new(channel.clone());
 
-    let albums = lib
-        .get_albums(GetAlbumsRequest {
-            limit: PAGE,
-            offset: 0,
-            filter: String::new(),
-        })
-        .await?
-        .into_inner()
-        .albums;
-    let artists = lib
-        .get_artists(GetArtistsRequest {
-            limit: PAGE,
-            offset: 0,
-            filter: String::new(),
-        })
-        .await?
-        .into_inner()
-        .artists;
-    let tracks = lib
-        .get_tracks(GetTracksRequest {
-            limit: PAGE,
-            offset: 0,
-            filter: String::new(),
-        })
-        .await?
-        .into_inner()
-        .tracks;
+    // Paged to exhaustion rather than asked for everything at once. A remote
+    // server has its own ceiling — Subsonic's is 500 rows — and it applies it
+    // silently, so a single large request returned 500 albums and looked like
+    // a library with 500 albums in it.
+    let mut albums = Vec::new();
+    loop {
+        let page = lib
+            .get_albums(GetAlbumsRequest {
+                limit: PAGE,
+                offset: albums.len() as i32,
+                filter: String::new(),
+            })
+            .await?
+            .into_inner()
+            .albums;
+        let short = page.len() < PAGE as usize;
+        albums.extend(page);
+        if short {
+            break;
+        }
+    }
+
+    let mut artists = Vec::new();
+    loop {
+        let page = lib
+            .get_artists(GetArtistsRequest {
+                limit: PAGE,
+                offset: artists.len() as i32,
+                filter: String::new(),
+            })
+            .await?
+            .into_inner()
+            .artists;
+        let short = page.len() < PAGE as usize;
+        artists.extend(page);
+        if short {
+            break;
+        }
+    }
+
+    let mut tracks = Vec::new();
+    loop {
+        let page = lib
+            .get_tracks(GetTracksRequest {
+                limit: PAGE,
+                offset: tracks.len() as i32,
+                filter: String::new(),
+            })
+            .await?
+            .into_inner()
+            .tracks;
+        let short = page.len() < PAGE as usize;
+        tracks.extend(page);
+        if short {
+            break;
+        }
+    }
 
     let full: Vec<FullTrack> = tracks
         .iter()

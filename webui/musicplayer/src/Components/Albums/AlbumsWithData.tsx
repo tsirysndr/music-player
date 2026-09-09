@@ -57,6 +57,7 @@ const AlbumsWithData: FC = () => {
         }
       }}
       hasMore={!!hasNextPage}
+      loadingMore={isFetchingNextPage}
     />
   );
 };

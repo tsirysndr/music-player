@@ -50,21 +50,39 @@ export default function LikedPage() {
   const { isLiked, toggleLike } = useLikes();
   const { recentPlaylists, addTrackToPlaylist } = usePlaylist();
 
+  // Paged to exhaustion rather than one request of 500. A ceiling here is a
+  // liked song that simply does not appear, with nothing to say it was cut —
+  // and 500 is a number a real library passes.
   useEffect(() => {
     let active = true;
-    fetcher<any, any>(query, { offset: 0, limit: 500 })()
-      .then((data) => {
-        if (active) setTracks(data.likedTracks || []);
-      })
-      .catch((e) => {
-        if (active)
+    const PAGE = 200;
+
+    (async () => {
+      const all: LikedTrack[] = [];
+      try {
+        for (let offset = 0; active; offset += PAGE) {
+          const data = await fetcher<any, any>(query, {
+            offset,
+            limit: PAGE,
+          })();
+          const page: LikedTrack[] = data.likedTracks || [];
+          all.push(...page);
+          // Show each page as it lands; a long list should not wait for its
+          // own tail.
+          if (active) setTracks([...all]);
+          if (page.length < PAGE) break;
+        }
+      } catch (e) {
+        if (active) {
           setError(
             e instanceof Error ? e.message : "Unable to load liked songs"
           );
-      })
-      .finally(() => {
+        }
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    })();
+
     return () => {
       active = false;
     };

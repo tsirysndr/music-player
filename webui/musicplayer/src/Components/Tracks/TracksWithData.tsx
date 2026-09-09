@@ -70,6 +70,7 @@ const TracksWithData: FC = () => {
         }
       }}
       hasMore={!!hasNextPage}
+      loadingMore={isFetchingNextPage}
     />
   );
 };

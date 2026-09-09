@@ -58,6 +58,7 @@ const ArtistsWithData: FC = () => {
         }
       }}
       hasMore={!!hasNextPage}
+      loadingMore={isFetchingNextPage}
     />
   );
 };

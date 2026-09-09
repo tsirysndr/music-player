@@ -25,6 +25,8 @@ export type TracksProps = {
   onAddTrackToPlaylist: (playlistId: string, trackId: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  /** A further page is in flight. */
+  loadingMore?: boolean;
 };
 
 /** The desktop's "All tracks" tab: a filter box over the shared track table. */
@@ -41,6 +43,7 @@ const Tracks: FC<TracksProps> = ({
   onAddTrackToPlaylist,
   onLoadMore,
   hasMore,
+  loadingMore,
 }) => (
   <AppShell>
     <PageToolbar
@@ -83,7 +86,11 @@ const Tracks: FC<TracksProps> = ({
             />
           ))}
         </div>
-        <LoadMore hasMore={hasMore} onLoadMore={onLoadMore} />
+        <LoadMore
+          hasMore={hasMore}
+          loading={loadingMore}
+          onLoadMore={onLoadMore}
+        />
       </>
     )}
   </AppShell>

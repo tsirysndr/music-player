@@ -18,6 +18,8 @@ export type ArtistsProps = {
   onPlayArtist: (id: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  /** A further page is in flight. */
+  loadingMore?: boolean;
 };
 
 /** The desktop's artists list. */
@@ -29,6 +31,7 @@ const Artists: FC<ArtistsProps> = ({
   onPlayArtist,
   onLoadMore,
   hasMore,
+  loadingMore,
 }) => (
   <AppShell>
     <PageToolbar
@@ -62,7 +65,11 @@ const Artists: FC<ArtistsProps> = ({
             />
           ))}
         </div>
-        <LoadMore hasMore={hasMore} onLoadMore={onLoadMore} />
+        <LoadMore
+          hasMore={hasMore}
+          loading={loadingMore}
+          onLoadMore={onLoadMore}
+        />
       </>
     )}
   </AppShell>

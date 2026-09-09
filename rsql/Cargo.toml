@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 name = "music-player-rsql"
 repository = "https://github.com/tsirysndr/music-player"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 serde = {version = "1.0.145", features = ["derive"]}

@@ -5,23 +5,23 @@ edition = "2021"
 license = "MIT"
 name = "music-player-extensions"
 repository = "https://github.com/tsirysndr/music-player"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-rsql]
 path = "../rsql"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 anyhow = "1.0.67"

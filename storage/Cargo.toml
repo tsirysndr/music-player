@@ -1,6 +1,6 @@
 [package]
 name = "music-player-storage"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -10,23 +10,23 @@ description = " The storage module of music player"
 
 [dependencies.music-player-analysis]
 path = "../analysis"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-rsql]
 path = "../rsql"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 itertools = "0.10.5"
@@ -54,7 +54,7 @@ ipld-core = "0.4"
 
 [dev-dependencies.music-player-migration]
 path = "../migration"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies]
 tempfile = "3.3.0"

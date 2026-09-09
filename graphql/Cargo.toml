@@ -1,6 +1,6 @@
 [package]
 name = "music-player-graphql"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -13,51 +13,51 @@ description = "The GraphQL server API for the music player"
 
 [dependencies.music-player-playback]
 path = "../playback"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-scanner]
 path = "../scanner"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-provider]
 path = "../provider"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-analysis]
 path = "../analysis"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-discovery]
 path = "../discovery"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-renderer]
 path = "../renderer"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies.music-player-migration]
 path = "../migration"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies]
 serde_json = "1.0.85"
@@ -65,11 +65,11 @@ ctor = "0.1.26"
 
 [dependencies.music-player-rsql]
 path = "../rsql"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-extensions]
 path = "../extensions"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 async-graphql = "7.2.1"

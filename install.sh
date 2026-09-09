@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/tsirysndr/music-player/master/install.sh | sh
 #
 # Environment:
-#   MUSIC_PLAYER_VERSION      Version to install: "0.2.1" or "v0.2.1".
+#   MUSIC_PLAYER_VERSION      Version to install: "0.3.0" or "v0.3.0".
 #                             Default: the latest release.
 #   MUSIC_PLAYER_INSTALL_DIR  Where the binary goes. Default: /usr/local/bin
 #                             when writable, else ~/.local/bin.

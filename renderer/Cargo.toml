@@ -1,6 +1,6 @@
 [package]
 name = "music-player-renderer"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -10,19 +10,19 @@ description = "Playback receivers (Chromecast, DLNA, peer daemons) for music pla
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-client]
 path = "../client"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 async-trait = "0.1.59"

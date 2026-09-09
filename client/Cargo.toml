@@ -1,6 +1,6 @@
 [package]
 name = "music-player-client"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -16,31 +16,31 @@ envtestkit = "1.1.2"
 
 [dependencies.music-player-server]
 path = "../server"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-provider]
 path = "../provider"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies.music-player-playback]
 path = "../playback"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies.music-player-storage]
 path = "../storage"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 futures-util = "0.3.24"
@@ -53,8 +53,8 @@ anyhow = "1.0.67"
 
 [dev-dependencies.music-player-migration]
 path = "../migration"
-version = "0.2.1"
+version = "0.3.0"
 
 [dev-dependencies.music-player-scanner]
 path = "../scanner"
-version = "0.2.1"
+version = "0.3.0"

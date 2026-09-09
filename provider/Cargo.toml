@@ -1,6 +1,6 @@
 [package]
 name = "music-player-provider"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -9,7 +9,7 @@ description = "The remote music source trait and registry of music player"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies]
 async-trait = "0.1.60"

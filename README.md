@@ -469,6 +469,17 @@ anyone else's listening history:
 - The **waveform** appears under the artwork in the full-screen player on both
   the desktop and the web client, and doubles as a seek bar — you can aim at the
   quiet part you remember rather than at a percentage.
+- **Key and tempo** get a column in every track list, with the key drawn as a
+  colour on the row's left edge. The colour follows the circle of fifths, so
+  keys that mix look alike — finding a compatible track is spotting neighbouring
+  colours rather than reading labels. Both are filterable in smart playlists:
+  `key==Fm;bpm>=120;bpm<=130`.
+
+A file's own `initialkey` and BPM tags are read before anything is computed. A
+tag written by Mixxx, Rekordbox or Traktor is a better answer than a
+re-derivation — and detection gets the *mode* wrong often enough to matter,
+since the major and minor profiles for one tonic look alike. Only tracks with
+no tag are analysed.
 
 Analysis is on demand, not automatic: it costs a decode per track, and a
 download first for a remote server. Start a pass from an agent

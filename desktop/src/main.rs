@@ -98,7 +98,7 @@ fn track_item_with(t: &rpc::TrackData, liked_ids: &std::collections::HashSet<Str
 /// Transparent rather than a grey: an unanalysed track should show no marker at
 /// all, not a marker that says "unknown".
 fn key_color(key: &str) -> slint::Color {
-    match music_player_analysis::key_color::rgb_for(key) {
+    match music_player_analysis::key::rgb_for(key) {
         Some((r, g, b)) => slint::Color::from_rgb_u8(r, g, b),
         None => slint::Color::from_argb_u8(0, 0, 0, 0),
     }

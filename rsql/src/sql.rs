@@ -386,4 +386,26 @@ mod tests {
             vec![Value::Text("; DROP TABLE track; --".into())]
         );
     }
+    /// Key and tempo, so a smart playlist can be "everything in Fm around 120".
+    #[test]
+    fn key_and_bpm_are_filterable() {
+        // Text, so it compares case-insensitively like any other name.
+        assert_eq!(compiled("key==Fm").sql, "track.key = ? COLLATE NOCASE");
+        // Rounded, so `bpm>=120` does not miss a track stored as 119.97.
+        assert_eq!(
+            compiled("bpm>=120").sql,
+            "CAST(ROUND(track.bpm) AS INTEGER) >= ?"
+        );
+        // The pair a DJ actually writes.
+        assert_eq!(
+            compiled("key==8A;bpm>=120;bpm<=130").sql,
+            "(track.key = ? COLLATE NOCASE AND CAST(ROUND(track.bpm) AS INTEGER) >= ? \
+AND CAST(ROUND(track.bpm) AS INTEGER) <= ?)"
+        );
+        // Unanalysed tracks are selectable as such.
+        assert_eq!(
+            compiled("key=null=").sql,
+            "(track.key IS NULL OR track.key = '')"
+        );
+    }
 }

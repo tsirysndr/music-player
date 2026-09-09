@@ -9,16 +9,16 @@
 //!
 //! It matters most for the *mode*. Correlation-based key detection picks the
 //! tonic reliably and the major/minor far less so — the two profiles for one
-//! tonic look alike — and confusing them is not a small error: F major is 7B
-//! and F minor is 4A, which sit at opposite ends of the wheel. A track tagged
-//! `4A` says so outright.
+//! tonic look alike — and confusing them is not a small error: F major and
+//! F minor sit at opposite ends of the circle of fifths. A tag says which
+//! outright.
 
 use symphonia::core::meta::{MetadataRevision, StandardTagKey};
 
 /// What a file says about itself.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Tags {
-    /// Camelot notation, e.g. `"4A"`, whatever notation the tag used.
+    /// Traditional notation, e.g. `"Fm"`, whatever notation the tag used.
     pub key: Option<String>,
     pub bpm: Option<f32>,
 }
@@ -36,7 +36,7 @@ pub fn read(revision: &MetadataRevision) -> Tags {
         // name the format actually uses: `initialkey` in mp4 and Vorbis,
         // `TKEY` in id3.
         if tags.key.is_none() && is_key_tag(&tag.key) {
-            tags.key = camelot_from_tag(&tag.value.to_string());
+            tags.key = key_from_tag(&tag.value.to_string());
         }
     }
 
@@ -62,98 +62,34 @@ fn parse_bpm(value: &str) -> Option<f32> {
     (bpm.is_finite() && (20.0..=300.0).contains(&bpm)).then_some(bpm)
 }
 
-/// A key tag in Camelot notation, whatever notation it was written in.
+/// A key tag, normalised to traditional notation.
 ///
-/// Three spellings are common and all appear in real libraries: Camelot
-/// (`4A`), which DJ tools write; musical (`Fm`, `F minor`, `Abmaj`); and the
-/// plain letter for a major key (`F`). Anything else is left alone rather than
-/// guessed at.
-pub fn camelot_from_tag(value: &str) -> Option<String> {
-    let value = value.trim();
-    if value.is_empty() {
-        return None;
-    }
-
-    // Already Camelot — the common case for a library that has been through a
-    // DJ tool, and the one that must survive untouched.
-    if crate::key_color::rgb_for(value).is_some() {
-        return Some(value.to_uppercase());
-    }
-
-    let (root, rest) = parse_root(value)?;
-    let rest = rest.trim().to_ascii_lowercase();
-    // A bare letter means major, as every tool that writes one intends.
-    let minor = match rest.as_str() {
-        "" | "maj" | "major" | "m*" => false,
-        "m" | "min" | "minor" => true,
-        _ => return None,
-    };
-
-    Some(crate::features::camelot(root, !minor))
-}
-
-/// The pitch class a key name starts with, and what follows it.
-fn parse_root(value: &str) -> Option<(u8, &str)> {
-    let mut chars = value.chars();
-    let letter = chars.next()?.to_ascii_uppercase();
-    let natural = match letter {
-        'C' => 0,
-        'D' => 2,
-        'E' => 4,
-        'F' => 5,
-        'G' => 7,
-        'A' => 9,
-        'B' => 11,
-        _ => return None,
-    };
-
-    let rest = chars.as_str();
-    // Accidentals, in both the spellings tags use.
-    if let Some(rest) = rest.strip_prefix(['#', '♯']) {
-        return Some(((natural + 1) % 12, rest));
-    }
-    if let Some(rest) = rest.strip_prefix(['b', '♭']) {
-        // `b` is ambiguous: "Bb" is a flat, but "Bb" could also be read as B
-        // followed by nothing. Treating it as a flat is right — no notation
-        // writes a mode as a bare `b`.
-        return Some(((natural + 11) % 12, rest));
-    }
-    Some((natural, rest))
+/// Tags are written in both spellings and either is accepted: DJ tools write
+/// Camelot (`4A`), taggers and people write musical (`Fm`, `F minor`, `Abm`,
+/// or a bare `F` for the major). Both name the same key, so both are stored the
+/// same way.
+pub fn key_from_tag(value: &str) -> Option<String> {
+    crate::key::Key::parse(value).map(|key| key.name())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Camelot passes through: a library tagged by a DJ tool is already saying
-    /// exactly what we want to store.
+    /// Both spellings appear in real libraries and both name the same key, so
+    /// both are stored the same way. These are the two tags that started this:
+    /// one file says `4A`, another says `10B`, and the user's other tools show
+    /// them as `Fm` and `D`.
     #[test]
-    fn camelot_survives_untouched() {
-        assert_eq!(camelot_from_tag("4A"), Some("4A".into()));
-        assert_eq!(camelot_from_tag("11B"), Some("11B".into()));
-        assert_eq!(camelot_from_tag("8a"), Some("8A".into()));
-    }
-
-    /// Musical notation converts. `Fm` is the case that started this: the
-    /// detector called it F major, and the tag says minor.
-    #[test]
-    fn musical_notation_converts_to_camelot() {
-        assert_eq!(camelot_from_tag("Fm"), Some("4A".into()));
-        assert_eq!(camelot_from_tag("F minor"), Some("4A".into()));
-        assert_eq!(camelot_from_tag("Fmin"), Some("4A".into()));
-        // The parallel major is a different key, and a long way away on the
-        // wheel — which is why getting the mode right matters.
-        assert_eq!(camelot_from_tag("F"), Some("7B".into()));
-        assert_eq!(camelot_from_tag("F major"), Some("7B".into()));
-    }
-
-    #[test]
-    fn accidentals_are_understood() {
-        // A minor is 8A, so A-flat minor is a fifth away.
-        assert_eq!(camelot_from_tag("Abm"), Some("1A".into()));
-        assert_eq!(camelot_from_tag("G#m"), Some("1A".into()));
-        assert_eq!(camelot_from_tag("Bb"), Some("6B".into()));
-        assert_eq!(camelot_from_tag("C#"), Some("3B".into()));
+    fn either_spelling_is_stored_traditionally() {
+        assert_eq!(key_from_tag("4A"), Some("Fm".into()));
+        assert_eq!(key_from_tag("10B"), Some("D".into()));
+        assert_eq!(key_from_tag("Fm"), Some("Fm".into()));
+        assert_eq!(key_from_tag("F minor"), Some("Fm".into()));
+        // A bare letter is the major, and a long way round the wheel from its
+        // parallel minor — which is why the mode has to be right.
+        assert_eq!(key_from_tag("F"), Some("F".into()));
+        assert_eq!(key_from_tag("Abm"), Some("G#m".into()));
     }
 
     /// Anything unrecognised is left alone rather than guessed at — a wrong key
@@ -161,7 +97,7 @@ mod tests {
     #[test]
     fn nonsense_is_not_a_key() {
         for input in ["", "  ", "Hm", "42", "F lydian", "unknown", "13A"] {
-            assert_eq!(camelot_from_tag(input), None, "{input:?}");
+            assert_eq!(key_from_tag(input), None, "{input:?}");
         }
     }
 

@@ -89,6 +89,20 @@ pub const TRACKS: Schema = Schema {
         Field::new("track", "track.track", FieldKind::Integer, "Track number"),
         Field::new("duration", "track.duration", FieldKind::Integer, "Duration"),
         Field::new("bitrate", "track.bitrate", FieldKind::Integer, "Bitrate"),
+        // Traditional notation — `Fm`, `D` — matched case-insensitively like
+        // any other text field, so `key==fm` works. Null until the track has
+        // been analysed, which `key=null=` selects for.
+        Field::new("key", "track.key", FieldKind::Text, "Musical key"),
+        // Integer rather than a decimal: tempo is read, sorted and filtered as
+        // a whole number, and `bpm>=120` should not miss a track stored as
+        // 119.97. SQLite compares the column numerically either way; rounding
+        // here is what makes the boundary behave as written.
+        Field::new(
+            "bpm",
+            "CAST(ROUND(track.bpm) AS INTEGER)",
+            FieldKind::Integer,
+            "Tempo (BPM)",
+        ),
         Field::new(
             "samplerate",
             "track.sample_rate",

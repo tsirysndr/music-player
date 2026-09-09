@@ -209,13 +209,13 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     Ok(songs)
 }
 
-/// How many tracks one pass will work through.
+/// How many tracks are fetched from the database at a time.
 ///
-/// A bound rather than "all of them": a first scan of a large library would
-/// otherwise be hours of decoding queued up in one task with no way to see the
-/// end of it. The next scan picks up where this left off, because the pass only
-/// ever looks at tracks that still have no key.
-pub const ANALYSIS_BATCH: u64 = 500;
+/// A paging size, not a limit on the work: the pass keeps asking for the next
+/// batch until nothing is left, so a whole library gets analysed however large
+/// it is. Batched only so a hundred thousand rows are not held in memory at
+/// once to answer a question about one track at a time.
+const ANALYSIS_PAGE: u64 = 500;
 
 /// Fill in key and tempo for tracks that have none. Returns how many it did.
 ///
@@ -226,51 +226,76 @@ pub const ANALYSIS_BATCH: u64 = 500;
 /// things: `music-player scan` is a command that exits when it returns, so a
 /// detached task there would be killed before it decoded anything — the reason
 /// a scan left every key null. The daemon, which keeps running, spawns it.
-pub async fn analyse_missing_key_and_bpm(db: &Database, limit: u64) -> usize {
+pub async fn analyse_missing_key_and_bpm(db: &Database) -> usize {
     let conn = db.get_connection();
-    let pending = music_player_storage::track_analysis::unanalysed_local_tracks(conn, limit).await;
-    if pending.is_empty() {
+
+    let total = music_player_storage::track_analysis::unanalysed_local_count(conn).await as usize;
+    if total == 0 {
         return 0;
     }
-    info!(tracks = pending.len(), "analysing key and tempo");
+    info!(tracks = total, "analysing key and tempo");
 
-    let total = pending.len();
     let mut done = 0usize;
-    for (index, track) in pending.iter().enumerate() {
-        // `ensure` serialises on its own semaphore, so this stays one decode at
-        // a time however many callers there are — it must not compete with the
-        // audio that is playing.
-        //
-        // Logged per track, and at info: this is minutes of work with nothing
-        // else to show for it, and a scan that printed only a total at the end
-        // is indistinguishable from one that has hung.
-        match music_player_storage::track_analysis::ensure(conn, "", track).await {
-            Ok(analysis) => {
-                done += 1;
-                info!(
-                    "[{}/{total}] {} — {}  {}  {}",
-                    index + 1,
-                    track.artist,
-                    track.title,
-                    // A track can decode fine and still have no clear key or
-                    // tempo; saying so is more useful than printing a zero.
-                    analysis.key.as_deref().unwrap_or("--"),
-                    analysis
-                        .bpm
-                        .map(|bpm| format!("{bpm:.0} BPM"))
-                        .unwrap_or_else(|| "--- BPM".to_string()),
-                );
-            }
-            Err(cause) => {
-                info!(
-                    "[{}/{total}] {} — {}  could not analyse: {cause}",
-                    index + 1,
-                    track.artist,
-                    track.title
-                );
+    let mut index = 0usize;
+    // Re-queried each time rather than paged with an offset: every track that
+    // succeeds stops being unanalysed, so the "next page" is always the front
+    // of the list. An offset would skip past everything already done and leave
+    // most of the library untouched.
+    loop {
+        let pending =
+            music_player_storage::track_analysis::unanalysed_local_tracks(conn, ANALYSIS_PAGE)
+                .await;
+        if pending.is_empty() {
+            break;
+        }
+        let before = done;
+        for track in &pending {
+            index += 1;
+            // `ensure` serialises on its own semaphore, so this stays one decode at
+            // a time however many callers there are — it must not compete with the
+            // audio that is playing.
+            //
+            // Logged per track, and at info: this is minutes of work with nothing
+            // else to show for it, and a scan that printed only a total at the end
+            // is indistinguishable from one that has hung.
+            match music_player_storage::track_analysis::ensure(conn, "", track).await {
+                Ok(analysis) => {
+                    done += 1;
+                    info!(
+                        "[{index}/{total}] {} — {}  {}  {}",
+                        track.artist,
+                        track.title,
+                        // A track can decode fine and still have no clear key
+                        // or tempo; saying so beats printing a zero.
+                        analysis.key.as_deref().unwrap_or("--"),
+                        analysis
+                            .bpm
+                            .map(|bpm| format!("{bpm:.0} BPM"))
+                            .unwrap_or_else(|| "--- BPM".to_string()),
+                    );
+                }
+                Err(cause) => {
+                    info!(
+                        "[{index}/{total}] {} — {}  could not analyse: {cause}",
+                        track.artist, track.title
+                    );
+                }
             }
         }
+
+        // Nothing in a whole batch succeeded, so the same rows would come back
+        // for ever. Every remaining track is one that cannot be analysed —
+        // a missing file, an unsupported codec — and retrying is not going to
+        // change that.
+        if done == before {
+            info!(
+                "stopping: none of the remaining {} tracks could be analysed",
+                pending.len()
+            );
+            break;
+        }
     }
+
     info!("key and tempo: {done}/{total} tracks analysed");
     done
 }
@@ -278,7 +303,7 @@ pub async fn analyse_missing_key_and_bpm(db: &Database, limit: u64) -> usize {
 /// The same pass, detached — for the daemon, which outlives it.
 pub fn spawn_key_and_bpm_analysis(db: Database) {
     tokio::spawn(async move {
-        analyse_missing_key_and_bpm(&db, ANALYSIS_BATCH).await;
+        analyse_missing_key_and_bpm(&db).await;
     });
 }
 

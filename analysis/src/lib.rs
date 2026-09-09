@@ -12,7 +12,7 @@
 
 mod decode;
 mod features;
-pub mod key_color;
+pub mod key;
 pub mod tags;
 mod waveform;
 
@@ -46,8 +46,9 @@ pub struct Analysis {
     pub arousal: Option<f32>,
     /// Mood labels with confidences, as the detector named them.
     pub moods: Vec<(String, f32)>,
-    /// The musical key in Camelot notation, e.g. `"8A"`. Camelot rather than
-    /// "A minor" because adjacent numbers mix, which is the reason to know it.
+    /// The musical key in traditional notation, e.g. `"Fm"` — what every other
+    /// tool in a user's library shows. [`key::Key`] converts to Camelot when
+    /// the wheel position is what is wanted.
     pub key: Option<String>,
     /// How much to believe the key, 0–1.
     pub key_confidence: Option<f32>,

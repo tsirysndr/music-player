@@ -174,6 +174,25 @@ async fn write_back_key_and_bpm(db: &DatabaseConnection, track_id: &str, analysi
     }
 }
 
+/// How many local tracks still have no key or tempo.
+///
+/// Counted separately from the listing so a pass can report real progress —
+/// "3 of 4812" — rather than progress through whichever page it happens to
+/// be holding.
+pub async fn unanalysed_local_count(db: &DatabaseConnection) -> u64 {
+    use music_player_entity::track;
+
+    track::Entity::find()
+        .filter(
+            sea_orm::Condition::any()
+                .add(track::Column::Key.is_null())
+                .add(track::Column::Bpm.is_null()),
+        )
+        .count(db)
+        .await
+        .unwrap_or(0) as u64
+}
+
 /// Tracks in the local library that have no key or tempo yet.
 ///
 /// The list the background pass works through. Ordered oldest-first so a

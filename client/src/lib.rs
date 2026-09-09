@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+pub mod analysis;
 pub mod library;
 pub mod playback;
 pub mod playlist;

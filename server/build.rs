@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "proto/objects/v1alpha1/playlist.proto",
                 "proto/objects/v1alpha1/tracklist.proto",
                 "proto/music/v1alpha1/addons.proto",
+                "proto/music/v1alpha1/analysis.proto",
                 "proto/music/v1alpha1/core.proto",
                 "proto/music/v1alpha1/history.proto",
                 "proto/music/v1alpha1/library.proto",

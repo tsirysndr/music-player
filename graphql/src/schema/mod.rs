@@ -5,6 +5,7 @@ use music_player_types::types::Device;
 
 use self::{
     account::{AccountMutation, AccountQuery},
+    analysis::AnalysisQuery,
     devices::{DevicesMutation, DevicesQuery, DevicesSubscription},
     extensions::{ExtensionsMutation, ExtensionsQuery},
     library::{LibraryMutation, LibraryQuery},
@@ -18,6 +19,7 @@ use self::{
 
 pub mod account;
 pub mod addons;
+pub mod analysis;
 pub mod core;
 pub mod devices;
 pub mod extensions;
@@ -44,6 +46,7 @@ pub struct Query(
     ExtensionsQuery,
     ServersQuery,
     AccountQuery,
+    AnalysisQuery,
 );
 
 #[derive(MergedObject, Default)]

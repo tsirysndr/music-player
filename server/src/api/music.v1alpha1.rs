@@ -418,6 +418,743 @@ pub mod addons_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MoodLabel {
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(float, tag = "2")]
+    pub confidence: f32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TrackAnalysis {
+    #[prost(string, tag = "1")]
+    pub track_id: ::prost::alloc::string::String,
+    /// Peak per display bar, 0-255, left to right. Empty when the track has not
+    /// been analysed.
+    #[prost(bytes = "vec", tag = "2")]
+    pub waveform: ::prost::alloc::vec::Vec<u8>,
+    #[prost(float, optional, tag = "3")]
+    pub bpm: ::core::option::Option<f32>,
+    /// How much to believe the bpm, 0-1.
+    #[prost(float, optional, tag = "4")]
+    pub bpm_confidence: ::core::option::Option<f32>,
+    /// -1 dark to 1 bright.
+    #[prost(float, optional, tag = "5")]
+    pub valence: ::core::option::Option<f32>,
+    /// 0 calm to 1 driving.
+    #[prost(float, optional, tag = "6")]
+    pub arousal: ::core::option::Option<f32>,
+    #[prost(message, repeated, tag = "7")]
+    pub moods: ::prost::alloc::vec::Vec<MoodLabel>,
+    /// Integrated loudness, LUFS.
+    #[prost(float, optional, tag = "8")]
+    pub lufs: ::core::option::Option<f32>,
+    #[prost(float, optional, tag = "9")]
+    pub true_peak_db: ::core::option::Option<f32>,
+    /// Seconds, as decoded rather than as the tags claim.
+    #[prost(float, tag = "10")]
+    pub duration: f32,
+    /// False means nothing has been computed yet; every other field is then empty
+    /// rather than zero.
+    #[prost(bool, tag = "11")]
+    pub analyzed: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetTrackAnalysisRequest {
+    #[prost(string, tag = "1")]
+    pub track_id: ::prost::alloc::string::String,
+    /// Analyse it now if it has not been. Off by default: a client drawing a
+    /// waveform wants whatever is ready, not a decode blocking the response.
+    #[prost(bool, tag = "2")]
+    pub analyze_if_missing: bool,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetTrackAnalysisResponse {
+    #[prost(message, optional, tag = "1")]
+    pub analysis: ::core::option::Option<TrackAnalysis>,
+}
+/// Analyse tracks that have not been analysed yet, in the background.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AnalyzeLibraryRequest {
+    /// How many to work through. Analysis is slow and this returns immediately,
+    /// so a caller asking for the whole library gets a long-running background
+    /// job rather than a long-running request.
+    #[prost(int32, tag = "1")]
+    pub limit: i32,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AnalyzeLibraryResponse {
+    /// How many were queued. Fewer than asked for means the rest are done.
+    #[prost(uint64, tag = "1")]
+    pub queued: u64,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetAnalysisStatusRequest {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetAnalysisStatusResponse {
+    /// Analysed tracks in the connected library.
+    #[prost(uint64, tag = "1")]
+    pub analyzed: u64,
+    /// Whether a background pass is running.
+    #[prost(bool, tag = "2")]
+    pub running: bool,
+    /// Still to do in the running pass.
+    #[prost(uint64, tag = "3")]
+    pub remaining: u64,
+}
+/// Where auto-DJ should steer the set. Absent fields mean "wherever the music
+/// goes" — the set still flows, it just is not being pushed in any direction.
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct AutoDjTarget {
+    #[prost(float, optional, tag = "1")]
+    pub bpm: ::core::option::Option<f32>,
+    #[prost(float, optional, tag = "2")]
+    pub valence: ::core::option::Option<f32>,
+    #[prost(float, optional, tag = "3")]
+    pub arousal: ::core::option::Option<f32>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct AutoDjState {
+    #[prost(bool, tag = "1")]
+    pub enabled: bool,
+    #[prost(message, optional, tag = "2")]
+    pub target: ::core::option::Option<AutoDjTarget>,
+    /// Tracks queued after the current one. Auto-DJ tops this up rather than
+    /// choosing one track at a time, so the next few are always visible.
+    #[prost(uint32, tag = "3")]
+    pub queued_ahead: u32,
+    /// How many tracks it has to choose between. Zero means nothing in the
+    /// library has been analysed yet, and auto-DJ can do nothing until it has.
+    #[prost(uint64, tag = "4")]
+    pub candidates: u64,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct SetAutoDjRequest {
+    #[prost(bool, tag = "1")]
+    pub enabled: bool,
+    /// Absent leaves the current target alone; present replaces it whole, so
+    /// clearing a target means sending an empty one rather than omitting it.
+    #[prost(message, optional, tag = "2")]
+    pub target: ::core::option::Option<AutoDjTarget>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct SetAutoDjResponse {
+    #[prost(message, optional, tag = "1")]
+    pub state: ::core::option::Option<AutoDjState>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetAutoDjRequest {}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetAutoDjResponse {
+    #[prost(message, optional, tag = "1")]
+    pub state: ::core::option::Option<AutoDjState>,
+}
+/// Tracks that would sound good after a given one, best first.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SimilarTracksRequest {
+    #[prost(string, tag = "1")]
+    pub track_id: ::prost::alloc::string::String,
+    #[prost(int32, tag = "2")]
+    pub limit: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SimilarTracksResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub tracks: ::prost::alloc::vec::Vec<super::super::metadata::v1alpha1::Track>,
+}
+/// Generated client implementations.
+pub mod analysis_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value
+    )]
+    use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
+    #[derive(Debug, Clone)]
+    pub struct AnalysisServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl AnalysisServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> AnalysisServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> AnalysisServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::Body>>>::Error:
+                Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            AnalysisServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        pub async fn get_track_analysis(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTrackAnalysisRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetTrackAnalysisResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalysisService/GetTrackAnalysis",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalysisService",
+                "GetTrackAnalysis",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn analyze_library(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AnalyzeLibraryRequest>,
+        ) -> std::result::Result<tonic::Response<super::AnalyzeLibraryResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalysisService/AnalyzeLibrary",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalysisService",
+                "AnalyzeLibrary",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_analysis_status(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetAnalysisStatusRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetAnalysisStatusResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalysisService/GetAnalysisStatus",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalysisService",
+                "GetAnalysisStatus",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn similar_tracks(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SimilarTracksRequest>,
+        ) -> std::result::Result<tonic::Response<super::SimilarTracksResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalysisService/SimilarTracks",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalysisService",
+                "SimilarTracks",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn set_auto_dj(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SetAutoDjRequest>,
+        ) -> std::result::Result<tonic::Response<super::SetAutoDjResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalysisService/SetAutoDj");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalysisService",
+                "SetAutoDj",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_auto_dj(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetAutoDjRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetAutoDjResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalysisService/GetAutoDj");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalysisService",
+                "GetAutoDj",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
+/// Generated server implementations.
+pub mod analysis_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with AnalysisServiceServer.
+    #[async_trait]
+    pub trait AnalysisService: std::marker::Send + std::marker::Sync + 'static {
+        async fn get_track_analysis(
+            &self,
+            request: tonic::Request<super::GetTrackAnalysisRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetTrackAnalysisResponse>, tonic::Status>;
+        async fn analyze_library(
+            &self,
+            request: tonic::Request<super::AnalyzeLibraryRequest>,
+        ) -> std::result::Result<tonic::Response<super::AnalyzeLibraryResponse>, tonic::Status>;
+        async fn get_analysis_status(
+            &self,
+            request: tonic::Request<super::GetAnalysisStatusRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetAnalysisStatusResponse>, tonic::Status>;
+        async fn similar_tracks(
+            &self,
+            request: tonic::Request<super::SimilarTracksRequest>,
+        ) -> std::result::Result<tonic::Response<super::SimilarTracksResponse>, tonic::Status>;
+        async fn set_auto_dj(
+            &self,
+            request: tonic::Request<super::SetAutoDjRequest>,
+        ) -> std::result::Result<tonic::Response<super::SetAutoDjResponse>, tonic::Status>;
+        async fn get_auto_dj(
+            &self,
+            request: tonic::Request<super::GetAutoDjRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetAutoDjResponse>, tonic::Status>;
+    }
+    #[derive(Debug)]
+    pub struct AnalysisServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> AnalysisServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for AnalysisServiceServer<T>
+    where
+        T: AnalysisService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/music.v1alpha1.AnalysisService/GetTrackAnalysis" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetTrackAnalysisSvc<T: AnalysisService>(pub Arc<T>);
+                    impl<T: AnalysisService>
+                        tonic::server::UnaryService<super::GetTrackAnalysisRequest>
+                        for GetTrackAnalysisSvc<T>
+                    {
+                        type Response = super::GetTrackAnalysisResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetTrackAnalysisRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalysisService>::get_track_analysis(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetTrackAnalysisSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalysisService/AnalyzeLibrary" => {
+                    #[allow(non_camel_case_types)]
+                    struct AnalyzeLibrarySvc<T: AnalysisService>(pub Arc<T>);
+                    impl<T: AnalysisService>
+                        tonic::server::UnaryService<super::AnalyzeLibraryRequest>
+                        for AnalyzeLibrarySvc<T>
+                    {
+                        type Response = super::AnalyzeLibraryResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::AnalyzeLibraryRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalysisService>::analyze_library(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = AnalyzeLibrarySvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalysisService/GetAnalysisStatus" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetAnalysisStatusSvc<T: AnalysisService>(pub Arc<T>);
+                    impl<T: AnalysisService>
+                        tonic::server::UnaryService<super::GetAnalysisStatusRequest>
+                        for GetAnalysisStatusSvc<T>
+                    {
+                        type Response = super::GetAnalysisStatusResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetAnalysisStatusRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalysisService>::get_analysis_status(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetAnalysisStatusSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalysisService/SimilarTracks" => {
+                    #[allow(non_camel_case_types)]
+                    struct SimilarTracksSvc<T: AnalysisService>(pub Arc<T>);
+                    impl<T: AnalysisService>
+                        tonic::server::UnaryService<super::SimilarTracksRequest>
+                        for SimilarTracksSvc<T>
+                    {
+                        type Response = super::SimilarTracksResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SimilarTracksRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalysisService>::similar_tracks(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SimilarTracksSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalysisService/SetAutoDj" => {
+                    #[allow(non_camel_case_types)]
+                    struct SetAutoDjSvc<T: AnalysisService>(pub Arc<T>);
+                    impl<T: AnalysisService> tonic::server::UnaryService<super::SetAutoDjRequest> for SetAutoDjSvc<T> {
+                        type Response = super::SetAutoDjResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SetAutoDjRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalysisService>::set_auto_dj(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SetAutoDjSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalysisService/GetAutoDj" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetAutoDjSvc<T: AnalysisService>(pub Arc<T>);
+                    impl<T: AnalysisService> tonic::server::UnaryService<super::GetAutoDjRequest> for GetAutoDjSvc<T> {
+                        type Response = super::GetAutoDjResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetAutoDjRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalysisService>::get_auto_dj(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetAutoDjSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => Box::pin(async move {
+                    let mut response = http::Response::new(tonic::body::Body::default());
+                    let headers = response.headers_mut();
+                    headers.insert(
+                        tonic::Status::GRPC_STATUS,
+                        (tonic::Code::Unimplemented as i32).into(),
+                    );
+                    headers.insert(
+                        http::header::CONTENT_TYPE,
+                        tonic::metadata::GRPC_CONTENT_TYPE,
+                    );
+                    Ok(response)
+                }),
+            }
+        }
+    }
+    impl<T> Clone for AnalysisServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "music.v1alpha1.AnalysisService";
+    impl<T> tonic::server::NamedService for AnalysisServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetVersionRequest {}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

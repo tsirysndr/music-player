@@ -16,6 +16,7 @@ pub mod rocksky_like;
 pub mod saved_radio;
 pub mod saved_server;
 pub mod track;
+pub mod track_analysis;
 pub mod track_genres;
 pub mod track_stats;
 

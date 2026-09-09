@@ -233,6 +233,13 @@ export type Levels = {
   right: Scalars['Float']['output'];
 };
 
+/** A named mood with how strongly it was detected. */
+export type Mood = {
+  __typename?: 'Mood';
+  confidence: Scalars['Float']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   /**
@@ -665,6 +672,8 @@ export type Query = {
   account?: Maybe<Account>;
   album: Album;
   albums: Array<Album>;
+  /** How many tracks in the connected library have been analysed. */
+  analyzedTracks: Scalars['Int']['output'];
   artist: Artist;
   artists: Array<Artist>;
   /** The DSP chain's state: EQ, tone, ReplayGain, crossfade, dithering. */
@@ -768,6 +777,14 @@ export type Query = {
   /** The kinds of server this build can talk to, straight from the registry. */
   sourceKinds: Array<SourceKind>;
   track: Track;
+  /**
+   * How a track sounds, if it has been analysed.
+   *
+   * Never analyses on demand. A waveform under a player should appear or not
+   * appear; it should not make opening the player cost a decode, and a
+   * client that wants one computed asks the daemon to analyse the library.
+   */
+  trackAnalysis: TrackAnalysis;
   tracklistTracks: Tracklist;
   tracks: Array<Track>;
 };
@@ -871,6 +888,11 @@ export type QuerySmartPlaylistPreviewArgs = {
 
 export type QueryTrackArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QueryTrackAnalysisArgs = {
+  trackId: Scalars['String']['input'];
 };
 
 
@@ -1084,6 +1106,38 @@ export type Track = {
   uri: Scalars['String']['output'];
 };
 
+/** How a track sounds. */
+export type TrackAnalysis = {
+  __typename?: 'TrackAnalysis';
+  /**
+   * False means nothing has been computed; every other field is then empty
+   * rather than zero.
+   */
+  analyzed: Scalars['Boolean']['output'];
+  /** 0 calm to 1 driving. */
+  arousal?: Maybe<Scalars['Float']['output']>;
+  bpm?: Maybe<Scalars['Float']['output']>;
+  /** How much to believe the bpm, 0–1. */
+  bpmConfidence?: Maybe<Scalars['Float']['output']>;
+  /** Seconds, as decoded rather than as the tags claim. */
+  duration: Scalars['Float']['output'];
+  /** Integrated loudness, LUFS. */
+  lufs?: Maybe<Scalars['Float']['output']>;
+  moods: Array<Mood>;
+  trackId: Scalars['String']['output'];
+  truePeakDb?: Maybe<Scalars['Float']['output']>;
+  /** -1 dark to 1 bright. */
+  valence?: Maybe<Scalars['Float']['output']>;
+  /**
+   * Peak per bar, 0–255, left to right, ready to draw. Empty when the track
+   * has not been analysed.
+   *
+   * A list of integers rather than a base64 blob: it is read by a canvas
+   * that wants numbers, and 400 of them is a few kilobytes either way.
+   */
+  waveform: Array<Scalars['Int']['output']>;
+};
+
 export type TrackInput = {
   discNumber: Scalars['Int']['input'];
   duration?: InputMaybe<Scalars['Float']['input']>;
@@ -1125,6 +1179,13 @@ export type GetAccountQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GetAccountQuery = { __typename?: 'Query', account?: { __typename?: 'Account', did: string, handle: string, displayName?: string | null, avatar?: string | null } | null };
+
+export type GetTrackAnalysisQueryVariables = Exact<{
+  trackId: Scalars['String']['input'];
+}>;
+
+
+export type GetTrackAnalysisQuery = { __typename?: 'Query', trackAnalysis: { __typename?: 'TrackAnalysis', trackId: string, analyzed: boolean, waveform: Array<number>, bpm?: number | null, bpmConfidence?: number | null, valence?: number | null, arousal?: number | null, lufs?: number | null, duration: number, moods: Array<{ __typename?: 'Mood', name: string, confidence: number }> } };
 
 export type ConnectToDeviceMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1785,6 +1846,68 @@ useInfiniteGetAccountQuery.getKey = (variables?: GetAccountQueryVariables) => va
 
 
 useGetAccountQuery.fetcher = (variables?: GetAccountQueryVariables, options?: RequestInit['headers']) => fetcher<GetAccountQuery, GetAccountQueryVariables>(GetAccountDocument, variables, options);
+
+export const GetTrackAnalysisDocument = `
+    query GetTrackAnalysis($trackId: String!) {
+  trackAnalysis(trackId: $trackId) {
+    trackId
+    analyzed
+    waveform
+    bpm
+    bpmConfidence
+    valence
+    arousal
+    lufs
+    duration
+    moods {
+      name
+      confidence
+    }
+  }
+}
+    `;
+
+export const useGetTrackAnalysisQuery = <
+      TData = GetTrackAnalysisQuery,
+      TError = unknown
+    >(
+      variables: GetTrackAnalysisQueryVariables,
+      options?: Omit<UseQueryOptions<GetTrackAnalysisQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<GetTrackAnalysisQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<GetTrackAnalysisQuery, TError, TData>(
+      {
+    queryKey: ['GetTrackAnalysis', variables],
+    queryFn: fetcher<GetTrackAnalysisQuery, GetTrackAnalysisQueryVariables>(GetTrackAnalysisDocument, variables),
+    ...options
+  }
+    )};
+
+useGetTrackAnalysisQuery.getKey = (variables: GetTrackAnalysisQueryVariables) => ['GetTrackAnalysis', variables];
+
+export const useInfiniteGetTrackAnalysisQuery = <
+      TData = InfiniteData<GetTrackAnalysisQuery>,
+      TError = unknown
+    >(
+      variables: GetTrackAnalysisQueryVariables,
+      options: Omit<UseInfiniteQueryOptions<GetTrackAnalysisQuery, TError, TData>, 'queryKey'> & { queryKey?: UseInfiniteQueryOptions<GetTrackAnalysisQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useInfiniteQuery<GetTrackAnalysisQuery, TError, TData>(
+      (() => {
+    const { queryKey: optionsQueryKey, ...restOptions } = options;
+    return {
+      queryKey: optionsQueryKey ?? ['GetTrackAnalysis.infinite', variables],
+      queryFn: (metaData) => fetcher<GetTrackAnalysisQuery, GetTrackAnalysisQueryVariables>(GetTrackAnalysisDocument, {...variables, ...(metaData.pageParam ?? {})})(),
+      ...restOptions
+    }
+  })()
+    )};
+
+useInfiniteGetTrackAnalysisQuery.getKey = (variables: GetTrackAnalysisQueryVariables) => ['GetTrackAnalysis.infinite', variables];
+
+
+useGetTrackAnalysisQuery.fetcher = (variables: GetTrackAnalysisQueryVariables, options?: RequestInit['headers']) => fetcher<GetTrackAnalysisQuery, GetTrackAnalysisQueryVariables>(GetTrackAnalysisDocument, variables, options);
 
 export const ConnectToDeviceDocument = `
     mutation ConnectToDevice($id: ID!) {

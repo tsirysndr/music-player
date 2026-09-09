@@ -78,6 +78,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
   - [Subsonic / Navidrome & Jellyfin](#subsonic--navidrome--jellyfin)
   - [Rocksky scrobbling](#rocksky-scrobbling)
   - [AT Protocol sync](#at-protocol-sync)
+- [Audio analysis & auto-DJ](#audio-analysis--auto-dj)
 - [AI agents (MCP)](#ai-agents-mcp)
 - [Casting](#casting)
 - [Star History](#star-history)
@@ -447,13 +448,41 @@ atproto_force_car_sync = true   # force it on every start
 atproto_car_max_age_hours = 24  # otherwise re-download only once a day (0 = every start)
 ```
 
+## Audio analysis & auto-DJ
+
+Every track can be decoded once and measured: a **waveform**, its **loudness**
+(EBU R128, via `ebur128`), its **tempo**, and its **mood** as a point in
+valence/arousal space (via [`oximedia-mir`](https://crates.io/crates/oximedia-mir)).
+Results are cached in SQLite, so a track is analysed once and never again — the
+audio does not change, so neither does the answer.
+
+That is enough to answer "what should play after this?" without genres, tags or
+anyone else's listening history:
+
+- **Auto-DJ** keeps the queue five tracks deep, each chosen to follow the last
+  by tempo and mood. It never repeats a track, never plays the same artist twice
+  in a row, and never interrupts what is playing. Half and double time count as
+  the same tempo, so it will move between 87 and 174 BPM the way a DJ does.
+- A **target** — energy, brightness, a tempo — steers it. It is a direction, not
+  a filter: the set leans that way over the next few tracks rather than jumping
+  to the most extreme thing that matches.
+- The **waveform** appears under the artwork in the full-screen player on both
+  the desktop and the web client, and doubles as a seek bar — you can aim at the
+  quiet part you remember rather than at a percentage.
+
+Analysis is on demand, not automatic: it costs a decode per track, and a
+download first for a remote server. Start a pass from an agent
+(`analyze_library`) or leave it alone — everything else works without it, and an
+unanalysed track simply shows a flat line where its waveform would be.
+
 ## AI agents (MCP)
 
 `music-player mcp` serves the [Model Context Protocol](https://modelcontextprotocol.io)
 on stdin/stdout, so Claude, Codex, Copilot and anything else that speaks MCP can
-run the player: ask what is on, search the library, work the transport, and build
-a queue. It drives a running daemon over the same gRPC API the desktop and the
-TUI use, so a set an agent queues is the queue every client shows.
+run the player: ask what is on, search the library, work the transport, build a
+queue, and DJ from the audio analysis below. It drives a running daemon over the
+same gRPC API the desktop and the TUI use, so a set an agent queues is the queue
+every client shows.
 
 Register it with Claude Code:
 
@@ -469,6 +498,48 @@ or, for hosts configured by file:
     "music-player": { "command": "music-player", "args": ["mcp"] }
   }
 }
+```
+
+### Try it
+
+Once the MCP server is registered, these all work from a chat prompt. The
+interesting ones are the last few — they are questions about how music *sounds*,
+which a search box cannot answer.
+
+```
+> what's playing?
+
+  Nothing is loaded right now. Want me to put something on?
+
+> put on something upbeat
+
+  Queued 9 tracks, opening with Justice — D.A.N.C.E. and building through
+  Daft Punk and Chromeo. Nothing was interrupted; your queue was empty.
+
+> analyse my library so you can pick by feel
+
+  Started a pass over 812 tracks. It runs in the background — about a second
+  each for local files. I'll work from what's already done in the meantime.
+
+> more like this but calmer, and keep it going
+
+  Handed the queue to auto-DJ with the energy target down at 0.25. It's picked
+  Bonobo — Kiara next, then Tycho. It'll keep five tracks queued and drift
+  gently downward from here rather than dropping straight into ambient.
+
+> what is this track, actually?
+
+  Bicep — Glue: 128 BPM, energy 0.72, fairly bright, -8.4 LUFS. That tempo is
+  why it sat so well after the last one.
+
+> nothing over 100 bpm for the next hour
+
+  Steering auto-DJ to 90 BPM. The two tracks already queued above that are
+  still there — say the word and I'll clear them.
+
+> stop choosing for me
+
+  Auto-DJ off. The four tracks it already queued will play out.
 ```
 
 `skills/music-player/SKILL.md` goes further: it is a [skill](https://code.claude.com/docs/en/skills)

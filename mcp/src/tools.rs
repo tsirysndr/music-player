@@ -212,6 +212,77 @@ pub fn catalogue() -> Value {
             }),
         ),
         tool(
+            "track_analysis",
+            "How a track actually sounds: tempo, mood as valence and energy, \
+             loudness, and how long it really is. The basis for choosing what \
+             goes with what.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "track_id": { "type": "string" },
+                    "analyze_now": {
+                        "type": "boolean",
+                        "description": "Decode it if it has not been analysed. Takes seconds, \
+                                        and needs a download for a remote track. Defaults to false."
+                    }
+                },
+                "required": ["track_id"],
+            }),
+        ),
+        tool(
+            "similar_tracks",
+            "Tracks that would sound good after this one, closest first — by \
+             tempo and mood, not by genre or by what anyone else listened to. \
+             Only considers tracks that have been analysed.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "track_id": { "type": "string" },
+                    "limit": { "type": "integer", "minimum": 1, "maximum": MAX_LIMIT,
+                               "description": "Defaults to 20." }
+                },
+                "required": ["track_id"],
+            }),
+        ),
+        tool(
+            "analyze_library",
+            "Analyse tracks that have not been analysed yet, in the background. \
+             Returns immediately; call again with no arguments to see progress. \
+             Nothing that needs analysis — similar_tracks, auto_dj, waveforms — \
+             works on a track until this has covered it.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer", "minimum": 1, "maximum": 5000,
+                        "description": "How many tracks to work through. Omit to just \
+                                        report progress without starting anything."
+                    }
+                },
+            }),
+        ),
+        tool(
+            "auto_dj",
+            "The automatic DJ: keeps the queue filled with tracks that follow on \
+             from what is playing. Steer it with a target — it leans that way \
+             over the next few tracks rather than jumping. Never interrupts what \
+             is playing.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "enabled": { "type": "boolean", "description": "Omit to read the current state without changing it." },
+                    "bpm": { "type": "number", "minimum": 20, "maximum": 300,
+                             "description": "Tempo to head towards. Half and double time count as the same tempo." },
+                    "energy": { "type": "number", "minimum": 0, "maximum": 1,
+                                "description": "0 calm, 1 driving. The strongest steer of the three." },
+                    "brightness": { "type": "number", "minimum": -1, "maximum": 1,
+                                    "description": "-1 dark or sad, 1 bright or happy." },
+                    "clear_target": { "type": "boolean",
+                                      "description": "Stop steering and let the set drift from wherever it is." }
+                },
+            }),
+        ),
+        tool(
             "list_servers",
             "The saved music servers, and which one the library is being read from. \
              `null` for the connected one means the daemon's own local library.",
@@ -296,6 +367,10 @@ async fn run(session: &mut Session, name: &str, args: &Value) -> Result<Value, E
         "view_queue" => view_queue(session).await,
         "clear_queue" => clear_queue(session).await,
         "set_playback_mode" => set_playback_mode(session, args).await,
+        "track_analysis" => track_analysis(session, args).await,
+        "similar_tracks" => similar_tracks(session, args).await,
+        "analyze_library" => analyze_library(session, args).await,
+        "auto_dj" => auto_dj(session, args).await,
         "list_servers" => list_servers(session).await,
         "connect_server" => connect_server(session, args).await,
         _ => Err(Error::msg(format!("unknown tool: {name}"))),
@@ -610,6 +685,132 @@ async fn set_playback_mode(session: &mut Session, args: &Value) -> Result<Value,
     Ok(json!({ "ok": true, "shuffle": shuffle, "repeat": repeat }))
 }
 
+// ---------------------------------------------------------------- analysis
+
+async fn track_analysis(session: &mut Session, args: &Value) -> Result<Value, Error> {
+    let id = string(args, "track_id")?;
+    let now = args
+        .get("analyze_now")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    let Some(analysis) = session.analysis().await?.track(&id, now).await? else {
+        return Ok(json!({
+            "track_id": id,
+            "analyzed": false,
+            "note": "Not analysed yet. Pass analyze_now, or run analyze_library.",
+        }));
+    };
+
+    Ok(json!({
+        "track_id": id,
+        "analyzed": true,
+        "bpm": analysis.bpm.map(|bpm| bpm.round()),
+        "bpm_confidence": analysis.bpm_confidence,
+        // Named rather than passed through: "valence" and "arousal" are terms
+        // of art, and the point is for these to be usable without knowing them.
+        "energy": analysis.arousal,
+        "brightness": analysis.valence,
+        "moods": analysis.moods.iter().map(|mood| mood.name.clone()).collect::<Vec<_>>(),
+        "loudness_lufs": analysis.lufs,
+        "duration": clock(analysis.duration as u32),
+    }))
+}
+
+async fn similar_tracks(session: &mut Session, args: &Value) -> Result<Value, Error> {
+    let id = string(args, "track_id")?;
+    let limit = limit_of(args);
+    let tracks = session.analysis().await?.similar(&id, limit).await?;
+    Ok(json!({
+        "after": id,
+        "tracks": tracks.iter().map(brief_track).collect::<Vec<_>>(),
+    }))
+}
+
+async fn analyze_library(session: &mut Session, args: &Value) -> Result<Value, Error> {
+    let analysis = session.analysis().await?;
+
+    // No limit means "how is it going" — asking for progress should not start
+    // work as a side effect.
+    if let Some(limit) = args.get("limit").and_then(Value::as_i64) {
+        let queued = analysis
+            .analyze_library(limit.clamp(1, 5_000) as i32)
+            .await?;
+        let status = analysis.status().await?;
+        return Ok(json!({
+            "started": true,
+            "queued": queued,
+            "analyzed_so_far": status.analyzed,
+        }));
+    }
+
+    let status = analysis.status().await?;
+    Ok(json!({
+        "analyzed": status.analyzed,
+        "running": status.running,
+        "remaining": status.remaining,
+    }))
+}
+
+async fn auto_dj(session: &mut Session, args: &Value) -> Result<Value, Error> {
+    use music_player_server::api::music::v1alpha1::AutoDjTarget;
+
+    let analysis = session.analysis().await?;
+
+    let Some(enabled) = args.get("enabled").and_then(Value::as_bool) else {
+        // Reading the state must not change it.
+        return Ok(auto_dj_state(&analysis.auto_dj().await?));
+    };
+
+    let clear = args
+        .get("clear_target")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let bpm = args.get("bpm").and_then(Value::as_f64).map(|v| v as f32);
+    let energy = args.get("energy").and_then(Value::as_f64).map(|v| v as f32);
+    let brightness = args
+        .get("brightness")
+        .and_then(Value::as_f64)
+        .map(|v| v as f32);
+
+    // Absent leaves the target alone, an empty one clears it. Sending a target
+    // only when something was actually said is what keeps "turn it on" from
+    // silently wiping a steer set a moment ago.
+    let target = if clear {
+        Some(AutoDjTarget::default())
+    } else if bpm.is_some() || energy.is_some() || brightness.is_some() {
+        Some(AutoDjTarget {
+            bpm,
+            arousal: energy,
+            valence: brightness,
+        })
+    } else {
+        None
+    };
+
+    let state = analysis.set_auto_dj(enabled, target).await?;
+    Ok(auto_dj_state(&state))
+}
+
+fn auto_dj_state(state: &music_player_server::api::music::v1alpha1::AutoDjState) -> Value {
+    let target = state.target.as_ref();
+    json!({
+        "enabled": state.enabled,
+        "target": {
+            "bpm": target.and_then(|t| t.bpm),
+            "energy": target.and_then(|t| t.arousal),
+            "brightness": target.and_then(|t| t.valence),
+        },
+        "queued_ahead": state.queued_ahead,
+        "candidates": state.candidates,
+        "note": if state.candidates == 0 {
+            "No analysed tracks, so auto-dj has nothing to choose from. Run analyze_library."
+        } else {
+            ""
+        },
+    })
+}
+
 // ----------------------------------------------------------------- servers
 
 async fn list_servers(session: &mut Session) -> Result<Value, Error> {
@@ -771,6 +972,10 @@ mod tests {
             "view_queue",
             "clear_queue",
             "set_playback_mode",
+            "track_analysis",
+            "similar_tracks",
+            "analyze_library",
+            "auto_dj",
             "list_servers",
             "connect_server",
         ];

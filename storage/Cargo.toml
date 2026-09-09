@@ -8,6 +8,10 @@ authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
 description = " The storage module of music player"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies.music-player-analysis]
+path = "../analysis"
+version = "0.2.1"
+
 [dependencies.music-player-settings]
 path = "../settings"
 version = "0.2.1"

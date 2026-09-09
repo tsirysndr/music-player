@@ -23,11 +23,11 @@ use crate::{
 };
 
 use crate::api::music::v1alpha1::{
-    addons_service_server::AddonsServiceServer, core_service_server::CoreServiceServer,
-    history_service_server::HistoryServiceServer, library_service_server::LibraryServiceServer,
-    mixer_service_server::MixerServiceServer, playback_service_server::PlaybackServiceServer,
-    playlist_service_server::PlaylistServiceServer, servers_service_server::ServersServiceServer,
-    tracklist_service_server::TracklistServiceServer,
+    addons_service_server::AddonsServiceServer, analysis_service_server::AnalysisServiceServer,
+    core_service_server::CoreServiceServer, history_service_server::HistoryServiceServer,
+    library_service_server::LibraryServiceServer, mixer_service_server::MixerServiceServer,
+    playback_service_server::PlaybackServiceServer, playlist_service_server::PlaylistServiceServer,
+    servers_service_server::ServersServiceServer, tracklist_service_server::TracklistServiceServer,
 };
 
 const BANNER: &str = r#"
@@ -49,6 +49,11 @@ pub struct MusicPlayerServer {
     peer_map: PeerMap,
     /// Where the library is read from, shared with the GraphQL schema.
     providers: Arc<ProviderState>,
+    /// Auto-DJ's on/off and target, shared between the rpc handlers and the
+    /// loop that tops the queue up.
+    auto_dj: Arc<crate::analysis::AutoDj>,
+    /// Progress of a background analysis pass, shared for the same reason.
+    analysis_progress: Arc<crate::analysis::AnalysisProgress>,
 }
 
 impl MusicPlayerServer {
@@ -65,13 +70,38 @@ impl MusicPlayerServer {
             cmd_tx,
             peer_map,
             providers,
+            auto_dj: Default::default(),
+            analysis_progress: Default::default(),
         }
+    }
+
+    /// The analysis service, and the auto-DJ state it shares with the loop.
+    fn analysis(&self) -> crate::analysis::Analysis {
+        crate::analysis::Analysis::new(
+            self.db.clone(),
+            Arc::clone(&self.providers),
+            Arc::clone(&self.tracklist),
+            Arc::clone(&self.cmd_tx),
+            Arc::clone(&self.auto_dj),
+            Arc::clone(&self.analysis_progress),
+        )
+    }
+
+    /// Start the loop that keeps the queue full while auto-DJ is on.
+    ///
+    /// Started with the server rather than when auto-DJ is switched on: it does
+    /// nothing at all while disabled, and a loop that only exists sometimes is
+    /// a loop that can be started twice.
+    fn spawn_auto_dj(&self) {
+        tokio::spawn(crate::analysis::run_auto_dj(self.analysis()));
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config = read_settings().unwrap();
         let settings = config.try_deserialize::<Settings>().unwrap();
         let addr: SocketAddr = format!("0.0.0.0:{}", settings.port).parse().unwrap();
+
+        self.spawn_auto_dj();
 
         println!("{}", BANNER.magenta());
         println!("Server listening on {}", addr.cyan());
@@ -107,6 +137,7 @@ impl MusicPlayerServer {
                 Arc::clone(&self.cmd_tx),
                 self.db.clone(),
             )))
+            .add_service(AnalysisServiceServer::new(self.analysis()))
             .serve(addr)
             .await?;
         Ok(())
@@ -121,6 +152,8 @@ impl MusicPlayerServer {
         if socket_path.exists() {
             std::fs::remove_file(&socket_path)?;
         }
+
+        self.spawn_auto_dj();
 
         let listener = UnixListener::bind(socket_path)?;
 
@@ -156,6 +189,7 @@ impl MusicPlayerServer {
                 Arc::clone(&self.cmd_tx),
                 self.db.clone(),
             )))
+            .add_service(AnalysisServiceServer::new(self.analysis()))
             .serve_with_incoming(UnixListenerStream::new(listener))
             .await?;
         Ok(())

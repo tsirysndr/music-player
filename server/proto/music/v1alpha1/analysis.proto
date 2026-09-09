@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+import "metadata/v1alpha1/track.proto";
+
+// What a track sounds like, and the automatic DJ that uses it.
+//
+// Analysis is per track and cached: asking twice costs one decode. Auto-DJ
+// reads that cache to keep the queue full without anyone choosing.
+
+message MoodLabel {
+  string name = 1;
+  float confidence = 2;
+}
+
+message TrackAnalysis {
+  string track_id = 1;
+  // Peak per display bar, 0-255, left to right. Empty when the track has not
+  // been analysed.
+  bytes waveform = 2;
+  optional float bpm = 3;
+  // How much to believe the bpm, 0-1.
+  optional float bpm_confidence = 4;
+  // -1 dark to 1 bright.
+  optional float valence = 5;
+  // 0 calm to 1 driving.
+  optional float arousal = 6;
+  repeated MoodLabel moods = 7;
+  // Integrated loudness, LUFS.
+  optional float lufs = 8;
+  optional float true_peak_db = 9;
+  // Seconds, as decoded rather than as the tags claim.
+  float duration = 10;
+  // False means nothing has been computed yet; every other field is then empty
+  // rather than zero.
+  bool analyzed = 11;
+}
+
+message GetTrackAnalysisRequest {
+  string track_id = 1;
+  // Analyse it now if it has not been. Off by default: a client drawing a
+  // waveform wants whatever is ready, not a decode blocking the response.
+  bool analyze_if_missing = 2;
+}
+
+message GetTrackAnalysisResponse { TrackAnalysis analysis = 1; }
+
+// Analyse tracks that have not been analysed yet, in the background.
+message AnalyzeLibraryRequest {
+  // How many to work through. Analysis is slow and this returns immediately,
+  // so a caller asking for the whole library gets a long-running background
+  // job rather than a long-running request.
+  int32 limit = 1;
+}
+
+message AnalyzeLibraryResponse {
+  // How many were queued. Fewer than asked for means the rest are done.
+  uint64 queued = 1;
+}
+
+message GetAnalysisStatusRequest {}
+
+message GetAnalysisStatusResponse {
+  // Analysed tracks in the connected library.
+  uint64 analyzed = 1;
+  // Whether a background pass is running.
+  bool running = 2;
+  // Still to do in the running pass.
+  uint64 remaining = 3;
+}
+
+// Where auto-DJ should steer the set. Absent fields mean "wherever the music
+// goes" — the set still flows, it just is not being pushed in any direction.
+message AutoDjTarget {
+  optional float bpm = 1;
+  optional float valence = 2;
+  optional float arousal = 3;
+}
+
+message AutoDjState {
+  bool enabled = 1;
+  AutoDjTarget target = 2;
+  // Tracks queued after the current one. Auto-DJ tops this up rather than
+  // choosing one track at a time, so the next few are always visible.
+  uint32 queued_ahead = 3;
+  // How many tracks it has to choose between. Zero means nothing in the
+  // library has been analysed yet, and auto-DJ can do nothing until it has.
+  uint64 candidates = 4;
+}
+
+message SetAutoDjRequest {
+  bool enabled = 1;
+  // Absent leaves the current target alone; present replaces it whole, so
+  // clearing a target means sending an empty one rather than omitting it.
+  optional AutoDjTarget target = 2;
+}
+
+message SetAutoDjResponse { AutoDjState state = 1; }
+
+message GetAutoDjRequest {}
+
+message GetAutoDjResponse { AutoDjState state = 1; }
+
+// Tracks that would sound good after a given one, best first.
+message SimilarTracksRequest {
+  string track_id = 1;
+  int32 limit = 2;
+}
+
+message SimilarTracksResponse { repeated metadata.v1alpha1.Track tracks = 1; }
+
+service AnalysisService {
+  rpc GetTrackAnalysis(GetTrackAnalysisRequest)
+      returns (GetTrackAnalysisResponse) {}
+  rpc AnalyzeLibrary(AnalyzeLibraryRequest) returns (AnalyzeLibraryResponse) {}
+  rpc GetAnalysisStatus(GetAnalysisStatusRequest)
+      returns (GetAnalysisStatusResponse) {}
+  rpc SimilarTracks(SimilarTracksRequest) returns (SimilarTracksResponse) {}
+  rpc SetAutoDj(SetAutoDjRequest) returns (SetAutoDjResponse) {}
+  rpc GetAutoDj(GetAutoDjRequest) returns (GetAutoDjResponse) {}
+}

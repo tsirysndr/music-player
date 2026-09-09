@@ -45,6 +45,46 @@ queue or start.
 the user cannot see your tool calls, and the point of asking an agent rather
 than clicking is that you can say *why* those tracks.
 
+## Knowing what a track sounds like
+
+`search` and `browse_library` only know titles. `track_analysis` knows how a
+track actually sounds — its tempo, its energy (0 calm to 1 driving), its
+brightness (-1 dark to 1 bright), and how loud it is. `similar_tracks` uses all
+of that to answer "what goes after this?" without needing genres or anyone
+else's listening history.
+
+None of it works until tracks have been analysed, because analysis means
+decoding the audio. `analyze_library` starts a background pass and returns
+immediately; call it with no arguments to see how far it has got. Run it once
+for a library, and check it before promising a mood-based set:
+
+- `analyze_library` with no arguments → `{"analyzed": 0, "running": false}`
+  means nothing is analysed and `similar_tracks` will fail. Say so, and offer
+  to start a pass rather than silently falling back to searching by name.
+- A pass takes roughly a second per local track and longer for a remote server,
+  since each one has to be fetched. Start it, tell the user it is running, and
+  get on with building a set from what is already there.
+
+## Handing over to auto-DJ
+
+`auto_dj` turns the daemon's own DJ on: it keeps the queue five tracks deep,
+each one chosen to follow the last by tempo and mood, never repeating and never
+playing the same artist twice in a row. It never interrupts what is playing.
+
+Steer it rather than micromanaging it. `energy`, `brightness` and `bpm` are a
+*direction*, not a filter — the set leans that way over the next few tracks
+instead of jumping:
+
+- "wind things down" → `auto_dj` with `enabled: true, energy: 0.25`
+- "keep it going but pick it up" → `energy: 0.8`
+- "something more upbeat and brighter" → `energy: 0.75, brightness: 0.6`
+- "just keep playing" → `enabled: true` with no target at all
+- "stop choosing for me" → `enabled: false`
+
+Prefer auto-DJ over queueing thirty tracks yourself when the user wants music
+to keep going indefinitely: it reacts to skips and to a changed target, which a
+queue you built half an hour ago cannot.
+
 ## DJing
 
 When asked for a set — "put on something for cooking", "build me an hour of
@@ -63,6 +103,10 @@ focus music", "DJ for the party" — the work is selection, not tool calls.
 - **Work from their library.** You can only play what is there. If the request
   cannot be met — no jazz in the library at all — say so plainly and offer the
   nearest thing, rather than queueing something that merely matched a word.
+- **Use the analysis when the request is about feel.** "Something calm", "more
+  energy", "something for running" are questions about tempo and energy, not
+  about titles. Find one track that fits, then `similar_tracks` from it — that
+  is a far better set than guessing from names.
 
 ## The tools
 
@@ -83,6 +127,10 @@ focus music", "DJ for the party" — the work is selection, not tool calls.
 | `clear_queue` | Empty it and stop |
 | `set_playback_mode` | Shuffle on/off, repeat `off`/`queue`/`track` |
 | `list_servers` / `connect_server` | Switch which library is being read |
+| `track_analysis` | Tempo, energy, brightness, loudness of one track |
+| `similar_tracks` | What sounds good after a given track |
+| `analyze_library` | Analyse tracks in the background, and check progress |
+| `auto_dj` | Hand the queue over to the daemon, and steer it |
 
 `connect_server` changes where music is *browsed from*, not where it comes out;
 it never interrupts playback. Only use it if the user asks for a different

@@ -5,6 +5,7 @@ extern crate log;
 mod tests;
 
 pub mod addons;
+pub mod analysis;
 pub mod atproto_sync;
 pub mod core;
 pub mod event;

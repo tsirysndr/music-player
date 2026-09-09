@@ -13,8 +13,8 @@
 
 use anyhow::Error;
 use music_player_client::{
-    library::LibraryClient, playback::PlaybackClient, playlist::PlaylistClient,
-    servers::ServersClient, tracklist::TracklistClient,
+    analysis::AnalysisClient, library::LibraryClient, playback::PlaybackClient,
+    playlist::PlaylistClient, servers::ServersClient, tracklist::TracklistClient,
 };
 
 /// The daemon, as the tools see it.
@@ -26,6 +26,7 @@ pub struct Session {
     library: Option<LibraryClient>,
     playlist: Option<PlaylistClient>,
     servers: Option<ServersClient>,
+    analysis: Option<AnalysisClient>,
 }
 
 impl Session {
@@ -38,7 +39,15 @@ impl Session {
             library: None,
             playlist: None,
             servers: None,
+            analysis: None,
         }
+    }
+
+    pub async fn analysis(&mut self) -> Result<&mut AnalysisClient, Error> {
+        if self.analysis.is_none() {
+            self.analysis = Some(self.connect(AnalysisClient::new).await?);
+        }
+        Ok(self.analysis.as_mut().unwrap())
     }
 
     /// Where the daemon is, for error messages that would otherwise leave the

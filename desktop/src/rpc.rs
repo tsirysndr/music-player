@@ -17,17 +17,19 @@ use crate::AppWindow;
 
 pub use music_player_server::api::metadata::v1alpha1::Track as TrackProto;
 use music_player_server::api::music::v1alpha1::{
-    library_service_client::LibraryServiceClient, mixer_service_client::MixerServiceClient,
-    playback_service_client::PlaybackServiceClient, playlist_service_client::PlaylistServiceClient,
+    analysis_service_client::AnalysisServiceClient, library_service_client::LibraryServiceClient,
+    mixer_service_client::MixerServiceClient, playback_service_client::PlaybackServiceClient,
+    playlist_service_client::PlaylistServiceClient,
     tracklist_service_client::TracklistServiceClient, AddItemRequest, AddTrackRequest,
     ClearTracklistRequest, CreateRequest, DeleteRequest, FindAllRequest, GetAlbumDetailsRequest,
     GetAlbumsRequest, GetArtistsRequest, GetAudioSettingsRequest, GetCurrentlyPlayingSongRequest,
-    GetLikedTracksRequest, GetPlaylistDetailsRequest, GetTracklistTracksRequest, GetTracksRequest,
-    GetVolumeRequest, LikeTrackRequest, LoadTracksRequest, NextRequest, PauseRequest,
-    PlayNextRequest, PlayRequest, PlayTrackAtRequest, PreviewSmartPlaylistRequest, PreviousRequest,
-    RemoveItemRequest, RemoveTrackAtRequest, RenameRequest, SearchRequest, SeekRequest,
-    SetAudioSettingRequest, SetEqBandGainRequest, SetMuteRequest, SetRepeatRequest,
-    SetVolumeRequest, ShuffleRequest, SmartPlaylist as SmartPlaylistProto, StreamLevelsRequest,
+    GetLikedTracksRequest, GetPlaylistDetailsRequest, GetTrackAnalysisRequest,
+    GetTracklistTracksRequest, GetTracksRequest, GetVolumeRequest, LikeTrackRequest,
+    LoadTracksRequest, NextRequest, PauseRequest, PlayNextRequest, PlayRequest, PlayTrackAtRequest,
+    PreviewSmartPlaylistRequest, PreviousRequest, RemoveItemRequest, RemoveTrackAtRequest,
+    RenameRequest, SearchRequest, SeekRequest, SetAudioSettingRequest, SetEqBandGainRequest,
+    SetMuteRequest, SetRepeatRequest, SetVolumeRequest, ShuffleRequest,
+    SmartPlaylist as SmartPlaylistProto, StreamLevelsRequest,
 };
 
 use crate::likes;
@@ -83,7 +85,6 @@ pub enum Cmd {
     /// library could never be: that cache is one page of a remote library.
     Search(String),
     /// Who is signed in, if anyone.
-    LoadAccount,
     SignIn {
         handle: String,
         password: String,
@@ -446,7 +447,7 @@ async fn session(
     // the local library when a provider is connected.
     load_connected_provider(weak).await;
     let _ = load_servers(weak).await;
-    load_account(weak).await;
+    tokio::spawn(load_account_when_ready(weak.clone()));
     tokio::spawn(stream_levels(channel.clone(), weak.clone()));
     init_volume(channel, weak).await;
     init_audio_settings(channel, weak).await;
@@ -456,6 +457,9 @@ async fn session(
     // Poll now-playing + queue until the daemon (or the target) goes away.
     let mut tracklist = TracklistServiceClient::new(channel.clone());
     let mut last_art: Option<String> = None;
+    // The waveform is a property of the track, so it is fetched once when the
+    // track changes rather than on every poll.
+    let mut last_waveform_track = String::new();
     let mut format_cache: HashMap<String, (u32, u32)> = HashMap::new();
     loop {
         if SWITCH_GEN.load(Ordering::SeqCst) != session_gen {
@@ -560,6 +564,24 @@ async fn session(
             }
             None => String::new(),
         };
+
+        if track_id != last_waveform_track {
+            last_waveform_track = track_id.clone();
+            // Cleared first: a stale waveform under a new track is worse than
+            // none, because it invites seeking to the wrong place.
+            let _ = weak.upgrade_in_event_loop(|app| {
+                app.set_waveform_bars(slint::ModelRc::new(
+                    slint::VecModel::from(Vec::<f32>::new()),
+                ));
+            });
+            if !track_id.is_empty() {
+                tokio::spawn(load_waveform(
+                    channel.clone(),
+                    track_id.clone(),
+                    weak.clone(),
+                ));
+            }
+        }
 
         if art_file != last_art {
             last_art = art_file.clone();
@@ -1487,7 +1509,13 @@ async fn connect_provider(
 /// The daemon is the authority: an `atradio login` at the terminal, or
 /// credentials in the environment, count as signed in here too — there is one
 /// session, however it was established.
-async fn load_account(weak: &Weak<AppWindow>) {
+/// Load the signed-in account into the sidebar.
+///
+/// Returns whether the daemon *answered*. Nobody being signed in is an answer;
+/// the http server not being up yet is not, and the two must not look the same
+/// — writing an empty handle for an unreachable daemon is what left the row
+/// showing "Sign in" for an account that was signed in all along.
+async fn load_account(weak: &Weak<AppWindow>) -> bool {
     const QUERY: &str = r#"query { account { handle displayName avatar } }"#;
     let (handle, name, avatar_url) = match graphql(QUERY, serde_json::json!({})).await {
         Ok(data) => {
@@ -1501,7 +1529,10 @@ async fn load_account(weak: &Weak<AppWindow>) {
                 account["avatar"].as_str().map(str::to_owned),
             )
         }
-        Err(_) => (String::new(), String::new(), None),
+        Err(cause) => {
+            tracing::debug!(%cause, "could not read the account");
+            return false;
+        }
     };
 
     // Fetched before touching the UI so the row appears complete rather than
@@ -1524,6 +1555,57 @@ async fn load_account(weak: &Weak<AppWindow>) {
             None => app.set_account_has_avatar(false),
         }
     });
+    true
+}
+
+/// The current track's waveform, if the daemon has analysed it.
+///
+/// Never asks the daemon to analyse on demand. Opening the player should not
+/// cost a decode — a track that has not been analysed simply shows a flat line,
+/// and the analysis pass fills it in later.
+async fn load_waveform(channel: Channel, track_id: String, weak: Weak<AppWindow>) {
+    let mut client = AnalysisServiceClient::new(channel);
+    let Ok(response) = client
+        .get_track_analysis(GetTrackAnalysisRequest {
+            track_id,
+            analyze_if_missing: false,
+        })
+        .await
+    else {
+        return;
+    };
+    let Some(analysis) = response.into_inner().analysis else {
+        return;
+    };
+    if !analysis.analyzed {
+        return;
+    }
+
+    let bars = resample_waveform(&analysis.waveform, WAVEFORM_BARS);
+    let _ = weak.upgrade_in_event_loop(move |app| {
+        app.set_waveform_bars(slint::ModelRc::new(slint::VecModel::from(bars)));
+    });
+}
+
+/// Load the account once the daemon's http server is up.
+///
+/// gRPC and http start separately, and the session begins the moment gRPC
+/// answers — which is usually before there is anything listening for a GraphQL
+/// query. A single attempt therefore asked too early and gave up, while the web
+/// client, which cannot load at all until http is serving it, always saw the
+/// account. Retrying is the whole fix.
+async fn load_account_when_ready(weak: Weak<AppWindow>) {
+    for attempt in 0..24u32 {
+        if load_account(&weak).await {
+            return;
+        }
+        // Backs off to a couple of seconds and stays there: a daemon that is
+        // slow to start is worth waiting for, and one that is never coming
+        // costs nothing but an idle task.
+        let wait = Duration::from_millis(250 * u64::from(attempt.min(8) + 1));
+        tokio::time::sleep(wait).await;
+    }
+    tracing::debug!("gave up reading the account");
 }
 
 /// Download and decode an avatar.
@@ -2355,9 +2437,6 @@ async fn cmd_loop(
                         crate::ui_set_search_hits(&app, tracks, albums, artists);
                     });
                 }
-                Cmd::LoadAccount => {
-                    load_account(&weak).await;
-                }
                 Cmd::SignIn { handle, password } => {
                     const MUTATION: &str = r#"mutation($handle: String!, $password: String!) {
                         signIn(handle: $handle, password: $password) { did }
@@ -2374,7 +2453,7 @@ async fn cmd_loop(
                                 app.set_signin_error("".into());
                                 app.set_show_signin(false);
                             });
-                            load_account(&weak).await;
+                            let _ = load_account(&weak).await;
                         }
                         Err(e) => {
                             let message = e.to_string();
@@ -2388,7 +2467,7 @@ async fn cmd_loop(
                 Cmd::SignOut => {
                     const MUTATION: &str = r#"mutation { signOut }"#;
                     let _ = graphql(MUTATION, serde_json::json!({})).await;
-                    load_account(&weak).await;
+                    let _ = load_account(&weak).await;
                 }
                 Cmd::LoadServers => {
                     if let Err(e) = load_servers(&weak).await {
@@ -2543,9 +2622,25 @@ async fn insert_track_ids(
 /// meter and measured nothing.
 async fn ticker(weak: Weak<AppWindow>) {
     const TICK_S: f64 = 0.06;
+    let mut elapsed_total = 0.0f32;
     loop {
         tokio::time::sleep(Duration::from_millis((TICK_S * 1000.0) as u64)).await;
+        elapsed_total += TICK_S as f32;
+        let now = elapsed_total;
         let _ = weak.upgrade_in_event_loop(move |app| {
+            // Only while the full player is open: this rebuilds a model every
+            // frame, and nothing is looking at it otherwise.
+            if app.get_show_full_player() {
+                let targets = if app.get_playing() {
+                    eq_targets(app.get_vu_left(), app.get_vu_right(), EQ_BARS, now)
+                } else {
+                    // Paused bars settle to the floor rather than freezing
+                    // mid-bounce, which reads as the app having hung.
+                    vec![0.0; EQ_BARS]
+                };
+                app.set_eq_bars(slint::ModelRc::new(slint::VecModel::from(targets)));
+                app.set_waveform_progress(app.get_progress());
+            }
             if app.get_playing() {
                 let length = app.get_length_s();
                 let elapsed = app.get_elapsed_s() + TICK_S as f32;
@@ -2623,9 +2718,137 @@ async fn stream_levels(channel: Channel, weak: Weak<AppWindow>) {
     });
 }
 
+/// How many bars the full player's equalizer draws.
+pub const EQ_BARS: usize = 28;
+
+/// How many bars its waveform draws.
+///
+/// Fewer than the 400 the daemon stores: this is a rectangle per bar in the
+/// scene graph rather than a canvas, and 400 of them is a cost paid on every
+/// frame to draw detail nobody can see at this width.
+pub const WAVEFORM_BARS: usize = 120;
+
+/// The height each equalizer bar is heading for.
+///
+/// The daemon measures left, right, and each again below 200 Hz — not a
+/// spectrum — so this is a shaped response rather than an FFT. Two things make
+/// it read as one, and both are about how music behaves:
+///
+/// Bars lean on the channel nearest them, so a hard-panned hat lifts one side.
+/// And low bars are steadier than high ones, because bass is sustained and
+/// treble is transient — without that, uniform bars read instantly as
+/// decoration.
+///
+/// The same shaping as the web client's, deliberately: it is one instrument
+/// shown in two places, and it should look like the same instrument.
+fn eq_targets(left: f32, right: f32, count: usize, time: f32) -> Vec<f32> {
+    let safe = |value: f32| {
+        if value.is_finite() {
+            value.clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    };
+    let (left, right) = (safe(left), safe(right));
+
+    (0..count)
+        .map(|i| {
+            let position = if count <= 1 {
+                0.0
+            } else {
+                i as f32 / (count - 1) as f32
+            };
+            // 0 at the edges, 1 in the middle: how far this bar is from "its"
+            // channel.
+            let blend = 1.0 - (position - 0.5).abs() * 2.0;
+            let channel = if position < 0.5 {
+                left + (right - left) * blend
+            } else {
+                right + (left - right) * blend
+            };
+
+            let tilt = 1.0 - position * 0.45;
+            let flicker =
+                1.0 + 0.22 * position * (time * (5.0 + i as f32 * 1.7) + i as f32 * 2.399).sin();
+            (channel * tilt * flicker).clamp(0.0, 1.0)
+        })
+        .collect()
+}
+
+/// The stored waveform, resampled to the number of bars actually drawn.
+///
+/// Peak per output bar rather than an average: averaging smooths away the
+/// transients that make a waveform recognisable as a particular song.
+fn resample_waveform(stored: &[u8], count: usize) -> Vec<f32> {
+    if stored.is_empty() || count == 0 {
+        return Vec::new();
+    }
+    (0..count)
+        .map(|i| {
+            let start = i * stored.len() / count;
+            let end = ((i + 1) * stored.len() / count)
+                .max(start + 1)
+                .min(stored.len());
+            let peak = stored[start..end].iter().copied().max().unwrap_or(0);
+            peak as f32 / 255.0
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// One height per bar, all drawable.
+    #[test]
+    fn eq_bars_stay_in_range() {
+        let targets = eq_targets(0.8, 0.4, EQ_BARS, 1.5);
+        assert_eq!(targets.len(), EQ_BARS);
+        assert!(targets.iter().all(|value| (0.0..=1.0).contains(value)));
+    }
+
+    #[test]
+    fn silence_draws_nothing() {
+        assert!(eq_targets(0.0, 0.0, 12, 3.0).iter().all(|v| *v == 0.0));
+    }
+
+    /// The display is stereo: a sound only on the left lifts the left side.
+    #[test]
+    fn each_side_leans_on_its_own_channel() {
+        let targets = eq_targets(1.0, 0.0, 20, 0.0);
+        assert!(targets[0] > targets[19], "{targets:?}");
+    }
+
+    /// A dropped frame arrives as NaN; drawing it would be a bar of NaN pixels.
+    #[test]
+    fn a_broken_level_reads_as_silence() {
+        assert!(eq_targets(f32::NAN, f32::NAN, 8, 1.0)
+            .iter()
+            .all(|v| *v == 0.0));
+    }
+
+    /// The waveform is drawn at the width chosen here, whatever was stored.
+    #[test]
+    fn the_waveform_is_resampled_to_what_is_drawn() {
+        assert_eq!(
+            resample_waveform(&[128; 400], WAVEFORM_BARS).len(),
+            WAVEFORM_BARS
+        );
+        // More bars than stored peaks still fills the width.
+        assert_eq!(resample_waveform(&[10, 200, 30], 120).len(), 120);
+        assert!(resample_waveform(&[], 120).is_empty());
+    }
+
+    /// Peaks survive the resampling — averaging would flatten them, and they
+    /// are what makes a waveform recognisable.
+    #[test]
+    fn resampling_keeps_the_peaks() {
+        let mut stored = vec![20u8; 400];
+        stored[200] = 255;
+        let bars = resample_waveform(&stored, 20);
+        assert_eq!(bars[10], 1.0);
+        assert!(bars[0] < 0.2);
+    }
 
     /// The meter's auto-gain, extracted so it can be reasoned about: the
     /// loudest thing heard recently is the top of the meter.

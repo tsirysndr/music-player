@@ -23,6 +23,7 @@ export {
 export { default as Dialog } from "./Dialog";
 export type { DialogProps } from "./Dialog";
 export { default as EmptyState } from "./EmptyState";
+export { default as EqualizerBars } from "./EqualizerBars";
 export { default as EqBandSlider } from "./EqBandSlider";
 export { default as FilterBox } from "./FilterBox";
 export { default as IconButton } from "./IconButton";
@@ -57,3 +58,4 @@ export { default as Toggle } from "./Toggle";
 export { default as TrackRow, TrackListHeader } from "./TrackRow";
 export type { PlaylistOption, TrackRowItem } from "./TrackRow";
 export { default as VfdDisplay } from "./VfdDisplay";
+export { default as Waveform } from "./Waveform";

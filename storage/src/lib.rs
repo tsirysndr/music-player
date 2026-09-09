@@ -8,6 +8,7 @@ use sea_orm::{sea_query, ConnectOptions, ConnectionTrait, DatabaseConnection};
 pub mod account;
 pub mod atproto;
 pub mod atradio;
+pub mod auto_dj;
 pub mod extension_state;
 pub mod radio_resolve;
 pub mod radio_stream;
@@ -17,6 +18,7 @@ pub mod rocksky_likes;
 pub mod saved_servers;
 pub mod searcher;
 pub mod smart_playlist;
+pub mod track_analysis;
 pub mod track_cache;
 
 pub mod repo;

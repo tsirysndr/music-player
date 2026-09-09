@@ -67,6 +67,17 @@ export component AppWindow inherits Window {
     in-out property <string> vfd-info: "--- kbps   --.- kHz";
     in-out property <float> vu-left: 0;
     in-out property <float> vu-right: 0;
+    // The current track's waveform, 0..1 per bar, already resampled to the
+    // number of bars the full player draws. Empty until the track has been
+    // analysed — the player then shows a flat line rather than nothing, so the
+    // layout does not jump when the analysis arrives.
+    in-out property <[float]> waveform-bars: [];
+    // How far through, 0..1. Drives which bars read as played.
+    in-out property <float> waveform-progress: 0;
+    // Equalizer bar heights, 0..1, recomputed from the output levels on every
+    // tick. Computed in Rust rather than here because it is the same shaping
+    // the web client uses, and one description of it is enough.
+    in-out property <[float]> eq-bars: [];
     in-out property <float> volume: 0.75;
     // Muted at the daemon, which keeps `volume` — unmuting restores the level
     // rather than guessing one.
@@ -2249,7 +2260,8 @@ export component AppWindow inherits Window {
             alignment: center;
             spacing: 16px;
             Rectangle {
-                width: min(parent.width, parent.height - 110px);
+                // Leaves room for the waveform and the equalizer below.
+                width: min(parent.width, parent.height - 210px);
                 height: self.width;
                 background: Theme.art-placeholder;
                 clip: true;
@@ -2257,6 +2269,71 @@ export component AppWindow inherits Window {
                 drop-shadow-blur: 40px;
                 if root.now-has-art : Image { width: parent.width; height: parent.height; source: root.now-art; image-fit: cover; }
                 if !root.now-has-art : Image { source: Icons.music; colorize: Theme.text-muted; width: parent.width * 0.3; height: self.width; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+            }
+
+            // The track's own waveform, from the daemon's analysis, doubling as
+            // a seek bar. It shows *where* in the song you are aiming — the
+            // quiet intro, the drop — which a progress bar cannot.
+            waveform := Rectangle {
+                height: 48px;
+                // A live stream has no length and no waveform to draw.
+                visible: !root.now-is-radio;
+
+                // A flat line while nothing has been analysed, so opening the
+                // player does not shift everything when the bars arrive.
+                if root.waveform-bars.length == 0 : Rectangle {
+                    y: (parent.height - 2px) / 2;
+                    width: parent.width;
+                    height: 2px;
+                    background: Theme.border;
+                }
+
+                HorizontalLayout {
+                    width: parent.width;
+                    height: parent.height;
+                    alignment: stretch;
+                    spacing: 1px;
+                    for level[i] in root.waveform-bars : Rectangle {
+                        // Never zero: a silent passage is a quiet part of the
+                        // track, not a gap in it.
+                        height: max(3px, level * parent.height);
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 1px;
+                        background: (i + 1) / root.waveform-bars.length <= root.waveform-progress
+                            ? Theme.accent : Theme.border;
+                    }
+                }
+
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    // The same callback the progress bar uses: one way to seek.
+                    clicked => { root.seek(self.pressed-x / parent.width); }
+                }
+            }
+
+            // Live equalizer, driven by the levels the daemon measures on the
+            // audio leaving the output — so it moves with what is actually
+            // heard, including on a cast device this app never decodes.
+            Rectangle {
+                height: 32px;
+                opacity: 0.9;
+                HorizontalLayout {
+                    width: parent.width;
+                    height: parent.height;
+                    alignment: stretch;
+                    spacing: 2px;
+                    for level in root.eq-bars : Rectangle {
+                        height: max(2px, level * parent.height);
+                        y: parent.height - self.height;
+                        border-radius: 1px;
+                        background: @linear-gradient(0deg,
+                            Theme.meter-low 0%, Theme.meter-mid 60%, Theme.meter-high 100%);
+                        // Smooths between ticks, which arrive at 20 Hz — without
+                        // it the bars step visibly rather than moving.
+                        animate height { duration: 90ms; easing: ease-out; }
+                    }
+                }
             }
         }
     }

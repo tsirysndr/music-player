@@ -27,6 +27,10 @@ version = "0.2.1"
 path = "../settings"
 version = "0.2.1"
 
+[dependencies.music-player-analysis]
+path = "../analysis"
+version = "0.2.1"
+
 [dependencies.music-player-storage]
 path = "../storage"
 version = "0.2.1"

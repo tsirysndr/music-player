@@ -18,6 +18,7 @@ mod m20260907_000001_smart_playlists;
 mod m20260907_000002_create_extension;
 mod m20260908_000001_create_saved_server;
 mod m20260909_000001_create_genre;
+mod m20260909_000002_create_track_analysis;
 
 /// Create the database file if needed and bring the schema up to date,
 /// without going through the sea-orm migration CLI (which parses argv).
@@ -54,6 +55,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260907_000002_create_extension::Migration),
             Box::new(m20260908_000001_create_saved_server::Migration),
             Box::new(m20260909_000001_create_genre::Migration),
+            Box::new(m20260909_000002_create_track_analysis::Migration),
         ]
     }
 }

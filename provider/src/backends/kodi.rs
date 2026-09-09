@@ -205,6 +205,8 @@ impl MusicProvider for Kodi {
 
     fn capabilities(&self) -> ProviderCapabilities {
         ProviderCapabilities {
+            // Kodi has genres, but browsing them is not wired up yet.
+            genres: false,
             playlists: true,
             // Kodi has star ratings, not likes; showing one as the other would
             // be worse than showing nothing.

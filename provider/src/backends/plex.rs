@@ -201,6 +201,7 @@ impl MusicProvider for Plex {
 
     fn capabilities(&self) -> ProviderCapabilities {
         ProviderCapabilities {
+            genres: false,
             playlists: true,
             // Plex has star ratings, not likes.
             liked: false,

@@ -106,6 +106,9 @@ impl MusicProvider for MusicPlayer {
 
     fn capabilities(&self) -> ProviderCapabilities {
         ProviderCapabilities {
+            // A peer daemon exposes its own genres over GraphQL; not
+            // wired up yet, so the local library answers instead.
+            genres: false,
             playlists: true,
             liked: true,
             native_search: true,

@@ -42,6 +42,53 @@ async fn setup_searcher() -> (tempfile::TempDir, Searcher) {
     (dir, Searcher::new(conn))
 }
 
+/// A genre listing has to reach tracks by *either* route: the file's own tag
+/// or the artist's. Most files carry no usable genre tag, so a listing built
+/// on tags alone is nearly empty, and one built on artists alone mis-files
+/// every compilation.
+#[tokio::test]
+async fn genres_reach_tracks_by_tag_and_by_artist() {
+    use crate::repo::genre::GenreRepository;
+
+    let (_dir, searcher) = setup_searcher().await;
+    let conn = searcher.get_connection();
+
+    // "Hip Hop" reaches the track through its own tag; "Trap" only through
+    // the artist, which is the case the artist link exists for.
+    for sql in [
+        "INSERT INTO genre (id, name) VALUES ('g1', 'Hip Hop')",
+        "INSERT INTO genre (id, name) VALUES ('g2', 'Trap')",
+        "INSERT INTO genre (id, name) VALUES ('g3', 'Polka')",
+        r#"INSERT INTO track_genres (id, track_id, genre_id)
+            VALUES ('tg1', '3ac1f226a5a75408acb57e97bd5feca2', 'g1')"#,
+        r#"INSERT INTO artist_genres (id, artist_id, genre_id)
+            VALUES ('ag1', '0afe1226a5a75408acb57e97bd5feca1', 'g2')"#,
+    ] {
+        conn.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
+            .await
+            .unwrap();
+    }
+
+    let genres = GenreRepository::new(conn)
+        .find_all(None, None)
+        .await
+        .unwrap();
+    let names: Vec<&str> = genres.iter().map(|g| g.name.as_str()).collect();
+    assert!(names.contains(&"Hip Hop"), "{names:?}");
+    assert!(names.contains(&"Trap"), "reached via the artist: {names:?}");
+    // A genre nothing reaches is omitted rather than shown as empty.
+    assert!(!names.contains(&"Polka"), "{names:?}");
+
+    for id in ["g1", "g2"] {
+        let tracks = GenreRepository::new(conn)
+            .tracks(id, None, None)
+            .await
+            .unwrap();
+        assert_eq!(tracks.len(), 1, "{id} should reach the track");
+        assert_eq!(tracks[0].title, "Futsal Shuffle 2020");
+    }
+}
+
 #[tokio::test]
 async fn search_song_with_fts5() {
     let (_dir, searcher) = setup_searcher().await;

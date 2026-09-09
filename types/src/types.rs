@@ -371,6 +371,16 @@ pub struct Track {
     pub liked: Option<bool>,
 }
 
+/// A genre, as a library reports it.
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct Genre {
+    pub id: String,
+    pub name: String,
+    /// How many tracks it holds, when the source says. Zero means unknown
+    /// rather than empty — the same distinction a playlist's count draws.
+    pub track_count: u32,
+}
+
 #[derive(Default, Clone)]
 pub struct Playlist {
     pub id: String,

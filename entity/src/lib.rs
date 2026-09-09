@@ -4,16 +4,19 @@ mod tests;
 pub mod addon;
 pub mod album;
 pub mod artist;
+pub mod artist_genres;
 pub mod artist_tracks;
 pub mod atproto_repo_sync;
 pub mod extension;
 pub mod folder;
+pub mod genre;
 pub mod playlist;
 pub mod playlist_tracks;
 pub mod rocksky_like;
 pub mod saved_radio;
 pub mod saved_server;
 pub mod track;
+pub mod track_genres;
 pub mod track_stats;
 
 pub mod select_result {

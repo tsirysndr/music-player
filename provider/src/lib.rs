@@ -27,7 +27,7 @@ pub use config::ProviderConfig;
 pub use registry::{ProviderFactory, ProviderKindInfo, ProviderRegistry};
 pub use state::{ConnectedProvider, ProviderState};
 
-pub use music_player_types::types::{Album, Artist, Playlist, Track};
+pub use music_player_types::types::{Album, Artist, Genre, Playlist, Track};
 use std::fmt;
 
 /// A slice of a listing. `limit <= 0` means "as many as the backend will give".
@@ -77,6 +77,9 @@ impl Default for Page {
 /// which is harder to get wrong than remembering to opt out.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ProviderCapabilities {
+    /// Whether this server can list genres. False means the Genres screen
+    /// shows the local library instead of an empty page.
+    pub genres: bool,
     pub playlists: bool,
     pub liked: bool,
     /// The backend has a real search endpoint. When false the default
@@ -209,6 +212,24 @@ pub trait MusicProvider: Send + Sync + 'static {
             kind: self.kind(),
             feature: "likes",
         })
+    }
+
+    /// The genres this server knows about.
+    ///
+    /// Every backend that has them has its own endpoint for it, and none of
+    /// them expose the local `genre` table — so without this the Genres screen
+    /// would go blank the moment a server was connected, which is the shape of
+    /// bug this trait exists to prevent.
+    ///
+    /// The default is empty rather than an error: a server without genres has
+    /// none, which is a fact, not a failure.
+    async fn genres(&self, _page: Page) -> Result<Vec<Genre>, ProviderError> {
+        Ok(vec![])
+    }
+
+    /// The tracks in one genre.
+    async fn genre_tracks(&self, _genre: &str, _page: Page) -> Result<Vec<Track>, ProviderError> {
+        Ok(vec![])
     }
 
     /// Add a track to one of this server's playlists.

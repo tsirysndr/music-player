@@ -6,8 +6,8 @@
 //! the token off it.
 
 use crate::{
-    http, Album, Artist, MusicProvider, Page, Playlist, ProviderCapabilities, ProviderConfig,
-    ProviderError, ProviderFactory, Track,
+    http, Album, Artist, Genre, MusicProvider, Page, Playlist, ProviderCapabilities,
+    ProviderConfig, ProviderError, ProviderFactory, Track,
 };
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -241,6 +241,7 @@ impl MusicProvider for Subsonic {
 
     fn capabilities(&self) -> ProviderCapabilities {
         ProviderCapabilities {
+            genres: true,
             playlists: true,
             liked: true,
             native_search: true,
@@ -405,6 +406,42 @@ impl MusicProvider for Subsonic {
         let endpoint = if liked { "star" } else { "unstar" };
         let url = self.api_url(endpoint, &[("id", id)])?;
         request(url).await.map(|_| ())
+    }
+
+    /// `getGenres`, which reports a song count per genre.
+    async fn genres(&self, page: Page) -> Result<Vec<Genre>, ProviderError> {
+        let url = self.api_url("getGenres", &[])?;
+        let response = request(url).await?;
+        let genres = response.genres.unwrap_or_default();
+        Ok(page.slice(
+            genres
+                .genre
+                .into_iter()
+                .filter(|genre| !genre.value.trim().is_empty())
+                .map(|genre| Genre {
+                    id: genre.value.clone(),
+                    name: genre.value,
+                    track_count: genre.song_count.unwrap_or(0).max(0) as u32,
+                })
+                .collect(),
+        ))
+    }
+
+    /// `getSongsByGenre`, whose `genre` parameter is the name — Subsonic has
+    /// no genre id, which is why [`Genre::id`] carries the name here.
+    async fn genre_tracks(&self, genre: &str, page: Page) -> Result<Vec<Track>, ProviderError> {
+        let limit = normalize_limit(page.limit);
+        let url = self.api_url(
+            "getSongsByGenre",
+            &[
+                ("genre", genre),
+                ("count", &limit.to_string()),
+                ("offset", &page.offset.max(0).to_string()),
+            ],
+        )?;
+        let response = request(url).await?;
+        let songs = response.songs_by_genre.unwrap_or_default();
+        Ok(songs.song.iter().map(|song| self.map_song(song)).collect())
     }
 
     async fn add_to_playlist(
@@ -592,6 +629,9 @@ pub struct ResponseBody {
     pub search_result3: Option<SearchResult3>,
     #[serde(rename = "starred2")]
     pub starred2: Option<Starred2>,
+    pub genres: Option<Genres>,
+    #[serde(rename = "songsByGenre")]
+    pub songs_by_genre: Option<SongsByGenre>,
     pub playlists: Option<Playlists>,
     pub playlist: Option<PlaylistID3>,
 }
@@ -669,6 +709,28 @@ pub struct Child {
     pub path: Option<String>,
     pub bit_rate: Option<u32>,
     pub sampling_rate: Option<u32>,
+}
+
+/// `getGenres` — every genre, with how many songs each holds.
+#[derive(Debug, Default, Deserialize)]
+pub struct Genres {
+    #[serde(default)]
+    pub genre: Vec<GenreEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenreEntry {
+    /// Subsonic names genres rather than giving them ids.
+    pub value: String,
+    pub song_count: Option<i32>,
+    pub album_count: Option<i32>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct SongsByGenre {
+    #[serde(default)]
+    pub song: Vec<Child>,
 }
 
 /// `getStarred2` — the songs the user has starred on this server.

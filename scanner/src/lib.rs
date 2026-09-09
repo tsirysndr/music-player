@@ -180,6 +180,12 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     if let Err(e) = searcher.reindex().await {
         tracing::warn!("typesense reindex failed: {e}");
     }
+    // Genres from the files' own tags. Cheap and local, so it runs whether or
+    // not the network enrichment below succeeds.
+    if let Err(e) = index_track_genres(&db).await {
+        tracing::warn!("genre indexing failed: {e}");
+    }
+
     // Artist pictures come from the Rocksky API in batch; network problems
     // must not fail the scan either.
     if let Err(e) = update_artist_pictures(&db).await {
@@ -194,14 +200,78 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
     Ok(songs)
 }
 
-/// Fills `artist.picture` for every artist that has none yet, in batches of
-/// names against Rocksky's public `app.rocksky.artist.getArtists` endpoint
-/// (matched by name; misses stay NULL and are retried on the next scan).
+/// Index every track's genre tag into the `genre` and `track_genres` tables.
+///
+/// The tag is free text holding one or more genres, spelled however the
+/// tagger felt — so it is split, normalised for identity, and stored under a
+/// derived id. Idempotent: the same track scanned twice links the same rows.
+pub async fn index_track_genres(db: &Database) -> Result<(), Error> {
+    use music_player_entity::{genre, track_genres};
+
+    let conn = db.get_connection();
+    let tracks = track::Entity::find().all(conn).await?;
+    let mut linked = 0usize;
+
+    for t in &tracks {
+        for name in genre::split_tag(&t.genre) {
+            let genre_id = genre::id_for(&name);
+
+            // `ON CONFLICT DO NOTHING`: two tracks sharing a genre race here
+            // on a rescan, and the second one losing is the correct outcome.
+            let row = genre::ActiveModel {
+                id: ActiveValue::Set(genre_id.clone()),
+                name: ActiveValue::Set(name.clone()),
+                ..Default::default()
+            };
+            let _ = genre::Entity::insert(row)
+                .on_conflict(
+                    sea_orm::sea_query::OnConflict::column(genre::Column::Id)
+                        .do_nothing()
+                        .to_owned(),
+                )
+                .exec(conn)
+                .await;
+
+            let link = track_genres::ActiveModel {
+                id: ActiveValue::Set(track_genres::id_for(&t.id, &genre_id)),
+                track_id: ActiveValue::Set(t.id.clone()),
+                genre_id: ActiveValue::Set(genre_id),
+            };
+            if track_genres::Entity::insert(link)
+                .on_conflict(
+                    sea_orm::sea_query::OnConflict::column(track_genres::Column::Id)
+                        .do_nothing()
+                        .to_owned(),
+                )
+                .exec(conn)
+                .await
+                .is_ok()
+            {
+                linked += 1;
+            }
+        }
+    }
+
+    info!(
+        "genres: {linked} track links from tags across {} tracks",
+        tracks.len()
+    );
+    Ok(())
+}
+
+/// Fills `artist.picture` for every artist that has none yet, and links every
+/// artist to the genres Rocksky reports, in batches of names against its
+/// public `app.rocksky.artist.getArtists` endpoint (matched by name; misses
+/// stay NULL and are retried on the next scan).
 pub async fn update_artist_pictures(db: &Database) -> Result<(), Error> {
     #[derive(serde::Deserialize)]
     struct RockskyArtist {
         name: String,
         picture: Option<String>,
+        /// The genres Rocksky has for this artist. Much better coverage than
+        /// the files' own tags, which most releases ship empty.
+        #[serde(default)]
+        genres: Vec<String>,
     }
     #[derive(serde::Deserialize)]
     struct RockskyArtists {
@@ -212,10 +282,10 @@ pub async fn update_artist_pictures(db: &Database) -> Result<(), Error> {
     let api_url =
         std::env::var("ROCKSKY_API_URL").unwrap_or_else(|_| "https://api.rocksky.app".to_string());
     let conn = db.get_connection();
-    let missing: Vec<artist::Model> = artist::Entity::find()
-        .filter(artist::Column::Picture.is_null())
-        .all(conn)
-        .await?;
+    // Every artist, not only those missing a picture: an artist can have a
+    // picture already and still have no genres linked, and the genres are the
+    // point of the second half of this call.
+    let missing: Vec<artist::Model> = artist::Entity::find().all(conn).await?;
     if missing.is_empty() {
         return Ok(());
     }
@@ -233,25 +303,73 @@ pub async fn update_artist_pictures(db: &Database) -> Result<(), Error> {
             .await?
             .error_for_status()?;
         let found: RockskyArtists = response.json().await?;
-        let by_name: std::collections::HashMap<String, Option<String>> = found
+        let by_name: std::collections::HashMap<String, RockskyArtist> = found
             .artists
             .into_iter()
-            .map(|a| (a.name.to_lowercase(), a.picture))
+            .map(|a| (a.name.to_lowercase(), a))
             .collect();
         for local in chunk {
-            let Some(Some(picture)) = by_name.get(&local.name.to_lowercase()) else {
+            let Some(remote) = by_name.get(&local.name.to_lowercase()) else {
                 continue;
             };
-            let mut active: artist::ActiveModel = local.clone().into();
-            active.picture = ActiveValue::Set(Some(picture.clone()));
-            active.update(conn).await?;
-            updated += 1;
+            if let (Some(picture), None) = (&remote.picture, &local.picture) {
+                let mut active: artist::ActiveModel = local.clone().into();
+                active.picture = ActiveValue::Set(Some(picture.clone()));
+                active.update(conn).await?;
+                updated += 1;
+            }
+            link_artist_genres(conn, &local.id, &remote.genres).await?;
         }
     }
     info!(
         "artist pictures: {updated}/{} filled from Rocksky",
         missing.len()
     );
+    Ok(())
+}
+
+/// Link one artist to the genres Rocksky reports, creating any that are new.
+///
+/// Separate from the track-tag pass because the two sources answer different
+/// questions — this one says what an *artist* is, which is why a compilation's
+/// tracks can end up in a genre none of their tags mention.
+async fn link_artist_genres(
+    conn: &sea_orm::DatabaseConnection,
+    artist_id: &str,
+    genres: &[String],
+) -> Result<(), Error> {
+    use music_player_entity::{artist_genres, genre};
+
+    for name in genres.iter().filter(|name| !name.trim().is_empty()) {
+        let genre_id = genre::id_for(name);
+        let row = genre::ActiveModel {
+            id: ActiveValue::Set(genre_id.clone()),
+            name: ActiveValue::Set(name.trim().to_string()),
+            ..Default::default()
+        };
+        let _ = genre::Entity::insert(row)
+            .on_conflict(
+                sea_orm::sea_query::OnConflict::column(genre::Column::Id)
+                    .do_nothing()
+                    .to_owned(),
+            )
+            .exec(conn)
+            .await;
+
+        let link = artist_genres::ActiveModel {
+            id: ActiveValue::Set(artist_genres::id_for(artist_id, &genre_id)),
+            artist_id: ActiveValue::Set(artist_id.to_string()),
+            genre_id: ActiveValue::Set(genre_id),
+        };
+        let _ = artist_genres::Entity::insert(link)
+            .on_conflict(
+                sea_orm::sea_query::OnConflict::column(artist_genres::Column::Id)
+                    .do_nothing()
+                    .to_owned(),
+            )
+            .exec(conn)
+            .await;
+    }
     Ok(())
 }
 

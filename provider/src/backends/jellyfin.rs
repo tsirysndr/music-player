@@ -4,8 +4,8 @@
 //! which is why [`crate::url::decorate`] leaves them alone.
 
 use crate::{
-    http, Album, Artist, MusicProvider, Page, Playlist, ProviderCapabilities, ProviderConfig,
-    ProviderError, ProviderFactory, Track,
+    http, Album, Artist, Genre, MusicProvider, Page, Playlist, ProviderCapabilities,
+    ProviderConfig, ProviderError, ProviderFactory, Track,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -266,6 +266,7 @@ impl MusicProvider for Jellyfin {
 
     fn capabilities(&self) -> ProviderCapabilities {
         ProviderCapabilities {
+            genres: true,
             playlists: true,
             liked: true,
             native_search: true,
@@ -474,6 +475,51 @@ impl MusicProvider for Jellyfin {
             )));
         }
         Ok(())
+    }
+
+    async fn genres(&self, page: Page) -> Result<Vec<Genre>, ProviderError> {
+        let offset = page.offset.max(0).to_string();
+        let limit = normalize_limit(page.limit).to_string();
+        let mut params = vec![
+            ("userId", self.user_id.as_str()),
+            ("startIndex", offset.as_str()),
+            ("sortBy", "SortName"),
+        ];
+        if page.limit > 0 {
+            params.push(("limit", limit.as_str()));
+        }
+        let url = self.url("/MusicGenres", &params)?;
+        let result: ItemsResult = self.get_json(url).await?;
+        Ok(result
+            .items
+            .iter()
+            .map(|item| Genre {
+                id: item.id.clone(),
+                name: item.name.clone(),
+                // Jellyfin reports it on the genre item when it has one.
+                track_count: item.child_count.unwrap_or(0),
+            })
+            .collect())
+    }
+
+    async fn genre_tracks(&self, genre: &str, page: Page) -> Result<Vec<Track>, ProviderError> {
+        let offset = page.offset.max(0).to_string();
+        let limit = normalize_limit(page.limit).to_string();
+        let result = self
+            .items(&[
+                ("IncludeItemTypes", "Audio"),
+                ("Recursive", "true"),
+                ("GenreIds", genre),
+                ("SortBy", "SortName"),
+                ("startIndex", offset.as_str()),
+                ("limit", limit.as_str()),
+            ])
+            .await?;
+        Ok(result
+            .items
+            .iter()
+            .map(|item| self.map_track(item))
+            .collect())
     }
 
     async fn add_to_playlist(

@@ -8,9 +8,142 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
-## [Unreleased]
+## [0.3.0] — 2026-09-10
 
 ### Added
+
+#### Hearing the music: tempo, key, mood, loudness and waveforms
+- A new `music-player-analysis` crate decodes a track **once** and measures four
+  things from that single pass: a **waveform**, its **loudness** (EBU R128, via
+  `ebur128`), its **tempo**, and its **mood** as a point in valence/arousal
+  space (via [`oximedia-mir`](https://crates.io/crates/oximedia-mir)). Decoding
+  is nearly the whole cost, so doing it per feature would decode each track
+  three times.
+- **The file is asked before anything is computed.** A track's own `initialkey`
+  and BPM tags win over detection: a tag written by Mixxx, Rekordbox or Traktor
+  was produced deliberately, and correlation-based key detection picks the tonic
+  well but the *mode* badly — the major and minor profiles for one tonic look
+  alike, and confusing them puts a key at the opposite end of the circle of
+  fifths. Camelot (`4A`) and traditional (`Fm`, `F minor`, `Abm`, a bare `F`)
+  spellings are both read; anything else is left alone, because a wrong key is
+  worse than none.
+- Results are cached in SQLite (`track_analysis`, migration `m20260909_000002`),
+  keyed by library as well as track — ids are only unique within a provider, and
+  without that a Navidrome track and a local one could share a row.
+- **Key and tempo columns** in every track list, in both clients, with the key
+  drawn as a colour on the row's left edge. The colour follows the circle of
+  fifths, so keys that mix look alike and finding a compatible track is spotting
+  neighbouring colours rather than reading labels. Relative major and minor
+  share a hue, with the minor darker. Keys are named traditionally — `D`, `Fm` —
+  because that is what every other tool in a library shows.
+- The columns appear only when the library can answer for them (the daemon's own
+  or another music-player), rather than sitting empty against Subsonic or
+  Jellyfin, where an empty column reads as broken rather than absent. A null key
+  shows nothing; a null tempo shows a dash, since a blank in a numeric column
+  reads as a fault.
+- `key` and `bpm` are **RSQL fields**, so a smart playlist can be
+  `key==Fm;bpm>=120;bpm<=130`. Tempo compares rounded, so `bpm>=120` does not
+  miss a track stored as 119.97.
+- The scanner fills both in after indexing, logging each track as it goes.
+  `music-player scan` runs it at full speed — the user is watching — while the
+  daemon's periodic refresh rests three times as long as it just worked, so it
+  drifts along at roughly a quarter of one core instead of fighting the player
+  it exists to improve.
+
+#### Auto-DJ
+- The daemon keeps the queue five tracks deep, each chosen to follow the last by
+  tempo and mood. Built as a **chain, not a ranking**: every pick is measured
+  against the one before it, so an hour travels a long way while each transition
+  stays close. Ranking everything against one seed gives a set that never leaves
+  the first track's neighbourhood and then falls off a cliff.
+- Half and double time count as one tempo — 140 and 70 are the same tempo
+  counted differently, and without that they look further apart than anything
+  else in the library and never follow each other.
+- It never repeats a track, never plays the same artist twice in a row, and
+  never interrupts what is playing — that last is the whole difference between
+  it and shuffle.
+- A **target** (energy, brightness, tempo) steers rather than filters, weighted
+  so it can overcome about one step of chain distance and no more: weaker and
+  "make it more energetic" does nothing, stronger and every pick jumps to the
+  most extreme match.
+
+#### An MCP server, so an agent can DJ
+- `music-player mcp` serves the [Model Context Protocol](https://modelcontextprotocol.io)
+  on stdin/stdout, so Claude, Codex, Copilot and anything else that speaks MCP
+  can run the player: ask what is on, search the library, work the transport,
+  build a queue, and read the analysis above. It drives a running daemon over
+  the same gRPC API the desktop and TUI use, so a set an agent queues is the
+  queue every client shows.
+- Twenty-one tools, chosen rather than enumerated — every one is context the
+  model pays for on each turn, so the five transport actions are one tool with
+  an argument and listings are one `browse_library` rather than three. The unit
+  of exchange is a track id, so an agent never has to construct a track or know
+  what a uri is.
+- A failed tool returns a result flagged `isError` rather than a JSON-RPC error:
+  a daemon that is not running is something the model should see and say, not
+  something the host swallows as a transport fault.
+- `skills/music-player/SKILL.md` teaches an agent to *DJ* rather than merely to
+  call the tools — queue instead of interrupt, sequence a set deliberately, work
+  from what the library actually holds — and carries CLI install instructions
+  for users who have none.
+
+#### Waveforms and an equalizer in the full-screen player
+- The track's **waveform** sits under the artwork in both clients and doubles as
+  a seek bar: you can aim at the quiet part you remember rather than at a
+  percentage. Bars are normalised to percentiles rather than to the maximum, so
+  one stray click cannot flatten the whole track.
+- A live **equalizer** runs full-bleed along the bottom edge, driven by the
+  daemon's `levels` feed — so it moves with audio actually leaving the output,
+  including on a cast device the client never decodes. The daemon measures four
+  numbers rather than a spectrum, so the response is shaped: bars lean on the
+  channel nearest them (the display is stereo) and low bars are steadier than
+  high ones, because bass is sustained and treble is transient. `v` toggles it.
+
+#### Browse by genre
+- A **Genres** entry and screen in the web client, with `genre`, `track_genres`
+  and `artist_genres` tables (migration `m20260909_000001`). Two link tables
+  rather than one, because the sources disagree usefully: a file's own tag is
+  precise but often absent, while the Rocksky artist enrichment has far better
+  coverage but describes the artist rather than the track.
+- `genres` and `genreTracks` on the provider trait, so a remote server's genres
+  work the same way.
+
+#### Sign in with an Atmosphere account
+- An avatar, display name and muted `@handle` at the foot of the sidebar in both
+  clients, with a sign-in modal taking a handle and an **app password** —
+  atproto issues them for exactly this, they can be revoked one at a time, and
+  the daemon has no browser to run an OAuth flow in.
+- One account for the whole daemon: the same session Rocksky scrobbling and
+  atradio use, so signing in here turns those on and signing out turns them off.
+  A daemon already logged in from the CLI shows as signed in. Signing in pulls
+  the account's repo in the background.
+
+#### Caching the tracks that are about to play
+- Finite remote tracks are downloaded at the halfway point of the current one,
+  so a track change does not wait on the network. **Off by default** (`cache =
+  true` in settings.toml): it spends gigabytes of disk on copies of audio you
+  already have on a server, which is not a thing to start doing because someone
+  installed a music player.
+- Cached copies are used at all three points a uri reaches the engine, including
+  the gapless lookahead — the transition the cache exists for. A finished
+  prefetch re-points a lookahead queued before it landed.
+- The queue's uris are never rewritten: a track keeps the remote uri it came
+  with, and resolution happens only where a path is handed to the engine.
+- The mapping lives in the filenames rather than in a database beside them, so a
+  cache directory deleted by hand cannot leave an index insisting the files are
+  still there. `music-player cache` and `music-player cache clear` show and free
+  it.
+
+#### More libraries to read from
+- **Kodi** and **Plex** providers, and a **Rocksky** provider preconfigured for
+  `https://navidrome.rocksky.app`.
+- A **Raycast-style server switcher** on `C` in every client, including the TUI,
+  with a shortcut to add a server. A **Play to** picker replaces the queue
+  button in the miniplayer, listing Chromecast, UPnP/DLNA and peer instances.
+- **Federated search**: one result list holding rows from the local library and
+  the connected server, each labelled with where it came from, and a context
+  menu whose actions depend on the source — a local track cannot be added to a
+  remote server's playlist.
 
 #### Extensions in both UIs
 - An **Extensions** entry in the sidebar of the web UI and the Slint desktop
@@ -101,6 +234,36 @@ This file starts at 0.2.1. For earlier releases see the
 
 ### Changed
 
+#### Providers and renderers are separate crates
+- Remote-library backends moved into a **`provider`** crate and the output
+  targets (Chromecast, UPnP/DLNA, the local player) into a **`renderer`** crate;
+  `addons` is gone, and `source` is `provider` throughout. The dependency graph
+  enforces the point: `renderer` depends on the client, which depends on the
+  server, so `provider` has to sit below the server — which is what guarantees
+  that **switching servers cannot interrupt playback**. Where music is read from
+  and where it comes out are different questions.
+- `MusicProvider` has six required methods and defaults for everything else
+  (`search`, `playlists`, `liked_tracks`, `genres`, `genre_tracks`, playlist
+  writes), so adding a backend is one file and one registration line. Clients
+  build their add-server forms from the registry, so a new backend needs no
+  client change beyond an icon.
+- `surf` is replaced by **`reqwest`** everywhere, with one shared pooled client:
+  the rest of the daemon is tokio, and surf dragged an async-std runtime in
+  beside it.
+
+#### Elsewhere
+- Sqlite runs in **WAL** mode. In rollback-journal mode a commit briefly locks
+  out every reader, and with background analysis committing per track that is
+  thousands of small stalls across every screen.
+- Search is **debounced** in both clients, so typing does not fire a query per
+  keystroke.
+- Loading skeletons on every Slint screen, a content-loader animation at the
+  bottom during infinite scroll, and shuffle buttons on playlist rows and
+  playlist detail.
+- The full-screen player's scrim is tinted with the **window colour** rather
+  than a fixed near-black: every control on that canvas is themed, and a dark
+  scrim under a light skin left all of them dark on dark.
+
 #### The web UI now matches the desktop app
 - The browser client is a port of the Slint desktop UI rather than a separate
   design: the five skins from `desktop/skins/*.toml` (Synthwave, Late Night,
@@ -139,6 +302,46 @@ This file starts at 0.2.1. For earlier releases see the
 - Bumped to **React 19**, which HeroUI requires.
 
 ### Fixed
+- **Opening a remote library took a minute of loading skeletons.** The desktop
+  fetched albums, then artists, then tracks, each paged to exhaustion, one after
+  another — and against a remote server a single listing costs seconds. They are
+  independent, so they run together now and the wait is the slowest of them
+  rather than the sum: measured against Rocksky, 10.21s to 1.99s.
+- **A library scan never finished.** "Needs analysing" meant *has no key* when
+  it should have meant *has never been analysed*, and the gap between them is
+  every track that analyses fine and yields nothing — a spoken intro, something
+  atonal. Those kept a null key for ever, so every page offered them again, the
+  cached result came back instantly, and the counter climbed past the size of
+  the library. Tracks that could not be analysed at all jammed the head of the
+  list for the same reason; pages are offset past them now.
+- **`track.key` and `track.bpm` stayed empty on a rescan.** Those columns are
+  newer than the analysis rows, and a cached analysis returned before the code
+  that writes them. A scan now starts by copying stored analysis onto the rows
+  missing it — one statement, no decoding.
+- **The desktop never showed the signed-in account.** gRPC and http start
+  separately and it asked the moment gRPC answered, before anything was
+  listening; one attempt, and the failure wrote an empty handle, which reads
+  exactly like "nobody is signed in". It retries now, and a failure leaves the
+  row alone.
+- **`AddTracks` was `unimplemented!()`** — calling it panicked the handler and
+  killed the connection. It takes whole tracks rather than ids, so queueing from
+  a remote library works: ids would be looked up in a local table that holds
+  nothing when a provider is connected.
+- Liked tracks stopped at 500. `getStarred2` is unpaged but was going through
+  the same limit as the paged endpoints, so hearts were right for the first 500
+  and wrong after.
+- Infinite scroll stopped at 500 on albums, artists, tracks and liked.
+- The web UI's VU meter stopped animating — the GraphQL subscription was not
+  reaching it — while the desktop's was fine.
+- Repeat and shuffle were never persisted across a restart.
+- Adding a remote track to a playlist silently did nothing.
+- Album artwork was missing from macOS notifications when playing from a remote
+  server.
+- Album detail and Liked were empty against a remote server, and opening an
+  album fetched its details twice.
+- Bitrate and sample rate were dropped for remote tracks, so the readout probed
+  the stream for what the server had already said.
+- Clippy warnings across the workspace, including locks held across awaits.
 - `cargo test` no longer fails to compile: two test fixtures in
   `src/extension.rs` set `readme` twice in the same struct literal, which broke
   the whole `music-player` test binary and so the unit-test CI job.
@@ -281,5 +484,6 @@ outright. See the README for setup.
 Stack modernization: the Rockbox playback engine, SQLite FTS5 search, a ratatui
 TUI and a Tauri 2 desktop app.
 
+[0.3.0]: https://github.com/tsirysndr/music-player/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/tsirysndr/music-player/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/tsirysndr/music-player/releases/tag/v0.2.0

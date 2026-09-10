@@ -123,6 +123,18 @@ Using [Homebrew](https://brew.sh/) (macOS/Linux):
 brew install tsirysndr/tap/musicplayer
 ```
 
+On macOS, the desktop app is also available as a cask:
+
+```bash
+brew install --cask tsirysndr/tap/musicplayer
+```
+
+> [!NOTE]
+> The macOS app is not code-signed or notarized, so Gatekeeper blocks it on
+> first launch. Open it once, then go to **System Settings → Privacy & Security**
+> and click **Open Anyway** next to the message about Music Player. Confirm with
+> **Open** in the dialog that follows — macOS remembers the choice afterwards.
+
 On Debian, Ubuntu, and other APT-based systems (`amd64` and `arm64`):
 
 ```bash

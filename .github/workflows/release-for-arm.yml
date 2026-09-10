@@ -15,19 +15,13 @@ permissions:
 jobs:
   release:
     name: release ${{ matrix.target }}
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: aarch64-unknown-linux-gnu
-            arch: arm64
-            linker: aarch64-linux-gnu-gcc
-            libdir: aarch64-linux-gnu
-          - target: armv7-unknown-linux-gnueabihf
-            arch: armhf
-            linker: arm-linux-gnueabihf-gcc
-            libdir: arm-linux-gnueabihf
+            os: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,19 +53,12 @@ jobs:
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-arm-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install cross toolchain + sysroot
+      # Native arm64 runner: alsa and friends come straight from apt, no
+      # sysroot and no cross toolchain.
+      - name: Install dependencies
         run: |
-          sudo mkdir -p /build/sysroot
-          echo "deb [arch=${{ matrix.arch }}] http://ports.ubuntu.com/ubuntu-ports/ jammy main universe" | sudo tee -a /etc/apt/sources.list
-          sudo dpkg --add-architecture ${{ matrix.arch }}
-          sudo apt-get update || true
-          sudo apt-get install -y build-essential pkg-config protobuf-compiler gcc-aarch64-linux-gnu libc6-arm64-cross libc6-dev-arm64-cross gcc-arm-linux-gnueabihf libc6-armhf-cross libc6-dev-armhf-cross
-          cd /tmp
-          apt-get download libasound2:${{ matrix.arch }} libasound2-dev:${{ matrix.arch }}
-          for deb in libasound2*.deb; do sudo dpkg -x "$deb" /build/sysroot/; done
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-          echo "C_INCLUDE_PATH=/build/sysroot/usr/include" >> $GITHUB_ENV
-          echo "RUSTFLAGS=-C linker=${{ matrix.linker }} -L/usr/${{ matrix.libdir }}/lib -L/build/sysroot/usr/lib/${{ matrix.libdir }} -L/build/sysroot/lib/${{ matrix.libdir }}" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler
 
       - name: Build webui
         run: |

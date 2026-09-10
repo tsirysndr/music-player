@@ -146,6 +146,9 @@ pub mod api {
                     uri: model.uri,
                     duration: model.duration.unwrap_or(0.0),
                     track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
+                    // Zero means "not part of a set", which is what the clients
+                    // read as "do not group by disc".
+                    disc_number: i32::try_from(model.disc.unwrap_or_default()).unwrap_or_default(),
                     bitrate: model.bitrate.unwrap_or_default(),
                     sample_rate: model.sample_rate.unwrap_or_default(),
                     liked: model.liked,
@@ -166,9 +169,7 @@ pub mod api {
                     title: model.title,
                     duration: model.duration.unwrap_or_default(),
                     track_number: i32::try_from(model.track.unwrap_or_default()).unwrap(),
-                    // The local track table has no disc column; multi-disc
-                    // information reaches the app by the scanner's own path.
-                    disc_number: 0,
+                    disc_number: i32::try_from(model.disc.unwrap_or_default()).unwrap_or_default(),
                     uri: model.uri,
                     album: model.album.title.clone(),
                     artist: model.artist,
@@ -280,6 +281,7 @@ pub mod api {
                     uri: val.uri,
                     duration: Some(val.duration),
                     track: Some(u32::try_from(val.track_number).unwrap_or_default()),
+                    disc: u32::try_from(val.disc_number).ok().filter(|disc| *disc > 0),
                     artists: val.artists.into_iter().map(Into::into).collect(),
                     artist: val.artist,
                     // The tracklist holds these, and the now-playing readout

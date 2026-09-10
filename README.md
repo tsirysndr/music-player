@@ -150,6 +150,13 @@ The Debian and RPM packages include both `music-player` and the Slint desktop
 application, `music-player-desktop`. Launch the desktop app from your
 application menu or run `music-player-desktop`.
 
+On Arch Linux and derivatives, from the
+[AUR](https://aur.archlinux.org/packages/music-player-bin):
+
+```bash
+yay -S music-player-bin   # or: paru -S music-player-bin
+```
+
 Using [Nix](https://nixos.org/) (macOS/Linux):
 
 ```bash

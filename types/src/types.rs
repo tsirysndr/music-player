@@ -50,6 +50,10 @@ pub struct Song {
     pub genre: String,
     pub year: Option<u32>,
     pub track: Option<u32>,
+    /// Which disc of a set the track sits on. `None` for the overwhelming
+    /// majority of files, which are not part of one — and a single-disc album
+    /// must not grow a "DISC 1" header just because the tag happened to say so.
+    pub disc: Option<u32>,
     pub bitrate: Option<u32>,
     pub sample_rate: Option<u32>,
     pub bit_depth: Option<u8>,
@@ -125,6 +129,10 @@ impl From<&AudioMetadata> for Song {
             genre: tag_or_none(&meta.genre),
             year: meta.year,
             track: meta.track_number,
+            // Read from the tag and kept: it was being dropped here, which is
+            // why a two-disc album looked like one long disc everywhere in the
+            // local library.
+            disc: meta.disc_number,
             bitrate: (meta.bitrate > 0).then_some(meta.bitrate),
             sample_rate: (meta.sample_rate > 0).then_some(meta.sample_rate),
             bit_depth: None,

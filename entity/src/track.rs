@@ -15,6 +15,9 @@ pub struct Model {
     pub genre: String,
     pub year: Option<u32>,
     pub track: Option<u32>,
+    /// Which disc of a set. Null for a single-disc release, which is most of
+    /// them — the clients only group when an album spans more than one.
+    pub disc: Option<u32>,
     pub bitrate: Option<u32>,
     pub sample_rate: Option<u32>,
     pub bit_depth: Option<u8>,
@@ -149,6 +152,7 @@ impl From<&Song> for ActiveModel {
             genre: ActiveValue::Set(song.genre.clone()),
             year: ActiveValue::Set(song.year),
             track: ActiveValue::Set(song.track),
+            disc: ActiveValue::Set(song.disc),
             bitrate: ActiveValue::Set(song.bitrate),
             sample_rate: ActiveValue::Set(song.sample_rate),
             bit_depth: ActiveValue::Set(song.bit_depth),

@@ -162,6 +162,9 @@ impl From<Model> for Track {
             uri: model.uri,
             duration: model.duration,
             track_number: model.track,
+            // Zero for a single-disc release, which is what stops the client
+            // drawing a "DISC 1" header over an album that has only one.
+            disc_number: model.disc.unwrap_or_default(),
             artists: model.artists.into_iter().map(Into::into).collect(),
             album: model.album.into(),
             artist: model.artist,

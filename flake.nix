@@ -24,15 +24,20 @@
 
         craneLib = crane.mkLib pkgs;
 
-        # The cargo sources plus everything the build scripts and
-        # rust-embed pull in at compile time: the gRPC protos and the
-        # committed web UI bundle.
+        # The cargo sources plus everything the build scripts, `include_str!`
+        # and rust-embed pull in at compile time: the gRPC protos, the
+        # committed web UI bundle and the extension manifest schema.
+        # (The desktop client's ui/ and assets/ trees are left out — it is
+        # not part of this build, see cargoExtraArgs below.)
         protoFilter = path: _type: builtins.match ".*proto$" path != null;
         webuiFilter = path: _type:
           builtins.match ".*webui/musicplayer/build.*" path != null;
+        schemaFilter = path: _type:
+          lib.hasSuffix "extensions/schema.yaml" path;
         srcFilter = path: type:
           (protoFilter path type)
           || (webuiFilter path type)
+          || (schemaFilter path type)
           || (craneLib.filterCargoSources path type);
 
         src = lib.cleanSourceWith {
@@ -45,6 +50,11 @@
           pname = "music-player";
           version = "0.3.0";
           strictDeps = true;
+
+          # Only the daemon/CLI: the Slint desktop client is a workspace
+          # member but drags in the whole GUI stack (fontconfig, wayland,
+          # xkbcommon, libGL), which this build has no business pulling in.
+          cargoExtraArgs = "--locked --package music-player";
 
           nativeBuildInputs = [
             pkgs.pkg-config

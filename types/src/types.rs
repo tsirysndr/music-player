@@ -557,3 +557,24 @@ impl RemoteCoverUrl for Playlist {
         }
     }
 }
+
+#[cfg(test)]
+mod disc_tests {
+    use super::*;
+
+    /// The disc number reaches `Song` from the tag. It was dropped here, which
+    /// is why the local library reported every track as disc zero and a
+    /// multi-disc album was never grouped.
+    #[test]
+    fn the_disc_number_survives_the_tag_conversion() {
+        let mut meta = AudioMetadata::default();
+        meta.title = "Track".into();
+        meta.disc_number = Some(2);
+        assert_eq!(Song::from(&meta).disc, Some(2));
+
+        // Most files are not part of a set, and a single-disc album must not
+        // grow a "DISC 1" header just because a tagger wrote one.
+        meta.disc_number = None;
+        assert_eq!(Song::from(&meta).disc, None);
+    }
+}

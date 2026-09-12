@@ -959,7 +959,34 @@ export component AppWindow inherits Window {
                                 root.signin-error = "";
                                 root.show-signin = true;
                             } else {
-                                root.sign-out();
+                                // A menu, not an immediate sign-out. Clicking
+                                // your own name should not end the session —
+                                // and signing out here also stops scrobbling
+                                // and station sync, which is not something to
+                                // do on a stray click with no way to see it
+                                // happened.
+                                account-menu.show();
+                            }
+                        }
+                        account-menu := PopupWindow {
+                            x: 8px;
+                            y: -46px;
+                            width: 180px;
+                            Rectangle {
+                                background: Theme.panel-raised;
+                                border-radius: 10px;
+                                border-width: 1px;
+                                border-color: Theme.border;
+                                drop-shadow-color: #000000aa;
+                                drop-shadow-blur: 18px;
+                                VerticalLayout {
+                                    padding: 4px;
+                                    CtxMenuItem {
+                                        icon: Icons.logout;
+                                        label: "Sign out";
+                                        clicked => { root.sign-out(); }
+                                    }
+                                }
                             }
                         }
                     }

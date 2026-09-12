@@ -49,7 +49,11 @@ pub async fn current() -> Option<Account> {
     // A daemon configured by environment variables has credentials but no
     // session until something uses them. Establishing one here is what makes
     // the UI show a CLI-configured account as signed in, which it is.
-    if atradio::profile().is_none() {
+    //
+    // Unless the user has signed out. Those same credentials would log them
+    // straight back in on the very next read, so the button appeared to do
+    // nothing — a sign-out that undoes itself is not a sign-out.
+    if atradio::profile().is_none() && !signed_out_deliberately() {
         atradio::ensure_session().await;
     }
     let profile = atradio::profile()?;
@@ -77,6 +81,9 @@ pub async fn sign_in(handle: &str, password: &str) -> Result<Account, Error> {
     }
 
     let profile = atradio::sign_in(identifier, password).await?;
+    // Signing in supersedes any earlier sign-out, so environment credentials
+    // are welcome to restore this session again later.
+    let _ = std::fs::remove_file(signed_out_marker());
     let avatar = fetch_avatar(&profile.did).await;
 
     // The account's repo is now readable, so pull it in — likes, and whatever
@@ -98,8 +105,26 @@ pub async fn sign_in(handle: &str, password: &str) -> Result<Account, Error> {
 
 /// Forget the session. Also ends atradio write-through, which is the same
 /// session — said plainly here because it is not obvious from the button.
+///
+/// Records that the sign-out was deliberate, so environment credentials do not
+/// quietly restore it. Signing in again clears the record.
 pub fn sign_out() {
     atradio::sign_out();
+    let _ = std::fs::write(signed_out_marker(), "");
+}
+
+/// Where the deliberate sign-out is recorded.
+///
+/// A file rather than a database row: it has to be readable before anything
+/// else is set up, it outlives a session that is by definition gone, and there
+/// is exactly one bit to store.
+fn signed_out_marker() -> std::path::PathBuf {
+    std::path::PathBuf::from(music_player_settings::get_application_directory()).join("signed-out")
+}
+
+/// Whether the user asked to be signed out and has not signed in since.
+fn signed_out_deliberately() -> bool {
+    signed_out_marker().exists()
 }
 
 /// The account's avatar, from its public Bluesky profile.

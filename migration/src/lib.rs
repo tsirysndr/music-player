@@ -21,6 +21,7 @@ mod m20260909_000001_create_genre;
 mod m20260909_000002_create_track_analysis;
 mod m20260909_000003_add_track_key_and_bpm;
 mod m20260910_000001_add_track_disc;
+mod m20260910_000002_drop_detected_keys;
 
 /// Create the database file if needed and bring the schema up to date,
 /// without going through the sea-orm migration CLI (which parses argv).
@@ -60,6 +61,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260909_000002_create_track_analysis::Migration),
             Box::new(m20260909_000003_add_track_key_and_bpm::Migration),
             Box::new(m20260910_000001_add_track_disc::Migration),
+            Box::new(m20260910_000002_drop_detected_keys::Migration),
         ]
     }
 }

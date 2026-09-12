@@ -737,13 +737,76 @@ pub fn ui_set_liked(app: &AppWindow, liked: Vec<rpc::TrackData>) {
     STATE.with(|s| {
         let st = s.borrow();
         let ids = liked_ids_of(&st.liked);
-        let tracks: Vec<TrackItem> = st.tracks.iter().map(|t| track_item_with(t, &ids)).collect();
+        // The Liked tab lists the liked tracks themselves, so its *membership*
+        // changed — rebuild it. Every other view keeps its rows and only needs
+        // the flag re-stamped.
         let liked_items: Vec<TrackItem> =
             st.liked.iter().map(|t| track_item_with(t, &ids)).collect();
-        app.set_tracks(ModelRc::new(VecModel::from(tracks)));
         app.set_liked(ModelRc::new(VecModel::from(liked_items)));
-        app.set_now_liked(ids.contains(app.get_now_track_id().as_str()));
+        refresh_liked_flags(app, &ids);
     });
+}
+
+/// Re-stamps `TrackItem::liked` on every track row currently on screen.
+///
+/// The library tabs could be rebuilt from `STATE`, but the album-detail,
+/// artist-detail, playlist-detail and queue lists are built from data that only
+/// ever existed in the message that produced them — `STATE` never keeps it.
+/// Rebuilding them is therefore not an option, and the previous version simply
+/// skipped them, so clicking a heart anywhere but the Tracks/Liked tabs left
+/// the icon unchanged: the like looked broken even though it had registered.
+///
+/// Patching the live models in place fixes every view at once, and — unlike
+/// swapping in a fresh model — leaves the list's scroll position alone.
+fn refresh_liked_flags(app: &AppWindow, ids: &std::collections::HashSet<String>) {
+    patch_track_model(&app.get_tracks(), ids);
+    patch_track_model(&app.get_liked(), ids);
+    patch_track_model(&app.get_artist_detail_tracks(), ids);
+    patch_track_model(&app.get_pl_detail_tracks(), ids);
+    patch_track_model(&app.get_queue_upnext(), ids);
+    patch_track_model(&app.get_queue_history(), ids);
+
+    // Album detail wraps each track in a DetailRow so it can interleave
+    // "DISC n" headers.
+    if let Some(vm) = app
+        .get_detail_tracks()
+        .as_any()
+        .downcast_ref::<VecModel<DetailRow>>()
+    {
+        for i in 0..vm.row_count() {
+            let Some(mut row) = vm.row_data(i) else {
+                continue;
+            };
+            if row.is_header {
+                continue;
+            }
+            let liked = ids.contains(row.track.id.as_str());
+            if row.track.liked != liked {
+                row.track.liked = liked;
+                vm.set_row_data(i, row);
+            }
+        }
+    }
+
+    app.set_now_liked(ids.contains(app.get_now_track_id().as_str()));
+}
+
+/// Set `liked` on each row of a plain track model. A no-op for the empty
+/// literal `[]` the properties start out as — that is not a `VecModel`.
+fn patch_track_model(model: &ModelRc<TrackItem>, ids: &std::collections::HashSet<String>) {
+    let Some(vm) = model.as_any().downcast_ref::<VecModel<TrackItem>>() else {
+        return;
+    };
+    for i in 0..vm.row_count() {
+        let Some(mut item) = vm.row_data(i) else {
+            continue;
+        };
+        let liked = ids.contains(item.id.as_str());
+        if item.liked != liked {
+            item.liked = liked;
+            vm.set_row_data(i, item);
+        }
+    }
 }
 
 /// The text before a byte offset, clamped to a character boundary.

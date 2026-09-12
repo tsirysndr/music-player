@@ -2871,6 +2871,9 @@ export component AppWindow inherits Window {
                                             : (root.bass - root.bass-min) / (root.bass-max - root.bass-min);
                                         default-norm: root.bass-max == root.bass-min ? 0
                                             : (0.0 - root.bass-min) / (root.bass-max - root.bass-min);
+                                        // Cut and boost grow out of 0 dB.
+                                        origin-norm: root.bass-max == root.bass-min ? 0
+                                            : (0.0 - root.bass-min) / (root.bass-max - root.bass-min);
                                         changed(p) => {
                                             root.audio-set("bass", root.bass-min + round(p * (root.bass-max - root.bass-min)));
                                         }
@@ -2882,6 +2885,8 @@ export component AppWindow inherits Window {
                                             : (root.treble - root.treble-min) / (root.treble-max - root.treble-min);
                                         default-norm: root.treble-max == root.treble-min ? 0
                                             : (0.0 - root.treble-min) / (root.treble-max - root.treble-min);
+                                        origin-norm: root.treble-max == root.treble-min ? 0
+                                            : (0.0 - root.treble-min) / (root.treble-max - root.treble-min);
                                         changed(p) => {
                                             root.audio-set("treble", root.treble-min + round(p * (root.treble-max - root.treble-min)));
                                         }
@@ -2892,6 +2897,9 @@ export component AppWindow inherits Window {
                                             : root.balance < 0 ? (-root.balance) + "% L"
                                             : root.balance + "% R";
                                         norm: (root.balance + 100) / 200.0;
+                                        // L and R grow out of centre, not from
+                                        // hard left.
+                                        origin-norm: 0.5;
                                         changed(p) => { root.audio-set("balance", round(p * 200) - 100); }
                                     }
                                 }
@@ -2949,6 +2957,8 @@ export component AppWindow inherits Window {
                                         label: "Pre-amp";
                                         value-text: (root.rg-preamp / 10.0) + " dB";
                                         norm: (root.rg-preamp + 120) / 240.0;
+                                        // 0 dB sits at the middle of ±12 dB.
+                                        origin-norm: 0.5;
                                         changed(p) => { root.audio-set("rg_preamp", round(p * 48) * 5 - 120); }
                                     }
                                 }

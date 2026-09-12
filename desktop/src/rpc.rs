@@ -2306,9 +2306,23 @@ async fn cmd_loop(
                         }
                     }
                     push_liked(&state, &weak).await;
-                    // The daemon forwards the like to Rocksky.
-                    let mut lib = LibraryServiceClient::new(channel.clone());
-                    lib.like_track(LikeTrackRequest { id, like }).await?;
+                    // Detached: the UI is already updated above, and the daemon
+                    // forwards the like to Rocksky — a network round-trip with
+                    // no timeout. Awaiting it here stalled every later command
+                    // in this loop (play/pause, seek) behind a heart click.
+                    let channel = channel.clone();
+                    tokio::spawn(async move {
+                        let mut lib = LibraryServiceClient::new(channel);
+                        if let Err(e) = lib
+                            .like_track(LikeTrackRequest {
+                                id: id.clone(),
+                                like,
+                            })
+                            .await
+                        {
+                            tracing::warn!("like {id} failed: {e}");
+                        }
+                    });
                 }
                 Cmd::LikeAlbum(id) => {
                     let ids: Vec<String> = {

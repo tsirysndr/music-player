@@ -1736,6 +1736,11 @@ export component Knob inherits VerticalLayout {
     in property <string> value-text;
     in property <float> norm: 0; // 0..1
     in property <float> default-norm: 0.5; // double-click resets here
+    // Where the value arc is anchored. 0 for a control that runs from nothing
+    // upwards (volume, a delay); 0.5 for a bipolar one (balance, bass, treble),
+    // where the arc should grow left or right out of its neutral centre rather
+    // than always filling from the far end.
+    in property <float> origin-norm: 0;
     in property <length> size: 54px;
     in property <length> gap: 5px; // value-text ↔ knob spacing
     callback changed(float);
@@ -1766,6 +1771,52 @@ export component Knob inherits VerticalLayout {
             drop-shadow-color: #00000066;
             drop-shadow-blur: 6px;
             drop-shadow-offset-y: 2px;
+
+            // Value arc — overdraws the face's own border from `origin-norm`
+            // round to the current value, in whichever direction that is. The
+            // unfilled remainder is simply the border showing through, so the
+            // two read as one ring rather than a ring with something drawn
+            // beside it.
+            //
+            // Geometry: the viewbox is an explicit 100×100 square, which is
+            // what stops Slint from scaling a partial arc to fill the element
+            // (without one it fits the path's own bounding box, turning every
+            // arc into a full sweep). Slint insets the path by stroke-width, so
+            // a radius-50 arc lands at (size-3)/2 and the 3px stroke then spans
+            // size/2-3 … size/2 — straddling the 2px border at size/2-2 … size/2.
+            if abs(clamp(root.norm, 0, 1) - clamp(root.origin-norm, 0, 1)) > 0.005 : Path {
+                width: parent.width;
+                height: parent.height;
+                viewbox-x: 0;
+                viewbox-y: 0;
+                viewbox-width: 100;
+                viewbox-height: 100;
+                stroke: Theme.accent;
+                stroke-width: 3px;
+                stroke-line-cap: round;
+
+                // Angles run clockwise from 12 o'clock, matching `indicator`.
+                property <float> from: clamp(root.origin-norm, 0, 1);
+                property <float> to: clamp(root.norm, 0, 1);
+                property <angle> a0: -135deg + self.from * 270deg;
+                property <angle> a1: -135deg + self.to * 270deg;
+
+                MoveTo {
+                    x: 50 + 50 * sin(parent.a0);
+                    y: 50 - 50 * cos(parent.a0);
+                }
+                ArcTo {
+                    x: 50 + 50 * sin(parent.a1);
+                    y: 50 - 50 * cos(parent.a1);
+                    radius-x: 50;
+                    radius-y: 50;
+                    // Past the half-turn mark the long way round is the right one.
+                    large-arc: abs(parent.to - parent.from) > 0.6667;
+                    // Clockwise when the value is above its origin, anti-clockwise
+                    // when below — a balance cut sweeps left out of centre.
+                    sweep: parent.to >= parent.from;
+                }
+            }
 
             // Full-diameter bar, opaque only on its top third — rotating
             // about the (default, center) origin pivots at the knob center.

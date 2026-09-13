@@ -32,6 +32,29 @@ pub fn err(e: ProviderError) -> Error {
     Error::new(e.to_string())
 }
 
+/// Refresh the queued tracks' `liked` from a freshly connected provider's
+/// starred list — the queued copies are snapshots from when each track was
+/// queued (or from a restored session), so a star set since then never
+/// reaches the now-playing heart without this.
+///
+/// Detached: the connect reply must not wait on a full starred-list fetch,
+/// and a failure only means the hearts keep their queue-time snapshots.
+pub fn restamp_queue_likes(ctx: &Context<'_>, connected: ConnectedProvider) {
+    let tracklist = ctx
+        .data::<Arc<std::sync::Mutex<music_player_tracklist::Tracklist>>>()
+        .expect("the tracklist is registered on the schema")
+        .clone();
+    tokio::spawn(async move {
+        match connected.provider.liked_tracks(Page::new(0, 0)).await {
+            Ok(starred) => {
+                let ids = starred.into_iter().map(|track| track.id).collect();
+                tracklist.lock().unwrap().restamp_liked(&ids);
+            }
+            Err(e) => tracing::warn!("could not refresh queued likes: {e}"),
+        }
+    });
+}
+
 /// The paging arguments every listing resolver takes.
 pub fn page(offset: Option<i32>, limit: Option<i32>) -> Page {
     Page::new(offset.unwrap_or(0), limit.unwrap_or(100))

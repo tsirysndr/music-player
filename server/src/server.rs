@@ -116,6 +116,7 @@ impl MusicPlayerServer {
             .add_service(LibraryServiceServer::new(Library::new(
                 self.db.clone(),
                 Arc::clone(&self.providers),
+                Arc::clone(&self.tracklist),
             )))
             .add_service(MixerServiceServer::new(Mixer::new(Arc::clone(
                 &self.cmd_tx,
@@ -131,6 +132,7 @@ impl MusicPlayerServer {
             .add_service(ServersServiceServer::new(Servers::new(
                 self.db.clone(),
                 Arc::clone(&self.providers),
+                Arc::clone(&self.tracklist),
             )))
             .add_service(TracklistServiceServer::new(Tracklist::new(
                 Arc::clone(&self.tracklist),
@@ -168,6 +170,7 @@ impl MusicPlayerServer {
             .add_service(LibraryServiceServer::new(Library::new(
                 self.db.clone(),
                 Arc::clone(&self.providers),
+                Arc::clone(&self.tracklist),
             )))
             .add_service(MixerServiceServer::new(Mixer::new(Arc::clone(
                 &self.cmd_tx,
@@ -183,6 +186,7 @@ impl MusicPlayerServer {
             .add_service(ServersServiceServer::new(Servers::new(
                 self.db.clone(),
                 Arc::clone(&self.providers),
+                Arc::clone(&self.tracklist),
             )))
             .add_service(TracklistServiceServer::new(Tracklist::new(
                 Arc::clone(&self.tracklist),

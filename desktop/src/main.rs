@@ -1825,9 +1825,19 @@ fn main() -> Result<(), slint::PlatformError> {
     // ── Track / album context actions ───────────────────────────────────────
     {
         let tx = tx.clone();
+        let app_weak = app.as_weak();
         app.on_track_like(move |id| {
+            let app = app_weak.unwrap();
             let id: String = id.into();
-            let like = !is_liked(&id);
+            // The player bar's heart shows the daemon's own answer for the
+            // current track — on a remote provider that can be lit when the
+            // local list has never heard of the id (a star set on the server).
+            // Toggling must flip what the user sees, not the local guess.
+            let like = if app.get_now_track_id().as_str() == id {
+                !app.get_now_liked()
+            } else {
+                !is_liked(&id)
+            };
             let _ = tx.send(rpc::Cmd::LikeTrack { id, like });
         });
     }

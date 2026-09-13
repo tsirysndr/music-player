@@ -388,6 +388,11 @@ struct WorkerState {
     /// cannot be derived by filtering the cached library. `None` means the
     /// local library, where they can.
     remote_liked: Option<Vec<TrackProto>>,
+    /// A like the daemon is still applying: track id, the state the user
+    /// chose, and how many more polls the choice outranks the daemon's
+    /// answer. Without it the poll snaps the heart back to the pre-click
+    /// state for the second the remote star takes to land.
+    pending_like: Option<(String, bool, u8)>,
     album_cache: HashMap<String, Vec<TrackProto>>,
     playlist_cache: HashMap<String, (Vec<TrackProto>, u32)>,
     radios: HashMap<String, crate::radio::Station>,
@@ -520,7 +525,29 @@ async fn session(
             // — and then some hearts are right and some are not. The set is
             // the fallback, and is all a local library has.
             match now.track.as_ref() {
-                Some(track) => track.liked.unwrap_or_else(|| st.liked.contains(&track.id)),
+                Some(track) => {
+                    // The daemon's copy is a snapshot from queue time (it can
+                    // even predate this session — the queue is restored from
+                    // disk). The set also holds the provider's own starred
+                    // list, fetched fresh at connect, so it can vouch for a
+                    // star the snapshot missed; its absence proves nothing, so
+                    // it only ever turns the heart ON.
+                    let source = track.liked == Some(true) || st.liked.contains(&track.id);
+                    // A just-clicked heart outranks the snapshot until the
+                    // daemon reports the new state (or long enough that it
+                    // clearly never will).
+                    let mut value = source;
+                    st.pending_like = match st.pending_like.take() {
+                        Some((id, desired, polls))
+                            if id == track.id && source != desired && polls > 0 =>
+                        {
+                            value = desired;
+                            Some((id, desired, polls - 1))
+                        }
+                        _ => None,
+                    };
+                    value
+                }
                 None => false,
             }
         };
@@ -2457,8 +2484,24 @@ async fn cmd_loop(
                     insert_track_ids(&channel, &state, position, ids).await?;
                 }
                 Cmd::LikeTrack { id, like } => {
+                    // Flip the player-bar heart right away. The poll confirms
+                    // within a second — the daemon updates its queued copy of
+                    // the track — but a heart that waits for that reads as a
+                    // dead button.
+                    {
+                        let id = id.clone();
+                        let _ = weak.upgrade_in_event_loop(move |app| {
+                            if app.get_now_track_id().as_str() == id {
+                                app.set_now_liked(like);
+                            }
+                        });
+                    }
                     {
                         let mut st = state.lock().await;
+                        // Five polls ≈ five seconds: enough for the star's
+                        // network round-trip, short enough that a failed one
+                        // snaps back visibly.
+                        st.pending_like = Some((id.clone(), like, 5));
                         if like {
                             if st.liked.insert(id.clone()) {
                                 st.liked_order.insert(0, id.clone());
@@ -2466,6 +2509,12 @@ async fn cmd_loop(
                         } else {
                             st.liked.remove(&id);
                             st.liked_order.retain(|t| t != &id);
+                        }
+                        // The cached library copy feeds every future queue —
+                        // a requeue must carry the new state, not the flag
+                        // from when the library was listed.
+                        if let Some(track) = st.tracks.iter_mut().find(|t| t.proto.id == id) {
+                            track.proto.liked = Some(like);
                         }
                         // Keep the provider's list in step so the Liked screen
                         // reflects the toggle without waiting for a reload.

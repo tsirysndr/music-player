@@ -4,6 +4,7 @@ use music_player_storage::repo::artist::ArtistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::searcher::Searcher;
 use music_player_storage::Database;
+use music_player_tracklist::Tracklist as TracklistState;
 use std::sync::Arc;
 
 use crate::api::metadata::v1alpha1::{
@@ -26,11 +27,23 @@ pub struct Library {
     /// what happened while only GraphQL knew: the Slint desktop and the TUI
     /// read over gRPC and kept showing the local library after a switch.
     providers: Arc<ProviderState>,
+    /// The live queue. A like must land on the queued copies too: the
+    /// now-playing readout serves `liked` from them, and a heart that only
+    /// reaches the remote server never changes on screen.
+    tracklist: Arc<std::sync::Mutex<TracklistState>>,
 }
 
 impl Library {
-    pub fn new(db: Database, providers: Arc<ProviderState>) -> Self {
-        Self { db, providers }
+    pub fn new(
+        db: Database,
+        providers: Arc<ProviderState>,
+        tracklist: Arc<std::sync::Mutex<TracklistState>>,
+    ) -> Self {
+        Self {
+            db,
+            providers,
+            tracklist,
+        }
     }
 }
 
@@ -320,8 +333,16 @@ impl LibraryService for Library {
                 .set_liked(&request.id, request.like)
                 .await
                 .map_err(provider_status)?;
+            self.tracklist
+                .lock()
+                .unwrap()
+                .set_track_liked(&request.id, request.like);
             return Ok(tonic::Response::new(LikeTrackResponse {}));
         }
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_track_liked(&request.id, request.like);
         music_player_storage::rocksky::sync_like(&self.db, request.id, request.like);
         Ok(tonic::Response::new(LikeTrackResponse {}))
     }

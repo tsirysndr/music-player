@@ -503,3 +503,94 @@ fn load_tracks() {
     assert_eq!(tracklist.len(), 5);
     assert_eq!(tracklist.tracks(), (vec![], tracks));
 }
+
+/// The regression: a like toggled while a track was playing only reached the
+/// remote server — the queued copies kept the `liked` value from when they
+/// were queued, so the now-playing heart never changed.
+#[test]
+fn set_track_liked_updates_every_copy() {
+    let mut tracklist = Tracklist::new_empty();
+    let track = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        track: Some(6),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        liked: Some(false),
+        ..Default::default()
+    };
+    let other = Track {
+        id: "e2f90d9be6548928fb55875b9b42f8d8".to_owned(),
+        track: Some(7),
+        title: "St. Tropez".to_owned(),
+        artist: "J. Cole".to_owned(),
+        liked: Some(false),
+        ..Default::default()
+    };
+    tracklist.load_tracks(vec![track.clone(), other.clone()]);
+    // Playing the first track puts a copy in `current_track` and `played`
+    // while `other` stays in the up-next list.
+    tracklist.next_track();
+
+    tracklist.set_track_liked(&track.id, true);
+
+    let (current, _) = tracklist.current_track();
+    assert_eq!(current.unwrap().liked, Some(true));
+    let (played, upcoming) = tracklist.tracks();
+    assert_eq!(played[0].liked, Some(true));
+    // The other track is untouched.
+    assert_eq!(upcoming[0].liked, Some(false));
+
+    // And back off again.
+    tracklist.set_track_liked(&track.id, false);
+    let (current, _) = tracklist.current_track();
+    assert_eq!(current.unwrap().liked, Some(false));
+}
+
+/// The regression: the queue is restored from disk with `liked` snapshots
+/// from when each track was queued, so a star set since then (or in another
+/// client) never showed until the track was re-queued. Connecting a provider
+/// re-stamps the queue from its starred list — in both directions — while
+/// local tracks (`liked: None`) are left to the local like store.
+#[test]
+fn restamp_liked_overwrites_stale_snapshots() {
+    let mut tracklist = Tracklist::new_empty();
+    let stale_unliked = Track {
+        id: "d078aab608b47743781027a8881bf3cb".to_owned(),
+        title: "Fire Squad".to_owned(),
+        artist: "J. Cole".to_owned(),
+        liked: Some(false),
+        ..Default::default()
+    };
+    let stale_liked = Track {
+        id: "e2f90d9be6548928fb55875b9b42f8d8".to_owned(),
+        title: "St. Tropez".to_owned(),
+        artist: "J. Cole".to_owned(),
+        liked: Some(true),
+        ..Default::default()
+    };
+    let local = Track {
+        id: "53fc91928a293df6cd9765a5938446eb".to_owned(),
+        title: "Love Yourz".to_owned(),
+        artist: "J. Cole".to_owned(),
+        liked: None,
+        ..Default::default()
+    };
+    tracklist.load_tracks(vec![
+        stale_unliked.clone(),
+        stale_liked.clone(),
+        local.clone(),
+    ]);
+    tracklist.next_track();
+
+    // The provider says: the first track IS starred, the second is NOT.
+    let starred: std::collections::HashSet<String> =
+        std::iter::once(stale_unliked.id.clone()).collect();
+    tracklist.restamp_liked(&starred);
+
+    let (current, _) = tracklist.current_track();
+    assert_eq!(current.unwrap().liked, Some(true));
+    let (_, upcoming) = tracklist.tracks();
+    assert_eq!(upcoming[0].liked, Some(false));
+    // Not the provider's to answer for.
+    assert_eq!(upcoming[1].liked, None);
+}

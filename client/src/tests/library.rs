@@ -15,11 +15,15 @@ async fn setup_client(
     // Search the fixture database, not whatever Typesense the developer's
     // settings point at — which answers about a different library entirely.
     std::env::set_var(music_player_settings::LOCAL_SEARCH_ONLY, "1");
-    let (_cmd_tx, _cmd_rx, _tracklist, db, addr, _url) = setup_new_params(port).await;
+    let (_cmd_tx, _cmd_rx, tracklist, db, addr, _url) = setup_new_params(port).await;
     let (tx, rx) = oneshot::channel();
     tokio::spawn(async move {
         Server::builder()
-            .add_service(LibraryServiceServer::new(Library::new(db, local_only())))
+            .add_service(LibraryServiceServer::new(Library::new(
+                db,
+                local_only(),
+                tracklist,
+            )))
             .serve_with_shutdown(addr, rx.map(drop))
             .await
             .unwrap();

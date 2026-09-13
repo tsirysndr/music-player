@@ -134,10 +134,11 @@ impl DevicesMutation {
 
         let config = ProviderConfig::from_device(&device, http_port)
             .ok_or_else(|| Error::new("that device has no address to read from"))?;
-        provider::state(ctx)
+        let connected = provider::state(ctx)
             .connect(config)
             .await
             .map_err(provider::err)?;
+        provider::restamp_queue_likes(ctx, connected);
 
         SimpleBroker::<ConnectedDevice>::publish(device.clone().into());
         Ok(device.clone().is_connected(Some(&device)).into())

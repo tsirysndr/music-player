@@ -1,3 +1,7 @@
+// The schema's combined resolver future sits right at rustc's default type
+// recursion limit; one more captured future in a mutation tips it over.
+#![recursion_limit = "256"]
+
 #[cfg(test)]
 mod tests;
 use crate::simple_broker::SimpleBroker;

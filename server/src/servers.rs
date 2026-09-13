@@ -5,11 +5,12 @@
 //! nothing else. It cannot interrupt playback — a provider is where the
 //! *screens* read from, and nothing reachable from here touches the player.
 
-use music_player_provider::{ProviderConfig, ProviderState};
+use music_player_provider::{ConnectedProvider, Page, ProviderConfig, ProviderState};
 use music_player_storage::{
     saved_servers::{self, NewServer, SavedServer},
     Database,
 };
+use music_player_tracklist::Tracklist as TracklistState;
 use std::sync::Arc;
 
 use crate::api::music::v1alpha1::{
@@ -23,16 +24,46 @@ use crate::api::music::v1alpha1::{
 pub struct Servers {
     db: Database,
     providers: Arc<ProviderState>,
+    /// The live queue: a fresh connection re-stamps the queued tracks' liked
+    /// flags, which are snapshots from when each track was queued.
+    tracklist: Arc<std::sync::Mutex<TracklistState>>,
 }
 
 impl Servers {
-    pub fn new(db: Database, providers: Arc<ProviderState>) -> Self {
-        Self { db, providers }
+    pub fn new(
+        db: Database,
+        providers: Arc<ProviderState>,
+        tracklist: Arc<std::sync::Mutex<TracklistState>>,
+    ) -> Self {
+        Self {
+            db,
+            providers,
+            tracklist,
+        }
     }
 
     async fn connected_id(&self) -> Option<String> {
         self.providers.config().await.map(|config| config.id)
     }
+}
+
+/// Refresh the queued tracks' `liked` from a freshly connected provider's
+/// starred list. Detached: the connect reply must not wait on a full
+/// starred-list fetch, and a failure only means the hearts keep their
+/// queue-time snapshots.
+pub(crate) fn restamp_queue_likes(
+    connected: ConnectedProvider,
+    tracklist: Arc<std::sync::Mutex<TracklistState>>,
+) {
+    tokio::spawn(async move {
+        match connected.provider.liked_tracks(Page::new(0, 0)).await {
+            Ok(starred) => {
+                let ids = starred.into_iter().map(|track| track.id).collect();
+                tracklist.lock().unwrap().restamp_liked(&ids);
+            }
+            Err(e) => tracing::warn!("could not refresh queued likes: {e}"),
+        }
+    });
 }
 
 fn now() -> String {
@@ -188,10 +219,12 @@ impl ServersService for Servers {
             username: row.username.clone(),
             password: row.password.clone(),
         };
-        self.providers
+        let connected = self
+            .providers
             .connect(config)
             .await
             .map_err(crate::library::provider_status)?;
+        restamp_queue_likes(connected, Arc::clone(&self.tracklist));
 
         Ok(tonic::Response::new(ConnectServerResponse {
             server: Some(to_proto(row, Some(id.as_str()))),

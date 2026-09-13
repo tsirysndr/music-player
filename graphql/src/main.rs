@@ -1,3 +1,7 @@
+// The schema's combined resolver future sits right at rustc's default type
+// recursion limit; one more captured future in a mutation tips it over.
+#![recursion_limit = "256"]
+
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use music_player_graphql::schema::{Mutation, Query};
 use music_player_settings::get_application_directory;

@@ -146,10 +146,11 @@ impl ServersMutation {
             username: row.username.clone(),
             password: row.password.clone(),
         };
-        provider::state(ctx)
+        let connected = provider::state(ctx)
             .connect(config)
             .await
             .map_err(provider::err)?;
+        provider::restamp_queue_likes(ctx, connected);
 
         Ok(Server::from_row(row, Some(id.as_str())))
     }

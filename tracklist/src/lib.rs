@@ -123,6 +123,45 @@ impl Tracklist {
         self.current_track = Some(track);
     }
 
+    /// Record a like/unlike on every queued copy of the track — up-next,
+    /// history and current. The now-playing readout serves `liked` from these
+    /// copies, so without this a toggle only reaches the remote server and the
+    /// heart keeps showing the state from when the track was queued.
+    pub fn set_track_liked(&mut self, id: &str, liked: bool) {
+        for track in self
+            .tracks
+            .iter_mut()
+            .chain(self.played.iter_mut())
+            .chain(self.current_track.iter_mut())
+        {
+            if track.id == id {
+                track.liked = Some(liked);
+            }
+        }
+    }
+
+    /// Overwrite the queued copies' `liked` with the provider's own starred
+    /// set: every id in it is starred, every id missing from it is not. The
+    /// queue can outlive a session — it is restored from disk with whatever
+    /// `liked` each track had when it was queued — so a freshly connected
+    /// provider's answer must replace those snapshots, both ways.
+    ///
+    /// Tracks whose `liked` was never known (`None` — a local file) are left
+    /// alone: they are not the provider's to answer for, and the clients fall
+    /// back to the local like store for them.
+    pub fn restamp_liked(&mut self, starred: &std::collections::HashSet<String>) {
+        for track in self
+            .tracks
+            .iter_mut()
+            .chain(self.played.iter_mut())
+            .chain(self.current_track.iter_mut())
+        {
+            if track.liked.is_some() {
+                track.liked = Some(starred.contains(&track.id));
+            }
+        }
+    }
+
     pub fn tracks(&self) -> (Vec<Track>, Vec<Track>) {
         (self.played.clone(), self.tracks.clone())
     }

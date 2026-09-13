@@ -2179,14 +2179,13 @@ export component AppWindow inherits Window {
                 background: root.show-full-player ? #100c18dd : Theme.panel-bg;
                 // One width for both side columns, so the transport + seek
                 // column between them is genuinely centred. Responsive: the
-                // VFD goes first when the window narrows, then the panel
-                // buttons, leaving just mute + the volume knob — the floor at
-                // each step is the natural width of what is still shown.
+                // VFD hides when the window narrows; the panel buttons, mute
+                // and the volume knob stay whatever the size — they are
+                // controls, not decoration.
                 property <bool> show-vfd: root.width >= 1050px;
-                property <bool> show-panel-buttons: root.width >= 820px;
                 property <length> side-width: self.show-vfd
                     ? max(root.width * 0.24, 392px)
-                    : self.show-panel-buttons ? 212px : 140px;
+                    : 212px;
                 if root.show-full-player && root.now-has-art : Image {
                     x: -20px;
                     y: -20px;
@@ -2382,7 +2381,7 @@ export component AppWindow inherits Window {
                         x: parent.width - self.preferred-width;
                         height: parent.height;
                         spacing: 10px;
-                        if player.show-panel-buttons : IconButton {
+                        IconButton {
                             icon: Icons.equalizer;
                             icon-size: 16px;
                             accented: root.show-audio;
@@ -2391,7 +2390,7 @@ export component AppWindow inherits Window {
                         }
                         // Where the audio comes out. The queue has the right
                         // panel, so the miniplayer's slot is better spent here.
-                        if player.show-panel-buttons : IconButton {
+                        IconButton {
                             icon: Icons.device-speaker;
                             icon-size: 17px;
                             accented: root.current-renderer != "";

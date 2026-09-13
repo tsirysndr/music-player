@@ -22,6 +22,10 @@ export struct TrackItem {
     bpm: string,
     // The colour of this key on the circle of fifths, for the row's left edge.
     key-color: color,
+    /// The album's thumbnail, for context-menu headers. Default when the
+    /// album grid has not loaded it yet.
+    art: image,
+    has-art: bool,
 }
 
 /// One row of an analytics list (Most Played, Statistics sections).
@@ -495,6 +499,63 @@ export component RadioCategoryTile inherits Rectangle {
     touch := TouchArea { clicked => { root.selected(root.label, root.term); } mouse-cursor: pointer; }
 }
 
+
+/// What a context menu is about — mini art, title, artist — so a stray click
+/// cannot act on the wrong thing. Sits above the CtxMenuItems, separated by
+/// a hairline.
+export component CtxMenuHeader inherits VerticalLayout {
+    in property <image> art;
+    in property <bool> has-art: false;
+    in property <image> fallback-icon;
+    in property <string> title;
+    in property <string> subtitle;
+
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 10px;
+        Rectangle {
+            width: 34px;
+            height: 34px;
+            y: (parent.height - self.height) / 2;
+            background: Theme.art-placeholder;
+            clip: true;
+            if root.has-art : Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.art;
+                image-fit: cover;
+            }
+            if !root.has-art : Image {
+                source: root.fallback-icon;
+                colorize: Theme.text-dim;
+                width: 15px;
+                height: 15px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.title;
+                color: Theme.text;
+                font-size: 12px;
+                font-weight: 600;
+                overflow: elide;
+            }
+            if root.subtitle != "" : Text {
+                text: root.subtitle;
+                color: Theme.text-dim;
+                font-size: 10px;
+                overflow: elide;
+            }
+        }
+    }
+    Rectangle { height: 1px; background: Theme.border; }
+    Rectangle { height: 4px; }
+}
 
 // Heart button — the gpui heart glyph sits up-left inside its 24px canvas,
 // so nudge it toward the optical center.
@@ -991,6 +1052,13 @@ export component AlbumCard inherits Rectangle {
 
             VerticalLayout {
                 padding: 4px;
+                CtxMenuHeader {
+                    art: root.album.art;
+                    has-art: root.album.has-art;
+                    fallback-icon: Icons.disc;
+                    title: root.album.title;
+                    subtitle: root.album.artist;
+                }
                 CtxMenuItem {
                     icon: Icons.play;
                     label: "Play";
@@ -1280,6 +1348,13 @@ export component TrackRow inherits Rectangle {
 
             VerticalLayout {
                 padding: 4px;
+                CtxMenuHeader {
+                    art: root.track.art;
+                    has-art: root.track.has-art;
+                    fallback-icon: Icons.music;
+                    title: root.track.title;
+                    subtitle: root.track.artist;
+                }
                 CtxMenuItem {
                     icon: Icons.play;
                     label: "Play next";

@@ -70,7 +70,23 @@ thread_local! {
     static STATE: RefCell<UiState> = RefCell::new(UiState::default());
 }
 
-fn track_item_with(t: &rpc::TrackData, liked_ids: &std::collections::HashSet<String>) -> TrackItem {
+/// The album grid's thumbnail for `album_id`, for context-menu headers.
+///
+/// Takes the album list rather than touching STATE: most callers already hold
+/// the RefCell (some mutably), and a nested borrow here would panic.
+fn album_art_of(albums: &[AlbumEntry], album_id: &str) -> Option<slint::Image> {
+    albums
+        .iter()
+        .find(|a| a.data.id == album_id)
+        .and_then(|a| a.image.clone())
+}
+
+fn track_item_with(
+    t: &rpc::TrackData,
+    liked_ids: &std::collections::HashSet<String>,
+    albums: &[AlbumEntry],
+) -> TrackItem {
+    let art = album_art_of(albums, &t.album_id);
     TrackItem {
         id: t.id.clone().into(),
         title: t.title.clone().into(),
@@ -90,6 +106,8 @@ fn track_item_with(t: &rpc::TrackData, liked_ids: &std::collections::HashSet<Str
         // Resolved here rather than in the markup: Slint has no colour
         // arithmetic, and the mapping is the same one the web client uses.
         key_color: key_color(&t.key),
+        has_art: art.is_some(),
+        art: art.unwrap_or_default(),
     }
 }
 
@@ -160,8 +178,16 @@ pub fn ui_set_library(app: &AppWindow, data: rpc::LibraryData) {
         let albums: Vec<AlbumItem> = st.albums.iter().map(album_item).collect();
         let artists: Vec<ArtistItem> = st.artists.iter().map(artist_item).collect();
         let ids = liked_ids_of(&st.liked);
-        let tracks: Vec<TrackItem> = st.tracks.iter().map(|t| track_item_with(t, &ids)).collect();
-        let liked: Vec<TrackItem> = st.liked.iter().map(|t| track_item_with(t, &ids)).collect();
+        let tracks: Vec<TrackItem> = st
+            .tracks
+            .iter()
+            .map(|t| track_item_with(t, &ids, &st.albums))
+            .collect();
+        let liked: Vec<TrackItem> = st
+            .liked
+            .iter()
+            .map(|t| track_item_with(t, &ids, &st.albums))
+            .collect();
 
         app.set_albums(ModelRc::new(VecModel::from(albums)));
         app.set_artists(ModelRc::new(VecModel::from(artists)));
@@ -382,9 +408,19 @@ pub fn ui_set_queue(
     upnext: Vec<rpc::TrackData>,
     history: Vec<rpc::TrackData>,
 ) {
-    let ids = STATE.with(|s| liked_ids_of(&s.borrow().liked));
-    let upnext: Vec<TrackItem> = upnext.iter().map(|t| track_item_with(t, &ids)).collect();
-    let history: Vec<TrackItem> = history.iter().map(|t| track_item_with(t, &ids)).collect();
+    let (upnext, history) = STATE.with(|s| {
+        let st = s.borrow();
+        let ids = liked_ids_of(&st.liked);
+        let upnext: Vec<TrackItem> = upnext
+            .iter()
+            .map(|t| track_item_with(t, &ids, &st.albums))
+            .collect();
+        let history: Vec<TrackItem> = history
+            .iter()
+            .map(|t| track_item_with(t, &ids, &st.albums))
+            .collect();
+        (upnext, history)
+    });
     app.set_queue_total(total as i32);
     app.set_queue_upnext(ModelRc::new(VecModel::from(upnext)));
     app.set_queue_history(ModelRc::new(VecModel::from(history)));
@@ -414,6 +450,18 @@ pub fn ui_show_album_detail(app: &AppWindow, detail: rpc::AlbumDetailData) {
     meta.push_str(&format!("{} tracks · {duration}", detail.tracks.len()));
 
     let ids = STATE.with(|s| liked_ids_of(&s.borrow().liked));
+    // Snapshot of the album thumbnails for the rows' menu headers; the row
+    // building below happens outside the STATE borrow.
+    let albums_snapshot: Vec<AlbumEntry> = STATE.with(|s| {
+        s.borrow()
+            .albums
+            .iter()
+            .map(|a| AlbumEntry {
+                data: a.data.clone(),
+                image: a.image.clone(),
+            })
+            .collect()
+    });
     // Group by disc when the album spans more than one.
     let discs: std::collections::BTreeSet<i32> =
         detail.tracks.iter().map(|t| t.disc.max(1)).collect();
@@ -433,7 +481,7 @@ pub fn ui_show_album_detail(app: &AppWindow, detail: rpc::AlbumDetailData) {
                     .map(|t| DetailRow {
                         is_header: false,
                         header: "".into(),
-                        track: track_item_with(t, &ids),
+                        track: track_item_with(t, &ids, &albums_snapshot),
                     }),
             );
         }
@@ -441,7 +489,7 @@ pub fn ui_show_album_detail(app: &AppWindow, detail: rpc::AlbumDetailData) {
         rows.extend(detail.tracks.iter().map(|t| DetailRow {
             is_header: false,
             header: "".into(),
-            track: track_item_with(t, &ids),
+            track: track_item_with(t, &ids, &albums_snapshot),
         }));
     }
     app.set_detail_album(AlbumItem {
@@ -488,7 +536,7 @@ pub fn ui_show_artist_detail(app: &AppWindow, id: &str) {
             .filter(|t| t.artist == name)
             .enumerate()
             .map(|(i, t)| {
-                let mut item = track_item_with(t, &ids);
+                let mut item = track_item_with(t, &ids, &st.albums);
                 item.index = i as i32;
                 item
             })
@@ -672,7 +720,7 @@ pub fn ui_show_playlist(
         tracks
             .iter()
             .enumerate()
-            .map(|(i, t)| track_item_with(&rpc::track_data(t, i as i32), &liked))
+            .map(|(i, t)| track_item_with(&rpc::track_data(t, i as i32), &liked, &st.albums))
             .collect()
     });
     if let Some(p) = STATE.with(|s| s.borrow().playlists.iter().find(|p| p.id == id).cloned()) {
@@ -799,8 +847,11 @@ pub fn ui_set_liked(app: &AppWindow, liked: Vec<rpc::TrackData>) {
         // The Liked tab lists the liked tracks themselves, so its *membership*
         // changed — rebuild it. Every other view keeps its rows and only needs
         // the flag re-stamped.
-        let liked_items: Vec<TrackItem> =
-            st.liked.iter().map(|t| track_item_with(t, &ids)).collect();
+        let liked_items: Vec<TrackItem> = st
+            .liked
+            .iter()
+            .map(|t| track_item_with(t, &ids, &st.albums))
+            .collect();
         app.set_liked(ModelRc::new(VecModel::from(liked_items)));
         refresh_liked_flags(app, &ids);
     });

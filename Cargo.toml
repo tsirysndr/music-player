@@ -147,14 +147,3 @@ tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 ratatui = {version = "0.30", features = ["serde"]}
 tungstenite = "0.17.3"
-
-# rockbox-playback 0.7.0 (spectrum bands) is not on crates.io yet — it lives
-# in the sibling rockbox-zig checkout. Drop this patch once 0.7.0 is published.
-[patch.crates-io]
-rockbox-playback = { path = "../rockbox-zig/crates/rockbox-playback" }
-# Its path dependencies must resolve to the same package identity as the
-# crates.io copies the rest of this workspace uses, or the `links =` native
-# libraries appear twice.
-rockbox-codecs = { path = "../rockbox-zig/crates/rockbox-codecs" }
-rockbox-dsp = { path = "../rockbox-zig/crates/rockbox-dsp" }
-rockbox-metadata = { path = "../rockbox-zig/crates/rockbox-metadata" }

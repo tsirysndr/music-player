@@ -41,6 +41,13 @@ async fn record_loop(tracklist: Arc<Mutex<Tracklist>>) {
         };
 
         let counted = watcher.advance(&current);
+        if counted {
+            // advance() keeps saying "crossed the threshold" until submitted
+            // is set — the scrobbler defers it for its retry logic, but here
+            // the count is recorded immediately, so mark it now or the same
+            // play is counted once per tick (the all-counts-wrong bug).
+            watcher.submitted = true;
+        }
         if let Some(mut previous) = pending.take() {
             if previous.key != current.key {
                 // A new play started while the old one was still short of the

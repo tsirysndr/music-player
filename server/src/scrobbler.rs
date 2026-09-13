@@ -100,7 +100,12 @@ pub(crate) struct Watcher {
     /// Wall clock when this play started — the scrobble's `timestamp`.
     pub(crate) started_at: i64,
     last_position_ms: u32,
-    submitted: bool,
+    /// Whether this play has been counted/submitted. `advance` keeps
+    /// returning true until the CALLER sets this (the scrobbler only marks it
+    /// after the network submit succeeded, so a failed submit retries) — a
+    /// caller with nothing to retry must mark it immediately or it will
+    /// count the same play once per tick.
+    pub(crate) submitted: bool,
     pub(crate) retry_after: Option<Instant>,
 }
 

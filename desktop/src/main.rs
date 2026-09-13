@@ -1379,6 +1379,11 @@ fn main() -> Result<(), slint::PlatformError> {
 
     setup_backend();
     let app = AppWindow::new()?;
+    // Open at the full layout — wide enough that the VFD, the panel icon
+    // buttons and the volume knob are all on screen — instead of whatever
+    // size the backend picks.
+    app.window()
+        .set_size(slint::LogicalSize::new(1200.0, 780.0));
     #[cfg(target_os = "macos")]
     {
         app.set_titlebar_inset(24.0);

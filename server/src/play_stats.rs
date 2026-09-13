@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use music_player_entity::track_stats;
 use music_player_tracklist::Tracklist;
-use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue, ConnectionTrait, DatabaseConnection, EntityTrait};
 
 use crate::scrobbler::{current_track, unix_now, Current, Watcher, TICK};
 
@@ -41,20 +41,39 @@ async fn record_loop(tracklist: Arc<Mutex<Tracklist>>) {
         };
 
         let counted = watcher.advance(&current);
-        if let Some(previous) = pending.take() {
+        if let Some(mut previous) = pending.take() {
             if previous.key != current.key {
                 // A new play started while the old one was still short of the
                 // threshold: the user moved on.
-                if let Err(e) = bump(&conn, &previous.id, Kind::Skip).await {
+                if let Err(e) = bump(
+                    &conn,
+                    &previous.id,
+                    Kind::Skip,
+                    previous.position_ms,
+                    previous.duration_ms,
+                )
+                .await
+                {
                     tracing::debug!(track = %previous.id, "could not record a skip: {e}");
                 }
             } else {
+                // Same play, later tick: remember how far it has got, so a
+                // skip records how much was actually heard.
+                previous.position_ms = current.position_ms;
                 pending = Some(previous);
             }
         }
 
         if counted {
-            if let Err(e) = bump(&conn, &current.id, Kind::Play).await {
+            if let Err(e) = bump(
+                &conn,
+                &current.id,
+                Kind::Play,
+                current.position_ms,
+                current.duration_ms,
+            )
+            .await
+            {
                 tracing::debug!(track = %current.id, "could not record a play: {e}");
             }
             pending = None;
@@ -69,6 +88,9 @@ async fn record_loop(tracklist: Arc<Mutex<Tracklist>>) {
 struct Pending {
     key: String,
     id: String,
+    /// The furthest position seen, so a skip records what was actually heard.
+    position_ms: u32,
+    duration_ms: u32,
 }
 
 impl Pending {
@@ -76,6 +98,8 @@ impl Pending {
         Self {
             key: current.key.clone(),
             id: current.id.clone(),
+            position_ms: current.position_ms,
+            duration_ms: current.duration_ms,
         }
     }
 }
@@ -86,12 +110,36 @@ enum Kind {
     Skip,
 }
 
-/// Add one to a track's play or skip count, creating the row on first sight.
-async fn bump(conn: &DatabaseConnection, track_id: &str, kind: Kind) -> Result<(), anyhow::Error> {
+/// Add one to a track's play or skip count, creating the row on first sight,
+/// and append the listen to the `play_history` log — the counters answer "how
+/// often", the log answers "when".
+async fn bump(
+    conn: &DatabaseConnection,
+    track_id: &str,
+    kind: Kind,
+    ms_played: u32,
+    length_ms: u32,
+) -> Result<(), anyhow::Error> {
     if track_id.is_empty() {
         return Ok(());
     }
     let now = unix_now();
+    // Best-effort: analytics must never fail the play that produced it.
+    let history = sea_orm::Statement::from_sql_and_values(
+        conn.get_database_backend(),
+        "INSERT INTO play_history (track_id, played_at, ms_played, length_ms, skipped) \
+         VALUES (?, ?, ?, ?, ?)",
+        [
+            track_id.into(),
+            now.into(),
+            (ms_played as i64).into(),
+            (length_ms as i64).into(),
+            (matches!(kind, Kind::Skip) as i32).into(),
+        ],
+    );
+    if let Err(e) = conn.execute(history).await {
+        tracing::debug!(track = %track_id, "could not append play history: {e}");
+    }
     let existing = track_stats::Entity::find_by_id(track_id.to_owned())
         .one(conn)
         .await?;
@@ -163,9 +211,15 @@ mod tests {
     async fn counts_plays_and_skips_separately() {
         let (_dir, conn) = temp_db().await;
 
-        bump(&conn, "t1", Kind::Play).await.unwrap();
-        bump(&conn, "t1", Kind::Play).await.unwrap();
-        bump(&conn, "t1", Kind::Skip).await.unwrap();
+        bump(&conn, "t1", Kind::Play, 30_000, 200_000)
+            .await
+            .unwrap();
+        bump(&conn, "t1", Kind::Play, 30_000, 200_000)
+            .await
+            .unwrap();
+        bump(&conn, "t1", Kind::Skip, 30_000, 200_000)
+            .await
+            .unwrap();
 
         let row = stats(&conn, "t1").await;
         assert_eq!(row.play_count, 2);
@@ -179,17 +233,49 @@ mod tests {
     #[tokio::test]
     async fn a_skip_leaves_the_play_count_alone() {
         let (_dir, conn) = temp_db().await;
-        bump(&conn, "t1", Kind::Play).await.unwrap();
-        bump(&conn, "t1", Kind::Skip).await.unwrap();
+        bump(&conn, "t1", Kind::Play, 30_000, 200_000)
+            .await
+            .unwrap();
+        bump(&conn, "t1", Kind::Skip, 30_000, 200_000)
+            .await
+            .unwrap();
         let row = stats(&conn, "t1").await;
         assert_eq!(row.play_count, 1);
         assert!(row.last_played.is_some());
     }
 
+    /// Every bump also lands in the play_history log, with the skip flag and
+    /// the listen details — that is what "what did I play this week" reads.
+    #[tokio::test]
+    async fn every_listen_reaches_the_history_log() {
+        let (_dir, conn) = temp_db().await;
+        bump(&conn, "t1", Kind::Play, 180_000, 200_000)
+            .await
+            .unwrap();
+        bump(&conn, "t1", Kind::Skip, 15_000, 200_000)
+            .await
+            .unwrap();
+
+        let rows = conn
+            .query_all(sea_orm::Statement::from_string(
+                conn.get_database_backend(),
+                "SELECT track_id, ms_played, skipped FROM play_history ORDER BY id".to_string(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 2);
+        let ms: i64 = rows[0].try_get("", "ms_played").unwrap();
+        let skipped: i32 = rows[0].try_get("", "skipped").unwrap();
+        assert_eq!((ms, skipped), (180_000, 0));
+        let ms: i64 = rows[1].try_get("", "ms_played").unwrap();
+        let skipped: i32 = rows[1].try_get("", "skipped").unwrap();
+        assert_eq!((ms, skipped), (15_000, 1));
+    }
+
     #[tokio::test]
     async fn ignores_tracks_with_no_id() {
         let (_dir, conn) = temp_db().await;
-        bump(&conn, "", Kind::Play).await.unwrap();
+        bump(&conn, "", Kind::Play, 30_000, 200_000).await.unwrap();
         assert_eq!(
             track_stats::Entity::find().all(&conn).await.unwrap().len(),
             0

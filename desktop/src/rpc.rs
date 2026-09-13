@@ -411,12 +411,15 @@ pub fn start(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
 async fn run(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
     // Likes restored from the user's atproto repo join the locally-stored ones,
     // so a fresh install shows the account's likes once the library is scanned.
-    let mut liked_order = likes::load();
-    let mut liked: HashSet<String> = liked_order.iter().cloned().collect();
+    // The account's likes carry real like-times (rocksky created_at, already
+    // newest-first) — they are the ordering backbone. Ids only the local file
+    // knows (liked while signed out, or pre-sync) go on top in file order,
+    // where the file's front is the newest.
+    let local = likes::load();
+    let mut liked: HashSet<String> = HashSet::new();
+    let mut liked_order: Vec<String> = Vec::new();
     let db = music_player_storage::shared().await;
     match music_player_storage::rocksky_likes::matched_track_ids(db.get_connection()).await {
-        // Restored likes have no local like-time; they go below the ones
-        // liked on this machine.
         Ok(ids) => {
             for id in ids {
                 if liked.insert(id.clone()) {
@@ -425,6 +428,13 @@ async fn run(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
             }
         }
         Err(e) => tracing::debug!("could not read restored likes: {e}"),
+    }
+    let mut fronted = 0usize;
+    for id in local {
+        if liked.insert(id.clone()) {
+            liked_order.insert(fronted, id);
+            fronted += 1;
+        }
     }
     let state = Arc::new(Mutex::new(WorkerState {
         liked,
@@ -1947,8 +1957,12 @@ async fn load_stats() -> StatsData {
         )
         .await,
         recently_played: analytics_rows(
-            "SELECT track_id, title, artist, ms_played / 1000, played_at \
-             FROM v_recently_played LIMIT 50",
+            // One row per track — the latest listen. Restarting a track a few
+            // times writes several history rows, and a screen repeating the
+            // same title reads as a bug, not a log.
+            "SELECT track_id, title, artist, ms_played / 1000, MAX(played_at) AS played_at \
+             FROM v_recently_played GROUP BY track_id \
+             ORDER BY played_at DESC LIMIT 50",
         )
         .await,
         never_played: analytics_rows(

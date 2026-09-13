@@ -24,6 +24,7 @@ use std::collections::HashMap;
 
 use anyhow::Error;
 use music_player_entity::{album, artist, rocksky_like, track};
+use sea_orm::QueryOrder;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
@@ -359,6 +360,8 @@ async fn stamp_track(
 pub async fn matched_track_ids(conn: &DatabaseConnection) -> Result<Vec<String>, Error> {
     Ok(rocksky_like::Entity::find()
         .filter(rocksky_like::Column::TrackId.is_not_null())
+        // Most recently liked first — the Liked screen shows this order.
+        .order_by_desc(rocksky_like::Column::CreatedAt)
         .all(conn)
         .await?
         .into_iter()

@@ -8,6 +8,151 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.0] — 2026-09-13
+
+### Added
+
+#### A listening history, and screens that read it
+- `track_stats` keeps running counters — one row per track, overwritten in
+  place — which is what smart playlists read, and which cannot answer anything
+  about *when*. A new **`play_history`** table is the event log those counters
+  summarise: one row per listen, appended and never updated, with how much was
+  actually heard — kept as milliseconds rather than a ratio, so a later change
+  of mind about what counts as a skip can be applied to history already
+  collected. Five SQL views (`v_most_played`, `v_most_skipped`,
+  `v_never_played`, `v_recently_added`, `v_recently_played`) live in the
+  migration rather than in Rust, so every consumer sees one definition. A track
+  skipped ten times has still never been *listened to*, and the views say so.
+- **Most Played** and **Statistics** join the desktop sidebar: a ranked
+  play-count list, and a stat-card strip (tracks / plays / skips / never
+  played) over the recently-played and most-skipped sections. They read the
+  local analytics views, which live on this machine even when browsing a
+  remote server. Recently Played collapses to the latest listen per track, so
+  replaying a song does not fill the screen with duplicate rows.
+
+#### The spectrum is measured now
+- The engine (rockbox-playback 0.7.0) measures a real **16-band log-spaced
+  spectrum** per output buffer — a one-pole low-pass ladder over the signed
+  mix, cheap enough for the audio callback — and `Levels` carries the bands
+  through tracklist and the gRPC stream, zero for older engines.
+- The desktop's full-screen equalizer switches from two-scalar synthesis to
+  those measured bands: per-band auto-gain (each column rides its own decaying
+  peak, so a hi-hat column reaches the top on hi-hats, not on kicks),
+  interpolated across the 96 bars. The data is real now, and decoration on top
+  of measurement reads as noise; the old synthesis stays as the fallback
+  against an older daemon.
+
+#### The seek bar is the waveform
+- The desktop player bar draws the current track's own waveform as the seek
+  bar: played bars in accent, the rest dimmed. A track the background pass has
+  not reached yet is analysed **on demand** the moment it plays, instead of
+  showing a flat rail until the scanner gets there.
+
+#### Five new builtin skins
+- **Nord**, **Oceanic**, **Tape**, **Phosphor** and **Parchment**, with this
+  client's fonts and skeleton/syntax tokens filled in. The two light skins sit
+  last in the cycle, so cycling runs through the dark ones before changing the
+  room.
+
+#### Context menus that say what they act on
+- Every desktop context menu now leads with what it is about — mini album art,
+  title, artist — via a shared header: the track-row menu, the album-card menu
+  and the palette menu, so a stray click cannot act on the wrong song.
+- Palette search results grew an ellipsis menu (play / play next / add to
+  queue / add to playlist), clamped on-screen and opening upward at the bottom.
+  The playlist picker pins a **"Create new playlist"** row on top; the typed
+  query becomes the name and the pending track or album lands in it in one
+  call.
+- **"Add to playlist…"** is one always-present item opening the raycast-style
+  picker, replacing an inline top-3 whose browse row only appeared with four or
+  more playlists. Artist-detail and album-detail rows gained the missing
+  wiring.
+
+#### Knobs with a value arc
+- Every knob draws an arc over its own border, from its origin round to the
+  current value. Volume, precut and the crossfade knobs fill from their
+  minimum; balance, bass, treble and ReplayGain pre-amp anchor at their neutral
+  centre, so a cut sweeps anti-clockwise out of it and a boost clockwise.
+
+#### Codec and sample rate on the remote-player wire
+- The Rocksky remote-player websocket now sends the **codec** (from the local
+  file's extension; streams send nothing) alongside the sample rate, so the
+  format badge can render fully on the other end.
+
+### Changed
+
+- **sea-orm 0.9 → 2.0.2** (five majors in one step, sqlx 0.6 → 0.9 with it):
+  raw statements moved to the new `_raw` forms, migrations use
+  `execute_unprepared`, expression methods come from `ExprTrait`, and
+  `UpdateOne` updates by the model's own primary key. The full workspace suite
+  passed after the migration.
+- **rockbox-playback 0.7.0 resolves from crates.io** — the temporary
+  `[patch.crates-io]` is gone, and the workspace no longer needs a sibling
+  rockbox-zig checkout to build.
+- A migration **drops the keys and tempos that were guessed before tags were
+  read**: the first analysis build detected both from the audio, and measured
+  against tagged files roughly a third of those rows disagreed with what the
+  file plainly said. That build wrote Camelot notation and every build since
+  writes traditional, so the guesses are identifiable exactly; the rows are
+  recomputed from the files. Irreversible by design — what it removes was
+  wrong.
+- The fullscreen player **drops the waveform strip** under the album art — the
+  seek bar is already the waveform, and the strip crowded the art. Statistics
+  drops the never-played listing for the count card alone.
+- The player bar is truly centred — both side columns share one width — and
+  responsive: below 1050px the VFD goes, below 820px the panel buttons follow.
+  Mute and the volume knob stay at every size; they are controls, not
+  decoration. The window opens at the full 1200×780 layout, so everything is
+  on screen from the start.
+- The sidebar account row **opens a menu** instead of signing out on click.
+  Clicking your own name should not end the session — and signing out also
+  stops scrobbling and station sync, which is not something to do on a stray
+  click.
+- The aarch64 Linux release **builds on an arm runner** instead of
+  cross-compiling through a hand-built sysroot that pkg-config never knew
+  about. `armv7-unknown-linux-gnueabihf` is dropped: there is no 32-bit ARM
+  runner, so keeping it would mean keeping the sysroot.
+- Install docs for the **macOS cask** and **Arch Linux (AUR)** package.
+
+### Fixed
+
+- **A play counted once, not once per second.** The stats recorder never
+  marked its watcher as submitted, so a single listen bumped the play count
+  every tick past the threshold — 141 "plays" of one track. It is marked the
+  moment the play is counted, and the inflated rows were cleared.
+- **The embedded daemon records plays at all.** The desktop app's built-in
+  daemon never spawned the play-stats recorder — only the standalone server
+  did — so playing music in the app updated no analytics.
+- **Signing in mid-session turns atradio on.** The status publisher checked
+  for an identity once at daemon startup and returned permanently; a user who
+  signed in from the UI minutes later published nothing until the next
+  restart. The gate now polls a local read every 30 seconds and starts the
+  sync tasks as soon as an identity appears.
+- **Sign-out sticks.** A daemon configured by environment variables
+  re-established a session on the very next read after sign-out, so the button
+  appeared to do nothing. A deliberate sign-out is recorded in a file — it has
+  to be readable before anything else is set up, and there is exactly one bit
+  to store — and signing in again clears it.
+- **Every heart on screen updates.** Liking a track refreshed only the Tracks
+  and Liked lists; detail pages and the queues were skipped, which read as the
+  button being broken. The liked flags are now patched into the live models in
+  place — every view at once, scroll position untouched — and the network call
+  no longer holds up play/pause behind a round-trip with no timeout.
+- **One liked-tracks order — recently liked first — for list and queue.** The
+  Liked screen and the play-liked queue were built from different sources, so
+  clicking row N could start a different track. An ordered id list is now the
+  single source for both, most recently liked on top.
+- The **disc number survives** the tag conversion, so multi-disc albums group
+  again — and a file with no disc tag stays `None`, so a single-disc album
+  does not grow a "DISC 1" header.
+- The now-playing frames **always carry a sample rate**: a queue restored from
+  an old session predates the field, and the status loop now falls back to the
+  library row.
+- The VFD is gated on the player bar's **effective width** rather than the
+  window's, so it can no longer appear in a bar too narrow for it and clip the
+  volume knob.
+- The nix flake builds again.
+
 ## [0.3.0] — 2026-09-10
 
 ### Added
@@ -484,6 +629,7 @@ outright. See the README for setup.
 Stack modernization: the Rockbox playback engine, SQLite FTS5 search, a ratatui
 TUI and a Tauri 2 desktop app.
 
+[0.4.0]: https://github.com/tsirysndr/music-player/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tsirysndr/music-player/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/tsirysndr/music-player/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/tsirysndr/music-player/releases/tag/v0.2.0

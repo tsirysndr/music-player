@@ -326,7 +326,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         migration::apply().await;
         let db = Database::new().await;
         let conn = db.get_connection();
-        conn.execute(Statement::from_string(
+        conn.execute_raw(Statement::from_string(
             DbBackend::Sqlite,
             "PRAGMA case_sensitive_like=OFF;".to_owned(),
         ))

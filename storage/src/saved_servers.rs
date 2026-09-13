@@ -250,12 +250,9 @@ mod tests {
     async fn db() -> DatabaseConnection {
         let db = Database::connect("sqlite::memory:").await.unwrap();
         let schema = Schema::new(DbBackend::Sqlite);
-        db.execute(
-            db.get_database_backend()
-                .build(&schema.create_table_from_entity(saved_server::Entity)),
-        )
-        .await
-        .unwrap();
+        db.execute(&schema.create_table_from_entity(saved_server::Entity))
+            .await
+            .unwrap();
         db
     }
 

@@ -29,20 +29,14 @@ const IS_CAMELOT: &str = r#"key GLOB '[0-9][AB]' OR key GLOB '[0-9][0-9][AB]'"#;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let db = manager.get_connection();
-        let backend = db.get_database_backend();
-        let run = |sql: String| {
-            db.execute(sea_orm_migration::sea_orm::Statement::from_string(
-                backend, sql,
-            ))
-        };
 
-        run(format!(
+        db.execute_unprepared(&format!(
             "DELETE FROM track_analysis WHERE track_id IN \
              (SELECT id FROM track WHERE {IS_CAMELOT})"
         ))
         .await?;
 
-        run(format!(
+        db.execute_unprepared(&format!(
             "UPDATE track SET key = NULL, bpm = NULL WHERE {IS_CAMELOT}"
         ))
         .await?;

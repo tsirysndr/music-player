@@ -57,7 +57,7 @@ version = "0.3.0"
 futures-util = "0.3.25"
 serde_json = "1.0.89"
 
-sea-orm = {version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
+sea-orm = {version = "2.0.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 surf = {version = "2.3.2", features = ["h1-client-rustls"], default-features = false}
 
 [dependencies]
@@ -73,7 +73,7 @@ mime = "0.3.16"
 mime_guess = "2.0.4"
 owo-colors = "3.5.0"
 rust-embed = {version = "8.12.0", features = ["debug-embed", "actix"]}
-sea-orm = {version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
+sea-orm = {version = "2.0.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 serde = {version = "1.0.145", features = ["serde_derive"]}
 serde_derive = "1.0.145"
 tokio = {version = "1.21.2", features = ["full"]}

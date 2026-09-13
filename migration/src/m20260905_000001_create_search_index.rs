@@ -1,7 +1,4 @@
-use sea_orm_migration::{
-    prelude::*,
-    sea_orm::{ConnectionTrait, Statement},
-};
+use sea_orm_migration::{prelude::*, sea_orm::ConnectionTrait};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -84,20 +81,16 @@ const DOWN_STATEMENTS: [&str; 12] = [
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let conn = manager.get_connection();
-        let backend = manager.get_database_backend();
         for sql in UP_STATEMENTS.iter().chain(BACKFILL_STATEMENTS.iter()) {
-            conn.execute(Statement::from_string(backend, sql.to_string()))
-                .await?;
+            conn.execute_unprepared(sql).await?;
         }
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let conn = manager.get_connection();
-        let backend = manager.get_database_backend();
         for sql in DOWN_STATEMENTS.iter() {
-            conn.execute(Statement::from_string(backend, sql.to_string()))
-                .await?;
+            conn.execute_unprepared(sql).await?;
         }
         Ok(())
     }

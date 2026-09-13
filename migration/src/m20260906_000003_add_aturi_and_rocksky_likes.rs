@@ -1,5 +1,5 @@
 use sea_orm_migration::prelude::*;
-use sea_orm_migration::sea_orm::{ConnectionTrait, Statement};
+use sea_orm_migration::sea_orm::ConnectionTrait;
 
 /// Links the local library to the user's atproto repo.
 ///
@@ -80,11 +80,7 @@ impl MigrationTrait for Migration {
             "CREATE INDEX IF NOT EXISTS idx_rocksky_like_match
                 ON rocksky_like (LOWER(title), LOWER(artist), LOWER(album))",
         ] {
-            db.execute(Statement::from_string(
-                manager.get_database_backend(),
-                statement.to_owned(),
-            ))
-            .await?;
+            db.execute_unprepared(statement).await?;
         }
         Ok(())
     }
@@ -99,11 +95,7 @@ impl MigrationTrait for Migration {
             "DROP INDEX IF EXISTS idx_rocksky_like_track_id",
             "DROP INDEX IF EXISTS idx_rocksky_like_match",
         ] {
-            db.execute(Statement::from_string(
-                manager.get_database_backend(),
-                statement.to_owned(),
-            ))
-            .await?;
+            db.execute_unprepared(statement).await?;
         }
         manager
             .drop_table(Table::drop().table(RockskyLike::Table).to_owned())

@@ -53,7 +53,7 @@ async fn matching_track_ids_at(
         })
         .collect();
     let rows = conn
-        .query_all(Statement::from_sql_and_values(
+        .query_all_raw(Statement::from_sql_and_values(
             DbBackend::Sqlite,
             &query.sql,
             params,

@@ -1,6 +1,7 @@
 use music_player_entity::{album, playlist, playlist_tracks, track};
 use music_player_provider::{Page, ProviderState};
 use music_player_storage::{repo::playlist::PlaylistRepository, Database};
+use sea_orm::sea_query::ExprTrait;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set,
 };
@@ -186,12 +187,14 @@ impl PlaylistService for Playlist {
         &self,
         request: tonic::Request<RenameRequest>,
     ) -> Result<tonic::Response<RenameResponse>, tonic::Status> {
+        // sea-orm 2.0: UpdateOne no longer takes a filter — it updates by the
+        // model's own primary key, so the key moves into the ActiveModel.
         let updates = playlist::ActiveModel {
+            id: Set("test".to_owned()),
             name: Set(request.get_ref().name.clone()),
             ..Default::default()
         };
         playlist::Entity::update(updates)
-            .filter(playlist::Column::Id.eq("test"))
             .exec(self.db.get_connection())
             .await
             .map(|updated| {

@@ -167,7 +167,7 @@ impl Typesense {
     /// Full sync from the database — called after every library scan.
     pub async fn reindex(&self, connection: &DatabaseConnection) -> Result<(), Error> {
         let songs = connection
-            .query_all(Statement::from_string(
+            .query_all_raw(Statement::from_string(
                 DbBackend::Sqlite,
                 r#"SELECT t.id, t.title, t.artist, t.genre, t.duration, t.artist_id, t.album_id,
                     al.title AS album_title, al.cover AS album_cover
@@ -192,7 +192,7 @@ impl Typesense {
             .collect::<Result<Vec<Value>, Error>>()?;
 
         let albums = connection
-            .query_all(Statement::from_string(
+            .query_all_raw(Statement::from_string(
                 DbBackend::Sqlite,
                 "SELECT id, title, artist, artist_id, year, cover FROM album".to_owned(),
             ))
@@ -211,7 +211,7 @@ impl Typesense {
             .collect::<Result<Vec<Value>, Error>>()?;
 
         let artists = connection
-            .query_all(Statement::from_string(
+            .query_all_raw(Statement::from_string(
                 DbBackend::Sqlite,
                 "SELECT id, name, picture FROM artist".to_owned(),
             ))

@@ -205,7 +205,7 @@ pub async fn backfill_key_and_bpm(db: &DatabaseConnection) -> u64 {
                           AND (ta.key IS NOT NULL OR ta.bpm IS NOT NULL))
     "#;
 
-    db.execute(Statement::from_string(
+    db.execute_raw(Statement::from_string(
         db.get_database_backend(),
         sql.to_owned(),
     ))
@@ -225,7 +225,7 @@ pub async fn backfill_key_and_bpm(db: &DatabaseConnection) -> u64 {
 /// go round again — which is exactly what it did.
 fn never_analysed() -> sea_orm::Select<music_player_entity::track::Entity> {
     use music_player_entity::{track, track_analysis};
-    use sea_orm::sea_query::{Expr, Query};
+    use sea_orm::sea_query::{Expr, ExprTrait, Query};
 
     let analysed = Query::select()
         .column(track_analysis::Column::TrackId)
@@ -415,12 +415,9 @@ mod tests {
     async fn memory_db() -> DatabaseConnection {
         let db = Database::connect("sqlite::memory:").await.unwrap();
         let schema = Schema::new(DbBackend::Sqlite);
-        db.execute(
-            db.get_database_backend()
-                .build(&schema.create_table_from_entity(track_analysis::Entity)),
-        )
-        .await
-        .unwrap();
+        db.execute(&schema.create_table_from_entity(track_analysis::Entity))
+            .await
+            .unwrap();
         db
     }
 

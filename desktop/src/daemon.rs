@@ -80,7 +80,7 @@ fn boot() {
         migration::apply().await;
         let db = Database::new().await;
         db.get_connection()
-            .execute(Statement::from_string(
+            .execute_raw(Statement::from_string(
                 DbBackend::Sqlite,
                 "PRAGMA case_sensitive_like=OFF;".to_owned(),
             ))

@@ -22,7 +22,7 @@ async fn test_cli() {
         .expect("Could not connect to database");
 
     let result: Vec<QueryResult> = db
-        .query_all(Statement::from_string(
+        .query_all_raw(Statement::from_string(
             DatabaseBackend::Sqlite,
             "SELECT name FROM sqlite_master
     WHERE type='table';"

@@ -50,7 +50,7 @@ impl<'a> GenreRepository<'a> {
 
         let rows = self
             .conn
-            .query_all(Statement::from_string(DbBackend::Sqlite, sql))
+            .query_all_raw(Statement::from_string(DbBackend::Sqlite, sql))
             .await?;
         rows.into_iter()
             .map(|row| {
@@ -94,7 +94,7 @@ impl<'a> GenreRepository<'a> {
 
         let rows = self
             .conn
-            .query_all(Statement::from_sql_and_values(
+            .query_all_raw(Statement::from_sql_and_values(
                 DbBackend::Sqlite,
                 &sql,
                 [id.into()],

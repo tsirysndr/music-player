@@ -49,10 +49,7 @@ impl MigrationTrait for Migration {
                     // Empty for the daemon's own library.
                     .col(ColumnDef::new(TrackAnalysis::Source).string().not_null())
                     // Peak per bar, one byte each, drawn as-is.
-                    .col(
-                        ColumnDef::new(TrackAnalysis::Waveform)
-                            .blob(sea_orm_migration::sea_query::BlobSize::Blob(None)),
-                    )
+                    .col(ColumnDef::new(TrackAnalysis::Waveform).blob())
                     .col(ColumnDef::new(TrackAnalysis::Bpm).float())
                     .col(ColumnDef::new(TrackAnalysis::BpmConfidence).float())
                     .col(ColumnDef::new(TrackAnalysis::Valence).float())

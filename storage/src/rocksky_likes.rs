@@ -262,7 +262,7 @@ async fn find_track(
             [title.into(), artist.into(), album.into()],
         )
     };
-    let row = conn.query_one(statement).await?;
+    let row = conn.query_one_raw(statement).await?;
     Ok(match row {
         Some(row) => Some(row.try_get::<String>("", "id")?),
         None => None,

@@ -1,3 +1,5 @@
+#![recursion_limit = "512"]
+
 //! Write the GraphQL schema as an introspection JSON document.
 //!
 //! The web UI's typed hooks are generated from that file

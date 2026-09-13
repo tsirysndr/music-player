@@ -539,13 +539,13 @@ async fn prune_missing_tracks(db: &Database) -> Result<(), Error> {
 
 async fn prune_orphaned_library_rows(db: &Database) -> Result<(), Error> {
     let conn = db.get_connection();
-    conn.execute(Statement::from_string(
+    conn.execute_raw(Statement::from_string(
         DbBackend::Sqlite,
         "DELETE FROM album WHERE id NOT IN (SELECT album_id FROM track WHERE album_id IS NOT NULL)"
             .to_owned(),
     ))
     .await?;
-    conn.execute(Statement::from_string(
+    conn.execute_raw(Statement::from_string(
         DbBackend::Sqlite,
         "DELETE FROM artist WHERE id NOT IN (SELECT artist_id FROM track WHERE artist_id IS NOT NULL) AND id NOT IN (SELECT artist_id FROM artist_track)"
             .to_owned(),

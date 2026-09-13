@@ -77,7 +77,7 @@ tide = "0.16.0"
 async-graphql-tide = "7.2.1"
 tokio = { version = "1.21.0", features = ["full"] }
 md5 = "0.7.0"
-sea-orm = { version = "0.9.3", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+sea-orm = { version = "2.0.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
 rand = "0.8.5"
 cuid = "1.2.0"
 chrono = "0.4.23"

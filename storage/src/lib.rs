@@ -62,7 +62,7 @@ async fn enable_wal(connection: &DatabaseConnection) {
         "PRAGMA synchronous=NORMAL",
     ] {
         if let Err(cause) = connection
-            .execute(Statement::from_string(backend, pragma.to_owned()))
+            .execute_raw(Statement::from_string(backend, pragma.to_owned()))
             .await
         {
             tracing::debug!(%pragma, %cause, "could not set");
@@ -113,14 +113,12 @@ impl Database {
     }
 
     pub async fn create_indexes(&self) {
-        let builder = self.connection.get_database_backend();
         let track_title_idx = sea_query::Index::create()
             .table(track_entity::Entity)
             .name("track_title_index")
             .col(track_entity::Column::Title)
             .to_owned();
-        let sql = builder.build(&track_title_idx);
-        match self.connection.execute(sql).await {
+        match self.connection.execute(&track_title_idx).await {
             Ok(_) => {}
             Err(_) => {
                 println!("track_title_index already exists, skipping");
@@ -132,8 +130,7 @@ impl Database {
             .name("album_title_index")
             .col(album_entity::Column::Title)
             .to_owned();
-        let sql = builder.build(&album_title_idx);
-        match self.connection.execute(sql).await {
+        match self.connection.execute(&album_title_idx).await {
             Ok(_) => {}
             Err(_) => {
                 println!("album_title_index already exists, skipping");
@@ -145,8 +142,7 @@ impl Database {
             .name("artist_name_index")
             .col(artist_entity::Column::Name)
             .to_owned();
-        let sql = builder.build(&artist_name_idx);
-        match self.connection.execute(sql).await {
+        match self.connection.execute(&artist_name_idx).await {
             Ok(_) => {}
             Err(_) => {
                 println!("artist_name_index already exists, skipping");

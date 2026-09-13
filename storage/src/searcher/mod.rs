@@ -71,7 +71,7 @@ impl Searcher {
         );
         let rows = self
             .connection
-            .query_all(Statement::from_sql_and_values(
+            .query_all_raw(Statement::from_sql_and_values(
                 DbBackend::Sqlite,
                 &sql,
                 vec![match_query.into()],
@@ -123,7 +123,7 @@ impl Searcher {
         );
         let rows = self
             .connection
-            .query_all(Statement::from_sql_and_values(
+            .query_all_raw(Statement::from_sql_and_values(
                 DbBackend::Sqlite,
                 &sql,
                 vec![match_query.into()],
@@ -167,7 +167,7 @@ impl Searcher {
         );
         let rows = self
             .connection
-            .query_all(Statement::from_sql_and_values(
+            .query_all_raw(Statement::from_sql_and_values(
                 DbBackend::Sqlite,
                 &sql,
                 vec![match_query.into()],

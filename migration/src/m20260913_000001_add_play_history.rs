@@ -75,7 +75,6 @@ ORDER BY h.played_at DESC;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let db = manager.get_connection();
-        let backend = db.get_database_backend();
         // One statement at a time: sqlite's execute takes a single statement,
         // and a failure should name the statement that caused it.
         for statement in UP.split(';') {
@@ -83,18 +82,13 @@ impl MigrationTrait for Migration {
             if statement.is_empty() {
                 continue;
             }
-            db.execute(sea_orm_migration::sea_orm::Statement::from_string(
-                backend,
-                statement.to_string(),
-            ))
-            .await?;
+            db.execute_unprepared(statement).await?;
         }
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let db = manager.get_connection();
-        let backend = db.get_database_backend();
         for statement in [
             "DROP VIEW IF EXISTS v_recently_played",
             "DROP VIEW IF EXISTS v_recently_added",
@@ -105,11 +99,7 @@ impl MigrationTrait for Migration {
             "DROP INDEX IF EXISTS play_history_track_idx",
             "DROP TABLE IF EXISTS play_history",
         ] {
-            db.execute(sea_orm_migration::sea_orm::Statement::from_string(
-                backend,
-                statement.to_string(),
-            ))
-            .await?;
+            db.execute_unprepared(statement).await?;
         }
         Ok(())
     }

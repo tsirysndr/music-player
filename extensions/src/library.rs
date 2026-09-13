@@ -70,7 +70,7 @@ impl Library {
             .collect();
         let rows = self
             .conn
-            .query_all(Statement::from_sql_and_values(
+            .query_all_raw(Statement::from_sql_and_values(
                 DbBackend::Sqlite,
                 &query.sql,
                 params,

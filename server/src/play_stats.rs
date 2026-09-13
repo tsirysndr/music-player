@@ -137,7 +137,7 @@ async fn bump(
             (matches!(kind, Kind::Skip) as i32).into(),
         ],
     );
-    if let Err(e) = conn.execute(history).await {
+    if let Err(e) = conn.execute_raw(history).await {
         tracing::debug!(track = %track_id, "could not append play history: {e}");
     }
     let existing = track_stats::Entity::find_by_id(track_id.to_owned())
@@ -257,7 +257,7 @@ mod tests {
             .unwrap();
 
         let rows = conn
-            .query_all(sea_orm::Statement::from_string(
+            .query_all_raw(sea_orm::Statement::from_string(
                 conn.get_database_backend(),
                 "SELECT track_id, ms_played, skipped FROM play_history ORDER BY id".to_string(),
             ))

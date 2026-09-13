@@ -34,7 +34,7 @@ async fn setup_searcher() -> (tempfile::TempDir, Searcher) {
             VALUES ('3ac1f226a5a75408acb57e97bd5feca2', 'Futsal Shuffle 2020', 'Lil Uzi Vert', 'Hip Hop', 192.5, '/tmp/audio/futsal.mp3', '27234641d4f5f9e0832affa79b9f62d8', '0afe1226a5a75408acb57e97bd5feca1')"#,
     ];
     for sql in statements {
-        conn.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
+        conn.execute_raw(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
             .await
             .unwrap();
     }
@@ -64,7 +64,7 @@ async fn genres_reach_tracks_by_tag_and_by_artist() {
         r#"INSERT INTO artist_genres (id, artist_id, genre_id)
             VALUES ('ag1', '0afe1226a5a75408acb57e97bd5feca1', 'g2')"#,
     ] {
-        conn.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
+        conn.execute_raw(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
             .await
             .unwrap();
     }
@@ -163,7 +163,7 @@ async fn delete_removes_row_from_index() {
 
     searcher
         .get_connection()
-        .execute(Statement::from_string(
+        .execute_raw(Statement::from_string(
             DbBackend::Sqlite,
             "DELETE FROM track WHERE id = '3ac1f226a5a75408acb57e97bd5feca2'".to_string(),
         ))
@@ -188,7 +188,7 @@ async fn track_repository_matches_albums_by_id_when_titles_are_equal() {
         "INSERT INTO album (id, title, artist, artist_id) VALUES ('muse-album', 'The 2nd Law', 'Muse', 'muse'), ('brown-album', 'BROWN (The Chocolate Edition)', 'Chris Brown', 'chris')",
         "INSERT INTO track (id, title, artist, genre, uri, album_id, artist_id) VALUES ('muse-track', 'Save Me', 'Muse', 'Rock', '/music/muse.flac', 'muse-album', 'muse'), ('brown-track', 'Save Me', 'Chris Brown', 'R&B', '/music/brown.flac', 'brown-album', 'chris')",
     ] {
-        conn.execute(Statement::from_string(DbBackend::Sqlite, sql.to_owned()))
+        conn.execute_raw(Statement::from_string(DbBackend::Sqlite, sql.to_owned()))
             .await
             .unwrap();
     }

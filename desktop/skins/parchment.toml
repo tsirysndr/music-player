@@ -1,0 +1,43 @@
+# Warm light skin — paper and ochre, the counterpart to Porcelain's cool
+# silver. For working in daylight without the blue cast.
+name = "Parchment"
+
+[colors]
+window_bg       = "#f6f1e4"
+panel_bg        = "#efe8d8"
+panel_raised    = "#e7dfcc"
+sidebar_bg      = "#f2ecdd"
+display_bg      = "#e6ddc6"
+display_glow    = "#8a6d2340"
+display_text    = "#7a5d18"
+display_dim     = "#b0a07c"
+accent          = "#b5730f"
+accent_hover    = "#d08a1f"
+on_accent       = "#fdf8ec"
+text            = "#2f2a20"
+text_dim        = "#615949"
+text_muted      = "#968c7c"
+border          = "#ddd4bf"
+hover_bg        = "#0000000a"
+selected_bg     = "#b5730f1c"
+slider_track    = "#d2c8b0"
+meter_low       = "#5b8c2a"
+meter_mid       = "#c98a12"
+meter_high      = "#b23a2a"
+meter_off       = "#ded5c0"
+skeleton_bg     = "#e7dfcc"
+skeleton_fg     = "#d5cbb4"
+syntax_field    = "#b5730f"
+syntax_operator = "#615949"
+syntax_value    = "#5b8c2a"
+syntax_logic    = "#8a5cb8"
+syntax_error    = "#b23a2a"
+art_placeholder = "#e2dac6"
+
+[metrics]
+radius         = 10.0
+control_radius = 7.0
+
+[fonts]
+ui   = "Roboto Mono"
+mono = "JetBrains Mono"

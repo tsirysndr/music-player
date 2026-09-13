@@ -1,0 +1,43 @@
+# Green-phosphor CRT: a black rack chassis with an oscilloscope for a display.
+# Squarer corners than the rest — this one is meant to read as hardware.
+name = "Phosphor"
+
+[colors]
+window_bg       = "#080a08"
+panel_bg        = "#0e120e"
+panel_raised    = "#151b15"
+sidebar_bg      = "#0a0d0a"
+display_bg      = "#040704"
+display_glow    = "#39ff1440"
+display_text    = "#39ff14"
+display_dim     = "#1d7a15"
+accent          = "#39ff14"
+accent_hover    = "#7dff60"
+on_accent       = "#041004"
+text            = "#d8f5d2"
+text_dim        = "#8cc286"
+text_muted      = "#527049"
+border          = "#1c261c"
+hover_bg        = "#39ff1412"
+selected_bg     = "#39ff141f"
+slider_track    = "#23301f"
+meter_low       = "#39ff14"
+meter_mid       = "#b6ff00"
+meter_high      = "#ff9f1c"
+meter_off       = "#161e16"
+skeleton_bg     = "#0e120e"
+skeleton_fg     = "#1d291c"
+syntax_field    = "#39ff14"
+syntax_operator = "#8cc286"
+syntax_value    = "#b6ff00"
+syntax_logic    = "#00e5a0"
+syntax_error    = "#ff5252"
+art_placeholder = "#121812"
+
+[metrics]
+radius         = 5.0
+control_radius = 3.0
+
+[fonts]
+ui   = "Roboto Mono"
+mono = "JetBrains Mono"

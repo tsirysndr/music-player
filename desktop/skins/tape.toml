@@ -1,0 +1,43 @@
+# Vintage cassette deck: warm graphite chassis, cream lettering, burnt-orange
+# transport and a needle-amber VU.
+name = "Tape"
+
+[colors]
+window_bg       = "#1a1613"
+panel_bg        = "#231f19"
+panel_raised    = "#2e2921"
+sidebar_bg      = "#1e1a15"
+display_bg      = "#14110c"
+display_glow    = "#ffae4240"
+display_text    = "#ffc46b"
+display_dim     = "#8a6a33"
+accent          = "#e8752b"
+accent_hover    = "#ff8f4a"
+on_accent       = "#1a0d04"
+text            = "#efe4d2"
+text_dim        = "#bcac95"
+text_muted      = "#7e7160"
+border          = "#383225"
+hover_bg        = "#ffffff0e"
+selected_bg     = "#e8752b1e"
+slider_track    = "#463d2e"
+meter_low       = "#d8c27a"
+meter_mid       = "#e8a13a"
+meter_high      = "#d9422b"
+meter_off       = "#2b261d"
+skeleton_bg     = "#231f19"
+skeleton_fg     = "#332d23"
+syntax_field    = "#e8752b"
+syntax_operator = "#bcac95"
+syntax_value    = "#d8c27a"
+syntax_logic    = "#c98fd0"
+syntax_error    = "#d9422b"
+art_placeholder = "#342f25"
+
+[metrics]
+radius         = 8.0
+control_radius = 5.0
+
+[fonts]
+ui   = "Roboto Mono"
+mono = "JetBrains Mono"

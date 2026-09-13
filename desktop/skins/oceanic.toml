@@ -1,0 +1,43 @@
+# Deep-water skin: near-black teal hull, aqua phosphor, coral for the top of
+# the meter. Dark like Synthwave but cool and quiet instead of neon.
+name = "Oceanic"
+
+[colors]
+window_bg       = "#0d1b1e"
+panel_bg        = "#122529"
+panel_raised    = "#193338"
+sidebar_bg      = "#0f1f23"
+display_bg      = "#08171b"
+display_glow    = "#2ee6c840"
+display_text    = "#2ee6c8"
+display_dim     = "#1d7d6e"
+accent          = "#2ee6c8"
+accent_hover    = "#5cf0d8"
+on_accent       = "#04231e"
+text            = "#dff2ef"
+text_dim        = "#a0c5bf"
+text_muted      = "#63857f"
+border          = "#1d3b41"
+hover_bg        = "#ffffff0f"
+selected_bg     = "#2ee6c81f"
+slider_track    = "#294c53"
+meter_low       = "#2ee6c8"
+meter_mid       = "#4fc3f7"
+meter_high      = "#ff6f61"
+meter_off       = "#163035"
+skeleton_bg     = "#122529"
+skeleton_fg     = "#1e3a40"
+syntax_field    = "#2ee6c8"
+syntax_operator = "#a0c5bf"
+syntax_value    = "#4fc3f7"
+syntax_logic    = "#b08ce0"
+syntax_error    = "#ff6f61"
+art_placeholder = "#1a343a"
+
+[metrics]
+radius         = 12.0
+control_radius = 8.0
+
+[fonts]
+ui   = "Roboto Mono"
+mono = "JetBrains Mono"

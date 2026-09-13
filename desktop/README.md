@@ -79,9 +79,10 @@ UIs (neon accents).
   with the daemon and the web UI. A module already loaded keeps running until
   the daemon next starts. Installing and scaffolding stay with
   `music-player extension`.
-- **Skins** — five bundled (`Synthwave` default, `Late Night`, `Neutron`,
-  `Lunar`, `Porcelain`); click the SKIN entry in the sidebar (or press `s`)
-  to cycle. The choice persists in the music-player config directory
+- **Skins** — ten bundled (`Synthwave` default, plus `Late Night`, `Neutron`,
+  `Lunar`, `Nord`, `Oceanic`, `Tape`, `Phosphor` and the two light ones,
+  `Porcelain` and `Parchment`); click the SKIN entry in the sidebar (or press
+  `s`) to cycle. The choice persists in the music-player config directory
   (`desktop-skin`).
 
 ## Keyboard shortcuts
@@ -137,7 +138,12 @@ magenta so they're easy to spot.
 | `skins/late-night.toml` | Mixxx LateNight PaleMoon — teal VFD, burnt amber      |
 | `skins/neutron.toml`    | FL Studio graphite + signal orange, lime channel glow |
 | `skins/lunar.toml`      | Cambridge Audio lunar grey + warm lamp amber          |
+| `skins/nord.toml`       | Nord polar slate, frost-blue display, aurora meters   |
+| `skins/oceanic.toml`    | Deep-water teal hull, aqua phosphor, coral peaks      |
+| `skins/tape.toml`       | Cassette deck — graphite, cream, burnt-orange VU      |
+| `skins/phosphor.toml`   | Green-CRT rack gear on black; squared-off corners     |
 | `skins/porcelain.toml`  | Light jetAudio silver deck, cool blue display         |
+| `skins/parchment.toml`  | Light, warm — paper and ochre instead of silver       |
 
 ## Configuration
 

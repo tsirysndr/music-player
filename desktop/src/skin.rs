@@ -1,5 +1,5 @@
 //! Skin loading. A skin is a .toml file of design tokens (colors, radii,
-//! fonts). Five skins ship embedded in the binary; users can drop extra
+//! fonts). Ten skins ship embedded in the binary; users can drop extra
 //! .toml files in the `skins/` folder of the music-player config directory
 //! and they show up in the sidebar switcher. The selected skin name
 //! persists across launches.
@@ -171,7 +171,14 @@ pub fn load_all() -> Vec<Skin> {
         include_str!("../skins/late-night.toml"),
         include_str!("../skins/neutron.toml"),
         include_str!("../skins/lunar.toml"),
+        include_str!("../skins/nord.toml"),
+        include_str!("../skins/oceanic.toml"),
+        include_str!("../skins/tape.toml"),
+        include_str!("../skins/phosphor.toml"),
+        // The two light skins last, so cycling runs through the dark ones
+        // before changing the room.
         include_str!("../skins/porcelain.toml"),
+        include_str!("../skins/parchment.toml"),
     ]
     .iter()
     .filter_map(|s| toml::from_str(s).ok())

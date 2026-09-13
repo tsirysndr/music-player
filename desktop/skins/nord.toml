@@ -1,0 +1,43 @@
+# Cool Scandinavian palette (Nord): polar-night slate chassis, frost-blue
+# display and accent, aurora meters. The restrained one — nothing glows.
+name = "Nord"
+
+[colors]
+window_bg       = "#2e3440"
+panel_bg        = "#343b48"
+panel_raised    = "#3b4252"
+sidebar_bg      = "#2b313c"
+display_bg      = "#232a34"
+display_glow    = "#88c0d040"
+display_text    = "#88c0d0"
+display_dim     = "#4e6b76"
+accent          = "#88c0d0"
+accent_hover    = "#a6d4e0"
+on_accent       = "#1f242c"
+text            = "#eceff4"
+text_dim        = "#b9c2cf"
+text_muted      = "#7b8799"
+border          = "#3f4857"
+hover_bg        = "#ffffff0f"
+selected_bg     = "#88c0d01f"
+slider_track    = "#495468"
+meter_low       = "#a3be8c"
+meter_mid       = "#ebcb8b"
+meter_high      = "#bf616a"
+meter_off       = "#363e4c"
+skeleton_bg     = "#343b48"
+skeleton_fg     = "#46505f"
+syntax_field    = "#88c0d0"
+syntax_operator = "#b9c2cf"
+syntax_value    = "#a3be8c"
+syntax_logic    = "#b48ead"
+syntax_error    = "#bf616a"
+art_placeholder = "#3a4251"
+
+[metrics]
+radius         = 10.0
+control_radius = 7.0
+
+[fonts]
+ui   = "Roboto Mono"
+mono = "JetBrains Mono"

@@ -43,14 +43,25 @@ pub fn spawn(tracklist: Arc<Mutex<Tracklist>>) {
         return;
     }
     tokio::spawn(async move {
-        // One identity check up front: with no account linked there is nothing
-        // for any of these tasks to do, so none of them start.
-        let Some(did) = atradio::resolve_did().await else {
-            info!(
-                "atproto integration off: no account linked (run `rocksky login` or \
-                 `atradio login`, or set ATPROTO_IDENTIFIER + ATPROTO_APP_PASSWORD)"
-            );
-            return;
+        // Wait for an identity rather than checking once: this runs at daemon
+        // boot, and a user who signs in from the desktop UI minutes later is
+        // exactly as signed-in as one who was signed in all along. Returning
+        // here — which is what this used to do — meant the status publisher
+        // never started for them until the next restart, which read as
+        // "logged in but nothing publishes".
+        let did = loop {
+            if let Some(did) = atradio::resolve_did().await {
+                break did;
+            }
+            static ONCE: std::sync::Once = std::sync::Once::new();
+            ONCE.call_once(|| {
+                info!(
+                    "atproto integration idle: no account linked yet (sign in from \
+                     the app, run `rocksky login` / `atradio login`, or set \
+                     ATPROTO_IDENTIFIER + ATPROTO_APP_PASSWORD)"
+                )
+            });
+            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         };
         info!(%did, "atproto integration on");
 

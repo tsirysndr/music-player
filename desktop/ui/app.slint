@@ -1798,12 +1798,9 @@ export component AppWindow inherits Window {
                             play => { root.play-stat-track(s.track-id); }
                         }
 
-                        if root.stats-never.length > 0 : SectionHeader { title: "NEVER PLAYED"; }
-                        for s[i] in root.stats-never : StatRow {
-                            item: s;
-                            rank: i + 1;
-                            play => { root.play-stat-track(s.track-id); }
-                        }
+                        // No never-played list here: the count card above
+                        // says how many, and recently-played is what a
+                        // statistics screen is opened for.
                     }
                 }
 
@@ -2472,8 +2469,8 @@ export component AppWindow inherits Window {
             background: Theme.window-bg.with-alpha(0.78);
         }
         IconButton { x: 22px; y: 22px + root.titlebar-inset; icon: Icons.chevron-left; icon-size: 20px; width: 42px; height: 42px; clicked => { root.show-full-player = false; } }
-        // One width for the artwork, the waveform and the equalizer, so the
-        // three read as a single column rather than three stacked things.
+        // One width for the artwork column and the equalizer, so the two
+        // read as a single column rather than two stacked things.
         //
         // Bounded by the *height* as well as the width, because the artwork is
         // square: a column as wide as the window would be taller than it, and
@@ -2490,11 +2487,8 @@ export component AppWindow inherits Window {
             alignment: center;
             spacing: 16px;
             Rectangle {
-                // The full column width, so it lines up with the waveform below
-                // it exactly. It was sized off the container height before,
-                // which made it both smaller than the waveform and, since a
-                // width inside a VerticalLayout does not centre, sat to one
-                // side of it.
+                // The full column width: a width inside a VerticalLayout does
+                // not centre, so anything narrower would sit to one side.
                 width: parent.width;
                 height: self.width;
                 background: Theme.art-placeholder;
@@ -2504,54 +2498,12 @@ export component AppWindow inherits Window {
                 if root.now-has-art : Image { width: parent.width; height: parent.height; source: root.now-art; image-fit: cover; }
                 if !root.now-has-art : Image { source: Icons.music; colorize: Theme.text-muted; width: parent.width * 0.3; height: self.width; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
             }
-
-            // The track's own waveform, from the daemon's analysis, doubling as
-            // a seek bar. It shows *where* in the song you are aiming — the
-            // quiet intro, the drop — which a progress bar cannot.
-            waveform := Rectangle {
-                height: 48px;
-                // A live stream has no length and no waveform to draw.
-                visible: !root.now-is-radio;
-
-                // A flat line while nothing has been analysed, so opening the
-                // player does not shift everything when the bars arrive.
-                if root.waveform-bars.length == 0 : Rectangle {
-                    y: (parent.height - 2px) / 2;
-                    width: parent.width;
-                    height: 2px;
-                    background: Theme.border;
-                }
-
-                HorizontalLayout {
-                    width: parent.width;
-                    height: parent.height;
-                    alignment: stretch;
-                    spacing: 1px;
-                    for level[i] in root.waveform-bars : Rectangle {
-                        // Never zero: a silent passage is a quiet part of the
-                        // track, not a gap in it.
-                        height: max(3px, level * parent.height);
-                        y: (parent.height - self.height) / 2;
-                        border-radius: 1px;
-                        background: (i + 1) / root.waveform-bars.length <= root.waveform-progress
-                            ? Theme.accent : Theme.border;
-                    }
-                }
-
-                TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                    // The same callback the progress bar uses: one way to seek.
-                    clicked => { root.seek(self.pressed-x / parent.width); }
-                }
-            }
-
         }
 
         // Full-bleed along the bottom edge, flush against the miniplayer
         // rather than boxed into the column above. The equalizer is the audio
         // leaving the machine, not a property of the track — so it spans the
-        // window, while the waveform, which *is* the track, stays with the art.
+        // window.
         Rectangle {
             visible: root.show-equalizer;
             x: 0;

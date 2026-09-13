@@ -193,6 +193,21 @@ fn apply_audio(
     }
 }
 
+/// Codec name for the format badge, from the file extension.
+///
+/// Lowercased, and only for URIs that look like files — an HTTP stream's
+/// extension (or lack of one) says nothing about what is inside it.
+fn codec_of(uri: &str) -> Option<String> {
+    let path = uri.strip_prefix("file://").unwrap_or(uri);
+    if path.starts_with("http://") || path.starts_with("https://") {
+        return None;
+    }
+    std::path::Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+}
+
 /// Push now-playing + transport state to controllers every couple of
 /// seconds so this daemon stays live in the miniplayer device picker.
 /// No queue push — see the module docs.
@@ -221,6 +236,10 @@ async fn status_loop(remote: Arc<RemotePlayer>, tracklist: Arc<Mutex<Tracklist>>
             np.album_artist = track.album.artist.clone();
             np.duration_ms = (track.duration.unwrap_or(0.0) * 1000.0) as u64;
             np.sample_rate = track.sample_rate;
+            // The wire's format badge. The scanner does not store a codec
+            // name, but for local files the extension IS the codec for every
+            // format we play (mp3, flac, ogg, m4a, …).
+            np.codec = codec_of(&track.uri);
         }
         remote.set_now_playing(np);
         remote.set_status(if stopped {

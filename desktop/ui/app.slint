@@ -1948,6 +1948,7 @@ export component AppWindow inherits Window {
                                     add-queue => { root.track-insert(t.id, -3); }
                                     go-album => { root.open-album(t.album-id); }
                                     add-to-playlist(plid) => { root.track-add-to-playlist(plid, t.id); }
+                                    browse-playlists => { root.open-playlist-picker(t.id); }
                                 }
                             }
                         }
@@ -2146,6 +2147,7 @@ export component AppWindow inherits Window {
                             add-queue => { root.track-insert(r.track.id, -3); }
                             go-album => { root.open-album(r.track.album-id); }
                             add-to-playlist(plid) => { root.track-add-to-playlist(plid, r.track.id); }
+                            browse-playlists => { root.open-playlist-picker(r.track.id); }
                                 }
                             }
                         }

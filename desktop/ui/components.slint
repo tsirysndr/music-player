@@ -1374,28 +1374,13 @@ export component TrackRow inherits Rectangle {
                     height: 1px;
                     background: Theme.border;
                 }
-                if root.playlists.length > 0 : Text {
-                    text: "ADD TO PLAYLIST";
-                    color: Theme.text-muted;
-                    font-size: 9px;
-                    letter-spacing: 1.5px;
-                    height: 22px;
-                    vertical-alignment: center;
-                    x: 10px;
-                }
-                for pl[pi] in root.playlists : Rectangle {
-                    height: pi < 3 ? 30px : 0px;
-                    if pi < 3 : CtxMenuItem {
-                        width: 100%;
-                        height: 30px;
-                        icon: Icons.playlist;
-                        label: pl.name;
-                        clicked => { root.add-to-playlist(pl.id); }
-                    }
-                }
-                if root.playlists.length > 3 : CtxMenuItem {
-                    icon: Icons.ellipsis;
-                    label: "Browse all playlists…";
+                // One entry, always present: the raycast-style picker it opens
+                // searches every playlist and pins "Create new playlist" on
+                // top, which beats an inline top-3 that hid the option
+                // entirely for users with few (or no) playlists.
+                CtxMenuItem {
+                    icon: Icons.playlist;
+                    label: "Add to playlist…";
                     clicked => { root.browse-playlists(); }
                 }
             }

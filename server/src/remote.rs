@@ -212,6 +212,12 @@ fn codec_of(uri: &str) -> Option<String> {
 /// seconds so this daemon stays live in the miniplayer device picker.
 /// No queue push — see the module docs.
 async fn status_loop(remote: Arc<RemotePlayer>, tracklist: Arc<Mutex<Tracklist>>) {
+    // The tracklist entry can arrive without a sample rate (a queue restored
+    // from an old session predates the field) — the library row always has
+    // it, so fall back to it, cached per track id.
+    let db = music_player_storage::shared().await;
+    let conn = db.get_connection().clone();
+    let mut cached: Option<(String, Option<u32>)> = None;
     loop {
         let (track, position_ms, is_playing, stopped) = {
             let tracklist = tracklist.lock().unwrap();
@@ -240,6 +246,20 @@ async fn status_loop(remote: Arc<RemotePlayer>, tracklist: Arc<Mutex<Tracklist>>
             // name, but for local files the extension IS the codec for every
             // format we play (mp3, flac, ogg, m4a, …).
             np.codec = codec_of(&track.uri);
+            if np.sample_rate.is_none() {
+                if cached.as_ref().map(|c| c.0.as_str()) != Some(track.id.as_str()) {
+                    use sea_orm::EntityTrait;
+                    let row = music_player_entity::track::Entity::find_by_id(track.id.clone())
+                        .one(&conn)
+                        .await
+                        .ok()
+                        .flatten();
+                    cached = Some((track.id.clone(), row.and_then(|r| r.sample_rate)));
+                }
+                if let Some((_, sr)) = &cached {
+                    np.sample_rate = *sr;
+                }
+            }
         }
         remote.set_now_playing(np);
         remote.set_status(if stopped {

@@ -27,6 +27,8 @@ message Levels {
     // with the bass rather than with whatever is loudest.
     float low_left = 3;
     float low_right = 4;
+    // Coarse spectrum, low band to high — what a bar visualiser draws.
+    repeated float bands = 5;
 }
 
 message StreamLevelsRequest {}

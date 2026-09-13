@@ -574,6 +574,7 @@ impl PlayerInternal {
                 right: status.levels.right,
                 low_left: status.levels.low_left,
                 low_right: status.levels.low_right,
+                bands: status.levels.bands.to_vec(),
             });
         match status.state {
             EngineState::Playing | EngineState::Paused => {

@@ -56,6 +56,7 @@ impl PlaybackService for Playback {
                     right: levels.right,
                     low_left: levels.low_left,
                     low_right: levels.low_right,
+                    bands: levels.bands.clone(),
                 });
             }
         };

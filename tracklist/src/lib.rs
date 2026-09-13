@@ -15,7 +15,7 @@ pub struct PlaybackState {
 /// Kept here because the player writes them and the gRPC and GraphQL layers
 /// read them, and all three already share this structure — a meter is not
 /// worth a second channel.
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Levels {
     pub left: f32,
     pub right: f32,
@@ -23,6 +23,8 @@ pub struct Levels {
     /// with the bass rather than with whatever is loudest.
     pub low_left: f32,
     pub low_right: f32,
+    /// Coarse spectrum, low band to high — what a bar visualiser draws.
+    pub bands: Vec<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -196,7 +198,7 @@ impl Tracklist {
     }
 
     pub fn levels(&self) -> Levels {
-        self.levels
+        self.levels.clone()
     }
 
     pub fn set_levels(&mut self, levels: Levels) {

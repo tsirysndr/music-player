@@ -2179,9 +2179,15 @@ export component AppWindow inherits Window {
                 // VFD hides when the window narrows; the panel buttons, mute
                 // and the volume knob stay whatever the size — they are
                 // controls, not decoration.
-                property <bool> show-vfd: root.width >= 1050px;
+                // The bar's real width, not the window's: the sidebar takes
+                // 208px from it, so gating the VFD on root.width let it show
+                // in a bar too narrow for it — clipping the volume knob and
+                // panel buttons off the right edge.
+                property <length> bar-width: root.width
+                    - (root.show-sidebar && !root.show-full-player ? 208px : 0px);
+                property <bool> show-vfd: self.bar-width >= 1100px;
                 property <length> side-width: self.show-vfd
-                    ? max(root.width * 0.24, 392px)
+                    ? max(self.bar-width * 0.24, 392px)
                     : 212px;
                 if root.show-full-player && root.now-has-art : Image {
                     x: -20px;

@@ -24,6 +24,15 @@ export struct TrackItem {
     key-color: color,
 }
 
+/// One row of an analytics list (Most Played, Statistics sections).
+export struct StatItem {
+    track-id: string,
+    title: string,
+    artist: string,
+    /// Rendered as-is: a play count, a skip count, or a relative time.
+    value: string,
+}
+
 export struct AlbumItem {
     id: string,
     title: string,
@@ -567,6 +576,59 @@ export component PlayPauseButton inherits Rectangle {
 }
 
 // Click/drag-to-position horizontal bar, used for seek and volume.
+/// Waveform seek bar — the psysonic player-bar idiom: the track's own peaks
+/// drawn as centred bars, played portion in accent, the rest dimmed, and the
+/// whole strip clickable to seek. Falls back to a flat rail while the
+/// waveform has not loaded, so the bar never disappears.
+export component WaveformBar inherits Rectangle {
+    in property <[float]> bars: [];
+    in property <float> progress: 0; // 0..1
+    callback changed(float);
+
+    height: 22px;
+    min-width: 60px;
+
+    // Flat rail while there is no data — same footprint, so nothing reflows
+    // when the bars arrive.
+    if root.bars.length == 0 : Rectangle {
+        y: (parent.height - 2px) / 2;
+        width: parent.width;
+        height: 2px;
+        border-radius: 1px;
+        background: Theme.slider-track;
+    }
+    if root.bars.length == 0 && root.progress > 0 : Rectangle {
+        y: (parent.height - 2px) / 2;
+        width: parent.width * clamp(root.progress, 0, 1);
+        height: 2px;
+        border-radius: 1px;
+        background: Theme.accent;
+    }
+
+    HorizontalLayout {
+        width: parent.width;
+        height: parent.height;
+        alignment: stretch;
+        spacing: 1px;
+        for level[i] in root.bars : Rectangle {
+            // Never zero: a silent passage is a quiet part of the track, not
+            // a gap in it.
+            height: max(2px, level * parent.height);
+            y: (parent.height - self.height) / 2;
+            border-radius: 1px;
+            background: (i + 1) / root.bars.length <= clamp(root.progress, 0, 1)
+                ? Theme.accent : Theme.slider-track;
+        }
+    }
+
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+        mouse-cursor: pointer;
+        clicked => { root.changed(self.pressed-x / parent.width); }
+    }
+}
+
 export component SlideBar inherits Rectangle {
     in property <float> progress: 0; // 0..1
     in property <length> bar-height: 5px;
@@ -1384,8 +1446,15 @@ export component SearchButton inherits Rectangle {
 export component PaletteRow inherits Rectangle {
     in property <PaletteItem> item;
     in property <bool> selected: false;
+    /// Show the ellipsis (and fire `menu`) — off for rows that have no
+    /// context actions, like the playlist picker's own entries.
+    in property <bool> has-menu: false;
     callback activate;
     callback hovered;
+    /// Fired with the button's anchor in window coordinates: the x of the
+    /// row's right edge and the y just under the row, so the caller can place
+    /// the popup where the click happened.
+    callback menu(length, length);
 
     height: 46px;
     border-radius: Theme.control-radius;
@@ -1448,11 +1517,29 @@ export component PaletteRow inherits Rectangle {
             font-family: Theme.font-mono;
             vertical-alignment: center;
         }
+        // Reserves the ellipsis button's slot inside the layout, so the kind
+        // label cannot run underneath the hand-placed button.
+        if root.has-menu : Rectangle { width: 26px; }
     }
     touch := TouchArea {
         clicked => { root.activate(); }
         moved => { root.hovered(); }
         mouse-cursor: pointer;
+    }
+    // After the row TouchArea, so it wins the hit test.
+    if root.has-menu : IconButton {
+        icon: Icons.ellipsis;
+        icon-size: 15px;
+        width: 26px;
+        height: 26px;
+        x: root.width - 12px - 26px;
+        y: (parent.height - self.height) / 2;
+        opacity: root.selected || touch.has-hover ? 1 : 0.35;
+        clicked => {
+            root.menu(
+                root.absolute-position.x + root.width - 12px,
+                root.absolute-position.y + root.height);
+        }
     }
 }
 
@@ -1706,6 +1793,97 @@ export component EqBandSlider inherits VerticalLayout {
         font-size: 9px;
         font-family: Theme.font-mono;
         horizontal-alignment: center;
+    }
+}
+
+/// One analytics row: rank, title/artist, and the value on the right.
+export component StatRow inherits Rectangle {
+    in property <StatItem> item;
+    in property <int> rank;
+    in property <bool> current: false;
+    callback play;
+
+    height: 42px;
+    border-radius: Theme.control-radius;
+    background: root.current ? Theme.selected-bg
+        : touch.has-hover ? Theme.hover-bg : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        Text {
+            text: root.rank;
+            color: Theme.text-muted;
+            font-size: 12px;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            width: 30px;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.item.title;
+                color: root.current ? Theme.accent : Theme.text;
+                font-size: 13px;
+                font-family: Theme.font-ui;
+                overflow: elide;
+            }
+            Text {
+                text: root.item.artist;
+                color: Theme.text-dim;
+                font-size: 11px;
+                font-family: Theme.font-ui;
+                overflow: elide;
+            }
+        }
+        Text {
+            text: root.item.value;
+            color: Theme.accent;
+            font-size: 12px;
+            font-family: Theme.font-mono;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.play(); }
+        mouse-cursor: pointer;
+    }
+}
+
+/// A large number with a label under it — the Statistics header strip.
+export component StatCard inherits Rectangle {
+    in property <string> value;
+    in property <string> label;
+
+    background: Theme.panel-raised;
+    border-radius: Theme.radius;
+    border-width: 1px;
+    border-color: Theme.border;
+    height: 84px;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        padding: 14px;
+        Text {
+            text: root.value;
+            color: Theme.accent;
+            font-size: 26px;
+            font-weight: 700;
+            font-family: Theme.font-mono;
+        }
+        Text {
+            text: root.label;
+            color: Theme.text-muted;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+        }
     }
 }
 

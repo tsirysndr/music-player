@@ -58,6 +58,10 @@ pub enum Cmd {
     Previous,
     SeekMs(u32),
     SetVolume(f32),
+    /// Refresh the Most Played tab from the local analytics views.
+    LoadMostPlayed,
+    /// Refresh the Statistics tab.
+    LoadStats,
     SetMute(bool),
     PlayAlbum(String),
     PlayAlbumAt(String, i32),
@@ -123,6 +127,12 @@ pub enum Cmd {
     PlaylistCreate {
         name: String,
         description: String,
+    },
+    /// Create a playlist named from the picker's query and put the pending
+    /// tracks straight into it — the picker's "Create new playlist" row.
+    PlaylistCreateAndAdd {
+        name: String,
+        track_ids: Vec<String>,
     },
     PlaylistUpdate {
         id: String,
@@ -1810,6 +1820,104 @@ async fn graphql(
 /// (name, host, port) per resolved gRPC peer (deduped). Peers that resolve
 /// to one of THIS machine's addresses are dropped — the embedded daemon
 /// already has its own switcher row.
+// ── Analytics (local DB views) ──────────────────────────────────────────────
+
+/// One row of an analytics view, as the UI shows it.
+#[derive(Clone, Debug)]
+pub struct StatRowData {
+    pub track_id: String,
+    pub title: String,
+    pub artist: String,
+    /// play count / skip count / seconds heard, depending on the view.
+    pub count: i64,
+    /// Unix seconds (last played / last skipped / played_at), when present.
+    pub at: Option<i64>,
+}
+
+/// Everything the Statistics tab shows.
+#[derive(Clone, Debug, Default)]
+pub struct StatsData {
+    pub total_tracks: i64,
+    pub total_plays: i64,
+    pub total_skips: i64,
+    pub never_played_count: i64,
+    pub most_skipped: Vec<StatRowData>,
+    pub recently_played: Vec<StatRowData>,
+    pub never_played: Vec<StatRowData>,
+}
+
+/// Rows of a `(track_id, title, artist, count, at)`-shaped view query.
+async fn analytics_rows(sql: &str) -> Vec<StatRowData> {
+    use sea_orm::{ConnectionTrait, Statement};
+    let db = music_player_storage::shared().await;
+    let conn = db.get_connection();
+    let rows = match conn
+        .query_all_raw(Statement::from_string(
+            sea_orm::DbBackend::Sqlite,
+            sql.to_owned(),
+        ))
+        .await
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::warn!("analytics query failed: {e}");
+            return Vec::new();
+        }
+    };
+    rows.into_iter()
+        .filter_map(|r| {
+            Some(StatRowData {
+                track_id: r.try_get_by_index::<String>(0).ok()?,
+                title: r.try_get_by_index::<String>(1).ok()?,
+                artist: r.try_get_by_index::<String>(2).ok()?,
+                count: r.try_get_by_index::<i64>(3).unwrap_or(0),
+                at: r.try_get_by_index::<Option<i64>>(4).ok().flatten(),
+            })
+        })
+        .collect()
+}
+
+/// A single scalar, for the Statistics counters.
+async fn analytics_count(sql: &str) -> i64 {
+    use sea_orm::{ConnectionTrait, Statement};
+    let db = music_player_storage::shared().await;
+    match db
+        .get_connection()
+        .query_one_raw(Statement::from_string(
+            sea_orm::DbBackend::Sqlite,
+            sql.to_owned(),
+        ))
+        .await
+    {
+        Ok(Some(row)) => row.try_get_by_index::<i64>(0).unwrap_or(0),
+        _ => 0,
+    }
+}
+
+async fn load_stats() -> StatsData {
+    StatsData {
+        total_tracks: analytics_count("SELECT COUNT(*) FROM track").await,
+        total_plays: analytics_count("SELECT COALESCE(SUM(play_count), 0) FROM track_stats").await,
+        total_skips: analytics_count("SELECT COALESCE(SUM(skip_count), 0) FROM track_stats").await,
+        never_played_count: analytics_count("SELECT COUNT(*) FROM v_never_played").await,
+        most_skipped: analytics_rows(
+            "SELECT track_id, title, artist, skip_count, last_skipped \
+             FROM v_most_skipped LIMIT 20",
+        )
+        .await,
+        recently_played: analytics_rows(
+            "SELECT track_id, title, artist, ms_played / 1000, played_at \
+             FROM v_recently_played LIMIT 50",
+        )
+        .await,
+        never_played: analytics_rows(
+            "SELECT track_id, title, artist, 0, NULL \
+             FROM v_never_played LIMIT 20",
+        )
+        .await,
+    }
+}
+
 async fn discover_music_player_servers() -> Vec<(String, String, u16)> {
     let own_addrs: std::collections::HashSet<String> = if_addrs::get_if_addrs()
         .map(|ifs| ifs.into_iter().map(|i| i.addr.ip().to_string()).collect())
@@ -2210,6 +2318,26 @@ async fn cmd_loop(
                     load_playlists(&channel, &weak).await;
                     open_playlist(&channel, &state, &weak, resp.id, true).await?;
                 }
+                Cmd::PlaylistCreateAndAdd { name, track_ids } => {
+                    // Create takes full Track protos; ids are enough for the
+                    // daemon to resolve, same as AddTrack.
+                    let tracks: Vec<TrackProto> = track_ids
+                        .into_iter()
+                        .map(|id| TrackProto {
+                            id,
+                            ..Default::default()
+                        })
+                        .collect();
+                    let mut playlists = PlaylistServiceClient::new(channel.clone());
+                    playlists
+                        .create(CreateRequest {
+                            name,
+                            tracks,
+                            smart: None,
+                        })
+                        .await?;
+                    load_playlists(&channel, &weak).await;
+                }
                 Cmd::PlaylistUpdate {
                     id,
                     name,
@@ -2348,6 +2476,25 @@ async fn cmd_loop(
                     let _ = weak.upgrade_in_event_loop(move |app| {
                         app.set_connected(false);
                         app.set_status_text(display.into());
+                    });
+                }
+                // Analytics read the LOCAL library's views directly — play
+                // counts live on this machine even when the browser is pointed
+                // at a remote server, the same way the local scrobble log does.
+                Cmd::LoadMostPlayed => {
+                    let rows = analytics_rows(
+                        "SELECT track_id, title, artist, play_count, last_played \
+                         FROM v_most_played LIMIT 200",
+                    )
+                    .await;
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        crate::ui_set_most_played(&app, rows);
+                    });
+                }
+                Cmd::LoadStats => {
+                    let data = load_stats().await;
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        crate::ui_set_stats(&app, data);
                     });
                 }
                 Cmd::DiscoverServers => {
@@ -2690,7 +2837,22 @@ async fn ticker(weak: Weak<AppWindow>) {
             // frame, and nothing is looking at it otherwise.
             if app.get_show_full_player() {
                 let targets = if app.get_playing() {
-                    eq_targets(app.get_vu_left(), app.get_vu_right(), EQ_BARS, now)
+                    let bands: Vec<f32> = {
+                        use slint::Model;
+                        app.get_eq_band_drive().iter().collect()
+                    };
+                    if bands.iter().any(|b| *b > 0.0) {
+                        eq_targets_from_bands(&bands, EQ_BARS)
+                    } else {
+                        // No spectrum from this daemon (older build): the
+                        // two-scalar synthesis is better than a flat line.
+                        eq_targets(
+                            app.get_eq_drive_left(),
+                            app.get_eq_drive_right(),
+                            EQ_BARS,
+                            now,
+                        )
+                    }
                 } else {
                     // Paused bars settle to the floor rather than freezing
                     // mid-bounce, which reads as the app having hung.
@@ -2764,13 +2926,62 @@ async fn stream_levels(channel: Channel, weak: Weak<AppWindow>) {
     const DECAY: f32 = 0.977;
     let mut reference = FLOOR;
 
+    // Short-term averages for the equalizer bars — separate from `reference`
+    // on purpose. The meter normalises to the recent *peak*, which is right
+    // for a meter (it should ride near the top) and wrong for bar animation:
+    // steady music keeps value/peak near 1, so every bar sat at full height.
+    // Sensitivity comes from comparing the instant against its own recent
+    // *average* instead: steady material lands mid-height, a kick 2x above
+    // average hits the top, and a dip actually dips — the way the psysonic
+    // bars behave on their dB scale.
+    let mut avg_left = FLOOR;
+    let mut avg_right = FLOOR;
+    // Per-band references for the spectrum bars — each band rides its own
+    // recent peak, the way a dB-scaled analyser normalises per column. One
+    // shared reference would let the bass bury the treble, which is exactly
+    // the "does not respect the spectrum" look.
+    let mut band_refs: Vec<f32> = Vec::new();
+
     while let Ok(Some(levels)) = stream.message().await {
         let peak = levels.low_left.max(levels.low_right);
         reference = (reference * DECAY).max(peak).max(FLOOR);
         let scale = |value: f32| (value / reference).clamp(0.0, 1.0);
         let (left, right) = (scale(levels.low_left), scale(levels.low_right));
 
+        // ~0.35 s time constant at 20 Hz: long enough to be "the song right
+        // now", short enough that a chorus re-normalises within a bar or two.
+        avg_left = avg_left * 0.9 + levels.low_left.max(0.0) * 0.1;
+        avg_right = avg_right * 0.9 + levels.low_right.max(0.0) * 0.1;
+        let drive = |value: f32, avg: f32| {
+            // Headroom of 1.8x: the average lands at (1/1.8)^1.5 ≈ 0.41 of
+            // the bar, leaving the top ~60% for transients. The 1.5 gamma
+            // stretches the useful range the way a dB axis would.
+            let ratio = value.max(0.0) / (avg.max(FLOOR) * 1.8);
+            ratio.powf(1.5).clamp(0.0, 1.0)
+        };
+        let (drive_left, drive_right) = (
+            drive(levels.low_left, avg_left),
+            drive(levels.low_right, avg_right),
+        );
+
+        // Spectrum: normalise each band against its own decaying peak, so a
+        // hi-hat column reaches the top on hi-hats, not on kicks.
+        band_refs.resize(levels.bands.len().max(band_refs.len()), FLOOR);
+        let band_drive: Vec<f32> = levels
+            .bands
+            .iter()
+            .enumerate()
+            .map(|(i, &v)| {
+                let v = if v.is_finite() { v.max(0.0) } else { 0.0 };
+                band_refs[i] = (band_refs[i] * DECAY).max(v).max(FLOOR);
+                (v / band_refs[i]).clamp(0.0, 1.0)
+            })
+            .collect();
+
         let _ = weak.upgrade_in_event_loop(move |app| {
+            app.set_eq_band_drive(slint::ModelRc::new(slint::VecModel::from(band_drive)));
+            app.set_eq_drive_left(drive_left);
+            app.set_eq_drive_right(drive_right);
             // Fast attack, slow release: real meter ballistics. An instant
             // attack reads as jitter and an instant release flickers between
             // buffers, but too slow an attack clips the top off a kick, which
@@ -2850,6 +3061,36 @@ fn eq_targets(left: f32, right: f32, count: usize, time: f32) -> Vec<f32> {
         .collect()
 }
 
+/// Spread the measured bands across the drawn bars: linear interpolation
+/// between band centres, with a light 3-tap smooth so neighbouring bars do
+/// not step. No flicker and no tilt — the data is real now, and decoration on
+/// top of measurement reads as noise.
+fn eq_targets_from_bands(bands: &[f32], count: usize) -> Vec<f32> {
+    if bands.is_empty() || count == 0 {
+        return vec![0.0; count];
+    }
+    let raw: Vec<f32> = (0..count)
+        .map(|i| {
+            let pos = if count <= 1 {
+                0.0
+            } else {
+                i as f32 / (count - 1) as f32 * (bands.len() - 1) as f32
+            };
+            let lo = pos.floor() as usize;
+            let hi = (lo + 1).min(bands.len() - 1);
+            let t = pos - lo as f32;
+            bands[lo] * (1.0 - t) + bands[hi] * t
+        })
+        .collect();
+    (0..count)
+        .map(|i| {
+            let prev = raw[i.saturating_sub(1)];
+            let next = raw[(i + 1).min(count - 1)];
+            (prev * 0.25 + raw[i] * 0.5 + next * 0.25).clamp(0.0, 1.0)
+        })
+        .collect()
+}
+
 /// The stored waveform, resampled to the number of bars actually drawn.
 ///
 /// Peak per output bar rather than an average: averaging smooths away the
@@ -2873,6 +3114,27 @@ fn resample_waveform(stored: &[u8], count: usize) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Spreading 16 measured bands over 96 bars must keep the spectrum's
+    /// shape — a low-heavy input stays low-heavy — and every bar drawable.
+    #[test]
+    fn band_spread_keeps_shape_and_range() {
+        let mut bands = vec![0.0f32; 16];
+        bands[0] = 1.0;
+        bands[1] = 0.8;
+        let bars = eq_targets_from_bands(&bands, EQ_BARS);
+        assert_eq!(bars.len(), EQ_BARS);
+        assert!(bars[0] > bars[EQ_BARS - 1], "low-heavy input inverted");
+        assert!(bars.iter().all(|b| (0.0..=1.0).contains(b)));
+    }
+
+    #[test]
+    fn band_spread_handles_degenerate_input() {
+        assert_eq!(eq_targets_from_bands(&[], EQ_BARS), vec![0.0; EQ_BARS]);
+        assert!(eq_targets_from_bands(&[0.5], 0).is_empty());
+        let flat = eq_targets_from_bands(&[0.5], EQ_BARS);
+        assert!(flat.iter().all(|b| (b - 0.5).abs() < 1e-6));
+    }
 
     /// One height per bar, all drawable.
     #[test]

@@ -2,7 +2,7 @@ import { ListView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import {
     TrackItem, AlbumItem, ArtistItem,
-    IconButton, PlayPauseButton, SlideBar, VfdDisplay,
+    IconButton, PlayPauseButton, SlideBar, WaveformBar, VfdDisplay,
     SidebarItem, AlbumCard, TrackRow, TrackListHeader, ArtistRow,
     SearchButton, PaletteItem, PaletteRow, HelpRow,
     EqBand, Toggle, Dropdown, SettingRow, EqBandSlider, SectionHeader, Knob,
@@ -10,7 +10,8 @@ import {
     PlaylistItem, PlaylistRow, CtxMenuItem, LikeButton, StationItem, RadioRow, RadioCategoryTile,
     RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion,
     TrackSkeletonList, AlbumSkeletonCard, ArtistSkeletonList, PlaylistSkeletonList,
-    ExtensionItem, ExtensionRow
+    ExtensionItem, ExtensionRow,
+    StatItem, StatRow, StatCard
 } from "components.slint";
 import { Icons } from "icons.slint";
 
@@ -66,6 +67,14 @@ export component AppWindow inherits Window {
     in-out property <string> duration-text: "00:00";
     in-out property <string> vfd-info: "--- kbps   --.- kHz";
     in-out property <float> vu-left: 0;
+    // Equalizer-bar drive: instant level vs its own short-term average,
+    // gamma-stretched — see stream_levels. NOT the VU value, which is
+    // peak-normalised and would pin every bar at the top.
+    in-out property <float> eq-drive-left: 0;
+    /// Per-band spectrum drive from the daemon, low to high; empty when the
+    /// daemon predates the band meter.
+    in-out property <[float]> eq-band-drive: [];
+    in-out property <float> eq-drive-right: 0;
     in-out property <float> vu-right: 0;
     // The current track's waveform, 0..1 per bar, already resampled to the
     // number of bars the full player draws. Empty until the track has been
@@ -96,7 +105,21 @@ export component AppWindow inherits Window {
     in-out property <int> repeat-mode: 0; // 0 off, 1 all, 2 one
 
     // ── App state ───────────────────────────────────────────────────────────
-    in-out property <int> current-tab: 0; // 0 albums, 1 artists, 2 tracks, 3 liked
+    // 0 albums, 1 artists, 2 tracks, 3 liked, 4 servers, 5 playlists,
+    // 6 radio, 7 extensions, 8 most played, 9 statistics
+    in-out property <int> current-tab: 0;
+    // ── Analytics ───────────────────────────────────────────────────────────
+    in-out property <[StatItem]> most-played: [];
+    in-out property <string> stats-total-tracks: "0";
+    in-out property <string> stats-total-plays: "0";
+    in-out property <string> stats-total-skips: "0";
+    in-out property <string> stats-never-count: "0";
+    in-out property <[StatItem]> stats-most-skipped: [];
+    in-out property <[StatItem]> stats-recent: [];
+    in-out property <[StatItem]> stats-never: [];
+    callback load-most-played();
+    callback load-stats();
+    callback play-stat-track(string);
     in-out property <bool> show-detail: false;
     /// The album detail is open but its tracks are still in flight. The page
     /// shows placeholder rows rather than an empty table.
@@ -174,6 +197,21 @@ export component AppWindow inherits Window {
     in-out property <[PaletteItem]> picker-results: [];
     in-out property <bool> show-playlist-picker: false;
     in-out property <string> plpicker-track-id: "";
+    /// What the playlist picker is adding: "track" or "album". Set alongside
+    /// plpicker-track-id (which then carries the album id).
+    in-out property <string> plpicker-kind: "track";
+    // ── Palette context menu ────────────────────────────────────────────────
+    in-out property <bool> palette-menu-open: false;
+    in-out property <PaletteItem> palette-menu-item;
+    /// Where the opening click happened, window coordinates — the popup hangs
+    /// off this point rather than floating in the middle of the palette.
+    in-out property <length> palette-menu-x: 0;
+    in-out property <length> palette-menu-y: 0;
+    callback palette-menu-play(PaletteItem);
+    callback palette-menu-play-next(PaletteItem);
+    callback palette-menu-add-queue(PaletteItem);
+    callback album-add-to-playlist(string, string); // playlist id, album id
+    callback plpicker-create-and-add(string); // typed name
     in-out property <[PaletteItem]> plpicker-results: [];
     in-out property <int> plpicker-sel: 0;
     in-out property <bool> show-confirm-delete: false;
@@ -514,13 +552,30 @@ export component AppWindow inherits Window {
         root.plpicker-query("");
         plpicker-input.focus();
     }
+    /// The picker, for something other than a single track: `kind` is
+    /// "track" or "album", `id` the matching library id.
+    public function open-playlist-picker-for(kind: string, id: string) {
+        root.plpicker-kind = kind;
+        root.open-playlist-picker(id);
+    }
+    function activate-plpicker-row(row: PaletteItem) {
+        if (row.kind == "create") {
+            // The typed query becomes the playlist's name; the pending
+            // track/album is added once the create round-trips.
+            root.plpicker-create-and-add(plpicker-input.text);
+        } else if (root.plpicker-kind == "album") {
+            root.album-add-to-playlist(row.id, root.plpicker-track-id);
+        } else {
+            root.track-add-to-playlist(row.id, root.plpicker-track-id);
+        }
+        root.show-playlist-picker = false;
+        root.plpicker-kind = "track";
+        main-focus.focus();
+    }
     function activate-plpicker() {
         if (root.plpicker-results.length > 0) {
-            root.track-add-to-playlist(
-                root.plpicker-results[clamp(root.plpicker-sel, 0, root.plpicker-results.length - 1)].id,
-                root.plpicker-track-id);
-            root.show-playlist-picker = false;
-            main-focus.focus();
+            root.activate-plpicker-row(
+                root.plpicker-results[clamp(root.plpicker-sel, 0, root.plpicker-results.length - 1)]);
         }
     }
     public function open-track-picker() {
@@ -794,6 +849,26 @@ export component AppWindow inherits Window {
                         root.extensions-refresh();
                     }
                 }
+                SidebarItem {
+                    icon: Icons.trending-up;
+                    label: "Most Played";
+                    active: root.current-tab == 8;
+                    clicked => {
+                        root.current-tab = 8;
+                        root.show-detail = false; root.show-artist = false;
+                        root.load-most-played();
+                    }
+                }
+                SidebarItem {
+                    icon: Icons.chart-bar;
+                    label: "Statistics";
+                    active: root.current-tab == 9;
+                    clicked => {
+                        root.current-tab = 9;
+                        root.show-detail = false; root.show-artist = false;
+                        root.load-stats();
+                    }
+                }
 
                 Rectangle { vertical-stretch: 1; }
 
@@ -1014,6 +1089,8 @@ export component AppWindow inherits Window {
                             : root.current-tab == 5 ? (root.pl-detail-open ? "Playlist" : "Playlists")
                             : root.current-tab == 6 ? "Internet Radio"
                             : root.current-tab == 7 ? "Extensions"
+                            : root.current-tab == 8 ? "Most Played"
+                            : root.current-tab == 9 ? "Statistics"
                             : "Servers";
                         color: Theme.text;
                         font-size: 20px;
@@ -1668,6 +1745,68 @@ export component AppWindow inherits Window {
                     }
                 }
 
+                // ── Most Played ─────────────────────────────────────────────
+                if root.current-tab == 8 : VerticalLayout {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    ListView {
+                        for s[i] in root.most-played : StatRow {
+                            item: s;
+                            rank: i + 1;
+                            current: !root.stopped && s.title == root.now-title && s.artist == root.now-artist;
+                            play => { root.play-stat-track(s.track-id); }
+                        }
+                    }
+                }
+                if root.current-tab == 8 && root.most-played.length == 0 : Text {
+                    text: "Nothing played yet — the chart builds itself as you listen.";
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    x: 24px;
+                    y: 80px;
+                }
+
+                // ── Statistics ──────────────────────────────────────────────
+                if root.current-tab == 9 : Flickable {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    viewport-height: mp-stats-body.preferred-height + 40px;
+
+                    mp-stats-body := VerticalLayout {
+                        width: parent.width;
+                        spacing: 12px;
+
+                        HorizontalLayout {
+                            spacing: 12px;
+                            StatCard { value: root.stats-total-tracks; label: "TRACKS"; }
+                            StatCard { value: root.stats-total-plays; label: "PLAYS"; }
+                            StatCard { value: root.stats-total-skips; label: "SKIPS"; }
+                            StatCard { value: root.stats-never-count; label: "NEVER PLAYED"; }
+                        }
+
+                        if root.stats-recent.length > 0 : SectionHeader { title: "RECENTLY PLAYED"; }
+                        for s[i] in root.stats-recent : StatRow {
+                            item: s;
+                            rank: i + 1;
+                            play => { root.play-stat-track(s.track-id); }
+                        }
+
+                        if root.stats-most-skipped.length > 0 : SectionHeader { title: "MOST SKIPPED"; }
+                        for s[i] in root.stats-most-skipped : StatRow {
+                            item: s;
+                            rank: i + 1;
+                            play => { root.play-stat-track(s.track-id); }
+                        }
+
+                        if root.stats-never.length > 0 : SectionHeader { title: "NEVER PLAYED"; }
+                        for s[i] in root.stats-never : StatRow {
+                            item: s;
+                            rank: i + 1;
+                            play => { root.play-stat-track(s.track-id); }
+                        }
+                    }
+                }
+
                 // ── Artist detail ───────────────────────────────────────────
                 if root.show-artist : Rectangle {
                     background: Theme.window-bg;
@@ -2038,6 +2177,16 @@ export component AppWindow inherits Window {
                 height: 92px;
                 clip: true;
                 background: root.show-full-player ? #100c18dd : Theme.panel-bg;
+                // One width for both side columns, so the transport + seek
+                // column between them is genuinely centred. Responsive: the
+                // VFD goes first when the window narrows, then the panel
+                // buttons, leaving just mute + the volume knob — the floor at
+                // each step is the natural width of what is still shown.
+                property <bool> show-vfd: root.width >= 1050px;
+                property <bool> show-panel-buttons: root.width >= 820px;
+                property <length> side-width: self.show-vfd
+                    ? max(root.width * 0.24, 392px)
+                    : self.show-panel-buttons ? 212px : 140px;
                 if root.show-full-player && root.now-has-art : Image {
                     x: -20px;
                     y: -20px;
@@ -2062,7 +2211,9 @@ export component AppWindow inherits Window {
                     // Track info
                     HorizontalLayout {
                         spacing: 12px;
-                        width: root.show-full-player ? 38% : (root.now-has-art ? 24% : 32%);
+                        // Same width as the right cluster, so the transport
+                        // column sits at the true centre of the bar.
+                        width: player.side-width;
                         Rectangle {
                             // A station without a logo still gets the slot, so
                             // the bar does not reflow when one loads.
@@ -2205,7 +2356,11 @@ export component AppWindow inherits Window {
                                 font-family: Theme.font-mono;
                                 vertical-alignment: center;
                             }
-                            SlideBar {
+                            // The track's own waveform as the seek bar — it
+                            // shows *where* you are aiming (the quiet intro,
+                            // the drop), which a plain bar cannot.
+                            WaveformBar {
+                                bars: root.waveform-bars;
                                 progress: root.progress;
                                 changed(p) => { root.seek(p); }
                             }
@@ -2219,10 +2374,15 @@ export component AppWindow inherits Window {
                         }
                     }
 
-                    // VFD + volume
+                    // VFD + volume — inside a fixed column matching the track
+                    // info's, right-aligned, so both flanks weigh the same.
+                    Rectangle {
+                        width: player.side-width;
                     HorizontalLayout {
+                        x: parent.width - self.preferred-width;
+                        height: parent.height;
                         spacing: 10px;
-                        IconButton {
+                        if player.show-panel-buttons : IconButton {
                             icon: Icons.equalizer;
                             icon-size: 16px;
                             accented: root.show-audio;
@@ -2231,7 +2391,7 @@ export component AppWindow inherits Window {
                         }
                         // Where the audio comes out. The queue has the right
                         // panel, so the miniplayer's slot is better spent here.
-                        IconButton {
+                        if player.show-panel-buttons : IconButton {
                             icon: Icons.device-speaker;
                             icon-size: 17px;
                             accented: root.current-renderer != "";
@@ -2241,7 +2401,7 @@ export component AppWindow inherits Window {
                                 root.renderers-open();
                             }
                         }
-                        VfdDisplay {
+                        if player.show-vfd : VfdDisplay {
                             y: (parent.height - self.height) / 2;
                             // A live stream has no meaningful position, so the
                             // readout names the source instead of counting.
@@ -2282,6 +2442,7 @@ export component AppWindow inherits Window {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
@@ -3382,7 +3543,11 @@ export component AppWindow inherits Window {
                                 return accept;
                             }
                             if (event.text == Key.Escape) {
-                                root.close-palette();
+                                if (root.palette-menu-open) {
+                                    root.palette-menu-open = false;
+                                } else {
+                                    root.close-palette();
+                                }
                                 return accept;
                             }
                             reject
@@ -3416,11 +3581,20 @@ export component AppWindow inherits Window {
                     for r[i] in root.palette-results : PaletteRow {
                         item: r;
                         selected: i == root.palette-sel;
+                        // Tracks, albums and playlists carry queue/playlist
+                        // actions; artists, radios and servers only activate.
+                        has-menu: r.kind == "track" || r.kind == "album" || r.kind == "playlist";
                         activate => {
                             root.palette-sel = i;
                             root.activate-palette();
                         }
                         hovered => { root.palette-sel = i; }
+                        menu(mx, my) => {
+                            root.palette-menu-item = r;
+                            root.palette-menu-x = mx;
+                            root.palette-menu-y = my;
+                            root.palette-menu-open = true;
+                        }
                     }
                 }
                 Rectangle { height: 1px; background: Theme.border; }
@@ -3445,6 +3619,121 @@ export component AppWindow inherits Window {
                         color: Theme.text-muted;
                         font-size: 10px;
                         font-family: Theme.font-mono;
+                    }
+                }
+            }
+        }
+
+        // Context menu for the selected result — centred over the palette
+        // rather than anchored to the row, which a ListView cannot place.
+        if root.palette-menu-open : Rectangle {
+            width: 100%;
+            height: 100%;
+            TouchArea { clicked => { root.palette-menu-open = false; } }
+            Rectangle {
+                // Hangs off the ellipsis that opened it — right edge under
+                // the button, dropping downward — clamped to stay on screen;
+                // when there is no room below, it opens upward instead.
+                x: clamp(root.palette-menu-x - self.width, 8px, root.width - self.width - 8px);
+                y: root.palette-menu-y + self.height <= root.height - 8px
+                    ? root.palette-menu-y
+                    : max(8px, root.palette-menu-y - self.height - 46px);
+                width: 240px;
+                // Sized by its content — a bare Rectangle otherwise fills its
+                // parent, which stretched this menu the height of the palette.
+                height: palette-menu-body.preferred-height;
+                background: Theme.panel-raised;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Theme.border;
+                drop-shadow-color: #000000aa;
+                drop-shadow-blur: 24px;
+                palette-menu-body := VerticalLayout {
+                    padding: 6px;
+                    // What the menu is about — art, title, artist — so a
+                    // stray click cannot act on the wrong song.
+                    HorizontalLayout {
+                        padding: 4px;
+                        spacing: 10px;
+                        Rectangle {
+                            width: 34px;
+                            height: 34px;
+                            y: (parent.height - self.height) / 2;
+                            background: Theme.art-placeholder;
+                            clip: true;
+                            if root.palette-menu-item.has-art : Image {
+                                width: parent.width;
+                                height: parent.height;
+                                source: root.palette-menu-item.art;
+                                image-fit: cover;
+                            }
+                            if !root.palette-menu-item.has-art : Image {
+                                source: root.palette-menu-item.kind == "track" ? Icons.music
+                                    : root.palette-menu-item.kind == "album" ? Icons.disc
+                                    : Icons.playlist;
+                                colorize: Theme.text-dim;
+                                width: 15px;
+                                height: 15px;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 2px;
+                            horizontal-stretch: 1;
+                            Text {
+                                text: root.palette-menu-item.title;
+                                color: Theme.text;
+                                font-size: 12px;
+                                font-weight: 600;
+                                overflow: elide;
+                            }
+                            if root.palette-menu-item.subtitle != "" : Text {
+                                text: root.palette-menu-item.subtitle;
+                                color: Theme.text-dim;
+                                font-size: 10px;
+                                overflow: elide;
+                            }
+                        }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    Rectangle { height: 4px; }
+                    CtxMenuItem {
+                        icon: Icons.play;
+                        label: "Play";
+                        clicked => {
+                            root.palette-menu-play(root.palette-menu-item);
+                            root.palette-menu-open = false;
+                            root.show-palette = false;
+                        }
+                    }
+                    if root.palette-menu-item.kind != "playlist" : CtxMenuItem {
+                        icon: Icons.next;
+                        label: "Play next";
+                        clicked => {
+                            root.palette-menu-play-next(root.palette-menu-item);
+                            root.palette-menu-open = false;
+                        }
+                    }
+                    if root.palette-menu-item.kind != "playlist" : CtxMenuItem {
+                        icon: Icons.list-music;
+                        label: "Add to queue";
+                        clicked => {
+                            root.palette-menu-add-queue(root.palette-menu-item);
+                            root.palette-menu-open = false;
+                        }
+                    }
+                    if root.palette-menu-item.kind != "playlist" : CtxMenuItem {
+                        icon: Icons.playlist;
+                        label: "Add to playlist…";
+                        clicked => {
+                            root.palette-menu-open = false;
+                            root.show-palette = false;
+                            root.open-playlist-picker-for(
+                                root.palette-menu-item.kind,
+                                root.palette-menu-item.id);
+                        }
                     }
                 }
             }
@@ -4291,7 +4580,7 @@ export component AppWindow inherits Window {
                         selected: i == root.plpicker-sel;
                         activate => {
                             root.plpicker-sel = i;
-                            root.activate-plpicker();
+                            root.activate-plpicker-row(r);
                         }
                         hovered => { root.plpicker-sel = i; }
                     }

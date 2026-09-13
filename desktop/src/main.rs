@@ -732,6 +732,65 @@ fn picker_results(query: &str) -> Vec<PaletteItem> {
 }
 
 /// Called after a like/unlike: refresh the liked list + hearts everywhere.
+// ── Analytics ───────────────────────────────────────────────────────────────
+
+/// "3d ago" / "2h ago" for the recently-played list.
+fn ago(unix: i64) -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    match (now - unix).max(0) {
+        s if s < 60 => "just now".into(),
+        s if s < 3600 => format!("{}m ago", s / 60),
+        s if s < 86_400 => format!("{}h ago", s / 3600),
+        s => format!("{}d ago", s / 86_400),
+    }
+}
+
+fn stat_item(r: &rpc::StatRowData, value: String) -> StatItem {
+    StatItem {
+        track_id: r.track_id.clone().into(),
+        title: r.title.clone().into(),
+        artist: r.artist.clone().into(),
+        value: value.into(),
+    }
+}
+
+pub fn ui_set_most_played(app: &AppWindow, rows: Vec<rpc::StatRowData>) {
+    let items: Vec<StatItem> = rows
+        .iter()
+        .map(|r| stat_item(r, format!("{} plays", r.count)))
+        .collect();
+    app.set_most_played(ModelRc::new(VecModel::from(items)));
+}
+
+pub fn ui_set_stats(app: &AppWindow, data: rpc::StatsData) {
+    app.set_stats_total_tracks(data.total_tracks.to_string().into());
+    app.set_stats_total_plays(data.total_plays.to_string().into());
+    app.set_stats_total_skips(data.total_skips.to_string().into());
+    app.set_stats_never_count(data.never_played_count.max(0).to_string().into());
+
+    let skipped: Vec<StatItem> = data
+        .most_skipped
+        .iter()
+        .map(|r| stat_item(r, format!("{} skips", r.count)))
+        .collect();
+    let recent: Vec<StatItem> = data
+        .recently_played
+        .iter()
+        .map(|r| stat_item(r, r.at.map(ago).unwrap_or_default()))
+        .collect();
+    let never: Vec<StatItem> = data
+        .never_played
+        .iter()
+        .map(|r| stat_item(r, String::new()))
+        .collect();
+    app.set_stats_most_skipped(ModelRc::new(VecModel::from(skipped)));
+    app.set_stats_recent(ModelRc::new(VecModel::from(recent)));
+    app.set_stats_never(ModelRc::new(VecModel::from(never)));
+}
+
 pub fn ui_set_liked(app: &AppWindow, liked: Vec<rpc::TrackData>) {
     STATE.with(|s| s.borrow_mut().liked = liked);
     STATE.with(|s| {
@@ -1577,6 +1636,136 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     }
 
+    // ── Palette context menu ────────────────────────────────────────────────
+    {
+        let tx = tx.clone();
+        app.on_palette_menu_play(move |item| {
+            let cmd = match item.kind.as_str() {
+                "track" => rpc::Cmd::PlayAllAt(item.index),
+                "album" => rpc::Cmd::PlayAlbum(item.id.into()),
+                _ => rpc::Cmd::PlaySavedPlaylist(item.id.into()),
+            };
+            let _ = tx.send(cmd);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_palette_menu_play_next(move |item| {
+            let cmd = match item.kind.as_str() {
+                "track" => Some(rpc::Cmd::InsertTracks {
+                    position: -2,
+                    tracks: vec![item.id.into()],
+                }),
+                "album" => Some(rpc::Cmd::InsertAlbum {
+                    album_id: item.id.into(),
+                    position: -2,
+                }),
+                _ => None,
+            };
+            if let Some(cmd) = cmd {
+                let _ = tx.send(cmd);
+            }
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_palette_menu_add_queue(move |item| {
+            let cmd = match item.kind.as_str() {
+                "track" => Some(rpc::Cmd::InsertTracks {
+                    position: -3,
+                    tracks: vec![item.id.into()],
+                }),
+                "album" => Some(rpc::Cmd::InsertAlbum {
+                    album_id: item.id.into(),
+                    position: -3,
+                }),
+                _ => None,
+            };
+            if let Some(cmd) = cmd {
+                let _ = tx.send(cmd);
+            }
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_album_add_to_playlist(move |playlist_id, album_id| {
+            // The library is already in STATE; an album's tracks are the ones
+            // carrying its id.
+            let track_ids: Vec<String> = STATE.with(|s| {
+                s.borrow()
+                    .tracks
+                    .iter()
+                    .filter(|t| t.album_id == album_id.as_str())
+                    .map(|t| t.id.clone())
+                    .collect()
+            });
+            for track_id in track_ids {
+                let _ = tx.send(rpc::Cmd::PlaylistAddTrack {
+                    playlist_id: playlist_id.to_string(),
+                    track_id,
+                });
+            }
+        });
+    }
+    {
+        let tx = tx.clone();
+        let app_weak = app.as_weak();
+        app.on_plpicker_create_and_add(move |typed| {
+            let app = app_weak.unwrap();
+            let name = typed.trim().to_string();
+            let name = if name.is_empty() {
+                "New Playlist".to_string()
+            } else {
+                name
+            };
+            let pending_id: String = app.get_plpicker_track_id().into();
+            let track_ids: Vec<String> = if app.get_plpicker_kind() == "album" {
+                STATE.with(|s| {
+                    s.borrow()
+                        .tracks
+                        .iter()
+                        .filter(|t| t.album_id == pending_id)
+                        .map(|t| t.id.clone())
+                        .collect()
+                })
+            } else {
+                vec![pending_id]
+            };
+            let _ = tx.send(rpc::Cmd::PlaylistCreateAndAdd { name, track_ids });
+        });
+    }
+
+    // ── Analytics tabs ──────────────────────────────────────────────────────
+    {
+        let tx = tx.clone();
+        app.on_load_most_played(move || {
+            let _ = tx.send(rpc::Cmd::LoadMostPlayed);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_load_stats(move || {
+            let _ = tx.send(rpc::Cmd::LoadStats);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_play_stat_track(move |id| {
+            // The stat lists carry library track ids; play by the track's
+            // position in the full library, which STATE already holds.
+            let index = STATE.with(|s| {
+                s.borrow()
+                    .tracks
+                    .iter()
+                    .position(|t| t.id == id.as_str())
+                    .map(|i| i as i32)
+            });
+            if let Some(index) = index {
+                let _ = tx.send(rpc::Cmd::PlayAllAt(index));
+            }
+        });
+    }
+
     // ── Track / album context actions ───────────────────────────────────────
     {
         let tx = tx.clone();
@@ -1756,28 +1945,47 @@ fn main() -> Result<(), slint::PlatformError> {
         app.on_plpicker_query(move |q| {
             let app = app_weak.unwrap();
             let q = q.to_lowercase();
+            // "Create new playlist" rides on top of every result set, so the
+            // escape hatch is always one arrow-up away — and typing a name
+            // that matches nothing still leaves something to activate.
+            let create_row = PaletteItem {
+                kind: "create".into(),
+                id: "create".into(),
+                title: if q.trim().is_empty() {
+                    "Create new playlist".into()
+                } else {
+                    format!("Create \"{}\"", q.trim()).into()
+                },
+                subtitle: "New playlist with this track".into(),
+                index: -1,
+                has_art: false,
+                art: slint::Image::default(),
+            };
             let items: Vec<PaletteItem> = STATE.with(|s| {
-                s.borrow()
-                    .playlists
-                    .iter()
-                    .filter(|p| {
-                        q.is_empty()
-                            || p.name.to_lowercase().contains(&q)
-                            || p.description.to_lowercase().contains(&q)
-                    })
-                    .map(|p| PaletteItem {
-                        kind: "playlist".into(),
-                        id: p.id.clone().into(),
-                        title: p.name.clone().into(),
-                        subtitle: if p.track_count == 1 {
-                            "1 track".into()
-                        } else {
-                            format!("{} tracks", p.track_count).into()
-                        },
-                        index: -1,
-                        has_art: false,
-                        art: slint::Image::default(),
-                    })
+                std::iter::once(create_row)
+                    .chain(
+                        s.borrow()
+                            .playlists
+                            .iter()
+                            .filter(|p| {
+                                q.is_empty()
+                                    || p.name.to_lowercase().contains(&q)
+                                    || p.description.to_lowercase().contains(&q)
+                            })
+                            .map(|p| PaletteItem {
+                                kind: "playlist".into(),
+                                id: p.id.clone().into(),
+                                title: p.name.clone().into(),
+                                subtitle: if p.track_count == 1 {
+                                    "1 track".into()
+                                } else {
+                                    format!("{} tracks", p.track_count).into()
+                                },
+                                index: -1,
+                                has_art: false,
+                                art: slint::Image::default(),
+                            }),
+                    )
                     .collect()
             });
             app.set_plpicker_results(ModelRc::new(VecModel::from(items)));

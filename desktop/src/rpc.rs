@@ -1611,7 +1611,10 @@ async fn load_waveform(channel: Channel, track_id: String, weak: Weak<AppWindow>
     let Ok(response) = client
         .get_track_analysis(GetTrackAnalysisRequest {
             track_id,
-            analyze_if_missing: false,
+            // Generate on demand: the track being looked at is exactly the
+            // one whose waveform matters right now, and waiting for the
+            // background pass to reach it left a flat rail for whole songs.
+            analyze_if_missing: true,
         })
         .await
     else {

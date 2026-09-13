@@ -1925,14 +1925,18 @@ pub struct StatsData {
 }
 
 /// Rows of a `(track_id, title, artist, count, at)`-shaped view query.
-async fn analytics_rows(sql: &str) -> Vec<StatRowData> {
+async fn analytics_rows<V>(sql: &str, values: V) -> Vec<StatRowData>
+where
+    V: IntoIterator<Item = sea_orm::Value>,
+{
     use sea_orm::{ConnectionTrait, Statement};
     let db = music_player_storage::shared().await;
     let conn = db.get_connection();
     let rows = match conn
-        .query_all_raw(Statement::from_string(
+        .query_all_raw(Statement::from_sql_and_values(
             sea_orm::DbBackend::Sqlite,
-            sql.to_owned(),
+            sql,
+            values,
         ))
         .await
     {
@@ -1956,14 +1960,18 @@ async fn analytics_rows(sql: &str) -> Vec<StatRowData> {
 }
 
 /// A single scalar, for the Statistics counters.
-async fn analytics_count(sql: &str) -> i64 {
+async fn analytics_count<V>(sql: &str, values: V) -> i64
+where
+    V: IntoIterator<Item = sea_orm::Value>,
+{
     use sea_orm::{ConnectionTrait, Statement};
     let db = music_player_storage::shared().await;
     match db
         .get_connection()
-        .query_one_raw(Statement::from_string(
+        .query_one_raw(Statement::from_sql_and_values(
             sea_orm::DbBackend::Sqlite,
-            sql.to_owned(),
+            sql,
+            values,
         ))
         .await
     {
@@ -1972,15 +1980,134 @@ async fn analytics_count(sql: &str) -> i64 {
     }
 }
 
-async fn load_stats() -> StatsData {
-    StatsData {
-        total_tracks: analytics_count("SELECT COUNT(*) FROM track").await,
-        total_plays: analytics_count("SELECT COALESCE(SUM(play_count), 0) FROM track_stats").await,
-        total_skips: analytics_count("SELECT COALESCE(SUM(skip_count), 0) FROM track_stats").await,
-        never_played_count: analytics_count("SELECT COUNT(*) FROM v_never_played").await,
+/// Which source the analytics screens read, and the name to show for it.
+///
+/// Asked of the daemon each time rather than cached: the screens must follow
+/// a server switch the moment the tab is opened. The key is the server url's
+/// host — exactly how the daemon's play recorder labels each listen — or
+/// `'local'` when the daemon reads its own library.
+async fn analytics_source() -> (String, String) {
+    const QUERY: &str = r#"query { connectedServer { name url } }"#;
+    if let Ok(data) = graphql(QUERY, serde_json::json!({})).await {
+        let server = &data["connectedServer"];
+        if let Some(url) = server["url"].as_str().filter(|url| !url.is_empty()) {
+            let name = server["name"].as_str().filter(|n| !n.is_empty());
+            return (host_of(url), name.unwrap_or(url).to_string());
+        }
+    }
+    ("local".to_string(), "Local library".to_string())
+}
+
+/// The host of a server url, matching the daemon's `source_of` labeling: no
+/// scheme, credentials, port or path, lowercased.
+fn host_of(url: &str) -> String {
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .unwrap_or(url);
+    let authority = rest.split(['/', '?']).next().unwrap_or_default();
+    let host = authority.rsplit('@').next().unwrap_or(authority);
+    let host = host.split(':').next().unwrap_or(host);
+    host.to_ascii_lowercase()
+}
+
+/// Claim pre-migration plays back for the connected server.
+///
+/// Listens recorded before the source column existed were marked `'unknown'`
+/// when their track id matched nothing local — they were remote plays, but
+/// nothing said whose. The connected server's listing answers that by id, so
+/// its history is whole rather than starting over at the migration.
+async fn adopt_unknown_rows(source: &str, state: &Arc<Mutex<WorkerState>>) {
+    use sea_orm::{ConnectionTrait, Statement};
+    let known: HashMap<String, (String, String)> = {
+        let st = state.lock().await;
+        st.tracks
+            .iter()
+            .map(|t| {
+                (
+                    t.proto.id.clone(),
+                    (t.proto.title.clone(), t.artist.clone()),
+                )
+            })
+            .collect()
+    };
+    if known.is_empty() {
+        return;
+    }
+    let orphans = analytics_rows(
+        "SELECT track_id, '', '', 0, NULL FROM track_stats WHERE source = 'unknown' \
+         UNION SELECT DISTINCT track_id, '', '', 0, NULL FROM play_history \
+         WHERE source = 'unknown'",
+        std::iter::empty(),
+    )
+    .await;
+    let db = music_player_storage::shared().await;
+    let conn = db.get_connection();
+    for row in orphans {
+        let Some((title, artist)) = known.get(&row.track_id) else {
+            continue;
+        };
+        for sql in [
+            "UPDATE track_stats SET source = ?, title = ?, artist = ? \
+             WHERE track_id = ? AND source = 'unknown'",
+            "UPDATE play_history SET source = ?, title = ?, artist = ? \
+             WHERE track_id = ? AND source = 'unknown'",
+        ] {
+            let update = Statement::from_sql_and_values(
+                sea_orm::DbBackend::Sqlite,
+                sql,
+                [
+                    source.into(),
+                    title.as_str().into(),
+                    artist.as_str().into(),
+                    row.track_id.as_str().into(),
+                ],
+            );
+            if let Err(e) = conn.execute_raw(update).await {
+                tracing::debug!(track = %row.track_id, "could not adopt an orphan play: {e}");
+            }
+        }
+    }
+}
+
+/// Reload both analytics tabs for whatever source is connected right now.
+async fn refresh_analytics(weak: &Weak<AppWindow>, state: &Arc<Mutex<WorkerState>>) {
+    let (source, label) = analytics_source().await;
+    if source != "local" {
+        adopt_unknown_rows(&source, state).await;
+    }
+    let most_played = analytics_rows(
+        "SELECT track_id, title, artist, play_count, last_played \
+         FROM v_most_played WHERE source = ? LIMIT 200",
+        [source.as_str().into()],
+    )
+    .await;
+    let data = load_stats(&source, state).await;
+    let _ = weak.upgrade_in_event_loop(move |app| {
+        app.set_stats_source(label.into());
+        crate::ui_set_most_played(&app, most_played);
+        crate::ui_set_stats(&app, data);
+    });
+}
+
+async fn load_stats(source: &str, state: &Arc<Mutex<WorkerState>>) -> StatsData {
+    let mut data = StatsData {
+        total_tracks: 0,
+        total_plays: analytics_count(
+            "SELECT COALESCE(SUM(play_count), 0) FROM track_stats WHERE source = ?",
+            [source.into()],
+        )
+        .await,
+        total_skips: analytics_count(
+            "SELECT COALESCE(SUM(skip_count), 0) FROM track_stats WHERE source = ?",
+            [source.into()],
+        )
+        .await,
+        never_played_count: 0,
         most_skipped: analytics_rows(
             "SELECT track_id, title, artist, skip_count, last_skipped \
-             FROM v_most_skipped LIMIT 20",
+             FROM v_most_skipped WHERE source = ? LIMIT 20",
+            [source.into()],
         )
         .await,
         recently_played: analytics_rows(
@@ -1988,16 +2115,57 @@ async fn load_stats() -> StatsData {
             // times writes several history rows, and a screen repeating the
             // same title reads as a bug, not a log.
             "SELECT track_id, title, artist, ms_played / 1000, MAX(played_at) AS played_at \
-             FROM v_recently_played GROUP BY track_id \
+             FROM v_recently_played WHERE source = ? GROUP BY track_id \
              ORDER BY played_at DESC LIMIT 50",
+            [source.into()],
         )
         .await,
-        never_played: analytics_rows(
+        never_played: Vec::new(),
+    };
+
+    if source == "local" {
+        data.total_tracks = analytics_count("SELECT COUNT(*) FROM track", std::iter::empty()).await;
+        data.never_played_count =
+            analytics_count("SELECT COUNT(*) FROM v_never_played", std::iter::empty()).await;
+        data.never_played = analytics_rows(
             "SELECT track_id, title, artist, 0, NULL \
              FROM v_never_played LIMIT 20",
+            std::iter::empty(),
         )
-        .await,
+        .await;
+        return data;
     }
+
+    // A remote library has no rows in the local `track` table; the listing
+    // the screens already show *is* the library, so "tracks" and "never
+    // played" are answered from it — the played ids come from this source's
+    // own counters.
+    let played: std::collections::HashSet<String> = analytics_rows(
+        "SELECT track_id, '' , '', play_count, NULL FROM track_stats \
+         WHERE source = ? AND play_count > 0",
+        [source.into()],
+    )
+    .await
+    .into_iter()
+    .map(|row| row.track_id)
+    .collect();
+    let st = state.lock().await;
+    data.total_tracks = st.tracks.len() as i64;
+    let never: Vec<StatRowData> = st
+        .tracks
+        .iter()
+        .filter(|track| !played.contains(&track.proto.id))
+        .map(|track| StatRowData {
+            track_id: track.proto.id.clone(),
+            title: track.proto.title.clone(),
+            artist: track.artist.clone(),
+            count: 0,
+            at: None,
+        })
+        .collect();
+    data.never_played_count = never.len() as i64;
+    data.never_played = never.into_iter().take(20).collect();
+    data
 }
 
 async fn discover_music_player_servers() -> Vec<(String, String, u16)> {
@@ -2584,24 +2752,14 @@ async fn cmd_loop(
                         app.set_status_text(display.into());
                     });
                 }
-                // Analytics read the LOCAL library's views directly — play
-                // counts live on this machine even when the browser is pointed
-                // at a remote server, the same way the local scrobble log does.
-                Cmd::LoadMostPlayed => {
-                    let rows = analytics_rows(
-                        "SELECT track_id, title, artist, play_count, last_played \
-                         FROM v_most_played LIMIT 200",
-                    )
-                    .await;
-                    let _ = weak.upgrade_in_event_loop(move |app| {
-                        crate::ui_set_most_played(&app, rows);
-                    });
-                }
-                Cmd::LoadStats => {
-                    let data = load_stats().await;
-                    let _ = weak.upgrade_in_event_loop(move |app| {
-                        crate::ui_set_stats(&app, data);
-                    });
+                // Analytics live in the LOCAL database whatever the library
+                // screens read from — but every listen is recorded with its
+                // source, so the charts here follow the connected server:
+                // Rocksky's plays on Rocksky, the local library's on local.
+                // Both tabs are refreshed together: the queries are cheap and
+                // the two must never disagree about which source they show.
+                Cmd::LoadMostPlayed | Cmd::LoadStats => {
+                    refresh_analytics(&weak, &state).await;
                 }
                 Cmd::DiscoverServers => {
                     let weak2 = weak.clone();
@@ -2844,6 +3002,9 @@ async fn cmd_loop(
                         tracing::warn!("reloading the library failed: {e}");
                     }
                     load_playlists(&channel, &weak).await;
+                    // An open analytics tab must not keep showing the old
+                    // source's numbers.
+                    refresh_analytics(&weak, &state).await;
                 }
                 Cmd::ConnectServer(srv) => {
                     // Connecting is now the daemon's job: it makes the server
@@ -2859,6 +3020,9 @@ async fn cmd_loop(
                                 tracing::warn!("reloading the library failed: {e}");
                             }
                             load_playlists(&channel, &weak).await;
+                            // An open analytics tab must not keep showing the
+                            // old source's numbers.
+                            refresh_analytics(&weak, &state).await;
                         }
                         Err(e) => {
                             let message = e.to_string();

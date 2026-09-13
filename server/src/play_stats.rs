@@ -58,6 +58,11 @@ async fn record_loop(tracklist: Arc<Mutex<Tracklist>>) {
                     Kind::Skip,
                     previous.position_ms,
                     previous.duration_ms,
+                    &Listen {
+                        source: previous.source.clone(),
+                        title: previous.title.clone(),
+                        artist: previous.artist.clone(),
+                    },
                 )
                 .await
                 {
@@ -78,6 +83,7 @@ async fn record_loop(tracklist: Arc<Mutex<Tracklist>>) {
                 Kind::Play,
                 current.position_ms,
                 current.duration_ms,
+                &Listen::of(&current),
             )
             .await
             {
@@ -98,6 +104,9 @@ struct Pending {
     /// The furthest position seen, so a skip records what was actually heard.
     position_ms: u32,
     duration_ms: u32,
+    source: String,
+    title: String,
+    artist: String,
 }
 
 impl Pending {
@@ -107,7 +116,51 @@ impl Pending {
             id: current.id.clone(),
             position_ms: current.position_ms,
             duration_ms: current.duration_ms,
+            source: source_of(&current.uri),
+            title: current.title.clone(),
+            artist: current.artist.clone(),
         }
+    }
+}
+
+/// What a listen carries beyond the counters: where it came from, and the
+/// names to show when the track has no local row to join.
+struct Listen {
+    source: String,
+    title: String,
+    artist: String,
+}
+
+impl Listen {
+    fn of(current: &Current) -> Self {
+        Self {
+            source: source_of(&current.uri),
+            title: current.title.clone(),
+            artist: current.artist.clone(),
+        }
+    }
+}
+
+/// Where a track streams from: `'local'` for a file of ours, else the host of
+/// its uri. The host rather than the saved-server id, because a queued track
+/// outlives a server switch and its uri is the one thing that still says
+/// where it came from.
+fn source_of(uri: &str) -> String {
+    let rest = uri
+        .strip_prefix("https://")
+        .or_else(|| uri.strip_prefix("http://"));
+    let Some(rest) = rest else {
+        return "local".to_owned();
+    };
+    let authority = rest.split(['/', '?']).next().unwrap_or_default();
+    // Credentials and port are not identity: the same server answers with
+    // and without them in the url.
+    let host = authority.rsplit('@').next().unwrap_or(authority);
+    let host = host.split(':').next().unwrap_or(host);
+    if host.is_empty() {
+        "local".to_owned()
+    } else {
+        host.to_ascii_lowercase()
     }
 }
 
@@ -126,6 +179,7 @@ async fn bump(
     kind: Kind,
     ms_played: u32,
     length_ms: u32,
+    listen: &Listen,
 ) -> Result<(), anyhow::Error> {
     if track_id.is_empty() {
         return Ok(());
@@ -134,14 +188,17 @@ async fn bump(
     // Best-effort: analytics must never fail the play that produced it.
     let history = sea_orm::Statement::from_sql_and_values(
         conn.get_database_backend(),
-        "INSERT INTO play_history (track_id, played_at, ms_played, length_ms, skipped) \
-         VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO play_history (track_id, played_at, ms_played, length_ms, skipped, \
+         source, title, artist) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
             track_id.into(),
             now.into(),
             (ms_played as i64).into(),
             (length_ms as i64).into(),
             (matches!(kind, Kind::Skip) as i32).into(),
+            listen.source.as_str().into(),
+            listen.title.as_str().into(),
+            listen.artist.as_str().into(),
         ],
     );
     if let Err(e) = conn.execute_raw(history).await {
@@ -155,6 +212,12 @@ async fn bump(
             let mut update = track_stats::ActiveModel {
                 track_id: ActiveValue::Unchanged(row.track_id),
                 updated_at: ActiveValue::Set(now),
+                // Re-stamped on every listen: the source follows the uri, and
+                // the names follow the freshest tags (rows from before the
+                // source column existed carry 'unknown' until played again).
+                source: ActiveValue::Set(listen.source.clone()),
+                title: ActiveValue::Set(listen.title.clone()),
+                artist: ActiveValue::Set(listen.artist.clone()),
                 ..Default::default()
             };
             match kind {
@@ -181,6 +244,9 @@ async fn bump(
                 last_played: ActiveValue::Set(last_played),
                 last_skipped: ActiveValue::Set(last_skipped),
                 updated_at: ActiveValue::Set(now),
+                source: ActiveValue::Set(listen.source.clone()),
+                title: ActiveValue::Set(listen.title.clone()),
+                artist: ActiveValue::Set(listen.artist.clone()),
             }
             .insert(conn)
             .await?;
@@ -214,17 +280,25 @@ mod tests {
             .unwrap()
     }
 
+    fn listen() -> Listen {
+        Listen {
+            source: "local".to_owned(),
+            title: "Fire Squad".to_owned(),
+            artist: "J. Cole".to_owned(),
+        }
+    }
+
     #[tokio::test]
     async fn counts_plays_and_skips_separately() {
         let (_dir, conn) = temp_db().await;
 
-        bump(&conn, "t1", Kind::Play, 30_000, 200_000)
+        bump(&conn, "t1", Kind::Play, 30_000, 200_000, &listen())
             .await
             .unwrap();
-        bump(&conn, "t1", Kind::Play, 30_000, 200_000)
+        bump(&conn, "t1", Kind::Play, 30_000, 200_000, &listen())
             .await
             .unwrap();
-        bump(&conn, "t1", Kind::Skip, 30_000, 200_000)
+        bump(&conn, "t1", Kind::Skip, 30_000, 200_000, &listen())
             .await
             .unwrap();
 
@@ -240,10 +314,10 @@ mod tests {
     #[tokio::test]
     async fn a_skip_leaves_the_play_count_alone() {
         let (_dir, conn) = temp_db().await;
-        bump(&conn, "t1", Kind::Play, 30_000, 200_000)
+        bump(&conn, "t1", Kind::Play, 30_000, 200_000, &listen())
             .await
             .unwrap();
-        bump(&conn, "t1", Kind::Skip, 30_000, 200_000)
+        bump(&conn, "t1", Kind::Skip, 30_000, 200_000, &listen())
             .await
             .unwrap();
         let row = stats(&conn, "t1").await;
@@ -256,10 +330,10 @@ mod tests {
     #[tokio::test]
     async fn every_listen_reaches_the_history_log() {
         let (_dir, conn) = temp_db().await;
-        bump(&conn, "t1", Kind::Play, 180_000, 200_000)
+        bump(&conn, "t1", Kind::Play, 180_000, 200_000, &listen())
             .await
             .unwrap();
-        bump(&conn, "t1", Kind::Skip, 15_000, 200_000)
+        bump(&conn, "t1", Kind::Skip, 15_000, 200_000, &listen())
             .await
             .unwrap();
 
@@ -282,10 +356,73 @@ mod tests {
     #[tokio::test]
     async fn ignores_tracks_with_no_id() {
         let (_dir, conn) = temp_db().await;
-        bump(&conn, "", Kind::Play, 30_000, 200_000).await.unwrap();
+        bump(&conn, "", Kind::Play, 30_000, 200_000, &listen())
+            .await
+            .unwrap();
         assert_eq!(
             track_stats::Entity::find().all(&conn).await.unwrap().len(),
             0
         );
+    }
+
+    /// A local file is 'local'; anything streamed is its host — no port, no
+    /// credentials, no path — so the same server always maps to one source.
+    #[test]
+    fn source_follows_the_uri() {
+        assert_eq!(source_of("/Users/me/Music/song.flac"), "local");
+        assert_eq!(source_of("file:///Users/me/Music/song.flac"), "local");
+        assert_eq!(
+            source_of("https://navidrome.rocksky.app/rest/stream?id=42&u=me"),
+            "navidrome.rocksky.app"
+        );
+        assert_eq!(
+            source_of("http://192.168.1.7:5053/tracks/abc"),
+            "192.168.1.7"
+        );
+        assert_eq!(
+            source_of("https://User:Pass@Music.Example.COM:443/rest/stream"),
+            "music.example.com"
+        );
+    }
+
+    /// The regression: a remote play was recorded under an id the local
+    /// `track` table has never heard of, so the views dropped it and the
+    /// analytics screens were local-only. The source and the snapshotted
+    /// names keep it visible, scoped to its server.
+    #[tokio::test]
+    async fn a_remote_play_stays_visible_under_its_source() {
+        let (_dir, conn) = temp_db().await;
+        let remote = Listen {
+            source: "navidrome.rocksky.app".to_owned(),
+            title: "Beyond".to_owned(),
+            artist: "Daft Punk".to_owned(),
+        };
+        bump(&conn, "sub-9f2", Kind::Play, 180_000, 200_000, &remote)
+            .await
+            .unwrap();
+
+        let row = conn
+            .query_one_raw(sea_orm::Statement::from_string(
+                conn.get_database_backend(),
+                "SELECT title, artist, source FROM v_most_played \
+                 WHERE source = 'navidrome.rocksky.app'"
+                    .to_string(),
+            ))
+            .await
+            .unwrap()
+            .expect("the remote play is in the view");
+        assert_eq!(row.try_get::<String>("", "title").unwrap(), "Beyond");
+        assert_eq!(row.try_get::<String>("", "artist").unwrap(), "Daft Punk");
+
+        // And it does not leak into the local numbers.
+        let local = conn
+            .query_one_raw(sea_orm::Statement::from_string(
+                conn.get_database_backend(),
+                "SELECT COUNT(*) AS n FROM v_most_played WHERE source = 'local'".to_string(),
+            ))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(local.try_get::<i64>("", "n").unwrap(), 0);
     }
 }

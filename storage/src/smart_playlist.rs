@@ -201,6 +201,7 @@ mod tests {
                     last_played: ActiveValue::Set(Some(1_700_000_000)),
                     last_skipped: ActiveValue::Set(None),
                     updated_at: ActiveValue::Set(1_700_000_000),
+                    ..Default::default()
                 }
                 .insert(&conn)
                 .await

@@ -21,6 +21,16 @@ pub struct Model {
     pub last_played: Option<i64>,
     pub last_skipped: Option<i64>,
     pub updated_at: i64,
+    /// `'local'` for a file of ours, else the host the track streams from —
+    /// what scopes the analytics screens to one server at a time.
+    #[sea_orm(default_value = "local")]
+    pub source: String,
+    /// Snapshotted at record time: a remote track has no local row to join
+    /// for a name, and a nameless Most Played row is useless.
+    #[sea_orm(default_value = "")]
+    pub title: String,
+    #[sea_orm(default_value = "")]
+    pub artist: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

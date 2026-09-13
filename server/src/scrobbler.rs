@@ -40,6 +40,8 @@ pub(crate) struct Current {
     pub(crate) duration_ms: u32,
     pub(crate) position_ms: u32,
     pub(crate) track_number: Option<i32>,
+    /// Where the audio comes from — what play_stats derives the source from.
+    pub(crate) uri: String,
 }
 
 fn token_path() -> PathBuf {
@@ -83,6 +85,7 @@ pub(crate) fn current_track(tracklist: &Arc<Mutex<Tracklist>>) -> Option<Current
         duration_ms: (track.duration.unwrap_or(0.0) * 1000.0) as u32,
         position_ms,
         track_number: track.track.map(|n| n as i32).filter(|n| *n > 0),
+        uri: track.uri.clone(),
     })
 }
 

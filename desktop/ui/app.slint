@@ -110,6 +110,9 @@ export component AppWindow inherits Window {
     in-out property <int> current-tab: 0;
     // ── Analytics ───────────────────────────────────────────────────────────
     in-out property <[StatItem]> most-played: [];
+    // Whose analytics the Most Played and Statistics tabs are showing:
+    // the connected server's name, or "Local library".
+    in-out property <string> stats-source: "Local library";
     in-out property <string> stats-total-tracks: "0";
     in-out property <string> stats-total-plays: "0";
     in-out property <string> stats-total-skips: "0";
@@ -1097,6 +1100,15 @@ export component AppWindow inherits Window {
                         font-weight: 700;
                         vertical-alignment: center;
                         horizontal-stretch: 1;
+                    }
+                    // Whose numbers the analytics tabs show — the scope
+                    // follows the connected server, and saying so beats
+                    // leaving the reader to guess.
+                    if (root.current-tab == 8 || root.current-tab == 9) && !root.show-detail && !root.show-artist : Text {
+                        text: root.stats-source;
+                        color: Theme.text-dim;
+                        font-size: 12px;
+                        vertical-alignment: center;
                     }
                     // Play / shuffle the whole liked list, next to its title.
                     if root.current-tab == 3 && !root.show-detail && root.liked.length > 0 : HorizontalLayout {

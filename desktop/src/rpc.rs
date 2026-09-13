@@ -370,6 +370,10 @@ struct FullTrack {
 struct WorkerState {
     tracks: Vec<FullTrack>,
     liked: HashSet<String>,
+    /// The same ids as `liked`, most recently liked first. This order is what
+    /// the Liked screen shows AND what play-liked loads, so the queue always
+    /// mirrors the list.
+    liked_order: Vec<String>,
     playing: bool,
     /// Album and playlist detail responses, keyed by id.
     ///
@@ -407,14 +411,24 @@ pub fn start(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
 async fn run(weak: Weak<AppWindow>, rx: UnboundedReceiver<Cmd>) {
     // Likes restored from the user's atproto repo join the locally-stored ones,
     // so a fresh install shows the account's likes once the library is scanned.
-    let mut liked = likes::load();
+    let mut liked_order = likes::load();
+    let mut liked: HashSet<String> = liked_order.iter().cloned().collect();
     let db = music_player_storage::shared().await;
     match music_player_storage::rocksky_likes::matched_track_ids(db.get_connection()).await {
-        Ok(ids) => liked.extend(ids),
+        // Restored likes have no local like-time; they go below the ones
+        // liked on this machine.
+        Ok(ids) => {
+            for id in ids {
+                if liked.insert(id.clone()) {
+                    liked_order.push(id);
+                }
+            }
+        }
         Err(e) => tracing::debug!("could not read restored likes: {e}"),
     }
     let state = Arc::new(Mutex::new(WorkerState {
         liked,
+        liked_order,
         ..WorkerState::default()
     }));
 
@@ -913,13 +927,35 @@ fn liked_list(state: &WorkerState) -> Vec<TrackData> {
             .map(|(i, track)| track_data(track, i as i32))
             .collect();
     }
-    state
+    liked_local_protos(state)
+        .iter()
+        .enumerate()
+        .map(|(i, t)| track_data(t, i as i32))
+        .collect()
+}
+
+/// The local liked tracks, most recently liked first — the single ordering
+/// shared by the Liked screen and the play-liked queue.
+fn liked_local_protos(state: &WorkerState) -> Vec<TrackProto> {
+    let by_id: HashMap<&str, &TrackProto> = state
         .tracks
         .iter()
-        .filter(|t| state.liked.contains(&t.proto.id))
-        .enumerate()
-        .map(|(i, t)| track_data(&t.proto, i as i32))
+        .map(|t| (t.proto.id.as_str(), &t.proto))
+        .collect();
+    state
+        .liked_order
+        .iter()
+        .filter_map(|id| by_id.get(id.as_str()).map(|t| (*t).clone()))
         .collect()
+}
+
+/// The liked tracks as protos, in exactly the order the Liked screen lists
+/// them — the provider's list when one is connected, else the local order.
+fn liked_protos(state: &WorkerState) -> Vec<TrackProto> {
+    if let Some(remote) = &state.remote_liked {
+        return remote.clone();
+    }
+    liked_local_protos(state)
 }
 
 /// Fetch albums, artists and tracks, flipping `library-loading` around it so
@@ -1063,7 +1099,9 @@ async fn load_library(
                 // The ids go into the same set the heart icon consults, so a
                 // remote star lights it just as a local like does.
                 for track in &tracks {
-                    st.liked.insert(track.id.clone());
+                    if st.liked.insert(track.id.clone()) {
+                        st.liked_order.push(track.id.clone());
+                    }
                 }
                 st.remote_liked = Some(tracks);
             }
@@ -1987,7 +2025,7 @@ async fn push_liked(state: &Arc<Mutex<WorkerState>>, weak: &Weak<AppWindow>) {
         let st = state.lock().await;
         // Only the local store is a file; a provider's stars live on it.
         if st.remote_liked.is_none() {
-            likes::save(&st.liked);
+            likes::save(&st.liked_order);
         }
         liked_list(&st)
     };
@@ -2159,11 +2197,7 @@ async fn cmd_loop(
                 Cmd::PlayLikedShuffled => {
                     let mut tracks: Vec<TrackProto> = {
                         let st = state.lock().await;
-                        st.tracks
-                            .iter()
-                            .filter(|t| st.liked.contains(&t.proto.id))
-                            .map(|t| t.proto.clone())
-                            .collect()
+                        liked_protos(&st)
                     };
                     // Fisher–Yates via fastrand: shuffle client-side.
                     for i in (1..tracks.len()).rev() {
@@ -2172,13 +2206,11 @@ async fn cmd_loop(
                     load_tracks(&channel, tracks, 0).await?;
                 }
                 Cmd::PlayLikedAt(pos) => {
+                    // Same source and same order as the Liked screen, so
+                    // position N in the list is position N in the queue.
                     let tracks: Vec<TrackProto> = {
                         let st = state.lock().await;
-                        st.tracks
-                            .iter()
-                            .filter(|t| st.liked.contains(&t.proto.id))
-                            .map(|t| t.proto.clone())
-                            .collect()
+                        liked_protos(&st)
                     };
                     load_tracks(&channel, tracks, pos).await?;
                 }
@@ -2414,9 +2446,12 @@ async fn cmd_loop(
                     {
                         let mut st = state.lock().await;
                         if like {
-                            st.liked.insert(id.clone());
+                            if st.liked.insert(id.clone()) {
+                                st.liked_order.insert(0, id.clone());
+                            }
                         } else {
                             st.liked.remove(&id);
+                            st.liked_order.retain(|t| t != &id);
                         }
                         // Keep the provider's list in step so the Liked screen
                         // reflects the toggle without waiting for a reload.
@@ -2464,7 +2499,12 @@ async fn cmd_loop(
                             .filter(|t| t.album_id == id)
                             .map(|t| t.proto.id.clone())
                             .collect();
-                        st.liked.extend(ids.iter().cloned());
+                        let fresh: Vec<String> = ids
+                            .iter()
+                            .filter(|id| st.liked.insert((*id).clone()))
+                            .cloned()
+                            .collect();
+                        st.liked_order.splice(0..0, fresh);
                         ids
                     };
                     push_liked(&state, &weak).await;

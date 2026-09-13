@@ -8,6 +8,47 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.1] — 2026-09-13
+
+### Added
+
+#### Analytics per source
+- Most Played and Statistics were local-only by accident: every listen was
+  recorded, remote ones too, but under the remote server's own track ids —
+  which join nothing in the local `track` table, so the views silently
+  dropped them. Each play and skip now carries a **source** — `local` for a
+  file of ours, else the host the track streams from (the uri is the one
+  thing that still says where a queued track came from after a server
+  switch) — plus a title/artist snapshot, because a remote track has no
+  local row to join for a name. The views become source-aware, preferring
+  the local `track` row (it follows retags) and falling back to the
+  snapshot.
+- The desktop scopes both tabs to the connected source, says so in the
+  header, and refreshes them on connect/disconnect. For a remote server,
+  "tracks" and "never played" are answered from the server's listing minus
+  its recorded plays. Listens that predate the source column were marked
+  `unknown` when their id matched nothing local; a connected server's
+  listing adopts them back by id, so its history survives the migration.
+
+### Fixed
+
+#### The now-playing heart tells the truth on remote providers
+- The heart in the player bar was dead when connected to a provider
+  (Rocksky/Subsonic): the daemon served `liked` from the copy frozen into
+  the queue when the track was queued — persisted across sessions by the
+  queue file — and `like_track` only forwarded the star to the server
+  without ever touching that copy. A stale answer outranked every other
+  signal, so the heart never lit and clicks looked like no-ops even though
+  the stars landed remotely.
+- A like now stamps the new state onto every queued copy of the track, and
+  any provider connect re-stamps the whole queue from the provider's starred
+  list — both directions, so stars set or removed in another client land
+  too. On the desktop the heart flips on click instead of waiting for the
+  poll, a short pending-like guard keeps an in-flight poll from snapping it
+  back while the star's round-trip completes, the toggle direction comes
+  from what the heart actually shows, and a like updates the cached library
+  copy so requeues carry the new state.
+
 ## [0.4.0] — 2026-09-13
 
 ### Added

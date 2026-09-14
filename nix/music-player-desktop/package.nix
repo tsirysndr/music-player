@@ -32,6 +32,8 @@ let
   ];
 in
 rustPlatform.buildRustPackage (finalAttrs: {
+  __structuredAttrs = true;
+
   pname = "music-player-desktop";
   version = "0.4.2";
 

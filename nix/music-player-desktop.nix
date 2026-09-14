@@ -1,6 +1,3 @@
-# Nixpkgs package for the Slint desktop client; the nixpkgs copy goes to
-# pkgs/by-name/mu/music-player-desktop/package.nix. Linux only — on macOS
-# the .app bundle is produced by dist/package-macos.sh, not nix.
 {
   lib,
   rustPlatform,
@@ -23,9 +20,6 @@
 }:
 
 let
-  # winit and Slint's GL renderer open these at *runtime* (dlopen, not
-  # linked), so they must be on the wrapped binary's search path — a nix
-  # build has no /usr/lib to fall back on.
   runtimeLibs = [
     wayland
     libxkbcommon
@@ -48,15 +42,13 @@ rustPlatform.buildRustPackage (finalAttrs: {
     hash = "sha256-ZcLDw9+bH3Iu3zdIyFdlIeAQfsnySDnfeJoHr2yViuA=";
   };
 
-  # Same workspace lockfile as music-player, so the vendor hash is shared —
-  # copy the value from music-player.nix once it is filled in.
-  cargoHash = lib.fakeHash;
+  cargoHash = "sha256-W5VWyXDleZYm+w0yDRTHfRuZjvA2gsXn1eE0UQYg77A=";
 
   cargoBuildFlags = [ "--package" "music-player-desktop" ];
 
   nativeBuildInputs = [
     pkg-config
-    protobuf # gRPC codegen (tonic-build)
+    protobuf
     makeWrapper
   ];
 
@@ -69,12 +61,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   env.ZSTD_SYS_USE_PKG_CONFIG = true;
 
-  # The test-suite needs audio fixtures and a running server; it is
-  # exercised by the project's CI, not by the nix build.
   doCheck = false;
 
-  # The same share/ tree the deb and rpm install, so the app shows up in
-  # launchers with its icon.
   postInstall = ''
     install -Dm644 dist/music-player.desktop \
       $out/share/applications/music-player.desktop

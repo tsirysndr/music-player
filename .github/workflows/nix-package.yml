@@ -2,8 +2,9 @@ name: nix package
 
 # Builds the nixpkgs-style package expressions in nix/ (which fetch the
 # released tag, unlike the flake) against nixos-unstable — the same pair a
-# nixpkgs PR would build. Manual trigger only: while nix/*.nix still holds a
-# lib.fakeHash cargoHash, the run fails printing the real hash to fill in.
+# nixpkgs PR would build. Manual trigger only. After a version bump, set
+# cargoHash to lib.fakeHash and dispatch once: the failing run prints the
+# real hash on its "got:" line.
 
 on:
   workflow_dispatch:

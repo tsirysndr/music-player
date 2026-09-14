@@ -44,7 +44,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   cargoHash = "sha256-W5VWyXDleZYm+w0yDRTHfRuZjvA2gsXn1eE0UQYg77A=";
 
-  cargoBuildFlags = [ "--package" "music-player-desktop" ];
+  cargoBuildFlags = [
+    "--package"
+    "music-player-desktop"
+  ];
 
   nativeBuildInputs = [
     pkg-config
@@ -57,7 +60,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
     zstd
     alsa-lib
     freetype
-  ] ++ runtimeLibs;
+  ]
+  ++ runtimeLibs;
 
   env.ZSTD_SYS_USE_PKG_CONFIG = true;
 

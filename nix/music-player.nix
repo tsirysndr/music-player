@@ -23,7 +23,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   cargoHash = "sha256-W5VWyXDleZYm+w0yDRTHfRuZjvA2gsXn1eE0UQYg77A=";
 
-  cargoBuildFlags = [ "--package" "music-player" ];
+  cargoBuildFlags = [
+    "--package"
+    "music-player"
+  ];
 
   nativeBuildInputs = [
     pkg-config
@@ -33,7 +36,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
   buildInputs = [
     openssl
     zstd
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     alsa-lib
   ];
 

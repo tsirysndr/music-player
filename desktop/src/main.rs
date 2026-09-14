@@ -13,6 +13,7 @@ mod likes;
 mod radio;
 mod rpc;
 mod skin;
+mod snapshot;
 
 use std::cell::RefCell;
 use std::rc::Rc;

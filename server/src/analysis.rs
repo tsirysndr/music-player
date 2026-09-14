@@ -107,7 +107,14 @@ impl AnalysisService for Analysis {
         let source = self.source().await;
         let db = self.db.get_connection();
 
-        let stored = track_analysis::get(db, &source, &request.track_id).await;
+        let stored = match track_analysis::get(db, &source, &request.track_id).await {
+            Some(analysis) => Some(analysis),
+            // A restart asks before the provider has reconnected, so the
+            // current source is not yet the one the analysis was stored
+            // under. The id already names one server's track; take the
+            // stored answer wherever it was filed.
+            None => track_analysis::get_any(db, &request.track_id).await,
+        };
         let analysis = match (stored, request.analyze_if_missing) {
             (Some(analysis), _) => Some(analysis),
             (None, false) => None,

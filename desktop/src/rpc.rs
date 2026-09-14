@@ -15,7 +15,9 @@ use tonic::transport::{Channel, Endpoint};
 
 use crate::AppWindow;
 
-pub use music_player_server::api::metadata::v1alpha1::Track as TrackProto;
+pub use music_player_server::api::metadata::v1alpha1::{
+    Album as AlbumProto, Artist as ArtistProto, Track as TrackProto,
+};
 use music_player_server::api::music::v1alpha1::{
     analysis_service_client::AnalysisServiceClient, library_service_client::LibraryServiceClient,
     mixer_service_client::MixerServiceClient, playback_service_client::PlaybackServiceClient,
@@ -501,9 +503,13 @@ async fn session(
     // Poll now-playing + queue until the daemon (or the target) goes away.
     let mut tracklist = TracklistServiceClient::new(channel.clone());
     let mut last_art: Option<String> = None;
-    // The waveform is a property of the track, so it is fetched once when the
-    // track changes rather than on every poll.
+    // The waveform is a property of the track, so it is fetched when the
+    // track changes rather than on every poll — plus spaced retries while it
+    // has not landed, because the first ask can race the daemon's provider
+    // reconnect.
     let mut last_waveform_track = String::new();
+    let waveform_loaded = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let mut last_waveform_attempt = std::time::Instant::now();
     let mut format_cache: HashMap<String, (u32, u32)> = HashMap::new();
     loop {
         if SWITCH_GEN.load(Ordering::SeqCst) != session_gen {
@@ -640,13 +646,31 @@ async fn session(
                     slint::VecModel::from(Vec::<f32>::new()),
                 ));
             });
+            waveform_loaded.store(false, Ordering::Relaxed);
+            last_waveform_attempt = std::time::Instant::now();
             if !track_id.is_empty() {
                 tokio::spawn(load_waveform(
                     channel.clone(),
                     track_id.clone(),
                     weak.clone(),
+                    Arc::clone(&waveform_loaded),
                 ));
             }
+        } else if !track_id.is_empty()
+            && !waveform_loaded.load(Ordering::Relaxed)
+            && last_waveform_attempt.elapsed() >= Duration::from_secs(5)
+        {
+            // The first ask can legitimately fail — right after a restart the
+            // daemon has not reconnected its provider yet, so a remote id
+            // resolves to nothing. One failed attempt must not be the final
+            // word: keep asking, spaced out, until the waveform lands.
+            last_waveform_attempt = std::time::Instant::now();
+            tokio::spawn(load_waveform(
+                channel.clone(),
+                track_id.clone(),
+                weak.clone(),
+                Arc::clone(&waveform_loaded),
+            ));
         }
 
         if art_file != last_art {
@@ -1013,6 +1037,35 @@ async fn load_library(
         st.album_cache.clear();
         st.playlist_cache.clear();
     }
+
+    // Whose listing this will be — 'local' when the daemon reads its own
+    // library. A remote server may have a snapshot from the last session:
+    // shown at once, so connecting reads as instant, while the fresh
+    // download below replaces it when it lands.
+    let (snapshot_host, _) = analytics_source().await;
+    if snapshot_host != "local" {
+        let host = snapshot_host.clone();
+        let snap = tokio::task::spawn_blocking(move || crate::snapshot::load(&host))
+            .await
+            .ok()
+            .flatten();
+        if let Some(snap) = snap {
+            // Likes are left untouched — a snapshot has no answer for them,
+            // and the fresh fetch below brings the real one.
+            publish_library(
+                ep,
+                weak,
+                state,
+                &snap.albums,
+                &snap.artists,
+                &snap.tracks,
+                None,
+            )
+            .await;
+            let _ = weak.upgrade_in_event_loop(|app| app.set_library_loading(false));
+        }
+    }
+
     let mut lib = LibraryServiceClient::new(channel.clone());
 
     // Paged to exhaustion rather than asked for everything at once. A remote
@@ -1030,15 +1083,34 @@ async fn load_library(
         F: FnMut(i32) -> Fut,
         Fut: std::future::Future<Output = Result<Vec<T>, tonic::Status>>,
     {
-        let mut all = Vec::new();
+        // The first page goes alone: most listings fit in one, and firing a
+        // window at a small library would be three wasted round trips per
+        // listing. Only a full first page proves there is more.
+        let mut all = fetch(0).await?;
+        if all.len() < PAGE as usize {
+            return Ok(all);
+        }
         loop {
-            let page = fetch(all.len() as i32).await?;
-            // A short page is the last one. Asking again would be a round trip
-            // to be told the same thing.
-            let short = page.len() < PAGE as usize;
-            all.extend(page);
-            if short {
-                return Ok(all);
+            // Whatever is left is fetched four pages at a time. The offsets
+            // are known in advance — page N starts at N*PAGE regardless of
+            // what page N-1 returns — so nothing forces the round trips into
+            // a line; only the stop condition does, and a short page inside
+            // a window still ends it. Against a remote server each page is a
+            // full network round trip, and fetching them one after another
+            // is exactly the first-connect minute this window removes.
+            let base = all.len() as i32;
+            let (a, b, c, d) = tokio::try_join!(
+                fetch(base),
+                fetch(base + PAGE),
+                fetch(base + 2 * PAGE),
+                fetch(base + 3 * PAGE),
+            )?;
+            for page in [a, b, c, d] {
+                let short = page.len() < PAGE as usize;
+                all.extend(page);
+                if short {
+                    return Ok(all);
+                }
             }
         }
     }
@@ -1095,29 +1167,30 @@ async fn load_library(
         }
     });
 
-    let (albums, artists, tracks) = tokio::try_join!(albums, artists, tracks)?;
-
-    let full: Vec<FullTrack> = tracks
-        .iter()
-        .map(|t| FullTrack {
-            proto: t.clone(),
-            album_id: t.album.as_ref().map(|a| a.id.clone()).unwrap_or_default(),
-            artist: t.artist.clone(),
-        })
-        .collect();
-
     // The daemon knows whose likes these are: with a provider connected they
     // are *its* stars, and their ids mean nothing to the local like store —
     // which is why filtering the cache locally left the screen empty.
-    let remote_liked = match lib
-        .get_liked_tracks(GetLikedTracksRequest {
-            offset: 0,
-            // Every one of them: this set decides which hearts light, so a
-            // ceiling here is a heart that is wrong past that many likes.
-            limit: 0,
-        })
-        .await
-    {
+    // Joined with the listings rather than awaited after them: on a remote
+    // server the starred list is its own round trip, and it depends on
+    // nothing the listings return.
+    let liked_fetch = {
+        let mut lib = lib.clone();
+        async move {
+            lib.get_liked_tracks(GetLikedTracksRequest {
+                offset: 0,
+                // Every one of them: this set decides which hearts light, so a
+                // ceiling here is a heart that is wrong past that many likes.
+                limit: 0,
+            })
+            .await
+        }
+    };
+
+    let (albums, artists, tracks, liked_response) =
+        tokio::join!(albums, artists, tracks, liked_fetch);
+    let (albums, artists, tracks) = (albums?, artists?, tracks?);
+
+    let remote_liked = match liked_response {
         Ok(response) => Some(response.into_inner().tracks),
         Err(e) => {
             // Swallowing this made the Liked screen and the heart both look
@@ -1128,23 +1201,72 @@ async fn load_library(
         }
     };
 
+    publish_library(
+        ep,
+        weak,
+        state,
+        &albums,
+        &artists,
+        &tracks,
+        Some(remote_liked),
+    )
+    .await;
+
+    // A remote listing is worth keeping: the next connect shows it instantly
+    // while the fresh one downloads. The local library needs no snapshot —
+    // it is already a local read.
+    if snapshot_host != "local" {
+        let host = snapshot_host.clone();
+        tokio::task::spawn_blocking(move || {
+            crate::snapshot::save(&host, &albums, &artists, &tracks);
+        });
+    }
+    Ok(())
+}
+
+/// Push a full library listing to the UI and start the art fetches.
+///
+/// Shared by the network path and the snapshot path. `liked_update` is
+/// `Some(answer)` when the daemon's liked list was (re)fetched — `None` for
+/// a snapshot publish, which has no fresh answer and must not disturb the
+/// liked state it would otherwise overwrite.
+async fn publish_library(
+    ep: &Endpoints,
+    weak: &Weak<AppWindow>,
+    state: &Arc<Mutex<WorkerState>>,
+    albums: &[AlbumProto],
+    artists: &[ArtistProto],
+    tracks: &[TrackProto],
+    liked_update: Option<Option<Vec<TrackProto>>>,
+) {
+    let full: Vec<FullTrack> = tracks
+        .iter()
+        .map(|t| FullTrack {
+            proto: t.clone(),
+            album_id: t.album.as_ref().map(|a| a.id.clone()).unwrap_or_default(),
+            artist: t.artist.clone(),
+        })
+        .collect();
+
     let liked = {
         let mut st = state.lock().await;
         st.tracks = full;
-        match remote_liked {
-            Some(tracks) if !tracks.is_empty() => {
-                // The ids go into the same set the heart icon consults, so a
-                // remote star lights it just as a local like does.
-                for track in &tracks {
-                    if st.liked.insert(track.id.clone()) {
-                        st.liked_order.push(track.id.clone());
+        if let Some(remote_liked) = liked_update {
+            match remote_liked {
+                Some(tracks) if !tracks.is_empty() => {
+                    // The ids go into the same set the heart icon consults, so
+                    // a remote star lights it just as a local like does.
+                    for track in &tracks {
+                        if st.liked.insert(track.id.clone()) {
+                            st.liked_order.push(track.id.clone());
+                        }
                     }
+                    st.remote_liked = Some(tracks);
                 }
-                st.remote_liked = Some(tracks);
+                // Nothing from the daemon: the local set, which is what a
+                // purely local library has always used.
+                _ => st.remote_liked = None,
             }
-            // Nothing from the daemon: the local set, which is what a purely
-            // local library has always used.
-            _ => st.remote_liked = None,
         }
         liked_list(&st)
     };
@@ -1242,7 +1364,6 @@ async fn load_library(
             }
         }
     });
-    Ok(())
 }
 
 async fn load_playlists(channel: &Channel, weak: &Weak<AppWindow>) {
@@ -1681,7 +1802,12 @@ async fn load_account(weak: &Weak<AppWindow>) -> bool {
 /// Never asks the daemon to analyse on demand. Opening the player should not
 /// cost a decode — a track that has not been analysed simply shows a flat line,
 /// and the analysis pass fills it in later.
-async fn load_waveform(channel: Channel, track_id: String, weak: Weak<AppWindow>) {
+async fn load_waveform(
+    channel: Channel,
+    track_id: String,
+    weak: Weak<AppWindow>,
+    loaded: Arc<std::sync::atomic::AtomicBool>,
+) {
     let mut client = AnalysisServiceClient::new(channel);
     let Ok(response) = client
         .get_track_analysis(GetTrackAnalysisRequest {
@@ -1703,6 +1829,9 @@ async fn load_waveform(channel: Channel, track_id: String, weak: Weak<AppWindow>
     }
 
     let bars = resample_waveform(&analysis.waveform, WAVEFORM_BARS);
+    // Marked before the UI hop: landing is what stops the poll loop's
+    // retries, and the hop cannot fail in a way a retry would fix.
+    loaded.store(true, Ordering::Relaxed);
     let _ = weak.upgrade_in_event_loop(move |app| {
         app.set_waveform_bars(slint::ModelRc::new(slint::VecModel::from(bars)));
     });

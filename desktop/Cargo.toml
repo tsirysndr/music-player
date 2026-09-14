@@ -86,6 +86,7 @@ dirs = "4.0.0"
 if-addrs = "0.13"
 md5 = "0.7.0"
 mdns-sd = "0.11"
+prost = "0.14"
 fastrand = "2"
 i-slint-backend-winit = "1.17"
 image = {version = "0.25", default-features = false, features = ["gif", "ico", "jpeg", "png", "webp"]}

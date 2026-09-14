@@ -17,6 +17,11 @@ use url::Url;
 const API_VERSION: &str = "1.16.1";
 const CLIENT_NAME: &str = "music-player";
 
+/// How long a fetched artist index answers for. Long enough to cover one
+/// paged walk of the Artists screen, short enough that a library edit on the
+/// server shows up on the next visit.
+const ARTISTS_INDEX_TTL: std::time::Duration = std::time::Duration::from_secs(60);
+
 /// Subsonic (Navidrome, Airsonic, gonic, ...) source addon.
 pub struct Subsonic {
     base_url: String,
@@ -25,6 +30,10 @@ pub struct Subsonic {
     salt: String,
     host: String,
     connected: bool,
+    /// The last `getArtists` answer, kept briefly. The endpoint has no
+    /// server-side paging — every page of the Artists screen re-downloaded
+    /// the whole index, so walking 2000 artists cost four full copies of it.
+    artists_index: tokio::sync::Mutex<Option<(std::time::Instant, Vec<Artist>)>>,
 }
 
 impl Default for Subsonic {
@@ -43,6 +52,7 @@ impl Subsonic {
             salt,
             host: "".to_string(),
             connected: false,
+            artists_index: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -292,24 +302,42 @@ impl MusicProvider for Subsonic {
     }
 
     /// `getArtists` returns the whole index in one go — there is no server-side
-    /// paging for it — so the filter and the page are applied here.
+    /// paging for it — so the filter and the page are applied here, over a
+    /// briefly cached copy of the index. The lock is held across the fetch on
+    /// purpose: concurrent pages of the same walk should share one download,
+    /// not race four.
     async fn artists(
         &self,
         filter: Option<&str>,
         page: Page,
     ) -> Result<Vec<Artist>, ProviderError> {
-        let url = self.api_url("getArtists", &[])?;
-        let response = request(url).await?;
-        let artists = response.artists.unwrap_or_default();
+        let mut cached = self.artists_index.lock().await;
+        let fresh = cached
+            .as_ref()
+            .filter(|(at, _)| at.elapsed() < ARTISTS_INDEX_TTL);
+        let all: &Vec<Artist> = match fresh {
+            Some(_) => &cached.as_ref().unwrap().1,
+            None => {
+                let url = self.api_url("getArtists", &[])?;
+                let response = request(url).await?;
+                let artists = response.artists.unwrap_or_default();
+                let all: Vec<Artist> = artists
+                    .index
+                    .iter()
+                    .flat_map(|index| index.artist.iter())
+                    .map(|artist| self.map_artist(artist))
+                    .collect();
+                *cached = Some((std::time::Instant::now(), all));
+                &cached.as_ref().unwrap().1
+            }
+        };
         let filter = filter.unwrap_or_default().trim().to_lowercase();
-        Ok(artists
-            .index
+        Ok(all
             .iter()
-            .flat_map(|index| index.artist.iter())
             .filter(|artist| filter.is_empty() || artist.name.to_lowercase().contains(&filter))
             .skip(page.offset.max(0) as usize)
             .take(normalize_limit(page.limit) as usize)
-            .map(|artist| self.map_artist(artist))
+            .cloned()
             .collect())
     }
 

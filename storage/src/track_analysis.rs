@@ -56,6 +56,23 @@ pub async fn get(db: &DatabaseConnection, source: &str, track_id: &str) -> Optio
     Some(from_row(row))
 }
 
+/// The stored analysis for a track under *any* source.
+///
+/// Track ids are already server-scoped — a Subsonic id and a local md5 id do
+/// not collide — so an analysis stored for this id is this track's, whoever
+/// was connected when it ran. What this answers is the restart gap: the
+/// daemon boots with no provider yet, asks with the wrong source, and a
+/// waveform that is sitting right there in the table came back "not
+/// analysed".
+pub async fn get_any(db: &DatabaseConnection, track_id: &str) -> Option<Analysis> {
+    let row = track_analysis::Entity::find()
+        .filter(track_analysis::Column::TrackId.eq(track_id))
+        .one(db)
+        .await
+        .ok()??;
+    Some(from_row(row))
+}
+
 /// Store an analysis, replacing any earlier one for the same track.
 pub async fn put(
     db: &DatabaseConnection,

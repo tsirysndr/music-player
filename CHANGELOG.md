@@ -8,6 +8,39 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.2] — 2026-09-14
+
+### Changed
+
+#### Connecting to a remote server is fast now
+- Connecting downloaded the whole library through pages Subsonic silently
+  caps at 500 rows, fetched strictly one after another — each a full
+  desktop → daemon → server round trip — with the starred list awaited
+  after all of them. Now, once a full first page proves there is more, the
+  remaining pages are fetched **four at a time** (the offsets are known in
+  advance; only the stop condition ever forced them into a line), the
+  starred list is joined with the listings, and the Subsonic backend caches
+  the `getArtists` index for 60 seconds — the endpoint has no server-side
+  paging, so every artists page past 500 used to re-download the entire
+  index. Small listings still cost exactly one request per screen.
+- Reconnecting to a server seen before is **instant**: the listing is
+  snapshotted per host (prost length-delimited — it already is three
+  vectors of protos) and shown immediately on the next connect while the
+  fresh download replaces it. A snapshot publish leaves likes untouched;
+  only the network path carries a real answer for them.
+
+### Fixed
+
+#### The waveform renders after a restart
+- Analyses are stored keyed by (source, track id), where source is the
+  connected provider — and a restarted daemon has no provider yet, so the
+  first waveform request looked under the wrong source, failed to resolve
+  the remote id, and the desktop never asked again: only a track *change*
+  re-triggered the fetch. Stored analyses are now found under any source
+  (track ids are already server-scoped, so the stored answer is the
+  track's), and the desktop retries a waveform that has not landed every
+  five seconds while the track plays on.
+
 ## [0.4.1] — 2026-09-13
 
 ### Added

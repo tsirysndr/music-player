@@ -27,8 +27,8 @@
         # The cargo sources plus everything the build scripts, `include_str!`
         # and rust-embed pull in at compile time: the gRPC protos, the
         # committed web UI bundle and the extension manifest schema.
-        # (The desktop client's ui/ and assets/ trees are left out — it is
-        # not part of this build, see cargoExtraArgs below.)
+        # (The desktop client's ui/ and assets/ trees are left out of the
+        # CLI build — the desktop package widens this filter below.)
         protoFilter = path: _type: builtins.match ".*proto$" path != null;
         webuiFilter = path: _type:
           builtins.match ".*webui/musicplayer/build.*" path != null;
@@ -43,6 +43,21 @@
         src = lib.cleanSourceWith {
           src = ./.;
           filter = srcFilter;
+        };
+
+        # What the desktop additionally compiles in — the Slint UI, its
+        # fonts and icons, the builtin skins (include_str!) — plus what its
+        # install step ships: the desktop entry and the license, mirroring
+        # dist/package-linux.sh.
+        desktopAssetFilter = path: _type:
+          builtins.match ".*desktop/(ui|assets|skins).*" path != null
+          || lib.hasSuffix "dist/music-player.desktop" path
+          || lib.hasSuffix "LICENSE" path;
+
+        desktopSrc = lib.cleanSourceWith {
+          src = ./.;
+          filter = path: type:
+            (desktopAssetFilter path type) || (srcFilter path type);
         };
 
         commonArgs = {
@@ -64,7 +79,7 @@
           buildInputs = [
             pkgs.zstd
             pkgs.openssl
-          ] ++ lib.optionals pkgs.stdenv.isLinux [
+          ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
             pkgs.alsa-lib
           ];
         };
@@ -78,6 +93,63 @@
           # The test-suite needs audio fixtures and a running server;
           # it is exercised by the regular CI, not by the nix build.
           doCheck = false;
+        });
+
+        # ── Desktop client (Linux only) ─────────────────────────────────
+        # macOS gets the CLI alone from this flake: there is no desktop-
+        # entry convention there, and the .app bundle is the job of
+        # dist/package-macos.sh. Evaluation is lazy, so none of this is
+        # forced on darwin — the package set below simply leaves it out.
+
+        # The libraries winit and Slint's GL renderer open at *runtime*
+        # (dlopen, not linked), so they must be on the wrapped binary's
+        # search path — a nix build has no /usr/lib to fall back on.
+        desktopRuntimeLibs = [
+          pkgs.wayland
+          pkgs.libxkbcommon
+          pkgs.libGL
+          pkgs.fontconfig
+          pkgs.libx11
+          pkgs.libxcursor
+          pkgs.libxi
+          pkgs.libxrandr
+        ];
+
+        desktopArgs = commonArgs // {
+          src = desktopSrc;
+          pname = "music-player-desktop";
+          cargoExtraArgs = "--locked --package music-player-desktop";
+          nativeBuildInputs = commonArgs.nativeBuildInputs ++ [
+            pkgs.makeWrapper
+          ];
+          buildInputs = commonArgs.buildInputs
+            ++ [ pkgs.freetype ]
+            ++ desktopRuntimeLibs;
+        };
+
+        # Its own dependency build: the GUI stack (slint, winit, GL) is not
+        # in the CLI's tree, and sharing artifacts would rebuild both ways.
+        desktopCargoArtifacts = craneLib.buildDepsOnly desktopArgs;
+
+        music-player-desktop = craneLib.buildPackage (desktopArgs // {
+          cargoArtifacts = desktopCargoArtifacts;
+          doCheck = false;
+
+          # The same share/ tree the deb and rpm install, so the app shows
+          # up in launchers with its icon.
+          postInstall = ''
+            install -Dm644 dist/music-player.desktop \
+              $out/share/applications/music-player.desktop
+            install -Dm644 desktop/assets/icon.svg \
+              $out/share/icons/hicolor/scalable/apps/music-player.svg
+            install -Dm644 LICENSE \
+              $out/share/licenses/music-player/LICENSE
+          '';
+
+          postFixup = ''
+            wrapProgram $out/bin/music-player-desktop \
+              --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath desktopRuntimeLibs}
+          '';
         });
       in
       {
@@ -94,7 +166,13 @@
           };
         };
 
-        packages.default = music-player;
+        # Both binaries on Linux; the CLI alone on darwin.
+        packages = {
+          default = music-player;
+          inherit music-player;
+        } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          inherit music-player-desktop;
+        };
 
         apps.default = flake-utils.lib.mkApp {
           drv = music-player;

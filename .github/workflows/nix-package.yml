@@ -1,0 +1,51 @@
+name: nix package
+
+# Builds the nixpkgs-style package expressions in nix/ (which fetch the
+# released tag, unlike the flake) against nixos-unstable — the same pair a
+# nixpkgs PR would build. Manual trigger only: while nix/*.nix still holds a
+# lib.fakeHash cargoHash, the run fails printing the real hash to fill in.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.attr }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            attr: music-player
+          - os: ubuntu-24.04-arm
+            attr: music-player
+          - os: macos-latest
+            attr: music-player
+          # The desktop client is Linux-only (meta.platforms).
+          - os: ubuntu-latest
+            attr: music-player-desktop
+          - os: ubuntu-24.04-arm
+            attr: music-player-desktop
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: tsirysndr
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build
+        run: |
+          nix-build nix -A ${{ matrix.attr }} \
+            -I nixpkgs=channel:nixos-unstable
+
+      - name: Show binary info
+        run: |
+          ls -la result/bin/
+          file result/bin/${{ matrix.attr }}

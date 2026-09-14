@@ -179,13 +179,30 @@
         };
 
         devShells.default = craneLib.devShell {
-          inputsFrom = [ music-player ];
+          # Every workspace member's build environment, so a plain
+          # `cargo build -p <anything>` works from this shell — on Linux
+          # that includes the desktop's GUI stack (fontconfig, wayland,
+          # xkbcommon, GL, X11), which the CLI alone would not pull in.
+          inputsFrom = [ music-player ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              music-player-desktop
+            ];
 
           packages = with pkgs; [
-            bun
-            protobuf
-            sqlite
+            bun # webui/musicplayer build
+            deno # extension/tooling scripts
+            mise # per-project tool versions and tasks
+            nodejs # npm package + anything bun does not cover
+            protobuf # gRPC codegen
+            sqlite # poke the library database directly
           ];
+
+          # The desktop dlopens these at runtime rather than linking them,
+          # so `cargo run -p music-player-desktop` from this shell needs
+          # them findable — same set the installed binary is wrapped with.
+          LD_LIBRARY_PATH = lib.optionalString pkgs.stdenv.hostPlatform.isLinux (
+            lib.makeLibraryPath desktopRuntimeLibs
+          );
         };
       });
 }

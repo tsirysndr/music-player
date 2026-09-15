@@ -8,6 +8,40 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.3] — 2026-09-15
+
+### Fixed
+
+#### Some remote tracks were unplayable, and always the same ones
+- A Subsonic server reports a refused login as `200 OK` with a JSON body,
+  at the very url that streams the track. The cache trusted the status
+  code, could not map the content type to a format, and fell back to
+  naming the file `.mp3` — so 163 bytes of `{"error":{"code":40,…}}` were
+  stored as a track. Every play after that resolved to it, the decoder
+  could not open it, and the engine **skipped the track the instant it
+  started**. Permanently, since nothing rewrites a cache entry that is
+  already there. That is why the failure looked random: it was per-track,
+  and which tracks were hit was decided by whichever plays happened to
+  land during a server blip.
+- The cache now decides what a body is from its **magic bytes** rather
+  than from the `Content-Type` header — the bytes are what the decoder is
+  handed, and a header can be wrong — and refuses anything it cannot
+  recognise instead of guessing an extension for it. Reads validate too,
+  so entries poisoned by the old code throw themselves away on the next
+  play instead of waiting for a manual `cache clear`. A download that
+  fails is retried three times: the server error behind all this is
+  transient.
+
+#### A track that will not open is retried, not dropped
+- The engine's answer to a failed open is to advance into its lookahead,
+  which from outside is indistinguishable from a track ending — except
+  that the track never played a single sample. The player now tells the
+  two apart: it drops the cached copy, loads the track again (twice before
+  letting it go), and **logs the reason**, which nothing did before.
+- A failed open with no lookahead to fall into used to wedge the queue for
+  good — loaded, silent, and nothing to move it on. It now gives up after
+  45 seconds of silence and plays the next track.
+
 ## [0.4.2] — 2026-09-14
 
 ### Changed
@@ -703,6 +737,9 @@ outright. See the README for setup.
 Stack modernization: the Rockbox playback engine, SQLite FTS5 search, a ratatui
 TUI and a Tauri 2 desktop app.
 
+[0.4.3]: https://github.com/tsirysndr/music-player/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/tsirysndr/music-player/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/tsirysndr/music-player/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/tsirysndr/music-player/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tsirysndr/music-player/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/tsirysndr/music-player/compare/v0.2.0...v0.2.1

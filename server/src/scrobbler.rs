@@ -20,7 +20,7 @@ use music_player_playback::player::{icy_now_playing, RADIO_ID_PREFIX};
 use music_player_settings::read_settings;
 use music_player_tracklist::Tracklist;
 use rocksky_sdk::{AppView, ScrobbleInput};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 pub(crate) const TICK: Duration = Duration::from_secs(1);
 
@@ -155,6 +155,15 @@ impl Watcher {
 /// station tuned away from straight away, never reaches a scrobble.
 pub(crate) const RADIO_MIN_PLAY: Duration = Duration::from_secs(30);
 
+/// How many times the catalogue is asked about an announcement before it is
+/// written off as not a song.
+///
+/// `matchSong` reaches out to external metadata providers, and when they do
+/// not answer it returns an empty body rather than an error — which reads
+/// exactly like "this is not a song". Songs the catalogue plainly knows were
+/// being dropped on one such answer, so a miss has to repeat before it counts.
+pub(crate) const MATCH_ATTEMPTS: u32 = 3;
+
 /// The song a station is announcing right now, as `(artist, title)`.
 ///
 /// `None` unless the `StreamTitle` actually named both — a bare title, an
@@ -188,6 +197,9 @@ pub(crate) struct RadioWatcher {
     /// at again until the metadata changes.
     pub(crate) submitted: bool,
     pub(crate) retry_after: Option<Instant>,
+    /// How many times the catalogue has answered nothing for this
+    /// announcement.
+    match_misses: u32,
 }
 
 impl RadioWatcher {
@@ -202,6 +214,7 @@ impl RadioWatcher {
             self.played = Duration::ZERO;
             self.submitted = false;
             self.retry_after = None;
+            self.match_misses = 0;
             return false;
         }
         self.played += TICK;
@@ -215,6 +228,19 @@ impl RadioWatcher {
             }
         }
         self.played >= RADIO_MIN_PLAY
+    }
+
+    /// Note that the catalogue answered nothing for this announcement.
+    /// Returns true once it has been asked [`MATCH_ATTEMPTS`] times, which is
+    /// when the announcement is written off; until then it is asked again
+    /// after [`RETRY_AFTER`].
+    pub(crate) fn missed_match(&mut self) -> bool {
+        self.match_misses += 1;
+        if self.match_misses >= MATCH_ATTEMPTS {
+            return true;
+        }
+        self.retry_after = Some(Instant::now() + RETRY_AFTER);
+        false
     }
 
     /// Drop what was on the air, so the next announcement — even an identical
@@ -308,8 +334,16 @@ async fn radio_tick(appview: &AppView, radio: &mut RadioWatcher) {
         }
     };
     let Some(input) = matched_scrobble(&matched, radio.started_at) else {
-        radio.submitted = true;
-        info!(%artist, %title, "the station announced nothing the catalogue knows; not scrobbling");
+        if radio.missed_match() {
+            radio.submitted = true;
+            info!(%artist, %title, "the station announced nothing the catalogue knows; not scrobbling");
+        } else {
+            debug!(
+                %artist, %title,
+                "the catalogue answered nothing; asking again in {}s",
+                RETRY_AFTER.as_secs()
+            );
+        }
         return;
     };
 
@@ -487,6 +521,23 @@ mod tests {
             0
         )
         .is_none());
+    }
+
+    #[test]
+    fn an_empty_answer_is_asked_again_before_it_is_written_off() {
+        let ticks = RADIO_MIN_PLAY.as_secs() as u32 / TICK.as_secs() as u32 + 1;
+        let mut radio = RadioWatcher::default();
+        assert!(play(&mut radio, "Pixies", "Where Is My Mind", ticks));
+        // The providers behind matchSong time out; the announcement is kept
+        // and asked about again rather than written off on one empty answer.
+        assert!(!radio.missed_match());
+        assert!(!radio.missed_match());
+        assert!(radio.missed_match());
+
+        // A new announcement starts its own count: the song after a genuinely
+        // unknown one still gets every attempt.
+        assert!(!radio.advance("Nirvana", "In Bloom"));
+        assert!(!radio.missed_match());
     }
 
     #[test]

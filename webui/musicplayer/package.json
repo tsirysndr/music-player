@@ -1,6 +1,6 @@
 {
   "name": "musicplayer",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": true,
   "dependencies": {
     "@fontsource-variable/roboto-mono": "^5.3.0",

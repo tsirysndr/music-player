@@ -8070,7 +8070,7 @@ checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 
 [[package]]
 name = "music-player"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -8116,7 +8116,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-analysis"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "ebur128",
@@ -8129,7 +8129,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-client"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "envtestkit",
@@ -8152,7 +8152,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-desktop"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -8204,7 +8204,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-discovery"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "async-stream 0.3.6",
  "env_logger",
@@ -8219,7 +8219,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-entity"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "chrono",
  "md5",
@@ -8231,7 +8231,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-extensions"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -8255,7 +8255,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-graphql"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -8298,7 +8298,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-mcp"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "jsonrpsee-types",
@@ -8313,7 +8313,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-migration"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "music-player-settings",
  "sea-orm-migration",
@@ -8322,7 +8322,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-playback"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8340,7 +8340,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-provider"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -8358,7 +8358,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-renderer"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8381,14 +8381,14 @@ dependencies = [
 
 [[package]]
 name = "music-player-rsql"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "music-player-scanner"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "dirs",
@@ -8412,7 +8412,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-server"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "async-stream 0.3.6",
@@ -8456,7 +8456,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-settings"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "config 0.13.4",
  "dirs",
@@ -8468,7 +8468,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-storage"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "atradio-sdk",
@@ -8503,7 +8503,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-tracklist"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "atlist-rs",
  "music-player-entity",
@@ -8512,7 +8512,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-types"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "local-ip-addr",
  "md5",
@@ -8527,7 +8527,7 @@ dependencies = [
 
 [[package]]
 name = "music-player-webui"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "actix-cors",
  "actix-files",

@@ -8,6 +8,32 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.4] — 2026-09-15
+
+### Added
+
+#### Internet radio scrobbles the song, not the station
+- A live stream has no duration to take half of and no tags of its own, so
+  the scrobbler had nothing to measure and radio never scrobbled at all.
+  Radio now takes its own path: the player publishes the **unfolded** ICY
+  parse — artist, title and station as they came off the wire, before the
+  now-playing fold puts the station's name in the empty artist slot — and
+  an announcement that holds for 30 seconds is scrobbled. Last.fm's floor
+  stands in for the half-a-track rule; a jingle between two songs, or a
+  station tuned away from straight away, never reaches it.
+- Only what the catalogue recognises is scrobbled. `matchSong` is what
+  turns `Artist - Title` off a wire into a real song, and it carries back
+  everything a stream never sends — the album, its artwork, the real
+  duration, the track number. A miss is the signal that the announcement
+  was never a song: an ad, a show title or a mangled `StreamTitle`, none of
+  which belong in a listening history. A bare title with no `" - "`, or a
+  station that announces nothing, is dropped for the same reason.
+- The date in a match is trimmed to `YYYY-MM-DD` before it is sent. The
+  catalogue stores most release dates as a full ISO-8601 timestamp, and
+  `createScrobble` validates the field strictly — so passing back what the
+  match just handed over was enough to lose the whole scrobble to a 400,
+  every 30 seconds until the station changed song.
+
 ## [0.4.3] — 2026-09-15
 
 ### Fixed

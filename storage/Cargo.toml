@@ -40,7 +40,7 @@ sea-orm = { version = "2.0.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"
 filetime = "0.2"
 url = "2.3"
 md5 = "0.7.0"
-tokio = { version = "1.22.0", features = ["test-util", "macros"] }
+tokio = { version = "1.22.0", features = ["test-util", "macros", "time"] }
 anyhow = "1.0.68"
 chrono = "0.4.23"
 atradio-sdk = "0.1"

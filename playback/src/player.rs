@@ -79,6 +79,18 @@ fn cache_in_background(uri: &str) {
 /// Minimum change in position before a `TrackTimePosition` event is broadcast.
 const POSITION_BROADCAST_STEP_MS: u32 = 250;
 
+/// How long a loaded track may stay silent before the open is called failed.
+///
+/// Generous on purpose: opening a remote track is a probe plus a header fetch
+/// over someone else's connection, and the engine reports `Stopped` for the
+/// whole of it. Only silence well past that is a failure rather than a slow
+/// server.
+const OPEN_TIMEOUT: Duration = Duration::from_secs(45);
+
+/// How many times a track that will not open is loaded again before it is let
+/// go. Two retries cover a blip; more would be a track that is simply broken.
+const MAX_OPEN_ATTEMPTS: u32 = 2;
+
 /// Track-id prefix every internet-radio entry carries. It is what marks a
 /// queue entry as a live stream, so it is also what arms ICY metadata.
 pub const RADIO_ID_PREFIX: &str = "radio:";
@@ -173,6 +185,10 @@ impl Player {
                 resume: false,
                 last_queue_save: Instant::now(),
                 stopped_ticks: 0,
+                loaded_at: Instant::now(),
+                expect_playback: false,
+                open_attempts: 0,
+                open_attempts_uri: None,
                 prefetched: None,
                 prefetch_landed: Arc::new(AtomicBool::new(false)),
                 icy_station: None,
@@ -362,6 +378,17 @@ struct PlayerInternal {
     /// Consecutive status ticks spent in `Stopped` mid-track; a backstop so a
     /// decode failure still ends the track instead of wedging the queue.
     stopped_ticks: u32,
+    /// When the current track was handed to the engine, and whether that was
+    /// meant to start playback. Together they bound the wait for a track that
+    /// never opens: the engine reports `Stopped` while it probes a remote url,
+    /// so only a long silence means the open failed.
+    loaded_at: Instant,
+    expect_playback: bool,
+    /// Failed opens counted for [`Self::open_attempts_uri`], so a track that
+    /// cannot be opened at all is retried a few times and then let go rather
+    /// than retried forever.
+    open_attempts: u32,
+    open_attempts_uri: Option<String>,
     /// The pristine station entry of the live stream that is playing, kept so
     /// every ICY refresh folds onto the original instead of onto the previous
     /// song. `None` for anything that is not internet radio.
@@ -536,6 +563,10 @@ impl PlayerInternal {
         self.track_loaded = true;
         self.engine_started = false;
         self.engine_index = 0;
+        // Cued, not played: a restored queue waits for the user, so a track
+        // that fails to open here must not be retried into playing itself.
+        self.loaded_at = Instant::now();
+        self.expect_playback = false;
         self.position_ms = saved.position_ms;
         self.last_broadcast_position_ms = saved.position_ms;
         self.queue_next_into_engine();
@@ -584,6 +615,14 @@ impl PlayerInternal {
                 // (crossfade / gapless transition) — catch the tracklist up
                 // and queue the next lookahead.
                 if let Some(index) = status.index {
+                    // ...unless the track it left never played a single
+                    // sample. Then this is not a transition at all: the open
+                    // failed and the engine fell forward into the lookahead,
+                    // which is what a track "skipping immediately" is. Give
+                    // the track another go before letting it past.
+                    if index > self.engine_index && self.never_played() && self.retry_current() {
+                        return;
+                    }
                     let mut advanced = false;
                     while index > self.engine_index {
                         self.engine_index += 1;
@@ -611,6 +650,12 @@ impl PlayerInternal {
                 self.last_duration_ms = status.duration.as_millis() as u32;
                 let position_ms = status.position.as_millis() as u32;
                 self.position_ms = position_ms;
+                // Audio is coming out: whatever went wrong before did not
+                // stop this track, so the next failure starts from zero.
+                if position_ms > 0 {
+                    self.open_attempts = 0;
+                    self.open_attempts_uri = None;
+                }
                 let playback_state = self.tracklist.lock().unwrap().playback_state();
                 self.tracklist
                     .lock()
@@ -631,6 +676,26 @@ impl PlayerInternal {
                 self.refresh_icy(&status);
             }
             EngineState::Stopped => {
+                // Loaded, meant to play, and still silent long after the
+                // engine had time to open it: the open failed and there was
+                // no lookahead to fall into, so nothing else will ever move
+                // this queue on. (The engine also reports `Stopped` while it
+                // probes a remote url, which is why this waits.)
+                if !self.engine_started
+                    && self.track_loaded
+                    && self.expect_playback
+                    && self.loaded_at.elapsed() >= OPEN_TIMEOUT
+                {
+                    if !self.retry_current() {
+                        self.track_loaded = false;
+                        let is_last_track = self.tracklist.lock().unwrap().is_empty();
+                        self.send_event(PlayerEvent::EndOfTrack {
+                            is_last_track: is_last_track && self.repeat_mode == 0,
+                        });
+                        self.handle_next();
+                    }
+                    return;
+                }
                 if self.engine_started {
                     // A reload (stop + set_queue + play) passes through a brief
                     // Stopped probe gap that a status tick can land in; a track
@@ -678,6 +743,56 @@ impl PlayerInternal {
                 }
             }
         }
+    }
+
+    /// Whether the track the engine holds has produced any audio at all.
+    ///
+    /// Both counters are reset by every load and only written while the engine
+    /// is playing, so a track that never opened leaves them at zero.
+    fn never_played(&self) -> bool {
+        self.position_ms == 0 && self.last_duration_ms == 0
+    }
+
+    /// The engine could not open the current track. Load it again, or report
+    /// that it is out of retries (`false`) so the caller can move on.
+    ///
+    /// Worth retrying because the usual cause is transient and remote: a
+    /// Subsonic server that answers one stream request out of many with
+    /// `Wrong username or password`, a connection dropped mid-probe, a server
+    /// that was still waking up. An unhandled failure here is invisible —
+    /// the track flashes past and the next one starts — so this is also where
+    /// the reason gets logged.
+    fn retry_current(&mut self) -> bool {
+        let Some(track) = self.tracklist.lock().unwrap().current_track().0 else {
+            return false;
+        };
+        if self.open_attempts_uri.as_deref() != Some(track.uri.as_str()) {
+            self.open_attempts_uri = Some(track.uri.clone());
+            self.open_attempts = 0;
+        }
+        if self.open_attempts >= MAX_OPEN_ATTEMPTS {
+            error!(
+                "could not play {} after {} attempts, skipping it: {}",
+                track.title, MAX_OPEN_ATTEMPTS, track.uri
+            );
+            return false;
+        }
+        self.open_attempts += 1;
+        // A cached copy that cannot be opened cannot be opened on the retry
+        // either — it is a fixed set of bytes. Dropping it sends the retry to
+        // the network, which is also the only way a poisoned entry (an error
+        // page saved as audio) ever leaves the cache.
+        if music_player_storage::track_cache::invalidate(&track.uri) {
+            tracing::warn!("discarded the cached copy of {}", track.title);
+        }
+        tracing::warn!(
+            "could not open {}, retrying ({}/{})",
+            track.title,
+            self.open_attempts,
+            MAX_OPEN_ATTEMPTS
+        );
+        self.handle_command_load(&track.uri);
+        true
     }
 
     /// Latch the pristine station entry when the track that just started is
@@ -897,6 +1012,8 @@ impl PlayerInternal {
         self.engine_started = false;
         self.engine_index = 0;
         self.stopped_ticks = 0;
+        self.loaded_at = Instant::now();
+        self.expect_playback = true;
         self.last_duration_ms = 0;
         self.position_ms = 0;
         self.last_broadcast_position_ms = 0;

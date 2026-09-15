@@ -12,7 +12,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     thread,
     time::{Duration, Instant},
@@ -94,6 +94,39 @@ const MAX_OPEN_ATTEMPTS: u32 = 2;
 /// Track-id prefix every internet-radio entry carries. It is what marks a
 /// queue entry as a live stream, so it is also what arms ICY metadata.
 pub const RADIO_ID_PREFIX: &str = "radio:";
+
+/// What a live stream announced last, as it came off the wire.
+///
+/// The tracklist overlay cannot answer this: a `StreamTitle` with no " - " is
+/// folded in with the station's name in the artist slot — which reads well in
+/// a now-playing bar but is not an artist — and a station that announces
+/// nothing at all leaves the station entry's own fields in place. Anything
+/// that must tell a real song from those stand-ins (the scrobbler) needs the
+/// unfolded parse, so it is published here.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct IcyNowPlaying {
+    /// The artist half of `Artist - Title`. Empty when the station sent a bare
+    /// title, or sent nothing.
+    pub artist: String,
+    /// The title half, or the whole `StreamTitle` when it does not split.
+    /// Empty until the first metadata block arrives.
+    pub title: String,
+    /// `icy-name`, falling back to the station entry's own name.
+    pub station: String,
+}
+
+/// Last [`IcyNowPlaying`], or `None` when what is playing is not radio.
+static ICY_NOW_PLAYING: Mutex<Option<IcyNowPlaying>> = Mutex::new(None);
+
+/// What the live stream that is playing announced last. `None` whenever the
+/// current track is not internet radio.
+pub fn icy_now_playing() -> Option<IcyNowPlaying> {
+    ICY_NOW_PLAYING.lock().unwrap().clone()
+}
+
+fn publish_icy(now_playing: Option<IcyNowPlaying>) {
+    *ICY_NOW_PLAYING.lock().unwrap() = now_playing;
+}
 
 pub enum RepeatState {
     Off,
@@ -803,6 +836,12 @@ impl PlayerInternal {
         let (track, _) = self.tracklist.lock().unwrap().current_track();
         self.icy_last = None;
         self.icy_station = track.filter(|t| t.id.starts_with(RADIO_ID_PREFIX));
+        // Nothing has been announced on this station yet — and on anything
+        // that is not radio there is nothing to announce at all.
+        publish_icy(self.icy_station.as_ref().map(|station| IcyNowPlaying {
+            station: station.title.clone(),
+            ..Default::default()
+        }));
     }
 
     /// Fold the live stream's ICY metadata onto the station entry so every
@@ -837,6 +876,13 @@ impl PlayerInternal {
         } else {
             snapshot.station.clone()
         };
+        // Published before the fold, so consumers see which halves the station
+        // actually sent rather than the ones filled in below.
+        publish_icy(Some(IcyNowPlaying {
+            artist: snapshot.artist.clone(),
+            title: snapshot.title.clone(),
+            station: station_name.clone(),
+        }));
         let mut track = station.clone();
         track.album.title = station_name.clone();
         if !snapshot.title.is_empty() {
@@ -1115,6 +1161,7 @@ impl PlayerInternal {
         self.engine_index = 0;
         self.icy_station = None;
         self.icy_last = None;
+        publish_icy(None);
         self.tracklist.lock().unwrap().stop();
     }
 

@@ -4,6 +4,10 @@
 //! when a play crosses Last.fm's rule: half the track or 4 minutes, whichever
 //! comes first. Mirrors rocksky's `playerd` scrobbler.
 //!
+//! Internet radio takes a separate path ([`radio_tick`]): a live stream has no
+//! duration to take half of, and its "track" is whatever the station last
+//! announced over ICY.
+//!
 //! Requires the access token written by `rocksky login` to
 //! `~/.rocksky/token.json`; without it the scrobbler stays off. It can also be
 //! disabled with `scrobble = false` in `settings.toml`.
@@ -12,6 +16,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use music_player_playback::player::{icy_now_playing, RADIO_ID_PREFIX};
 use music_player_settings::read_settings;
 use music_player_tracklist::Tracklist;
 use rocksky_sdk::{AppView, ScrobbleInput};
@@ -144,6 +149,165 @@ impl Watcher {
     }
 }
 
+/// How long a station must keep announcing the same song before it is
+/// scrobbled. Radio has no duration to take half of, so Last.fm's floor stands
+/// in for it: 30 seconds is long enough that a jingle between two songs, or a
+/// station tuned away from straight away, never reaches a scrobble.
+pub(crate) const RADIO_MIN_PLAY: Duration = Duration::from_secs(30);
+
+/// The song a station is announcing right now, as `(artist, title)`.
+///
+/// `None` unless the `StreamTitle` actually named both — a bare title, an
+/// empty announcement or a station ident does not identify a song, and a
+/// station's own name in the artist slot is the player's display fallback, not
+/// an artist. Those are exactly the announcements that must not be scrobbled.
+fn icy_song() -> Option<(String, String)> {
+    let icy = icy_now_playing()?;
+    let artist = icy.artist.trim().to_string();
+    let title = icy.title.trim().to_string();
+    if artist.is_empty() || title.is_empty() {
+        return None;
+    }
+    Some((artist, title))
+}
+
+/// Per-announcement bookkeeping, the live-stream counterpart of [`Watcher`].
+#[derive(Default)]
+pub(crate) struct RadioWatcher {
+    /// The announcement being played, as `artist\u{1}title`.
+    pub(crate) key: Option<String>,
+    /// Wall clock when this announcement first appeared — the scrobble's
+    /// `timestamp`.
+    pub(crate) started_at: i64,
+    /// How long it has been on the air. Counted in ticks rather than off a
+    /// clock so a paused stream does not age towards a scrobble it never
+    /// played.
+    played: Duration,
+    /// Whether this announcement has been settled — scrobbled, or matched
+    /// against nothing and deliberately dropped. Either way it is not looked
+    /// at again until the metadata changes.
+    pub(crate) submitted: bool,
+    pub(crate) retry_after: Option<Instant>,
+}
+
+impl RadioWatcher {
+    /// Count one playing tick of `(artist, title)`. Returns true on the tick
+    /// that crosses [`RADIO_MIN_PLAY`], which is the one that scrobbles.
+    pub(crate) fn advance(&mut self, artist: &str, title: &str) -> bool {
+        let key = format!("{artist}\u{1}{title}");
+        if self.key.as_deref() != Some(key.as_str()) {
+            // The metadata changed: a new song is on the air.
+            self.key = Some(key);
+            self.started_at = unix_now();
+            self.played = Duration::ZERO;
+            self.submitted = false;
+            self.retry_after = None;
+            return false;
+        }
+        self.played += TICK;
+
+        if self.submitted {
+            return false;
+        }
+        if let Some(at) = self.retry_after {
+            if Instant::now() < at {
+                return false;
+            }
+        }
+        self.played >= RADIO_MIN_PLAY
+    }
+
+    /// Drop what was on the air, so the next announcement — even an identical
+    /// one — counts as a new play. For when the stream itself ends.
+    pub(crate) fn forget(&mut self) {
+        self.key = None;
+    }
+}
+
+/// Turn an `app.rocksky.song.matchSong` answer into a scrobble, carrying over
+/// the metadata a radio stream never sends: the album, its artwork, the real
+/// duration, the track number.
+///
+/// `None` when the catalogue did not recognise the announcement. An unmatched
+/// one is as likely to be an ad, a show title or a mangled `StreamTitle` as a
+/// song, and none of those belong in a listening history.
+fn matched_scrobble(matched: &serde_json::Value, timestamp: i64) -> Option<ScrobbleInput> {
+    let text = |key: &str| {
+        matched
+            .get(key)
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    };
+    let number = |key: &str| matched.get(key).and_then(serde_json::Value::as_i64);
+    let title = text("title")?;
+    let artist = text("artist")?;
+    Some(ScrobbleInput {
+        album_artist: text("albumArtist").unwrap_or_else(|| artist.clone()),
+        album: text("album"),
+        duration: number("duration").filter(|d| *d > 0).map(|d| d as u64),
+        album_art: text("albumArt"),
+        timestamp: Some(timestamp),
+        track_number: number("trackNumber").map(|n| n as i32).filter(|n| *n > 0),
+        genres: text("genre").map(|genre| vec![genre]),
+        release_date: text("releaseDate"),
+        year: number("year").map(|y| y as i32).filter(|y| *y > 0),
+        title,
+        artist,
+        ..Default::default()
+    })
+}
+
+/// One tick of a playing internet-radio stream: scrobble the announced song
+/// once it has been on the air long enough and the catalogue recognises it.
+async fn radio_tick(appview: &AppView, radio: &mut RadioWatcher) {
+    let Some((artist, title)) = icy_song() else {
+        // Nothing that names a song. The announcement is kept as it was, so a
+        // jingle in the middle of a song does not restart — or re-scrobble —
+        // the play around it.
+        return;
+    };
+    if !radio.advance(&artist, &title) {
+        return;
+    }
+
+    // Match before scrobbling: the catalogue is what turns "Artist - Title"
+    // off a wire into a real song, and a miss is the signal that this was
+    // never a song to begin with.
+    let matched = match appview.match_song(&title, &artist, None, None, None).await {
+        Ok(matched) => matched,
+        Err(e) => {
+            radio.retry_after = Some(Instant::now() + RETRY_AFTER);
+            warn!(
+                "could not match {artist} - {title}, retrying in {}s: {e}",
+                RETRY_AFTER.as_secs()
+            );
+            return;
+        }
+    };
+    let Some(input) = matched_scrobble(&matched, radio.started_at) else {
+        radio.submitted = true;
+        info!(%artist, %title, "the station announced nothing the catalogue knows; not scrobbling");
+        return;
+    };
+
+    match appview.create_scrobble(&input).await {
+        Ok(_) => {
+            radio.submitted = true;
+            info!(artist = %input.artist, title = %input.title, "scrobbled from radio");
+        }
+        Err(e) => {
+            radio.retry_after = Some(Instant::now() + RETRY_AFTER);
+            warn!(
+                "radio scrobble failed, retrying in {}s: {}",
+                RETRY_AFTER.as_secs(),
+                e
+            );
+        }
+    }
+}
+
 /// Start the scrobbler if it is enabled and a Rocksky token is available.
 pub fn spawn(tracklist: Arc<Mutex<Tracklist>>) {
     let enabled = read_settings()
@@ -170,13 +334,29 @@ pub fn spawn(tracklist: Arc<Mutex<Tracklist>>) {
 async fn scrobble_loop(tracklist: Arc<Mutex<Tracklist>>, api_url: String, token: String) {
     let appview = AppView::new(api_url).with_token(token);
     let mut watcher = Watcher::default();
+    let mut radio = RadioWatcher::default();
     loop {
         tokio::time::sleep(TICK).await;
+
+        // Checked whatever is playing: the ICY state outlives the tracklist
+        // snapshot, and its disappearance — the stream stopped, or a local
+        // file took over — is what ends the song that was on the air. A pause
+        // leaves it alone, so resuming continues the same play.
+        if icy_now_playing().is_none() {
+            radio.forget();
+        }
 
         let Some(current) = current_track(&tracklist) else {
             watcher.key = None;
             continue;
         };
+        if current.id.starts_with(RADIO_ID_PREFIX) {
+            // A live stream has neither a duration to measure a play against
+            // nor tags of its own; the rules in `radio_tick` replace both.
+            watcher.key = None;
+            radio_tick(&appview, &mut radio).await;
+            continue;
+        }
         if !watcher.advance(&current) {
             continue;
         }
@@ -214,5 +394,106 @@ async fn scrobble_loop(tracklist: Arc<Mutex<Tracklist>>, api_url: String, token:
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ticks of the same announcement, up to the count given.
+    fn play(radio: &mut RadioWatcher, artist: &str, title: &str, ticks: u32) -> bool {
+        (0..ticks).fold(false, |crossed, _| radio.advance(artist, title) || crossed)
+    }
+
+    #[test]
+    fn scrobbles_a_song_that_stays_on_the_air() {
+        let ticks = RADIO_MIN_PLAY.as_secs() as u32 / TICK.as_secs() as u32;
+        let mut radio = RadioWatcher::default();
+        // The first tick only records the announcement, so the threshold is
+        // crossed one tick after that.
+        assert!(!play(&mut radio, "Aretha Franklin", "Respect", ticks));
+        assert!(radio.advance("Aretha Franklin", "Respect"));
+    }
+
+    #[test]
+    fn a_short_announcement_never_scrobbles() {
+        let mut radio = RadioWatcher::default();
+        assert!(!play(
+            &mut radio,
+            "Station ID",
+            "You are listening to us",
+            20
+        ));
+    }
+
+    #[test]
+    fn changed_metadata_starts_a_new_play() {
+        let ticks = RADIO_MIN_PLAY.as_secs() as u32 / TICK.as_secs() as u32 + 1;
+        let mut radio = RadioWatcher::default();
+        assert!(play(&mut radio, "Aretha Franklin", "Respect", ticks));
+        radio.submitted = true;
+        // Same song, already scrobbled: nothing more comes of it.
+        assert!(!play(&mut radio, "Aretha Franklin", "Respect", ticks));
+        // The next song has to earn its own threshold, and then scrobbles.
+        assert!(!radio.advance("Otis Redding", "Try a Little Tenderness"));
+        assert!(!radio.submitted);
+        assert!(play(
+            &mut radio,
+            "Otis Redding",
+            "Try a Little Tenderness",
+            ticks
+        ));
+    }
+
+    #[test]
+    fn a_stopped_stream_lets_the_same_song_play_again() {
+        let ticks = RADIO_MIN_PLAY.as_secs() as u32 / TICK.as_secs() as u32 + 1;
+        let mut radio = RadioWatcher::default();
+        assert!(play(&mut radio, "Aretha Franklin", "Respect", ticks));
+        radio.submitted = true;
+        radio.forget();
+        assert!(play(&mut radio, "Aretha Franklin", "Respect", ticks));
+    }
+
+    #[test]
+    fn an_unmatched_announcement_is_not_scrobbled() {
+        // What `matchSong` answers when it recognises nothing.
+        assert!(matched_scrobble(&serde_json::json!({}), 0).is_none());
+        assert!(matched_scrobble(&serde_json::json!({"title": "Respect"}), 0).is_none());
+        assert!(matched_scrobble(
+            &serde_json::json!({"title": " ", "artist": "Aretha Franklin"}),
+            0
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn a_match_fills_in_what_the_stream_could_not_say() {
+        let input = matched_scrobble(
+            &serde_json::json!({
+                "title": "Respect",
+                "artist": "Aretha Franklin",
+                "album": "I Never Loved a Man the Way I Love You",
+                "duration": 147000,
+                "trackNumber": 1,
+                "albumArt": "https://example.test/cover.jpg",
+                "genre": "Soul",
+                "year": 1967,
+            }),
+            1_700_000_000,
+        )
+        .expect("a matched song scrobbles");
+        assert_eq!(input.title, "Respect");
+        assert_eq!(
+            input.album.as_deref(),
+            Some("I Never Loved a Man the Way I Love You")
+        );
+        // No album artist of its own: the artist stands in, as elsewhere.
+        assert_eq!(input.album_artist, "Aretha Franklin");
+        assert_eq!(input.duration, Some(147000));
+        assert_eq!(input.track_number, Some(1));
+        assert_eq!(input.genres.as_deref(), Some(&["Soul".to_string()][..]));
+        assert_eq!(input.timestamp, Some(1_700_000_000));
     }
 }

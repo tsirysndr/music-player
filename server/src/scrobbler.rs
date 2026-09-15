@@ -224,6 +224,27 @@ impl RadioWatcher {
     }
 }
 
+/// The `YYYY-MM-DD` half of a release date, or `None` when there is no
+/// calendar date in it at all.
+///
+/// The catalogue answers with whatever it stored, and most records carry a
+/// full ISO-8601 timestamp — `2012-10-01T00:00:00.000Z`. `createScrobble`
+/// validates the field strictly and answers `400 Invalid scrobble:
+/// releaseDate Invalid date format. Use YYYY-MM-DD.`, which loses the whole
+/// scrobble over a field nothing needed. Trimming it keeps the date; anything
+/// that is not one is dropped rather than guessed at.
+fn calendar_date(value: &str) -> Option<String> {
+    let date = value.split('T').next()?;
+    let mut parts = date.split('-');
+    let (year, month, day) = (parts.next()?, parts.next()?, parts.next()?);
+    let shaped = parts.next().is_none()
+        && (year.len(), month.len(), day.len()) == (4, 2, 2)
+        && [year, month, day]
+            .iter()
+            .all(|part| part.bytes().all(|b| b.is_ascii_digit()));
+    shaped.then(|| date.to_string())
+}
+
 /// Turn an `app.rocksky.song.matchSong` answer into a scrobble, carrying over
 /// the metadata a radio stream never sends: the album, its artwork, the real
 /// duration, the track number.
@@ -251,7 +272,7 @@ fn matched_scrobble(matched: &serde_json::Value, timestamp: i64) -> Option<Scrob
         timestamp: Some(timestamp),
         track_number: number("trackNumber").map(|n| n as i32).filter(|n| *n > 0),
         genres: text("genre").map(|genre| vec![genre]),
-        release_date: text("releaseDate"),
+        release_date: text("releaseDate").and_then(|date| calendar_date(&date)),
         year: number("year").map(|y| y as i32).filter(|y| *y > 0),
         title,
         artist,
@@ -469,6 +490,24 @@ mod tests {
     }
 
     #[test]
+    fn a_release_date_is_cut_down_to_a_calendar_date() {
+        // What the catalogue answers for most records.
+        assert_eq!(
+            calendar_date("2012-10-01T00:00:00.000Z").as_deref(),
+            Some("2012-10-01")
+        );
+        // And what it answers for the rest, which already passes validation.
+        assert_eq!(calendar_date("2005-12-12").as_deref(), Some("2005-12-12"));
+        // Nothing to salvage: sent as no release date at all rather than as a
+        // guess the endpoint would reject.
+        assert_eq!(calendar_date("2012"), None);
+        assert_eq!(calendar_date("2012-10"), None);
+        assert_eq!(calendar_date("October 2012"), None);
+        assert_eq!(calendar_date("2012-1-1"), None);
+        assert_eq!(calendar_date("20xx-10-01"), None);
+    }
+
+    #[test]
     fn a_match_fills_in_what_the_stream_could_not_say() {
         let input = matched_scrobble(
             &serde_json::json!({
@@ -480,6 +519,7 @@ mod tests {
                 "albumArt": "https://example.test/cover.jpg",
                 "genre": "Soul",
                 "year": 1967,
+                "releaseDate": "1967-03-10T00:00:00.000Z",
             }),
             1_700_000_000,
         )
@@ -494,6 +534,9 @@ mod tests {
         assert_eq!(input.duration, Some(147000));
         assert_eq!(input.track_number, Some(1));
         assert_eq!(input.genres.as_deref(), Some(&["Soul".to_string()][..]));
+        // Trimmed on the way in: the timestamp the catalogue stores is not a
+        // date the scrobble endpoint accepts.
+        assert_eq!(input.release_date.as_deref(), Some("1967-03-10"));
         assert_eq!(input.timestamp, Some(1_700_000_000));
     }
 }

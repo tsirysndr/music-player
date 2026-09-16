@@ -164,20 +164,98 @@ pub(crate) const RADIO_MIN_PLAY: Duration = Duration::from_secs(30);
 /// being dropped on one such answer, so a miss has to repeat before it counts.
 pub(crate) const MATCH_ATTEMPTS: u32 = 3;
 
-/// The song a station is announcing right now, as `(artist, title)`.
+/// What the station is announcing right now, as it came off the wire: the
+/// engine's `Artist - Title` split when it found one, else the whole
+/// `StreamTitle` with nothing in the artist slot.
 ///
-/// `None` unless the `StreamTitle` actually named both — a bare title, an
-/// empty announcement or a station ident does not identify a song, and a
-/// station's own name in the artist slot is the player's display fallback, not
-/// an artist. Those are exactly the announcements that must not be scrobbled.
-fn icy_song() -> Option<(String, String)> {
+/// The halves are not believed here — [`readings`] decides what they mean.
+fn icy_announcement() -> Option<(String, String)> {
     let icy = icy_now_playing()?;
-    let artist = icy.artist.trim().to_string();
     let title = icy.title.trim().to_string();
-    if artist.is_empty() || title.is_empty() {
+    if title.is_empty() {
         return None;
     }
-    Some((artist, title))
+    Some((icy.artist.trim().to_string(), title))
+}
+
+/// What a station may put between the two halves of an announcement. The
+/// spaces are required: an unspaced hyphen belongs to `Jay-Z` and `Blink-182`
+/// at least as often as it separates anything.
+const SEPARATORS: [&str; 3] = [" - ", " – ", " — "];
+
+/// Every reading of an announcement worth asking the catalogue about, as
+/// `(artist, title)`, likeliest first. Empty when the announcement names no
+/// two halves at all — a station ident, a jingle, a bare song title.
+///
+/// `Artist - Title` is the common form and the one the engine assumes, but
+/// nothing enforces it: stations announce `Title - Artist` too, and reading
+/// that one the usual way scrobbles a song with its own title in the artist
+/// slot. Rather than guess from the text, both readings are offered and the
+/// catalogue settles it — the one that resolves is the true one. Splitting
+/// here also catches the en and em dashes, which the engine does not treat as
+/// separators at all.
+fn readings(artist: &str, title: &str) -> Vec<(String, String)> {
+    let (artist, title) = (artist.trim(), title.trim());
+    if !artist.is_empty() && !title.is_empty() {
+        return vec![
+            (artist.to_string(), title.to_string()),
+            (title.to_string(), artist.to_string()),
+        ];
+    }
+    for separator in SEPARATORS {
+        let Some((left, right)) = title.split_once(separator) else {
+            continue;
+        };
+        let (left, right) = (left.trim(), right.trim());
+        if !left.is_empty() && !right.is_empty() {
+            return vec![
+                (left.to_string(), right.to_string()),
+                (right.to_string(), left.to_string()),
+            ];
+        }
+    }
+    Vec::new()
+}
+
+/// Letters and digits, lowercased. A station's punctuation is not to be
+/// trusted — `Say It Ain\`t So` comes off the wire with a backtick, and
+/// `Guns n Roses` without the apostrophe the catalogue spells it with.
+fn squashed(value: &str) -> String {
+    value
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// Whether an answered name is the asked-for one. Containment either way: the
+/// catalogue answers `The Killers` for a station's `Killers`, credits a
+/// collaboration to every artist on it, and returns `Say It Ain't So
+/// (Original Mix)` for a plain `Say It Ain't So`.
+fn corresponds(answered: &str, asked: &str) -> bool {
+    let (answered, asked) = (squashed(answered), squashed(asked));
+    !answered.is_empty()
+        && !asked.is_empty()
+        && (answered.contains(&asked) || asked.contains(&answered))
+}
+
+/// Whether the catalogue answered about the halves it was asked about, rather
+/// than merely answering something.
+///
+/// `matchSong` is fuzzy to a fault: handed a song title as if it were an
+/// artist it still resolves *something* — `Muse`/`Madness` the wrong way round
+/// comes back as Marillion's "Muse in the Madness". So a reading is only taken
+/// as the right one when both halves come back recognisable, which is what
+/// tells `Artist - Title` from `Title - Artist` apart.
+fn confirms(matched: &serde_json::Value, artist: &str, title: &str) -> bool {
+    let answered = |key: &str| {
+        matched
+            .get(key)
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    corresponds(&answered("artist"), artist) && corresponds(&answered("title"), title)
 }
 
 /// Per-announcement bookkeeping, the live-stream counterpart of [`Watcher`].
@@ -309,37 +387,71 @@ fn matched_scrobble(matched: &serde_json::Value, timestamp: i64) -> Option<Scrob
 /// One tick of a playing internet-radio stream: scrobble the announced song
 /// once it has been on the air long enough and the catalogue recognises it.
 async fn radio_tick(appview: &AppView, radio: &mut RadioWatcher) {
-    let Some((artist, title)) = icy_song() else {
+    let Some((announced_artist, announced_title)) = icy_announcement() else {
+        return;
+    };
+    let readings = readings(&announced_artist, &announced_title);
+    if readings.is_empty() {
         // Nothing that names a song. The announcement is kept as it was, so a
         // jingle in the middle of a song does not restart — or re-scrobble —
         // the play around it.
         return;
-    };
-    if !radio.advance(&artist, &title) {
+    }
+    if !radio.advance(&announced_artist, &announced_title) {
         return;
     }
 
-    // Match before scrobbling: the catalogue is what turns "Artist - Title"
-    // off a wire into a real song, and a miss is the signal that this was
-    // never a song to begin with.
-    let matched = match appview.match_song(&title, &artist, None, None, None).await {
-        Ok(matched) => matched,
-        Err(e) => {
-            radio.retry_after = Some(Instant::now() + RETRY_AFTER);
-            warn!(
-                "could not match {artist} - {title}, retrying in {}s: {e}",
-                RETRY_AFTER.as_secs()
-            );
-            return;
+    // Match before scrobbling: the catalogue is what turns two halves off a
+    // wire into a real song, which reading of them is the right one, and
+    // whether this was a song at all.
+    // The likeliest reading is asked about first and, when the catalogue
+    // confirms it, nothing else is asked at all. Only when it does not is the
+    // other reading tried — and it has to be confirmed to win, since an
+    // unconfirmed answer is what the wrong reading produces too. If neither is
+    // confirmed the first reading's answer still stands: the catalogue spells
+    // plenty of songs differently from the station that announced them, and
+    // dropping those would cost more plays than it saves.
+    let mut found = None;
+    let mut unconfirmed = None;
+    for (index, (artist, title)) in readings.iter().enumerate() {
+        let matched = match appview.match_song(title, artist, None, None, None).await {
+            Ok(matched) => matched,
+            Err(e) => {
+                radio.retry_after = Some(Instant::now() + RETRY_AFTER);
+                warn!(
+                    "could not match {artist} - {title}, retrying in {}s: {e}",
+                    RETRY_AFTER.as_secs()
+                );
+                return;
+            }
+        };
+        let confirmed = confirms(&matched, artist, title);
+        let Some(input) = matched_scrobble(&matched, radio.started_at) else {
+            continue;
+        };
+        if confirmed {
+            if index > 0 {
+                info!(
+                    artist = %announced_artist, title = %announced_title,
+                    "the station announced the title first; scrobbling as {artist} - {title}"
+                );
+            }
+            found = Some(input);
+            break;
         }
-    };
-    let Some(input) = matched_scrobble(&matched, radio.started_at) else {
+        unconfirmed.get_or_insert(input);
+    }
+
+    let Some(input) = found.or(unconfirmed) else {
         if radio.missed_match() {
             radio.submitted = true;
-            info!(%artist, %title, "the station announced nothing the catalogue knows; not scrobbling");
+            info!(
+                artist = %announced_artist, title = %announced_title,
+                "the station announced nothing the catalogue knows; not scrobbling"
+            );
         } else {
             debug!(
-                %artist, %title,
+                artist = %announced_artist, title = %announced_title,
                 "the catalogue answered nothing; asking again in {}s",
                 RETRY_AFTER.as_secs()
             );
@@ -521,6 +633,203 @@ mod tests {
             0
         )
         .is_none());
+    }
+
+    /// `readings`, as `(artist, title)` pairs, for terser assertions.
+    fn read(artist: &str, title: &str) -> Vec<(String, String)> {
+        readings(artist, title)
+    }
+
+    #[test]
+    fn both_orders_are_offered_for_the_catalogue_to_settle() {
+        // What the engine split: the usual reading first, the reverse behind
+        // it, because a station announcing title first is the rarer one.
+        assert_eq!(
+            read("Muse", "Madness"),
+            vec![
+                ("Muse".to_string(), "Madness".to_string()),
+                ("Madness".to_string(), "Muse".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dash_the_engine_does_not_know_still_splits() {
+        // The engine only splits on " - ", so these arrive whole.
+        for announcement in ["Muse – Madness", "Muse — Madness"] {
+            assert_eq!(
+                read("", announcement),
+                vec![
+                    ("Muse".to_string(), "Madness".to_string()),
+                    ("Madness".to_string(), "Muse".to_string()),
+                ],
+                "{announcement}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_announcement_that_names_no_two_halves_is_not_a_song() {
+        // Idents and jingles, which must not count as a play at all.
+        assert!(read("", "AlternativeRadio.us").is_empty());
+        assert!(read("", "Radio For The Rest Of Us").is_empty());
+        // An unspaced hyphen is part of a name far more often than it is a
+        // separator, so it is left alone.
+        assert!(read("", "Jay-Z").is_empty());
+        assert!(read("", "Blink-182").is_empty());
+        // Half an announcement names nothing either.
+        assert!(read("", "Muse - ").is_empty());
+        assert!(read("", " - Madness").is_empty());
+    }
+
+    #[test]
+    fn only_the_first_split_separates_the_halves() {
+        // Artists rarely carry " - "; titles do.
+        assert_eq!(
+            read("Muse", "Madness - Live at Rome").first().unwrap(),
+            &("Muse".to_string(), "Madness - Live at Rome".to_string())
+        );
+        assert_eq!(
+            read("", "Muse – Madness – Live at Rome").first().unwrap(),
+            &("Muse".to_string(), "Madness – Live at Rome".to_string())
+        );
+    }
+
+    #[test]
+    fn the_padding_stations_send_is_not_part_of_a_name() {
+        // Every `StreamTitle` this station sends ends in a space.
+        assert_eq!(
+            read("Killers", "When You Were Young "),
+            read("Killers", "When You Were Young")
+        );
+        assert_eq!(read("", " Muse – Madness "), read("", "Muse – Madness"));
+        // Whitespace in the artist slot is an empty artist slot.
+        assert!(read("   ", "AlternativeRadio.us").is_empty());
+        assert_eq!(read("  ", "Muse - Madness").len(), 2);
+    }
+
+    #[test]
+    fn a_spaced_hyphen_wins_over_the_longer_dashes() {
+        // Both are present: the one the engine itself would have used decides,
+        // so a title carrying an en dash is not split on it.
+        assert_eq!(
+            read(
+                "",
+                "Godspeed You! Black Emperor - Dead Flag Blues – Reprise"
+            )
+            .first()
+            .unwrap(),
+            &(
+                "Godspeed You! Black Emperor".to_string(),
+                "Dead Flag Blues – Reprise".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn an_ad_break_is_read_like_anything_else() {
+        // The station announces its ads as a perfectly well-formed pair, so
+        // both readings are asked about and both miss — which is what writes
+        // the break off. Nothing here can tell it from a song on its own.
+        assert_eq!(read("Live365", "Advertisement").len(), 2);
+    }
+
+    #[test]
+    fn no_reading_ever_carries_an_empty_half() {
+        for (artist, title) in [
+            ("Muse", "Madness"),
+            ("", "Muse - Madness"),
+            ("", "Muse – Madness"),
+            ("", "Muse — Madness"),
+            ("Live365", "Advertisement"),
+            ("", "AlternativeRadio.us"),
+            ("", " - "),
+            ("", ""),
+        ] {
+            for (artist, title) in read(artist, title) {
+                assert!(!artist.is_empty() && !title.is_empty(), "{artist}/{title}");
+            }
+        }
+    }
+
+    /// A `matchSong` answer, as the fields `confirms` reads.
+    fn answer(artist: &str, title: &str) -> serde_json::Value {
+        serde_json::json!({"artist": artist, "title": title})
+    }
+
+    #[test]
+    fn a_confirmed_reading_is_one_the_catalogue_answered_about() {
+        // Both halves come back recognisable.
+        assert!(confirms(&answer("Muse", "Madness"), "Muse", "Madness"));
+        // A fuller name than the station announced, on either half.
+        assert!(confirms(
+            &answer("The Killers", "When You Were Young"),
+            "Killers",
+            "When You Were Young"
+        ));
+        assert!(confirms(
+            &answer("Weezer", "Say It Ain't So (Original Mix)"),
+            "Weezer",
+            "Say It Ain`t So"
+        ));
+        // A collaboration credits everyone on it.
+        assert!(confirms(
+            &answer("Elley Duhé, Whethan", "MONEY ON THE DASH"),
+            "Whethan",
+            "Money On The Dash"
+        ));
+        // Punctuation the station dropped.
+        assert!(confirms(
+            &answer("Guns N' Roses", "Patience"),
+            "Guns n Roses",
+            "Patience"
+        ));
+    }
+
+    #[test]
+    fn the_answer_to_a_backwards_reading_is_not_confirmed() {
+        // What the catalogue really answers for `Muse`/`Madness` read the
+        // wrong way round — an answer, but not about what was asked.
+        let backwards = answer("Marillion", "Muse in the Madness");
+        assert!(!confirms(&backwards, "Madness", "Muse"));
+        // Read the right way round, the same announcement confirms.
+        assert!(confirms(&answer("Muse", "Madness"), "Muse", "Madness"));
+
+        // And the other one seen live: asking for `Nirvana` as a title.
+        let backwards = answer("Nirvana", "On A Plain (Live In Tokyo, Japan/1992)");
+        assert!(!confirms(&backwards, "In Bloom", "Nirvana"));
+        assert!(confirms(
+            &answer("Nirvana", "In Bloom"),
+            "Nirvana",
+            "In Bloom"
+        ));
+    }
+
+    #[test]
+    fn an_answer_missing_a_half_confirms_nothing() {
+        assert!(!confirms(&serde_json::json!({}), "Muse", "Madness"));
+        assert!(!confirms(&answer("Muse", ""), "Muse", "Madness"));
+        assert!(!confirms(&answer("", "Madness"), "Muse", "Madness"));
+        // Nothing asked for is nothing to confirm against either.
+        assert!(!confirms(&answer("Muse", "Madness"), "", "Madness"));
+    }
+
+    #[test]
+    fn punctuation_and_case_are_not_part_of_a_name() {
+        assert_eq!(squashed("Guns N' Roses"), "gunsnroses");
+        assert_eq!(squashed("Guns n Roses"), "gunsnroses");
+        assert_eq!(squashed("AC/DC"), "acdc");
+        assert_eq!(squashed("P!nk"), "pnk");
+        assert_eq!(squashed("Blink-182"), "blink182");
+        assert_eq!(squashed(" - "), "");
+        // Accents are not punctuation: they distinguish names.
+        assert_eq!(squashed("Elley Duhé"), "elleyduhé");
+        assert!(corresponds(
+            "Say It Ain't So (Original Mix)",
+            "Say It Ain`t So"
+        ));
+        assert!(!corresponds("Madness", "Muse"));
+        assert!(!corresponds("", "Muse"));
     }
 
     #[test]

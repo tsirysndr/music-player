@@ -988,8 +988,40 @@ mod tests {
             "auto_dj",
             "list_servers",
             "connect_server",
+            // Read the analytics database directly rather than the daemon;
+            // see crate::listening.
+            "listening_overview",
+            "listening_top",
+            "listening_clock",
+            "listening_sessions",
+            "listening_skips",
+            "listening_drift",
+            "listening_transitions",
+            "listening_rotation",
+            "listening_on_this_day",
         ];
         assert_eq!(names(), expected);
+    }
+
+    /// The listening tools dispatch through their own name list rather than a
+    /// match arm each, so a tool added to the catalogue and not to that list
+    /// is advertised and then answers "unknown tool".
+    #[test]
+    fn every_listening_tool_dispatches() {
+        let advertised: Vec<String> = names()
+            .into_iter()
+            .filter(|name| name.starts_with("listening_"))
+            .map(|name| name.to_string())
+            .collect();
+        let dispatched: Vec<String> = crate::listening::names()
+            .iter()
+            .map(|name| name.to_string())
+            .collect();
+        assert_eq!(
+            advertised, dispatched,
+            "the catalogue and crate::listening::names() disagree"
+        );
+        assert!(!advertised.is_empty(), "the listening tools went missing");
     }
 
     /// Hosts reject a tool with no schema, and models guess badly at one with no

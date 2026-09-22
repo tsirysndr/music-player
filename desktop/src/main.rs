@@ -873,7 +873,16 @@ pub fn ui_set_stats(app: &AppWindow, data: rpc::StatsData) {
 /// counters above are about the library connected right now, this is every
 /// source ever imported, deduplicated. Mixing them would imply the numbers
 /// relate, and they do not.
-pub fn ui_set_history(app: &AppWindow, data: rpc::HistoryData) {
+pub fn ui_set_history(app: &AppWindow, data: Option<rpc::HistoryData>) {
+    // `None` is "could not read it just now" — an import holds DuckDB's single
+    // writer, most likely. Leaving the panel exactly as it was is the right
+    // answer: blanking nine years of history because a background job is
+    // running looks like the feature broke.
+    let Some(data) = data else {
+        tracing::debug!("listening history unreadable; leaving the panel as it is");
+        return;
+    };
+
     app.set_history_available(data.available);
     if !data.available {
         return;

@@ -2241,9 +2241,14 @@ async fn refresh_analytics(weak: &Weak<AppWindow>, state: &Arc<Mutex<WorkerState
     let most_played_art = art_of(&most_played);
     let skipped_art = art_of(&data.most_skipped);
     let recent_art = art_of(&data.recently_played);
-    let history_track_art = art_of(&history.top_tracks);
-    let artist_art: Vec<Option<String>> =
-        history.artist_bars.iter().map(|b| b.art.clone()).collect();
+    let history_track_art = history
+        .as_ref()
+        .map(|h| art_of(&h.top_tracks))
+        .unwrap_or_default();
+    let artist_art: Vec<Option<String>> = history
+        .as_ref()
+        .map(|h| h.artist_bars.iter().map(|b| b.art.clone()).collect())
+        .unwrap_or_default();
 
     let _ = weak.upgrade_in_event_loop(move |app| {
         app.set_stats_source(label.into());
@@ -3890,7 +3895,10 @@ pub struct HistoryData {
 /// Every failure is the same answer — `available: false`, which hides the
 /// section. There is nothing actionable to show a user who has never run an
 /// import, and a half-drawn panel of zeroes reads as breakage.
-pub async fn load_history(local_only: bool) -> HistoryData {
+/// `None` means the database could not be read — an import is holding it, or
+/// it is mid-write. That is *not* the same as having no history, and the
+/// caller must leave whatever is on screen alone rather than blanking it.
+pub async fn load_history(local_only: bool) -> Option<HistoryData> {
     // Artist pictures first, resolved from the Rocksky catalogue and cached.
     // Does nothing once every artist on the leaderboard is known.
     //
@@ -3901,7 +3909,8 @@ pub async fn load_history(local_only: bool) -> HistoryData {
 
     tokio::task::spawn_blocking(move || read_history(local_only))
         .await
-        .unwrap_or_default()
+        .ok()
+        .flatten()
 }
 
 /// Make sure the artists the leaderboard is about to show have a picture.
@@ -3953,15 +3962,19 @@ async fn resolve_artist_pictures(local_only: bool) {
     .await;
 }
 
-fn read_history(local_only: bool) -> HistoryData {
+fn read_history(local_only: bool) -> Option<HistoryData> {
     use music_player_analytics::query::{self, Scope, TopKind, Window};
     use music_player_analytics::Analytics;
 
-    let Ok(analytics) = Analytics::open_default_read_only() else {
-        // Not an error worth logging at warn: no analytics database is the
-        // normal state until someone imports a history.
-        tracing::debug!("no analytics database; the listening history panel stays hidden");
-        return HistoryData::default();
+    let analytics = match Analytics::open_default_read_only() {
+        Ok(analytics) => analytics,
+        Err(cause) => {
+            // Could be "never imported", could be "an import is running and
+            // holds the single writer". Neither is a reason to erase a panel
+            // that is already showing nine years of history.
+            tracing::debug!("listening history unavailable: {cause}");
+            return None;
+        }
     };
 
     let scope = Scope {
@@ -3970,10 +3983,11 @@ fn read_history(local_only: bool) -> HistoryData {
     };
     let overview = match query::overview(&analytics, scope) {
         Ok(overview) if overview.listens > 0 => overview,
-        Ok(_) => return HistoryData::default(),
+        // Genuinely empty: there is nothing to show, and saying so is right.
+        Ok(_) => return Some(HistoryData::default()),
         Err(e) => {
-            tracing::warn!("listening history unavailable: {e}");
-            return HistoryData::default();
+            tracing::warn!("could not read the listening history: {e}");
+            return None;
         }
     };
 
@@ -4047,7 +4061,7 @@ fn read_history(local_only: bool) -> HistoryData {
 
     data.top_tracks = top_tracks(&analytics, local_only);
 
-    data
+    Some(data)
 }
 
 /// The most-played tracks of all time, carrying a local track id where the
@@ -4414,8 +4428,10 @@ mod history_tests {
     #[tokio::test]
     #[ignore]
     async fn listening_history_panel_is_populated() {
-        let data = load_history(false).await;
-        assert!(data.available, "no analytics database to read");
+        let data = load_history(false)
+            .await
+            .expect("the analytics database could not be read (is an import running?)");
+        assert!(data.available, "the analytics database holds no history");
 
         println!("listens          {}", thousands(data.listens));
         println!("hours            {:.0}", data.hours);
@@ -4458,7 +4474,7 @@ mod history_tests {
         );
 
         // The restricted view must be a subset, never larger.
-        let owned = load_history(true).await;
+        let owned = load_history(true).await.expect("read the restricted view");
         assert!(
             owned.listens <= data.listens,
             "\"in my library only\" cannot add listens"

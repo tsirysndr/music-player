@@ -80,6 +80,13 @@
             # xkbcommon, libGL), which this build has no business pulling in.
             cargoExtraArgs = "--locked --package music-player";
 
+              # DuckDB comes from nixpkgs, not from scripts/fetch-duckdb.sh:
+              # a nix build has no network, and these override the static
+              # defaults in .cargo/config.toml (which point at vendor/).
+            DUCKDB_LIB_DIR = "${pkgs.duckdb}/lib";
+            DUCKDB_INCLUDE_DIR = "${pkgs.duckdb}/include";
+            DUCKDB_STATIC = "0";
+
             nativeBuildInputs = [
               pkgs.pkg-config
               pkgs.protobuf
@@ -88,6 +95,7 @@
             buildInputs = [
               pkgs.zstd
               pkgs.openssl
+              pkgs.duckdb
             ]
             ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.alsa-lib

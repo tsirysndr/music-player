@@ -32,6 +32,13 @@ jobs:
         env:
           TAG_INPUT: ${{ inputs.tag }}
 
+      - name: Vendor DuckDB
+        # `libduckdb-sys` resolves `-l static=duckdb_static` when its own crate
+        # compiles, and Cargo gives no way to order another crate's build script
+        # ahead of that — so the libraries must be on disk before cargo runs at
+        # all. See scripts/fetch-duckdb.sh.
+        run: ./scripts/fetch-duckdb.sh
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24

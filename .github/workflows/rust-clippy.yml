@@ -20,6 +20,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Vendor DuckDB
+        # `libduckdb-sys` resolves `-l static=duckdb_static` when its own crate
+        # compiles, and Cargo gives no way to order another crate's build script
+        # ahead of that — so the libraries must be on disk before cargo runs at
+        # all. See scripts/fetch-duckdb.sh.
+        run: ./scripts/fetch-duckdb.sh
+
       - name: Install Rust 1.98.0
         run: |
           rustup toolchain install 1.98.0 --profile minimal --component clippy

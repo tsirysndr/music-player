@@ -90,16 +90,27 @@ struct Pending {
     album: Option<String>,
 }
 
+/// How long a recorded miss is believed before it is asked about again.
+///
+/// A miss is not as final as it looks. The catalogue answered "no match" for
+/// tracks as mainstream as Charli xcx's *Good Ones* during a long backfill and
+/// returns them immediately when asked again — an empty 200 under load is
+/// indistinguishable from a real absence. Caching that forever left a quarter
+/// of the most-played tracks permanently without artwork, so a miss expires.
+pub const RETRY_MISSES_AFTER_DAYS: i64 = 7;
+
 /// Resolve metadata for listens that have none.
 ///
 /// `limit` caps how many tracks are looked up in one run, so this can be given
-/// a budget rather than being all-or-nothing.
+/// a budget rather than being all-or-nothing. `retry_misses` asks again about
+/// tracks already recorded as having no match, however recently.
 pub async fn enrich(
     analytics: &Analytics,
     limit: u32,
+    retry_misses: bool,
     reporter: &dyn Reporter,
 ) -> Result<EnrichReport> {
-    let pending = pending(analytics, limit)?;
+    let pending = pending(analytics, limit, retry_misses)?;
     if pending.is_empty() {
         reporter.finish("everything already resolved");
         return Ok(EnrichReport::default());
@@ -233,13 +244,33 @@ async fn match_song(
     base: &str,
     pending: &Pending,
 ) -> Result<Option<Match>> {
+    // The album is meant to steer the match toward the right release, and
+    // does when it agrees with the catalogue's spelling. When it does not it
+    // does not merely fail to help — it narrows the search until nothing
+    // matches: `Good Ones` by Charli xcx resolves instantly with no album and
+    // misses with `CRASH`, which is the album we hold for it. Exports are
+    // full of deluxe and regional editions, so the album-qualified answer is
+    // taken when there is one and the question asked again without it when
+    // there is not.
+    let album = pending.album.as_deref().unwrap_or_default();
+    if !album.is_empty() {
+        if let Some(found) = attempt(http, base, &pending.title, &pending.artist, album).await? {
+            return Ok(Some(found));
+        }
+    }
+    attempt(http, base, &pending.title, &pending.artist, "").await
+}
+
+async fn attempt(
+    http: &reqwest::Client,
+    base: &str,
+    title: &str,
+    artist: &str,
+    album: &str,
+) -> Result<Option<Match>> {
     let response = http
         .get(format!("{base}/xrpc/app.rocksky.song.matchSong"))
-        .query(&[
-            ("title", pending.title.as_str()),
-            ("artist", pending.artist.as_str()),
-            ("album", pending.album.as_deref().unwrap_or_default()),
-        ])
+        .query(&[("title", title), ("artist", artist), ("album", album)])
         .send()
         .await
         .with_context(|| format!("could not reach {base}"))?;
@@ -263,13 +294,20 @@ async fn match_song(
 /// Tracks that have been listened to, have no local library row, and have not
 /// been looked up yet — most-played first, so a capped run spends its budget
 /// where it matters.
-fn pending(analytics: &Analytics, limit: u32) -> Result<Vec<Pending>> {
-    let mut statement = analytics.conn().prepare(
+fn pending(analytics: &Analytics, limit: u32, retry_misses: bool) -> Result<Vec<Pending>> {
+    // A track is due when it has never been asked about, or when it was
+    // recorded as a miss long enough ago to be worth asking again.
+    let stale = if retry_misses {
+        "OR NOT m.resolved".to_string()
+    } else {
+        format!("OR (NOT m.resolved AND m.matched_at < now() - INTERVAL {RETRY_MISSES_AFTER_DAYS} DAY)")
+    };
+    let mut statement = analytics.conn().prepare(&format!(
         "SELECT l.match_key, mode(l.title), mode(l.artist), mode(l.album)
          FROM listens l
          LEFT JOIN tracks     t ON t.track_id  = l.track_id
          LEFT JOIN song_match m ON m.match_key = l.match_key
-         WHERE t.track_id IS NULL AND m.match_key IS NULL
+         WHERE t.track_id IS NULL AND (m.match_key IS NULL {stale})
          GROUP BY l.match_key
          -- Internet radio records one row per announced song with an explicit
          -- zero length; station idents and adverts arrive that way and are not
@@ -280,8 +318,8 @@ fn pending(analytics: &Analytics, limit: u32) -> Result<Vec<Pending>> {
          -- stream, not something to resolve.
          HAVING max(coalesce(l.length_ms, -1)) <> 0
          ORDER BY count(*) DESC
-         LIMIT ?",
-    )?;
+         LIMIT ?"
+    ))?;
     let rows = statement.query_map([limit as i64], |row| {
         Ok(Pending {
             match_key: row.get(0)?,
@@ -296,7 +334,7 @@ fn pending(analytics: &Analytics, limit: u32) -> Result<Vec<Pending>> {
 /// The titles [`enrich`] would look up, for the tests.
 #[cfg(test)]
 pub(crate) fn pending_for_test(analytics: &Analytics, limit: u32) -> Result<Vec<String>> {
-    Ok(pending(analytics, limit)?
+    Ok(pending(analytics, limit, false)?
         .into_iter()
         .map(|p| p.title)
         .collect())

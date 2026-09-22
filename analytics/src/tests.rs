@@ -1578,3 +1578,94 @@ fn a_local_cover_wins_over_the_catalogue() {
     .unwrap();
     assert_eq!(top[0].art.as_deref(), Some("local-cover.jpg"));
 }
+
+/// The album steers a match toward the right release, and when it disagrees
+/// with the catalogue's spelling it does not merely fail to help — it narrows
+/// the search until nothing matches. `Good Ones` by Charli xcx resolves with
+/// no album and misses with `CRASH`, the album an export holds for it. So a
+/// miss with an album must be asked again without one.
+#[tokio::test]
+async fn an_album_that_does_not_match_is_dropped_and_retried() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    let seen = Arc::new(AtomicUsize::new(0));
+    let albums = Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+
+    // A catalogue that only answers when no album is given.
+    let (addr, shutdown) = {
+        let seen = Arc::clone(&seen);
+        let albums = Arc::clone(&albums);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (tx, mut rx) = tokio::sync::oneshot::channel::<()>();
+        tokio::spawn(async move {
+            loop {
+                let accept = tokio::select! {
+                    a = listener.accept() => a,
+                    _ = &mut rx => break,
+                };
+                let Ok((mut stream, _)) = accept else { break };
+                let seen = Arc::clone(&seen);
+                let albums = Arc::clone(&albums);
+                tokio::spawn(async move {
+                    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+                    let mut buf = vec![0u8; 4096];
+                    let n = stream.read(&mut buf).await.unwrap_or(0);
+                    let request = String::from_utf8_lossy(&buf[..n]).to_string();
+                    seen.fetch_add(1, Ordering::SeqCst);
+
+                    let album = request
+                        .split("album=")
+                        .nth(1)
+                        .and_then(|rest| rest.split([' ', '&']).next())
+                        .unwrap_or("")
+                        .to_string();
+                    albums.lock().unwrap().push(album.clone());
+
+                    let body = if album.is_empty() {
+                        r#"{"title":"Good Ones","artist":"Charli xcx","albumArt":"https://art/x.jpg"}"#
+                    } else {
+                        "{}"
+                    };
+                    let response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    );
+                    let _ = stream.write_all(response.as_bytes()).await;
+                });
+            }
+        });
+        (addr, tx)
+    };
+
+    std::env::set_var("ROCKSKY_API_URL", format!("http://{addr}"));
+
+    let a = db();
+    a.conn()
+        .execute(
+            "INSERT INTO listens (origin, origin_key, played_at, title, artist, album,
+                                  ms_played, length_ms, source, match_key)
+             VALUES ('spotify', 's1', now(), 'Good Ones', 'Charli xcx', 'CRASH (Deluxe)',
+                     200000, 200000, 'spotify', match_key('Charli xcx', 'Good Ones'))",
+            [],
+        )
+        .unwrap();
+    a.refresh_dedup().unwrap();
+
+    let report = crate::enrich::enrich(&a, 10, false, &crate::progress::Silent)
+        .await
+        .unwrap();
+    let _ = shutdown.send(());
+    std::env::remove_var("ROCKSKY_API_URL");
+
+    assert_eq!(report.resolved, 1, "the retry without an album finds it");
+    let asked = albums.lock().unwrap().clone();
+    assert_eq!(asked.len(), 2, "asked twice: with the album, then without");
+    assert!(!asked[0].is_empty(), "the album is tried first");
+    assert!(asked[1].is_empty(), "then dropped");
+
+    let art: String = scalar(&a, "SELECT album_art FROM song_match");
+    assert_eq!(art, "https://art/x.jpg");
+}

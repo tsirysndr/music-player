@@ -17,6 +17,24 @@ jobs:
           choco install archiver
           choco install nodejs-lts
           refreshenv
+      # No static DuckDB is published for an MSVC target, so Windows links the
+      # shared library instead. Setting these in the environment overrides the
+      # static defaults in .cargo/config.toml, which exist for the platforms
+      # that do have one.
+      - name: Vendor DuckDB (shared)
+        shell: pwsh
+        run: |
+          $version = "1.5.5"
+          $dir = "$env:GITHUB_WORKSPACE\vendor\duckdb\lib"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $url = "https://github.com/duckdb/duckdb/releases/download/v$version/libduckdb-windows-amd64.zip"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\libduckdb.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\libduckdb.zip" -DestinationPath $dir -Force
+          # The .dll has to sit beside the executable at run time as well.
+          echo "DUCKDB_LIB_DIR=$dir" >> $env:GITHUB_ENV
+          echo "DUCKDB_STATIC=0" >> $env:GITHUB_ENV
+          echo "$dir" >> $env:GITHUB_PATH
+
       - name: Build
         run: |
           cd webui\musicplayer
@@ -25,7 +43,8 @@ jobs:
           yarn build
           cd ..\..
           cargo build --release
-          arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe
+          copy "%GITHUB_WORKSPACE%\vendor\duckdb\lib\duckdb.dll" target\release\ 2>nul
+          arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe target\release\duckdb.dll
           checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz" > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
       - name: Releasing assets
         uses: softprops/action-gh-release@v1

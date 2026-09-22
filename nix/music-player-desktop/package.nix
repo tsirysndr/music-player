@@ -7,6 +7,7 @@
   makeWrapper,
   openssl,
   zstd,
+  duckdb,
   alsa-lib,
   freetype,
   fontconfig,
@@ -58,6 +59,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   ];
 
   buildInputs = [
+    duckdb
     openssl
     zstd
     alsa-lib
@@ -66,6 +68,12 @@ rustPlatform.buildRustPackage (finalAttrs: {
   ++ runtimeLibs;
 
   env.ZSTD_SYS_USE_PKG_CONFIG = true;
+  # DuckDB comes from nixpkgs, not from scripts/fetch-duckdb.sh: a nix build
+  # has no network. These override the static defaults in .cargo/config.toml,
+  # which point at a vendor/ directory that only exists after that script runs.
+  env.DUCKDB_LIB_DIR = "${duckdb}/lib";
+  env.DUCKDB_INCLUDE_DIR = "${duckdb}/include";
+  env.DUCKDB_STATIC = "0";
 
   doCheck = false;
 

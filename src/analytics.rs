@@ -271,8 +271,13 @@ async fn cmd_enrich(matches: &ArgMatches) -> CmdResult {
         "resolving metadata for imported tracks via Rocksky".bold()
     );
     let bars = Bars::new();
-    let report =
-        music_player_analytics::enrich::enrich(&analytics, limit(matches, 2_000), &bars).await?;
+    let report = music_player_analytics::enrich::enrich(
+        &analytics,
+        limit(matches, 2_000),
+        matches.get_flag("retry-misses"),
+        &bars,
+    )
+    .await?;
     if report.attempted == 0 {
         return Ok(());
     }

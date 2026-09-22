@@ -312,6 +312,17 @@ A simple music player written in Rust — single binary, zero dependency"#,
                             Arg::new("limit")
                                 .long("limit")
                                 .help("Tracks to resolve [default: 2000]"),
+                        )
+                        .arg(
+                            Arg::new("retry-misses")
+                                .long("retry-misses")
+                                .help(
+                                    "Ask again about tracks recorded as having no match. \
+                                     A busy catalogue answers \"no match\" for tracks it \
+                                     does have; those answers are otherwise believed for \
+                                     a week",
+                                )
+                                .action(clap::ArgAction::SetTrue),
                         ),
                 )
                 .subcommand(

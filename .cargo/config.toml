@@ -14,6 +14,12 @@
 # release. The path carries no platform or version, because this file cannot
 # interpolate either; the build script keeps a stamp inside the directory and
 # re-extracts when the target or the DuckDB version changes.
+# These are defaults, not mandates: `[env]` without `force = true` yields to a
+# variable already set in the environment. That is what lets a build with no
+# network — the nix derivations, and the Windows release, neither of which has
+# a static DuckDB to vendor — point at their own copy instead:
+#
+#   DUCKDB_LIB_DIR=/nix/store/…/lib DUCKDB_STATIC=0 cargo build
 [env]
 DUCKDB_STATIC = "1"
 DUCKDB_LIB_DIR = { value = "vendor/duckdb/lib", relative = true }

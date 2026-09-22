@@ -208,7 +208,7 @@ fn uncached(analytics: &Analytics, artists: &[String]) -> Result<Vec<Pending>> {
          FROM listens l
          JOIN song_match m ON m.match_key = l.match_key
          WHERE m.artist_picture IS NOT NULL
-           AND primary_artist(l.artist) NOT IN (SELECT artist_key FROM artist_art)
+           AND primary_artist(l.artist) NOT IN (SELECT artist_key FROM artist_art WHERE resolved)
          GROUP BY primary_artist(l.artist)",
     )?;
 
@@ -222,6 +222,7 @@ fn uncached(analytics: &Analytics, artists: &[String]) -> Result<Vec<Pending>> {
     // their most-played tracks, most-played first, because a well-known track
     // is likelier to be in the catalogue with a picture attached.
     const CANDIDATES: usize = 3;
+    let retry_days = crate::enrich::RETRY_MISSES_AFTER_DAYS;
     let mut statement = analytics.conn().prepare(&format!(
         "WITH ranked AS (
            SELECT primary_artist(artist) AS artist_key,
@@ -232,7 +233,13 @@ fn uncached(analytics: &Analytics, artists: &[String]) -> Result<Vec<Pending>> {
                                      ORDER BY count(*) DESC) AS rank
            FROM enriched_listens
            WHERE artist IN ({list})
-             AND primary_artist(artist) NOT IN (SELECT artist_key FROM artist_art)
+             AND primary_artist(artist) NOT IN (
+                 SELECT artist_key FROM artist_art
+                 -- A recorded miss expires, for the same reason it does in
+                 -- enrichment: an empty answer under load is not an absence.
+                 WHERE resolved
+                    OR matched_at >= now() - INTERVAL {retry_days} DAY
+               )
            GROUP BY artist_key, artist, title
          )
          SELECT artist_key,

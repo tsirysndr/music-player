@@ -1,4 +1,9 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Without this Cargo caches the build script's output and a `.proto` edit
+    // never regenerates `src/api` — the change compiles against last build's
+    // bindings and fails with "no such message", pointing nowhere useful.
+    println!("cargo:rerun-if-changed=proto");
+
     tonic_prost_build::configure()
         .out_dir("src/api")
         .compile_protos(
@@ -12,6 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "proto/objects/v1alpha1/tracklist.proto",
                 "proto/music/v1alpha1/addons.proto",
                 "proto/music/v1alpha1/analysis.proto",
+                "proto/music/v1alpha1/analytics.proto",
                 "proto/music/v1alpha1/core.proto",
                 "proto/music/v1alpha1/history.proto",
                 "proto/music/v1alpha1/library.proto",

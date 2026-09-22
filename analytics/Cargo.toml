@@ -1,0 +1,39 @@
+[package]
+name = "music-player-analytics"
+version = "0.4.4"
+edition = "2021"
+repository = "https://github.com/tsirysndr/music-player"
+license = "MIT"
+authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
+description = "The listening-analytics engine of music player: a DuckDB lens over the listen log and imported history"
+
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.4.4"
+
+[dependencies.music-player-storage]
+path = "../storage"
+version = "0.4.4"
+
+[dependencies]
+# Linked against the prebuilt static libduckdb from the upstream GitHub
+# release (see build.rs) rather than `bundled`, which compiles the whole C++
+# amalgamation on every clean build.
+duckdb = "1.10505"
+anyhow = "1.0.68"
+chrono = "0.4.23"
+dirs = "4.0.0"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.85"
+sea-orm = { version = "2.0.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+tokio = { version = "1.22.0", features = ["macros", "time", "sync", "rt"] }
+tracing = "0.1"
+
+[dev-dependencies.music-player-migration]
+path = "../migration"
+version = "0.4.4"
+
+[dev-dependencies]
+tempfile = "3.3.0"
+tokio = { version = "1.22.0", features = ["macros", "rt-multi-thread"] }

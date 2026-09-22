@@ -39,7 +39,7 @@ const MAX_LIMIT: i32 = 100;
 
 /// The tool descriptors, verbatim as `tools/list` returns them.
 pub fn catalogue() -> Value {
-    json!([
+    let mut catalogue = json!([
         tool(
             "now_playing",
             "What is playing right now: track, position, whether it is paused, \
@@ -298,7 +298,14 @@ pub fn catalogue() -> Value {
                 "required": ["server_id"],
             }),
         ),
-    ])
+    ]);
+    // Appended rather than written inline: these read the analytics database
+    // directly and have nothing to do with the daemon, so they keep their own
+    // module.
+    if let Some(list) = catalogue.as_array_mut() {
+        list.extend(crate::listening::tools());
+    }
+    catalogue
 }
 
 fn tool(name: &str, description: &str, schema: Value) -> Value {
@@ -373,6 +380,9 @@ async fn run(session: &mut Session, name: &str, args: &Value) -> Result<Value, E
         "auto_dj" => auto_dj(session, args).await,
         "list_servers" => list_servers(session).await,
         "connect_server" => connect_server(session, args).await,
+        listening if crate::listening::names().contains(&listening) => {
+            crate::listening::call(listening, args).await
+        }
         _ => Err(Error::msg(format!("unknown tool: {name}"))),
     }
 }

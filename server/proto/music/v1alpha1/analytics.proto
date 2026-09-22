@@ -1,0 +1,205 @@
+syntax = "proto3";
+
+package music.v1alpha1;
+
+// Listening analytics over the deduplicated history — the player's own listen
+// log plus any imported Spotify, Last.fm or Rocksky history.
+//
+// Read-only. Importing is a command-line operation (`music-player analytics
+// import`), not something a client should be able to trigger remotely: it
+// reads arbitrary paths on the daemon's filesystem and can take minutes.
+
+// Which listens a question is about.
+//
+// `since`/`until` unset means all of recorded history, which may span years
+// once an export has been imported.
+message Scope {
+  // Unix seconds, inclusive.
+  optional int64 since = 1;
+  // Unix seconds, exclusive.
+  optional int64 until = 2;
+  // Count only tracks the local library has. Matched on title+artist, so a
+  // play imported from Spotify still counts when the same track is in the
+  // library — the question is "my history, for music I own", not "plays that
+  // went through this player".
+  bool local_only = 3;
+}
+
+message GetOverviewRequest {
+  Scope scope = 1;
+}
+
+message GetOverviewResponse {
+  int64 listens = 1;
+  int64 distinct_tracks = 2;
+  int64 distinct_artists = 3;
+  int64 distinct_albums = 4;
+  // A floor, not an estimate: sources that record no duration (a bare
+  // scrobble) contribute nothing.
+  double hours_played = 5;
+  int64 sessions = 6;
+  string first_listen = 7;
+  string last_listen = 8;
+  int64 active_days = 9;
+  int64 longest_streak = 10;
+  repeated Source sources = 11;
+}
+
+// Where the history came from, and how much of it survived deduplication.
+message Source {
+  string origin = 1;
+  int64 raw = 2;
+  int64 canonical = 3;
+  string first = 4;
+  string last = 5;
+}
+
+enum TopKind {
+  TOP_KIND_UNSPECIFIED = 0;
+  TOP_KIND_ARTISTS = 1;
+  TOP_KIND_TRACKS = 2;
+  TOP_KIND_ALBUMS = 3;
+  TOP_KIND_GENRES = 4;
+}
+
+message GetTopRequest {
+  TopKind kind = 1;
+  Scope scope = 2;
+  uint32 limit = 3;
+}
+
+message Rank {
+  string name = 1;
+  // The artist, for a track or album row; empty otherwise.
+  string secondary = 2;
+  int64 listens = 3;
+  double hours = 4;
+  string last_played = 5;
+}
+
+message GetTopResponse {
+  repeated Rank ranks = 1;
+}
+
+message GetClockRequest {
+  Scope scope = 1;
+}
+
+message ClockCell {
+  // 0 = Sunday.
+  int32 weekday = 1;
+  int32 hour = 2;
+  int64 listens = 3;
+  optional double avg_bpm = 4;
+  optional double avg_valence = 5;
+}
+
+message GetClockResponse {
+  repeated ClockCell cells = 1;
+}
+
+message GetSessionsRequest {
+  Scope scope = 1;
+  uint32 limit = 2;
+}
+
+message GetSessionsResponse {
+  int64 sessions = 1;
+  double avg_tracks = 2;
+  double median_minutes = 3;
+  double longest_minutes = 4;
+  // Tracks that most often open a session.
+  repeated Rank openers = 5;
+}
+
+message GetSkipsRequest {
+  Scope scope = 1;
+  uint32 limit = 2;
+  int64 min_listens = 3;
+}
+
+message SkipRow {
+  string name = 1;
+  string secondary = 2;
+  int64 listens = 3;
+  int64 skips = 4;
+  double skip_rate = 5;
+  // Median fraction of the track heard before moving on.
+  optional double median_completion = 6;
+}
+
+message GetSkipsResponse {
+  repeated SkipRow rows = 1;
+}
+
+message GetDriftRequest {
+  Scope scope = 1;
+  // day, week, month, quarter or year.
+  string bucket = 2;
+}
+
+message DriftPoint {
+  string bucket = 1;
+  int64 listens = 2;
+  optional double avg_bpm = 3;
+  optional double avg_valence = 4;
+  optional double avg_arousal = 5;
+  optional double median_year = 6;
+  double discovery_rate = 7;
+}
+
+message GetDriftResponse {
+  repeated DriftPoint points = 1;
+}
+
+message GetTransitionsRequest {
+  Scope scope = 1;
+  uint32 limit = 2;
+}
+
+message Transition {
+  string from_title = 1;
+  string from_artist = 2;
+  string to_title = 3;
+  string to_artist = 4;
+  int64 times = 5;
+}
+
+message GetTransitionsResponse {
+  repeated Transition transitions = 1;
+}
+
+message GetRotationRequest {
+  Scope scope = 1;
+  uint32 limit = 2;
+}
+
+message GetRotationResponse {
+  double top_1_percent_share = 1;
+  double top_10_percent_share = 2;
+  double gini = 3;
+  int64 library_tracks = 4;
+  int64 library_played = 5;
+  repeated Rank rediscover = 6;
+}
+
+message SyncRequest {}
+
+message SyncResponse {
+  uint64 listens = 1;
+  uint64 tracks = 2;
+}
+
+service AnalyticsService {
+  rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse) {}
+  rpc GetTop(GetTopRequest) returns (GetTopResponse) {}
+  rpc GetClock(GetClockRequest) returns (GetClockResponse) {}
+  rpc GetSessions(GetSessionsRequest) returns (GetSessionsResponse) {}
+  rpc GetSkips(GetSkipsRequest) returns (GetSkipsResponse) {}
+  rpc GetDrift(GetDriftRequest) returns (GetDriftResponse) {}
+  rpc GetTransitions(GetTransitionsRequest) returns (GetTransitionsResponse) {}
+  rpc GetRotation(GetRotationRequest) returns (GetRotationResponse) {}
+  // Mirror anything the player has recorded since the last call. Safe to call
+  // often — it is incremental and does nothing when there is nothing new.
+  rpc Sync(SyncRequest) returns (SyncResponse) {}
+}

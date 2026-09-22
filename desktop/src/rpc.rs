@@ -64,6 +64,9 @@ pub enum Cmd {
     LoadMostPlayed,
     /// Refresh the Statistics tab.
     LoadStats,
+    /// Flip the listening-history panel between the whole history and only
+    /// what the local library has, and redraw it.
+    SetHistoryLocalOnly(bool),
     SetMute(bool),
     PlayAlbum(String),
     PlayAlbumAt(String, i32),
@@ -370,6 +373,11 @@ struct FullTrack {
 
 #[derive(Default)]
 struct WorkerState {
+    /// Whether the listening-history panel is restricted to the local
+    /// library. Held here rather than read back off the UI because the
+    /// worker refreshes the panel from several places — a server switch, a
+    /// scan — that have no business touching Slint properties.
+    history_local_only: bool,
     tracks: Vec<FullTrack>,
     liked: HashSet<String>,
     /// The same ids as `liked`, most recently liked first. This order is what
@@ -2035,6 +2043,10 @@ pub struct StatRowData {
     pub track_id: String,
     pub title: String,
     pub artist: String,
+    /// Artwork to fetch for this row: a bare filename for the daemon's cover
+    /// server, or an absolute URL from the catalogue. `None` draws the
+    /// placeholder.
+    pub art: Option<String>,
     /// play count / skip count / seconds heard, depending on the view.
     pub count: i64,
     /// Unix seconds (last played / last skipped / played_at), when present.
@@ -2083,6 +2095,13 @@ where
                 artist: r.try_get_by_index::<String>(2).ok()?,
                 count: r.try_get_by_index::<i64>(3).unwrap_or(0),
                 at: r.try_get_by_index::<Option<i64>>(4).ok().flatten(),
+                // Optional sixth column: queries that can supply a cover do,
+                // the rest leave the row on its placeholder.
+                art: r
+                    .try_get_by_index::<Option<String>>(5)
+                    .ok()
+                    .flatten()
+                    .filter(|c| !c.trim().is_empty()),
             })
         })
         .collect()
@@ -2205,18 +2224,57 @@ async fn refresh_analytics(weak: &Weak<AppWindow>, state: &Arc<Mutex<WorkerState
     if source != "local" {
         adopt_unknown_rows(&source, state).await;
     }
-    let most_played = analytics_rows(
-        "SELECT track_id, title, artist, play_count, last_played \
-         FROM v_most_played WHERE source = ? LIMIT 200",
+    let mut most_played = analytics_rows(
+        "SELECT v.track_id, v.title, v.artist, v.play_count, v.last_played, al.cover \
+         FROM v_most_played v \
+         LEFT JOIN track t ON t.id = v.track_id \
+         LEFT JOIN album al ON al.id = t.album_id \
+         WHERE v.source = ? \
+         ORDER BY v.play_count DESC, v.last_played DESC \
+         LIMIT 200",
         [source.as_str().into()],
     )
     .await;
-    let data = load_stats(&source, state).await;
+    fill_missing_art(&mut most_played);
+    let mut data = load_stats(&source, state).await;
+    // The lists above come from SQLite and only know local covers; the
+    // catalogue has resolved artwork for much of the rest.
+    fill_missing_art(&mut data.most_skipped);
+    fill_missing_art(&mut data.recently_played);
+    // Independent of the source: the imported history spans every source
+    // there has ever been, so a server switch does not change it.
+    let local_only = state.lock().await.history_local_only;
+    let history = load_history(local_only).await;
+
+    // The artwork each list wants, captured before the data moves into the
+    // UI closure — the models are built there and the fetches keyed by index.
+    let most_played_art = art_of(&most_played);
+    let skipped_art = art_of(&data.most_skipped);
+    let recent_art = art_of(&data.recently_played);
+    let history_track_art = art_of(&history.top_tracks);
+    let artist_art: Vec<Option<String>> =
+        history.artist_bars.iter().map(|b| b.art.clone()).collect();
+
     let _ = weak.upgrade_in_event_loop(move |app| {
         app.set_stats_source(label.into());
         crate::ui_set_most_played(&app, most_played);
         crate::ui_set_stats(&app, data);
+        crate::ui_set_history(&app, history);
     });
+
+    // Fetched after the lists are on screen: a row draws its placeholder
+    // immediately and fills in as each thumbnail lands, rather than the whole
+    // screen waiting on the slowest image.
+    let covers_base = endpoints().covers;
+    fetch_stat_art(
+        weak.clone(),
+        covers_base,
+        most_played_art,
+        skipped_art,
+        recent_art,
+        history_track_art,
+        artist_art,
+    );
 }
 
 async fn load_stats(source: &str, state: &Arc<Mutex<WorkerState>>) -> StatsData {
@@ -2234,8 +2292,13 @@ async fn load_stats(source: &str, state: &Arc<Mutex<WorkerState>>) -> StatsData 
         .await,
         never_played_count: 0,
         most_skipped: analytics_rows(
-            "SELECT track_id, title, artist, skip_count, last_skipped \
-             FROM v_most_skipped WHERE source = ? LIMIT 20",
+            "SELECT v.track_id, v.title, v.artist, v.skip_count, v.last_skipped, al.cover \
+             FROM v_most_skipped v \
+             LEFT JOIN track t ON t.id = v.track_id \
+             LEFT JOIN album al ON al.id = t.album_id \
+             WHERE v.source = ? \
+             ORDER BY v.skip_count DESC, v.last_skipped DESC \
+             LIMIT 20",
             [source.into()],
         )
         .await,
@@ -2243,8 +2306,12 @@ async fn load_stats(source: &str, state: &Arc<Mutex<WorkerState>>) -> StatsData 
             // One row per track — the latest listen. Restarting a track a few
             // times writes several history rows, and a screen repeating the
             // same title reads as a bug, not a log.
-            "SELECT track_id, title, artist, ms_played / 1000, MAX(played_at) AS played_at \
-             FROM v_recently_played WHERE source = ? GROUP BY track_id \
+            "SELECT v.track_id, v.title, v.artist, v.ms_played / 1000, \
+                    MAX(v.played_at) AS played_at, MAX(al.cover) \
+             FROM v_recently_played v \
+             LEFT JOIN track t ON t.id = v.track_id \
+             LEFT JOIN album al ON al.id = t.album_id \
+             WHERE v.source = ? GROUP BY v.track_id \
              ORDER BY played_at DESC LIMIT 50",
             [source.into()],
         )
@@ -2257,8 +2324,12 @@ async fn load_stats(source: &str, state: &Arc<Mutex<WorkerState>>) -> StatsData 
         data.never_played_count =
             analytics_count("SELECT COUNT(*) FROM v_never_played", std::iter::empty()).await;
         data.never_played = analytics_rows(
-            "SELECT track_id, title, artist, 0, NULL \
-             FROM v_never_played LIMIT 20",
+            "SELECT v.track_id, v.title, v.artist, 0, NULL, al.cover \
+             FROM v_never_played v \
+             LEFT JOIN track t ON t.id = v.track_id \
+             LEFT JOIN album al ON al.id = t.album_id \
+             ORDER BY v.created_at DESC \
+             LIMIT 20",
             std::iter::empty(),
         )
         .await;
@@ -2290,6 +2361,10 @@ async fn load_stats(source: &str, state: &Arc<Mutex<WorkerState>>) -> StatsData 
             artist: track.artist.clone(),
             count: 0,
             at: None,
+            // The cached remote track keeps no cover filename — only the
+            // decoded image, which lives on the UI thread. This list is the
+            // never-played one; a placeholder is an honest answer for it.
+            art: None,
         })
         .collect();
     data.never_played_count = never.len() as i64;
@@ -2889,6 +2964,16 @@ async fn cmd_loop(
                 // the two must never disagree about which source they show.
                 Cmd::LoadMostPlayed | Cmd::LoadStats => {
                     refresh_analytics(&weak, &state).await;
+                }
+                Cmd::SetHistoryLocalOnly(local_only) => {
+                    state.lock().await.history_local_only = local_only;
+                    // Only the history panel changes; the counters above it
+                    // are about the connected library and are unaffected.
+                    let history = load_history(local_only).await;
+                    let _ = weak.upgrade_in_event_loop(move |app| {
+                        app.set_history_local_only(local_only);
+                        crate::ui_set_history(&app, history);
+                    });
                 }
                 Cmd::DiscoverServers => {
                     let weak2 = weak.clone();
@@ -3514,6 +3599,78 @@ fn resample_waveform(stored: &[u8], count: usize) -> Vec<f32> {
 mod tests {
     use super::*;
 
+    /// Build a drift point with only the fields `fill_gaps` reads.
+    fn point(bucket: &str, listens: i64) -> music_player_analytics::query::DriftPoint {
+        music_player_analytics::query::DriftPoint {
+            bucket: bucket.to_string(),
+            listens,
+            avg_bpm: None,
+            avg_valence: None,
+            avg_arousal: None,
+            median_year: None,
+            discovery_rate: 0.0,
+        }
+    }
+
+    /// A year with no listening is data, and the gap is the point. Plotting
+    /// only the periods that have rows puts 2017 next to 2021 and calls the
+    /// result a time axis.
+    #[test]
+    fn silent_periods_are_drawn() {
+        let points = [point("2017-01-01", 400), point("2021-01-01", 1200)];
+        let filled = fill_gaps(&points, "year");
+        assert_eq!(filled.len(), 5, "2017 through 2021 inclusive");
+        assert_eq!(filled[0], ("2017".into(), 400));
+        assert_eq!(filled[1], ("2018".into(), 0), "a silent year is a zero bar");
+        assert_eq!(filled[4], ("2021".into(), 1200));
+    }
+
+    /// Stepping months must roll the year over, and land on the right ones.
+    #[test]
+    fn month_stepping_rolls_over_the_year() {
+        let points = [point("2025-11-01", 10), point("2026-02-01", 20)];
+        let filled = fill_gaps(&points, "month");
+        let labels: Vec<&str> = filled.iter().map(|(l, _)| l.as_str()).collect();
+        assert_eq!(labels, ["2025-11", "2025-12", "2026-01", "2026-02"]);
+        assert_eq!(filled[0].1, 10);
+        assert_eq!(filled[1].1, 0);
+        assert_eq!(filled[3].1, 20);
+    }
+
+    #[test]
+    fn quarter_stepping_advances_three_months() {
+        let points = [point("2025-01-01", 5), point("2025-10-01", 7)];
+        let filled = fill_gaps(&points, "quarter");
+        let labels: Vec<&str> = filled.iter().map(|(l, _)| l.as_str()).collect();
+        assert_eq!(labels, ["2025-01", "2025-04", "2025-07", "2025-10"]);
+        assert_eq!(filled[1].1, 0);
+    }
+
+    /// A single period is a valid series of one, not an empty chart.
+    #[test]
+    fn a_single_period_survives() {
+        let filled = fill_gaps(&[point("2026-03-01", 42)], "month");
+        assert_eq!(filled, vec![("2026-03".to_string(), 42)]);
+    }
+
+    /// Malformed buckets must not hang the UI thread or panic it.
+    #[test]
+    fn malformed_buckets_are_survivable() {
+        assert!(fill_gaps(&[point("not-a-date", 1)], "month").is_empty());
+        assert!(fill_gaps(&[], "month").is_empty());
+    }
+
+    /// Thousands separators, at the boundaries that usually break them.
+    #[test]
+    fn thousands_groups_correctly() {
+        assert_eq!(thousands(0), "0");
+        assert_eq!(thousands(999), "999");
+        assert_eq!(thousands(1_000), "1,000");
+        assert_eq!(thousands(68_659), "68,659");
+        assert_eq!(thousands(1_234_567), "1,234,567");
+        assert_eq!(thousands(-4_500), "-4,500");
+    }
+
     /// Spreading 16 measured bands over 96 bars must keep the spectrum's
     /// shape — a low-heavy input stays low-heavy — and every bar drawable.
     #[test]
@@ -3682,5 +3839,659 @@ mod tests {
         let (w, h, rgba) = thumb.expect("cover fetch/decode returned None");
         assert!(w > 0 && h > 0, "decoded a {w}x{h} thumbnail");
         assert_eq!(rgba.len(), (w * h * 4) as usize);
+    }
+}
+
+// ── Listening history (DuckDB analytics) ────────────────────────────────────
+
+/// One cell of the listening-clock heatmap.
+#[derive(Clone, Copy, Debug)]
+pub struct HeatCellData {
+    pub weekday: i32,
+    pub hour: i32,
+    /// 0..1 against the busiest hour.
+    pub level: f32,
+    pub listens: i32,
+}
+
+/// One bar of a chart.
+#[derive(Clone, Debug)]
+pub struct ChartBarData {
+    pub label: String,
+    /// Artist picture, as in [`StatRowData::art`].
+    pub art: Option<String>,
+    pub norm: f32,
+    pub value: String,
+    pub show_label: bool,
+}
+
+/// The whole imported listening history, as the Statistics tab shows it.
+///
+/// Distinct from [`StatsData`], which is about the library or server connected
+/// right now. This spans every source that has been imported and is
+/// deduplicated across them, so the two sets of numbers do not add up to each
+/// other and are presented apart.
+#[derive(Clone, Debug, Default)]
+pub struct HistoryData {
+    pub available: bool,
+    /// Whether these figures are restricted to the local library.
+    pub local_only: bool,
+    pub listens: i64,
+    pub hours: f64,
+    pub artists: i64,
+    pub tracks: i64,
+    pub sessions: i64,
+    pub streak: i64,
+    pub span: String,
+    pub sources: String,
+    pub clock: Vec<HeatCellData>,
+    pub clock_peak: i32,
+    pub timeline: Vec<ChartBarData>,
+    pub artist_bars: Vec<ChartBarData>,
+    pub top_tracks: Vec<StatRowData>,
+}
+
+/// Read the analytics database.
+///
+/// Read-only, and on a blocking thread: DuckDB is synchronous, its connection
+/// is not `Send` across an await, and a decade of imported history is enough
+/// work that running it on the UI worker's executor would be felt.
+///
+/// Every failure is the same answer — `available: false`, which hides the
+/// section. There is nothing actionable to show a user who has never run an
+/// import, and a half-drawn panel of zeroes reads as breakage.
+pub async fn load_history(local_only: bool) -> HistoryData {
+    // Artist pictures first, resolved from the Rocksky catalogue and cached.
+    // Does nothing once every artist on the leaderboard is known.
+    //
+    // Split into three because a DuckDB connection is not `Sync` and this
+    // runs inside a spawned task: the database work happens on blocking
+    // threads either side, and only the HTTP part is awaited here.
+    resolve_artist_pictures(local_only).await;
+
+    tokio::task::spawn_blocking(move || read_history(local_only))
+        .await
+        .unwrap_or_default()
+}
+
+/// Make sure the artists the leaderboard is about to show have a picture.
+///
+/// Every failure is silent: the database being briefly held by an import is a
+/// normal thing, and the cost is placeholder portraits for one repaint.
+async fn resolve_artist_pictures(local_only: bool) {
+    use music_player_analytics::artwork;
+
+    let pending = tokio::task::spawn_blocking(move || {
+        use music_player_analytics::query::{self, Scope, TopKind, Window};
+        use music_player_analytics::Analytics;
+
+        let analytics = Analytics::open_default().ok()?;
+        let scope = Scope {
+            window: Window::all(),
+            local_only,
+        };
+        let artists = query::top(&analytics, TopKind::Artists, scope, 10).ok()?;
+        let names: Vec<String> = artists
+            .iter()
+            .filter(|a| a.art.is_none())
+            .map(|a| a.name.clone())
+            .collect();
+        artwork::pending_artists(&analytics, &names).ok()
+    })
+    .await
+    .ok()
+    .flatten()
+    .unwrap_or_default();
+
+    if pending.is_empty() {
+        return;
+    }
+
+    let found = artwork::fetch_pictures(pending).await;
+    if found.is_empty() {
+        return;
+    }
+    let _ = tokio::task::spawn_blocking(move || {
+        use music_player_analytics::Analytics;
+        if let Ok(analytics) = Analytics::open_default() {
+            match artwork::store_pictures(&analytics, &found) {
+                Ok(n) => tracing::debug!(resolved = n, "artist pictures"),
+                Err(e) => tracing::debug!("could not store artist pictures: {e}"),
+            }
+        }
+    })
+    .await;
+}
+
+fn read_history(local_only: bool) -> HistoryData {
+    use music_player_analytics::query::{self, Scope, TopKind, Window};
+    use music_player_analytics::Analytics;
+
+    let Ok(analytics) = Analytics::open_default_read_only() else {
+        // Not an error worth logging at warn: no analytics database is the
+        // normal state until someone imports a history.
+        tracing::debug!("no analytics database; the listening history panel stays hidden");
+        return HistoryData::default();
+    };
+
+    let scope = Scope {
+        window: Window::all(),
+        local_only,
+    };
+    let overview = match query::overview(&analytics, scope) {
+        Ok(overview) if overview.listens > 0 => overview,
+        Ok(_) => return HistoryData::default(),
+        Err(e) => {
+            tracing::warn!("listening history unavailable: {e}");
+            return HistoryData::default();
+        }
+    };
+
+    let mut data = HistoryData {
+        available: true,
+        listens: overview.listens,
+        hours: overview.hours_played,
+        artists: overview.distinct_artists,
+        tracks: overview.distinct_tracks,
+        sessions: overview.sessions,
+        streak: overview.longest_streak,
+        span: match (&overview.first_listen, &overview.last_listen) {
+            (Some(first), Some(last)) => format!("{} — {}", day(first), day(last)),
+            _ => String::new(),
+        },
+        local_only,
+        ..Default::default()
+    };
+
+    if let Ok(origins) = query::origins(&analytics) {
+        // Named because the headline figure is otherwise unattributable: a
+        // user seeing 68,000 listens needs to know which of them came from an
+        // export rather than from this player.
+        data.sources = origins
+            .iter()
+            .map(|o| format!("{} {}", thousands(o.canonical), o.origin))
+            .collect::<Vec<_>>()
+            .join(" · ");
+    }
+
+    if let Ok(cells) = query::clock(&analytics, scope) {
+        let peak = cells.iter().map(|c| c.listens).max().unwrap_or(0).max(1);
+        data.clock_peak = peak as i32;
+        // Every hour of the week gets a tile, present in the data or not, so
+        // the grid reads as a week rather than as scattered marks.
+        data.clock = (0..7)
+            .flat_map(|weekday| {
+                let cells = &cells;
+                (0..24).map(move |hour| {
+                    let listens = cells
+                        .iter()
+                        .find(|c| c.weekday == weekday && c.hour == hour)
+                        .map(|c| c.listens)
+                        .unwrap_or(0);
+                    HeatCellData {
+                        weekday,
+                        hour,
+                        level: (listens as f64 / peak as f64) as f32,
+                        listens: listens as i32,
+                    }
+                })
+            })
+            .collect();
+    }
+
+    data.timeline = timeline(&analytics, scope);
+
+    if let Ok(artists) = query::top(&analytics, TopKind::Artists, scope, 10) {
+        let peak = artists.iter().map(|a| a.listens).max().unwrap_or(0).max(1);
+        data.artist_bars = artists
+            .iter()
+            .map(|a| ChartBarData {
+                label: a.name.clone(),
+                norm: (a.listens as f64 / peak as f64) as f32,
+                value: thousands(a.listens),
+                show_label: true,
+                art: a.art.clone(),
+            })
+            .collect();
+    }
+
+    data.top_tracks = top_tracks(&analytics, local_only);
+
+    data
+}
+
+/// The most-played tracks of all time, carrying a local track id where the
+/// library happens to have the track.
+///
+/// Not [`query::top`], which returns names only. Most of these rows come from
+/// an imported history and have nothing to play, but the ones that are also
+/// in the library should be playable from here — a row that offers a pointer
+/// and then does nothing is worse than a row that never offered.
+fn top_tracks(analytics: &music_player_analytics::Analytics, local_only: bool) -> Vec<StatRowData> {
+    // An INNER join when restricted: a row with no local track is exactly
+    // what "in my library only" excludes.
+    let join = if local_only { "JOIN" } else { "LEFT JOIN" };
+    let mut statement = match analytics.conn().prepare(&format!(
+        "SELECT coalesce(max(t.track_id), '') AS track_id,
+                mode(l.title)  AS title,
+                mode(l.artist) AS artist,
+                count(*)       AS listens,
+                any_value(l.cover) AS art
+         FROM enriched_listens l
+         {join} tracks t ON t.match_key = l.match_key
+         GROUP BY l.match_key
+         ORDER BY listens DESC
+         LIMIT 20"
+    )) {
+        Ok(statement) => statement,
+        Err(e) => {
+            tracing::warn!("all-time tracks unavailable: {e}");
+            return Vec::new();
+        }
+    };
+
+    let rows = statement.query_map([], |row| {
+        Ok(StatRowData {
+            track_id: row.get::<_, String>(0)?,
+            title: row.get::<_, String>(1)?,
+            artist: row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+            count: row.get::<_, i64>(3)?,
+            at: None,
+            art: row.get::<_, Option<String>>(4)?,
+        })
+    });
+    match rows {
+        Ok(rows) => rows.filter_map(Result::ok).collect(),
+        Err(e) => {
+            tracing::warn!("all-time tracks unavailable: {e}");
+            Vec::new()
+        }
+    }
+}
+
+/// Listens per period, as bars.
+///
+/// Two things this has to get right that a plain `GROUP BY` does not:
+///
+/// * **Bucket size follows the range.** Months over a decade is a hundred-odd
+///   bars, which at panel width is a smear; years over one is a sparse row of
+///   eight. The bucket is widened until the count is legible.
+/// * **Silent periods are drawn.** `drift` returns only periods that have
+///   listens, so plotting it directly puts 2017 next to 2021 and calls it a
+///   time axis. A year of not listening is data — the gap is the point.
+fn timeline(
+    analytics: &music_player_analytics::Analytics,
+    scope: music_player_analytics::query::Scope,
+) -> Vec<ChartBarData> {
+    use music_player_analytics::query;
+
+    /// Beyond this the bars are too thin to read or hover.
+    const MAX_BARS: usize = 64;
+
+    let mut filled = Vec::new();
+    for bucket in ["month", "quarter", "year"] {
+        let Ok(points) = query::drift(analytics, scope, bucket) else {
+            return Vec::new();
+        };
+        if points.is_empty() {
+            return Vec::new();
+        }
+        filled = fill_gaps(&points, bucket);
+        if filled.len() <= MAX_BARS {
+            break;
+        }
+    }
+    if filled.is_empty() {
+        return Vec::new();
+    }
+
+    let peak = filled.iter().map(|(_, n)| *n).max().unwrap_or(0).max(1);
+    let count = filled.len();
+    // A label under every bar is unreadable; roughly eight across the axis is
+    // legible whatever the range.
+    let every = (count / 8).max(1);
+    filled
+        .iter()
+        .enumerate()
+        .map(|(i, (label, listens))| ChartBarData {
+            // A period has no portrait.
+            art: None,
+            label: label.clone(),
+            norm: (*listens as f64 / peak as f64) as f32,
+            value: format!("{} plays", thousands(*listens)),
+            show_label: i % every == 0 || i + 1 == count,
+        })
+        .collect()
+}
+
+/// Expand a sparse series into every period between its first and last,
+/// inserting zeroes for the ones with no listening.
+///
+/// Buckets arrive as `YYYY-MM-DD` (the truncated period start), so stepping
+/// is month arithmetic; no date library is needed and none of this depends on
+/// the local timezone.
+fn fill_gaps(
+    points: &[music_player_analytics::query::DriftPoint],
+    bucket: &str,
+) -> Vec<(String, i64)> {
+    let step_months = match bucket {
+        "month" => 1,
+        "quarter" => 3,
+        _ => 12,
+    };
+
+    let parse = |b: &str| -> Option<(i32, u32)> {
+        let mut parts = b.split('-');
+        let year: i32 = parts.next()?.parse().ok()?;
+        let month: u32 = parts.next()?.parse().ok()?;
+        Some((year, month))
+    };
+
+    let Some(first) = points.first().and_then(|p| parse(&p.bucket)) else {
+        return Vec::new();
+    };
+    let Some(last) = points.last().and_then(|p| parse(&p.bucket)) else {
+        return Vec::new();
+    };
+
+    let label_of = |year: i32, month: u32| match bucket {
+        "year" => format!("{year}"),
+        _ => format!("{year}-{month:02}"),
+    };
+
+    let mut out = Vec::new();
+    let (mut year, mut month) = first;
+    // Bounded by construction — the loop always advances by at least a month
+    // — but capped anyway so a malformed bucket cannot hang the UI thread.
+    for _ in 0..4096 {
+        if (year, month) > last {
+            break;
+        }
+        let key = format!("{year:04}-{month:02}");
+        let listens = points
+            .iter()
+            .find(|p| p.bucket.starts_with(&key))
+            .map(|p| p.listens)
+            .unwrap_or(0);
+        out.push((label_of(year, month), listens));
+
+        month += step_months;
+        while month > 12 {
+            month -= 12;
+            year += 1;
+        }
+    }
+    out
+}
+
+fn non_empty(value: String) -> Option<String> {
+    let trimmed = value.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_owned())
+}
+
+/// The artwork each row wants, by position.
+fn art_of(rows: &[StatRowData]) -> Vec<Option<String>> {
+    rows.iter().map(|row| row.art.clone()).collect()
+}
+
+/// Fill in covers the local library could not supply, from the catalogue.
+///
+/// The Statistics lists that come from SQLite only know about covers the
+/// local library has on disk, so a track streamed from a server or played
+/// before it was scanned shows a placeholder. Enrichment has already resolved
+/// an album cover for most of those through `matchSong`; this is a lookup of
+/// what is already stored, not a network call.
+fn fill_missing_art(rows: &mut [StatRowData]) {
+    use music_player_analytics::Analytics;
+
+    let missing: Vec<&StatRowData> = rows
+        .iter()
+        .filter(|row| row.art.is_none() && !row.title.trim().is_empty())
+        .collect();
+    if missing.is_empty() {
+        return;
+    }
+    let Ok(analytics) = Analytics::open_default_read_only() else {
+        return;
+    };
+
+    let keys: Vec<String> = missing
+        .iter()
+        .map(|row| {
+            format!(
+                "match_key('{}', '{}')",
+                row.artist.replace('\'', "''"),
+                row.title.replace('\'', "''")
+            )
+        })
+        .collect();
+
+    let sql = format!(
+        "SELECT m.match_key, m.album_art FROM song_match m \
+         WHERE m.resolved AND m.album_art IS NOT NULL AND m.match_key IN ({})",
+        keys.join(",")
+    );
+    let Ok(mut statement) = analytics.conn().prepare(&sql) else {
+        return;
+    };
+    let Ok(found) = statement.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    }) else {
+        return;
+    };
+    let found: std::collections::HashMap<String, String> = found.filter_map(Result::ok).collect();
+    if found.is_empty() {
+        return;
+    }
+
+    // The key is computed the same way on both sides, so ask DuckDB for each
+    // row's key rather than reimplementing the normalisation in Rust and
+    // letting the two drift.
+    for row in rows.iter_mut().filter(|row| row.art.is_none()) {
+        let key: Option<String> = analytics
+            .conn()
+            .query_row(
+                "SELECT match_key(?, ?)",
+                music_player_analytics::duckdb::params![row.artist, row.title],
+                |r| r.get(0),
+            )
+            .ok();
+        if let Some(art) = key.and_then(|key| found.get(&key)).cloned() {
+            row.art = Some(art);
+        }
+    }
+}
+
+/// Which list a fetched thumbnail belongs to.
+#[derive(Clone, Copy)]
+enum StatList {
+    MostPlayed,
+    MostSkipped,
+    Recent,
+    HistoryTracks,
+    HistoryArtists,
+}
+
+/// Load the artwork for every Statistics list, in the background.
+///
+/// One task per image, capped by a semaphore: a cold Statistics tab wants a
+/// hundred-odd thumbnails and firing them all at once starves the daemon's
+/// own cover server.
+#[allow(clippy::too_many_arguments)]
+fn fetch_stat_art(
+    weak: Weak<AppWindow>,
+    covers_base: String,
+    most_played: Vec<Option<String>>,
+    skipped: Vec<Option<String>>,
+    recent: Vec<Option<String>>,
+    history_tracks: Vec<Option<String>>,
+    history_artists: Vec<Option<String>>,
+) {
+    let lists = [
+        (StatList::MostPlayed, most_played),
+        (StatList::MostSkipped, skipped),
+        (StatList::Recent, recent),
+        (StatList::HistoryTracks, history_tracks),
+        (StatList::HistoryArtists, history_artists),
+    ];
+
+    let limit = Arc::new(tokio::sync::Semaphore::new(6));
+    for (list, arts) in lists {
+        for (idx, art) in arts.into_iter().enumerate() {
+            let Some(art) = art else { continue };
+            let weak = weak.clone();
+            let covers_base = covers_base.clone();
+            let limit = Arc::clone(&limit);
+            tokio::spawn(async move {
+                let Ok(_permit) = limit.acquire().await else {
+                    return;
+                };
+                // 96px: the largest of these is drawn at 34pt, so a 96px
+                // thumbnail covers a 2x display with nothing to spare.
+                let Some((w, h, rgba)) = fetch_thumb(&covers_base, &art, 96).await else {
+                    return;
+                };
+                let _ = weak.upgrade_in_event_loop(move |app| match list {
+                    StatList::MostPlayed => {
+                        crate::ui_set_stat_art(&app.get_most_played(), idx, w, h, rgba)
+                    }
+                    StatList::MostSkipped => {
+                        crate::ui_set_stat_art(&app.get_stats_most_skipped(), idx, w, h, rgba)
+                    }
+                    StatList::Recent => {
+                        crate::ui_set_stat_art(&app.get_stats_recent(), idx, w, h, rgba)
+                    }
+                    StatList::HistoryTracks => {
+                        crate::ui_set_stat_art(&app.get_history_top_tracks(), idx, w, h, rgba)
+                    }
+                    StatList::HistoryArtists => {
+                        crate::ui_set_bar_art(&app.get_history_artist_bars(), idx, w, h, rgba)
+                    }
+                });
+            });
+        }
+    }
+}
+
+/// `2026-09-21 18:04:36+03` -> `2026-09-21`.
+fn day(timestamp: &str) -> String {
+    timestamp.split(' ').next().unwrap_or(timestamp).to_string()
+}
+
+/// Thousands separators: five-figure counts are common here and `28744` is
+/// harder to read at a glance than `28,744`.
+fn thousands(n: i64) -> String {
+    let digits = n.abs().to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    if n < 0 {
+        format!("-{out}")
+    } else {
+        out
+    }
+}
+
+#[cfg(test)]
+mod history_tests {
+    use super::*;
+
+    /// The listening-history panel, against the real analytics database.
+    ///
+    /// Ignored by default: it needs a database that has actually had a history
+    /// imported, which only a real installation has. Run it with
+    /// `cargo test -p music-player-desktop -- --ignored --nocapture` to check
+    /// what the Statistics tab would draw.
+    #[tokio::test]
+    #[ignore]
+    async fn listening_history_panel_is_populated() {
+        let data = load_history(false).await;
+        assert!(data.available, "no analytics database to read");
+
+        println!("listens          {}", thousands(data.listens));
+        println!("hours            {:.0}", data.hours);
+        println!("artists          {}", thousands(data.artists));
+        println!("tracks           {}", thousands(data.tracks));
+        println!("sessions         {}", thousands(data.sessions));
+        println!("streak           {} days", data.streak);
+        println!("span             {}", data.span);
+        println!("sources          {}", data.sources);
+        println!(
+            "clock cells      {} (peak {})",
+            data.clock.len(),
+            data.clock_peak
+        );
+        println!("timeline bars    {}", data.timeline.len());
+        println!("artist bars      {}", data.artist_bars.len());
+        println!("top tracks       {}", data.top_tracks.len());
+        if let Some(first) = data.timeline.first() {
+            println!("timeline starts  {} ({})", first.label, first.value);
+        }
+        if let Some(last) = data.timeline.last() {
+            println!("timeline ends    {} ({})", last.label, last.value);
+        }
+        for bar in data.artist_bars.iter().take(3) {
+            println!("  artist         {} {}", bar.label, bar.value);
+        }
+
+        // Every hour of the week gets a tile so the grid reads as a week.
+        assert_eq!(data.clock.len(), 7 * 24, "the heatmap is a full week");
+        assert!(data.clock_peak > 0);
+        assert!(!data.timeline.is_empty(), "the timeline has bars");
+        assert!(!data.artist_bars.is_empty(), "the ranking has bars");
+        assert!(data.listens > 0 && data.hours > 0.0);
+
+        // Silent periods are drawn, so the labelled bars must be contiguous.
+        let labelled = data.timeline.iter().filter(|b| b.show_label).count();
+        assert!(
+            labelled >= 2 && labelled <= data.timeline.len(),
+            "selective labels, not one per bar"
+        );
+
+        // The restricted view must be a subset, never larger.
+        let owned = load_history(true).await;
+        assert!(
+            owned.listens <= data.listens,
+            "\"in my library only\" cannot add listens"
+        );
+        println!("local-only       {} listens", thousands(owned.listens));
+
+        // Artwork: every artist should have a portrait, and most tracks a
+        // cover. These are the URLs the rows fetch and decode.
+        let with_portrait = data.artist_bars.iter().filter(|b| b.art.is_some()).count();
+        let with_cover = data.top_tracks.iter().filter(|t| t.art.is_some()).count();
+        println!(
+            "artist portraits {}/{}",
+            with_portrait,
+            data.artist_bars.len()
+        );
+        println!("track covers     {}/{}", with_cover, data.top_tracks.len());
+        for bar in data.artist_bars.iter().take(2) {
+            println!(
+                "  {} -> {}",
+                bar.label,
+                bar.art.as_deref().unwrap_or("(none)")
+            );
+        }
+        for track in data.top_tracks.iter().take(2) {
+            println!(
+                "  {} -> {}",
+                track.title,
+                track.art.as_deref().unwrap_or("(none)")
+            );
+        }
+        assert_eq!(
+            with_portrait,
+            data.artist_bars.len(),
+            "every artist on the leaderboard should have a portrait"
+        );
+        assert!(
+            with_cover * 2 > data.top_tracks.len(),
+            "most played tracks should carry a cover"
+        );
     }
 }

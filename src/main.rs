@@ -45,6 +45,7 @@ use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use tokio::sync::Mutex;
 use tungstenite::Message;
 
+mod analytics;
 mod app;
 mod args;
 mod event;
@@ -270,6 +271,112 @@ A simple music player written in Rust — single binary, zero dependency"#,
                         ),
                 ),
         )
+        .subcommand(
+            Command::new("analytics")
+                .about("Import listening history and ask questions of it")
+                .subcommand(
+                    Command::new("import")
+                        .about("Import a Spotify or Last.fm export")
+                        .arg(arg!(<path> "Export directory or file"))
+                        .arg(
+                            Arg::new("format")
+                                .long("format")
+                                .short('f')
+                                .help("spotify or lastfm; autodetected when omitted"),
+                        )
+                        .arg(
+                            Arg::new("min-seconds")
+                                .long("min-seconds")
+                                .help("Ignore Spotify plays shorter than this [default: 30]"),
+                        ),
+                )
+                .subcommand(
+                    Command::new("rocksky")
+                        .about("Import scrobbles from a Rocksky account")
+                        .arg(arg!(<actor> "Handle or DID, e.g. tsiry-sandratraina.com"))
+                        .arg(
+                            Arg::new("full")
+                                .long("full")
+                                .help("Walk the whole feed instead of stopping at known scrobbles")
+                                .action(clap::ArgAction::SetTrue),
+                        ),
+                )
+                .subcommand(
+                    Command::new("sync")
+                        .about("Pull in what this player has recorded since the last run"),
+                )
+                .subcommand(
+                    Command::new("enrich")
+                        .about("Fill in albums, genres and years via Rocksky")
+                        .arg(
+                            Arg::new("limit")
+                                .long("limit")
+                                .help("Tracks to resolve [default: 2000]"),
+                        ),
+                )
+                .subcommand(
+                    Command::new("overview")
+                        .about("The headline numbers")
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("top")
+                        .about("Leaderboards")
+                        .arg(arg!([what] "artists, tracks, albums or genres [default: artists]"))
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("clock")
+                        .about("When you listen, as a heatmap")
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("sessions")
+                        .about("How your listening sessions behave")
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("skips")
+                        .about("What you abandon, and how far in")
+                        .arg(
+                            Arg::new("min-listens")
+                                .long("min-listens")
+                                .help("Ignore tracks played fewer times [default: 3]"),
+                        )
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("drift")
+                        .about("How your taste moved over time")
+                        .arg(
+                            Arg::new("bucket")
+                                .long("bucket")
+                                .help("day, week, month, quarter or year [default: month]"),
+                        )
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("transitions")
+                        .about("What actually follows what")
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("rotation")
+                        .about("How concentrated your listening is")
+                        .args(window_args()),
+                )
+                .subcommand(
+                    Command::new("on-this-day")
+                        .about("What you played on this date in past years")
+                        .args(window_args()),
+                )
+                .subcommand(Command::new("origins").about("Where the history came from"))
+                .subcommand(
+                    Command::new("query")
+                        .about("Run SQL against the analytics database")
+                        .arg(arg!(<sql> "A SELECT statement")),
+                ),
+        )
         .arg(
             Arg::new("force-car-sync")
                 .long("force-car-sync")
@@ -279,6 +386,24 @@ A simple music player written in Rust — single binary, zero dependency"#,
                 )
                 .action(clap::ArgAction::SetTrue),
         )
+}
+
+/// `--days` and `--limit`, shared by every reporting subcommand.
+fn window_args() -> Vec<Arg> {
+    vec![
+        Arg::new("days")
+            .long("days")
+            .short('d')
+            .help("Only the last N days [default: all of recorded history]"),
+        Arg::new("limit")
+            .long("limit")
+            .short('n')
+            .help("How many rows to show"),
+        Arg::new("local-only")
+            .long("local-only")
+            .help("Only tracks your local library has, matched on title and artist")
+            .action(clap::ArgAction::SetTrue),
+    ]
 }
 
 #[tokio::main]

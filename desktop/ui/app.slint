@@ -11,8 +11,7 @@ import {
     RadioSkeletonList, RadioFilterBox, MarqueeText, FilterBox, SyntaxRun, FilterSuggestion,
     TrackSkeletonList, AlbumSkeletonCard, ArtistSkeletonList, PlaylistSkeletonList,
     ExtensionItem, ExtensionRow,
-    StatItem, StatRow, StatCard
-} from "components.slint";
+    StatItem, StatRow, StatCard, ClockHeatmap, HeatCell, BarChart, RankChart, ChartBar} from "components.slint";
 import { Icons } from "icons.slint";
 
 export { Theme }
@@ -120,6 +119,28 @@ export component AppWindow inherits Window {
     in-out property <[StatItem]> stats-most-skipped: [];
     in-out property <[StatItem]> stats-recent: [];
     in-out property <[StatItem]> stats-never: [];
+    // ── Listening history ───────────────────────────────────────────────────
+    // The whole imported history, across every source, as opposed to the
+    // counters above — which are about the library or server connected right
+    // now. Empty when nothing has been imported, and the section hides.
+    in-out property <bool> history-available: false;
+    in-out property <string> history-listens: "0";
+    in-out property <string> history-hours: "0";
+    in-out property <string> history-artists: "0";
+    in-out property <string> history-tracks: "0";
+    in-out property <string> history-sessions: "0";
+    in-out property <string> history-streak: "0";
+    in-out property <string> history-span: "";
+    in-out property <string> history-sources: "";
+    in-out property <[HeatCell]> history-clock: [];
+    in-out property <int> history-clock-peak: 0;
+    in-out property <[StatItem]> history-top-tracks: [];
+    // Listens per period, oldest first — the shape of nine years.
+    in-out property <[ChartBar]> history-timeline: [];
+    in-out property <[ChartBar]> history-artist-bars: [];
+    /// Restrict the history panel to music the local library has.
+    in-out property <bool> history-local-only: false;
+    callback toggle-history-local-only(bool);
     callback load-most-played();
     callback load-stats();
     callback play-stat-track(string);
@@ -1794,6 +1815,84 @@ export component AppWindow inherits Window {
                             StatCard { value: root.stats-total-plays; label: "PLAYS"; }
                             StatCard { value: root.stats-total-skips; label: "SKIPS"; }
                             StatCard { value: root.stats-never-count; label: "NEVER PLAYED"; }
+                        }
+
+                        // ── Listening history ───────────────────────────────
+                        // Everything above is about the library connected
+                        // right now. This is the whole history, including
+                        // years imported from elsewhere, deduplicated across
+                        // sources. Hidden until something has been imported.
+                        if root.history-available : SectionHeader { title: "LISTENING HISTORY"; }
+                        if root.history-available : HorizontalLayout {
+                            spacing: 10px;
+                            Text {
+                                text: root.history-span;
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            Text {
+                                text: "In my library only";
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                            }
+                            Toggle {
+                                checked: root.history-local-only;
+                                // Flipped here and the new value passed out,
+                                // so the switch responds on the frame it was
+                                // clicked rather than when the query returns.
+                                toggled => {
+                                    root.history-local-only = !root.history-local-only;
+                                    root.toggle-history-local-only(root.history-local-only);
+                                }
+                            }
+                        }
+                        if root.history-available : HorizontalLayout {
+                            spacing: 12px;
+                            StatCard { value: root.history-listens; label: "LISTENS"; }
+                            StatCard { value: root.history-hours; label: "HOURS"; }
+                            StatCard { value: root.history-artists; label: "ARTISTS"; }
+                            StatCard { value: root.history-tracks; label: "TRACKS"; }
+                        }
+                        if root.history-available : HorizontalLayout {
+                            spacing: 12px;
+                            StatCard { value: root.history-sessions; label: "SESSIONS"; }
+                            StatCard { value: root.history-streak; label: "LONGEST STREAK"; }
+                        }
+                        if root.history-available : Text {
+                            text: root.history-sources;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            wrap: word-wrap;
+                        }
+
+                        if root.history-available && root.history-clock.length > 0
+                            : SectionHeader { title: "WHEN YOU LISTEN"; }
+                        if root.history-available && root.history-clock.length > 0 : ClockHeatmap {
+                            cells: root.history-clock;
+                            peak: root.history-clock-peak;
+                        }
+
+                        if root.history-timeline.length > 0
+                            : SectionHeader { title: "LISTENS OVER TIME"; }
+                        if root.history-timeline.length > 0 : BarChart {
+                            bars: root.history-timeline;
+                        }
+
+                        if root.history-artist-bars.length > 0
+                            : SectionHeader { title: "MOST PLAYED ARTISTS, ALL TIME"; }
+                        if root.history-artist-bars.length > 0 : RankChart {
+                            bars: root.history-artist-bars;
+                        }
+
+                        if root.history-top-tracks.length > 0
+                            : SectionHeader { title: "MOST PLAYED TRACKS, ALL TIME"; }
+                        for s[i] in root.history-top-tracks : StatRow {
+                            item: s;
+                            rank: i + 1;
+                            play => { root.play-stat-track(s.track-id); }
                         }
 
                         if root.stats-recent.length > 0 : SectionHeader { title: "RECENTLY PLAYED"; }

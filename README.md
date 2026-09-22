@@ -77,6 +77,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
   - [AT Protocol sync](#at-protocol-sync)
 - [Audio analysis & auto-DJ](#audio-analysis--auto-dj)
 - [AI agents (MCP)](#ai-agents-mcp)
+- [Listening analytics](#listening-analytics)
 - [Casting](#casting)
 - [Star History](#star-history)
 
@@ -93,6 +94,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - 🎧 **Rocksky scrobbling** — scrobble your plays to [Rocksky](https://rocksky.app) on the [AT Protocol](https://atproto.com)
 - 📻 **Internet radio** — search and browse thousands of stations (Radio Browser + TuneIn), bookmark them, with a fullscreen now-playing player
 - 🛰️ **AT Protocol sync** — radio bookmarks and liked songs restored from your atproto repo, written back to your PDS, and kept live over Jetstream
+- 📊 **Listening analytics** (DuckDB) — import years of Spotify, Last.fm and Rocksky history, deduplicated across sources, then ask it about sessions, skips, taste drift and what actually follows what
 - 🔌 Flexible **audio output**: system device (cpal), stdout, FIFO, Unix or TCP socket
 
 ## Installation
@@ -186,12 +188,20 @@ sudo apt-get install -y libasound2-dev protobuf-compiler # Ubuntu/Debian
 choco install protoc # Windows using Chocolatey Package Manager
 # Compile
 git clone https://github.com/tsirysndr/music-player.git
-cd music-player/webui/musicplayer
+cd music-player
+./scripts/fetch-duckdb.sh # prebuilt static DuckDB for the analytics engine
+cd webui/musicplayer
 nvm install # install node version specified in .nvmrc (optional on windows)
 bun install && bun run build # build webui
 cd ../..
 cargo install --path .
 ```
+
+`fetch-duckdb.sh` downloads the static libraries from DuckDB's own GitHub
+release into `vendor/`, so nothing has to compile the DuckDB C++ sources. It
+must run before `cargo`, not from a build script: `libduckdb-sys` resolves the
+library when its own crate compiles, and Cargo gives no way to order another
+crate's build script ahead of that.
 
 With Nix:
 
@@ -199,6 +209,7 @@ With Nix:
 git clone https://github.com/tsirysndr/music-player.git
 cd music-player
 nix develop --experimental-features "nix-command flakes"
+./scripts/fetch-duckdb.sh
 cd webui/musicplayer
 bun install && bun run build # build webui
 cd ../..
@@ -580,6 +591,91 @@ which a search box cannot answer.
 that teaches an agent to *DJ* rather than merely to call the tools — queue
 instead of interrupt, sequence a set deliberately, and work from what the
 library actually holds. Copy it into `~/.claude/skills/music-player/`.
+
+## Listening analytics
+
+The player records every listen to `play_history`, which answers "how many
+times" but nothing about *when*. Point the analytics engine at that log — plus
+any history you can export from elsewhere — and the interesting questions
+become ordinary queries.
+
+It is a [DuckDB](https://duckdb.org) **lens** over your data: it reads the
+player's SQLite database and never writes to it, and the whole analytics file
+can be deleted and rebuilt from its sources at any time.
+
+### Importing
+
+```bash
+music-player analytics sync                       # what this player has recorded
+music-player analytics import ~/Downloads/Spotify\ Extended\ Streaming\ History
+music-player analytics import ~/Downloads/lastfm-scrobbles.csv
+music-player analytics rocksky your-handle.com    # your Rocksky scrobbles
+music-player analytics enrich                     # albums, genres, years via Rocksky
+```
+
+Each import is idempotent — running it twice imports nothing the second time —
+and reports what it skipped rather than silently dropping it.
+
+DuckDB allows one writer or many readers at a time, so while an import is
+running the reporting commands (and the desktop panel) will say the database
+is busy. `enrich` over a large first-time backfill is the long one — tens of
+minutes for a decade of history, rate-limited to stay well inside the API's
+budget. It is resumable and cached, so later runs only pick up what is new.
+
+**Sources are deduplicated against each other.** The same listen often arrives
+from two places at once, and rarely at the same instant: a scrobbler that
+submits local time as UTC leaves its scrobbles hours away from their Spotify
+twin. Rather than assume a correction, the engine *measures* the modal clock
+offset between each pair of sources and folds duplicates within a few minutes
+of it, keeping the copy from the source that knows most (this player, which
+records how much was actually heard, over Spotify, over a bare scrobble).
+
+### Asking
+
+```bash
+music-player analytics overview          # the headline numbers
+music-player analytics top artists       # or tracks, albums, genres
+music-player analytics clock             # when you listen, as a heatmap
+music-player analytics sessions          # how long, how many tracks, what opens one
+music-player analytics skips             # what you abandon, and how far in
+music-player analytics drift --bucket year   # how your taste moved
+music-player analytics transitions       # what actually follows what
+music-player analytics rotation          # how concentrated your listening is
+music-player analytics on-this-day
+music-player analytics query "SELECT ..."    # anything the above does not cover
+```
+
+Every command takes `--days N` to restrict the window, `--limit N` to size the
+output, and `--local-only` to count only music your library actually has —
+matched on title and artist, so a play imported from Spotify still counts when
+you own the track.
+
+A **session** is a run of listens with no gap longer than thirty minutes —
+the unit most questions are really about, and the one a play count cannot
+express. `transitions` counts pairs within a session, which makes it the
+transition graph your own listening has built: better input for an automatic
+mix than tempo matching alone, because it encodes sequences you actually chose.
+
+`skips` only counts sources that record play duration — this player and a
+Spotify import. A scrobble is submitted *after* a track has been listened to,
+so counting it would dilute every rate toward zero.
+
+### On the desktop
+
+The **Statistics** tab grows a *Listening history* panel below its existing
+counters: the headline figures, a weekday × hour heatmap of when you listen,
+listens over time, and all-time top artists and tracks. It is kept apart from
+the counters above it because the two answer different questions — those are
+about the library or server connected right now, this is every source ever
+imported, deduplicated. A switch restricts the panel to music your library has.
+
+The panel hides itself until something has been imported.
+
+### Elsewhere
+
+The same figures are on the daemon's gRPC API as `AnalyticsService`, and as
+`listening_*` tools on the [MCP server](#ai-agents-mcp), so an agent can answer
+"what was I listening to last summer" and build a set around the answer.
 
 ## Casting
 

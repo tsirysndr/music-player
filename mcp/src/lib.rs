@@ -11,6 +11,7 @@
 //! this crate may print to stdout — stdout *is* the protocol. Diagnostics go to
 //! stderr through `tracing`, which the host shows in its logs.
 
+mod listening;
 mod protocol;
 mod session;
 mod tools;

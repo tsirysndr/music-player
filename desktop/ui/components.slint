@@ -29,12 +29,44 @@ export struct TrackItem {
 }
 
 /// One row of an analytics list (Most Played, Statistics sections).
+/// One bar of a chart.
+export struct ChartBar {
+    /// Artist picture, for a ranking of artists.
+    art: image,
+    has-art: bool,
+    /// Axis label. Only shown on selected bars — a label under every bar is
+    /// unreadable at this width and adds nothing.
+    label: string,
+    /// 0..1, against the tallest bar in the series.
+    norm: float,
+    /// Shown on hover, and as the direct label where one is drawn.
+    value: string,
+    show-label: bool,
+}
+
+/// One cell of the listening-clock heatmap.
+///
+/// A flat list rather than seven rows of twenty-four, because Slint structs
+/// cannot hold arrays; the view positions each cell from its own coordinates.
+export struct HeatCell {
+    weekday: int,   // 0 = Sunday
+    hour: int,
+    /// 0..1, scaled against the busiest hour in the window — the shape of a
+    /// week is the answer here, not the absolute counts.
+    level: float,
+    listens: int,
+}
+
 export struct StatItem {
     track-id: string,
     title: string,
     artist: string,
     /// Rendered as-is: a play count, a skip count, or a relative time.
     value: string,
+    /// Album cover. Absent for a track the catalogue does not know, which is
+    /// why `has-art` is separate rather than testing the image.
+    art: image,
+    has-art: bool,
 }
 
 export struct AlbumItem {
@@ -1863,7 +1895,9 @@ export component StatRow inherits Rectangle {
     in property <bool> current: false;
     callback play;
 
-    height: 42px;
+    // Taller than the 42px it was: a row now carries a cover, and 34px of
+    // artwork needs room to breathe on both sides.
+    height: 50px;
     border-radius: Theme.control-radius;
     background: root.current ? Theme.selected-bg
         : touch.has-hover ? Theme.hover-bg : transparent;
@@ -1881,6 +1915,31 @@ export component StatRow inherits Rectangle {
             vertical-alignment: center;
             horizontal-alignment: right;
             width: 30px;
+        }
+        // The cover, or a disc standing in for one. Square, because an album
+        // cover is square and letterboxing one into a circle crops the art.
+        Rectangle {
+            width: 34px;
+            height: 34px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 4px;
+            background: Theme.art-placeholder;
+            clip: true;
+
+            if root.item.has-art : Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.item.art;
+                image-fit: cover;
+            }
+            if !root.item.has-art : Image {
+                source: Icons.disc;
+                colorize: Theme.text-muted;
+                width: parent.width * 0.5;
+                height: self.width;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
         }
         VerticalLayout {
             alignment: center;
@@ -1943,6 +2002,268 @@ export component StatCard inherits Rectangle {
             color: Theme.text-muted;
             font-size: 10px;
             letter-spacing: 1.5px;
+        }
+    }
+}
+
+
+// ── Listening clock ─────────────────────────────────────────────────────────
+
+/// When listening happens, as a weekday × hour heatmap.
+///
+/// The one figure on the Statistics tab that is a *shape* rather than a
+/// number: "loudest at 11am on a Tuesday" is not something a table conveys.
+export component ClockHeatmap inherits Rectangle {
+    in property <[HeatCell]> cells: [];
+    in property <int> peak: 0;
+
+    property <length> cell-w: 15px;
+    property <length> cell-h: 16px;
+    property <length> gutter: 34px;
+
+    height: 7 * cell-h + 38px;
+
+    // Hour ruler. Every sixth hour, so the row reads without crowding.
+    for label[i] in [{ h: 0, t: "00" }, { h: 6, t: "06" }, { h: 12, t: "12" }, { h: 18, t: "18" }] : Text {
+        x: root.gutter + label.h * root.cell-w;
+        y: 0;
+        text: label.t;
+        color: Theme.text-muted;
+        font-size: 9px;
+        font-family: Theme.font-mono;
+    }
+
+    for day[d] in ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : Text {
+        x: 0;
+        y: 18px + d * root.cell-h;
+        width: root.gutter - 6px;
+        height: root.cell-h;
+        text: day;
+        color: Theme.text-muted;
+        font-size: 9px;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+
+    // The scale the shading is relative to. Without it the darkest tile could
+    // be ten listens or ten thousand and the grid would look identical.
+    Text {
+        x: root.gutter;
+        y: 18px + 7 * root.cell-h + 4px;
+        text: "busiest hour: " + root.peak + " listens";
+        color: Theme.text-muted;
+        font-size: 9px;
+    }
+
+    for cell[i] in root.cells : Rectangle {
+        x: root.gutter + cell.hour * root.cell-w;
+        y: 18px + cell.weekday * root.cell-h;
+        width: root.cell-w - 2px;
+        height: root.cell-h - 2px;
+        border-radius: 2px;
+        // An hour with nothing in it still gets a faint tile, so the grid
+        // reads as a week rather than as scattered marks.
+        background: cell.level > 0
+            ? Theme.accent.with-alpha(0.15 + 0.85 * cell.level)
+            : Theme.panel-raised;
+
+        TouchArea {
+            mouse-cursor: default;
+            Rectangle {
+                visible: parent.has-hover && cell.listens > 0;
+                x: -20px;
+                y: -22px;
+                width: 56px;
+                height: 20px;
+                background: Theme.window-bg;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Theme.border;
+                Text {
+                    text: cell.listens;
+                    color: Theme.text;
+                    font-size: 10px;
+                    font-family: Theme.font-mono;
+                }
+            }
+        }
+    }
+}
+
+
+// ── Charts ──────────────────────────────────────────────────────────────────
+//
+// Single-series throughout, so there is one hue and no legend: the section
+// heading names what is being measured. Bars are anchored to the baseline and
+// rounded only at the data end, separated by a surface gap so adjacent bars
+// stay distinct, and the axis is recessive — the data is the ink.
+
+/// Magnitude over time. Vertical bars, because the periods are discrete.
+export component BarChart inherits Rectangle {
+    in property <[ChartBar]> bars: [];
+    in property <length> chart-height: 120px;
+
+    property <length> gap: 2px;
+    property <length> slot: root.bars.length > 0
+        ? (root.width - 8px) / root.bars.length : 10px;
+
+    height: root.chart-height + 26px;
+
+    // Baseline. The only rule drawn: gridlines behind twelve bars are noise.
+    Rectangle {
+        x: 0;
+        y: root.chart-height;
+        width: root.width;
+        height: 1px;
+        background: Theme.border;
+    }
+
+    for bar[i] in root.bars : Rectangle {
+        x: 4px + i * root.slot;
+        width: root.slot - root.gap;
+        y: 0;
+        height: root.chart-height;
+
+        // Anchored to the baseline and grown upward, so a short bar reads as
+        // a small quantity rather than as a floating tile.
+        Rectangle {
+            y: parent.height - max(2px, parent.height * bar.norm);
+            width: parent.width;
+            height: max(2px, parent.height * bar.norm);
+            background: touch.has-hover ? Theme.accent : Theme.accent.with-alpha(0.85);
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+
+        touch := TouchArea {
+            mouse-cursor: default;
+            Rectangle {
+                visible: parent.has-hover;
+                y: -8px;
+                width: 74px;
+                height: 34px;
+                background: Theme.window-bg;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Theme.border;
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 1px;
+                    Text {
+                        text: bar.label;
+                        color: Theme.text-muted;
+                        font-size: 9px;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: bar.value;
+                        color: Theme.text;
+                        font-size: 11px;
+                        font-weight: 700;
+                        font-family: Theme.font-mono;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+
+    // Drawn after the bars and as their sibling, not their child: a date label
+    // is far wider than one bar, and nested inside it elides to "201…".
+    for bar[i] in root.bars : Text {
+        visible: bar.show-label;
+        x: 4px + i * root.slot + (root.slot - root.gap) / 2 - 28px;
+        y: root.chart-height + 6px;
+        width: 56px;
+        text: bar.label;
+        color: Theme.text-muted;
+        font-size: 9px;
+        font-family: Theme.font-mono;
+        horizontal-alignment: center;
+    }
+}
+
+/// A ranking. Horizontal bars, because the labels are names and names read
+/// along the axis they are written on.
+export component RankChart inherits VerticalLayout {
+    in property <[ChartBar]> bars: [];
+    spacing: 4px;
+
+    for bar[i] in root.bars : Rectangle {
+        // The name sits on its own line above the bar. Overlapping them
+        // saves six pixels and costs legibility on every row.
+        height: 38px;
+
+        // Round, like every other portrait in this client — an artist is a
+        // face, not a sleeve.
+        Rectangle {
+            x: 0;
+            y: 2px;
+            width: 30px;
+            height: 30px;
+            border-radius: 15px;
+            background: Theme.art-placeholder;
+            clip: true;
+
+            if bar.has-art : Image {
+                width: parent.width;
+                height: parent.height;
+                source: bar.art;
+                image-fit: cover;
+            }
+            if !bar.has-art : Image {
+                source: Icons.artist;
+                colorize: Theme.text-muted;
+                width: parent.width * 0.5;
+                height: self.width;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+
+        Text {
+            x: 40px;
+            y: 0;
+            height: 16px;
+            width: parent.width - 104px;
+            text: bar.label;
+            color: Theme.text;
+            font-size: 11px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        // The value wears a text token, not the series colour: the bar beside
+        // it already carries the identity.
+        Text {
+            x: parent.width - 60px;
+            y: 0;
+            height: 16px;
+            width: 60px;
+            text: bar.value;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-family: Theme.font-mono;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+        }
+
+        // The track the bar runs in, so a short bar still has a length to be
+        // short against.
+        Rectangle {
+            x: 40px;
+            y: 22px;
+            width: parent.width - 40px;
+            height: 6px;
+            background: Theme.panel-raised;
+            border-radius: 3px;
+        }
+        Rectangle {
+            x: 40px;
+            y: 22px;
+            width: max(3px, (parent.width - 40px) * bar.norm);
+            height: 6px;
+            background: Theme.accent;
+            border-radius: 3px;
         }
     }
 }

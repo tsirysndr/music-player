@@ -118,6 +118,7 @@ pub async fn parse_args(matches: ArgMatches) -> CmdResult {
         Some(("devices", _)) => devices().await,
         Some(("reset", _)) => reset(),
         Some(("extension", m)) => extension(m).await,
+        Some(("analytics", m)) => crate::analytics::analytics(m).await,
         // No subcommand: the caller starts the daemon or the TUI.
         _ => Err("No subcommand found".into()),
     }

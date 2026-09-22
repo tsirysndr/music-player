@@ -252,6 +252,29 @@ pub fn ui_set_artist_art(app: &AppWindow, idx: usize, w: u32, h: u32, rgba: Vec<
     }
 }
 
+/// Artwork for one row of a Statistics list, by model and index.
+///
+/// Keyed by index rather than by id: these rows come from an imported history
+/// and most have no local track id to key on, and the model is rebuilt
+/// wholesale whenever the panel reloads, so an index is stable for exactly as
+/// long as the fetch it belongs to.
+pub fn ui_set_stat_art(model: &ModelRc<StatItem>, idx: usize, w: u32, h: u32, rgba: Vec<u8>) {
+    if let Some(mut row) = model.row_data(idx) {
+        row.art = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
+        row.has_art = true;
+        model.set_row_data(idx, row);
+    }
+}
+
+/// The same, for a chart bar — the artist rankings.
+pub fn ui_set_bar_art(model: &ModelRc<ChartBar>, idx: usize, w: u32, h: u32, rgba: Vec<u8>) {
+    if let Some(mut row) = model.row_data(idx) {
+        row.art = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
+        row.has_art = true;
+        model.set_row_data(idx, row);
+    }
+}
+
 pub fn ui_set_now_art(app: &AppWindow, w: u32, h: u32, rgba: Vec<u8>) {
     let image = slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&rgba, w, h));
     app.set_now_art(image);
@@ -803,6 +826,10 @@ fn stat_item(r: &rpc::StatRowData, value: String) -> StatItem {
         title: r.title.clone().into(),
         artist: r.artist.clone().into(),
         value: value.into(),
+        // Filled in later, once the thumbnail has been fetched and decoded;
+        // the row draws its placeholder until then rather than waiting.
+        art: Default::default(),
+        has_art: false,
     }
 }
 
@@ -838,6 +865,88 @@ pub fn ui_set_stats(app: &AppWindow, data: rpc::StatsData) {
     app.set_stats_most_skipped(ModelRc::new(VecModel::from(skipped)));
     app.set_stats_recent(ModelRc::new(VecModel::from(recent)));
     app.set_stats_never(ModelRc::new(VecModel::from(never)));
+}
+
+/// The imported listening history panel.
+///
+/// Separate from [`ui_set_stats`] because it answers a different question: the
+/// counters above are about the library connected right now, this is every
+/// source ever imported, deduplicated. Mixing them would imply the numbers
+/// relate, and they do not.
+pub fn ui_set_history(app: &AppWindow, data: rpc::HistoryData) {
+    app.set_history_available(data.available);
+    if !data.available {
+        return;
+    }
+
+    // Kept in step with the data actually shown, so a refresh from elsewhere
+    // (a server switch, a scan) cannot leave the switch describing figures it
+    // did not produce.
+    app.set_history_local_only(data.local_only);
+
+    app.set_history_listens(group(data.listens).into());
+    // One decimal: the figure runs to four digits, and "1,902.2 hours" claims
+    // a precision the sources cannot support past that.
+    app.set_history_hours(format!("{:.0}", data.hours).into());
+    app.set_history_artists(group(data.artists).into());
+    app.set_history_tracks(group(data.tracks).into());
+    app.set_history_sessions(group(data.sessions).into());
+    app.set_history_streak(format!("{} days", data.streak).into());
+    app.set_history_span(data.span.into());
+    app.set_history_sources(data.sources.into());
+
+    let clock: Vec<HeatCell> = data
+        .clock
+        .iter()
+        .map(|c| HeatCell {
+            weekday: c.weekday,
+            hour: c.hour,
+            level: c.level,
+            listens: c.listens,
+        })
+        .collect();
+    app.set_history_clock(ModelRc::new(VecModel::from(clock)));
+    app.set_history_clock_peak(data.clock_peak);
+
+    app.set_history_timeline(ModelRc::new(VecModel::from(chart_bars(&data.timeline))));
+    app.set_history_artist_bars(ModelRc::new(VecModel::from(chart_bars(&data.artist_bars))));
+
+    let tracks: Vec<StatItem> = data
+        .top_tracks
+        .iter()
+        .map(|r| stat_item(r, format!("{} plays", r.count)))
+        .collect();
+    app.set_history_top_tracks(ModelRc::new(VecModel::from(tracks)));
+}
+
+fn chart_bars(bars: &[rpc::ChartBarData]) -> Vec<ChartBar> {
+    bars.iter()
+        .map(|b| ChartBar {
+            label: b.label.clone().into(),
+            norm: b.norm,
+            value: b.value.clone().into(),
+            show_label: b.show_label,
+            art: Default::default(),
+            has_art: false,
+        })
+        .collect()
+}
+
+/// Thousands separators, matching the analytics CLI.
+fn group(n: i64) -> String {
+    let digits = n.abs().to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    if n < 0 {
+        format!("-{out}")
+    } else {
+        out
+    }
 }
 
 pub fn ui_set_liked(app: &AppWindow, liked: Vec<rpc::TrackData>) {
@@ -1807,6 +1916,13 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        {
+            let tx = tx.clone();
+            app.on_toggle_history_local_only(move |local_only| {
+                let _ = tx.send(rpc::Cmd::SetHistoryLocalOnly(local_only));
+            });
+        }
+
         app.on_play_stat_track(move |id| {
             // The stat lists carry library track ids; play by the track's
             // position in the full library, which STATE already holds.

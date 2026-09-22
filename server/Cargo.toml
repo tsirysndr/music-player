@@ -23,6 +23,10 @@ version = "0.4.4"
 path = "../settings"
 version = "0.4.4"
 
+[dependencies.music-player-analytics]
+path = "../analytics"
+version = "0.4.4"
+
 [dependencies.music-player-analysis]
 path = "../analysis"
 version = "0.4.4"

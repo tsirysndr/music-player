@@ -7,6 +7,10 @@ license = "MIT"
 authors = ["Tsiry Sandratraina <tsiry.sndr@rocksky.app>"]
 description = "A Model Context Protocol server for music-player, so an agent can DJ"
 
+[dependencies.music-player-analytics]
+path = "../analytics"
+version = "0.4.4"
+
 [dependencies.music-player-client]
 path = "../client"
 version = "0.4.4"

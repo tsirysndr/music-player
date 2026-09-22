@@ -8,6 +8,82 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [Unreleased]
+
+### Added
+
+#### Listening analytics over your whole history, not just this player's
+- `play_history` records every listen, but a library that has only ever been
+  played here goes back as far as the install and no further. A new
+  **DuckDB** analytics engine (`music-player-analytics`) imports the history
+  you can export from elsewhere — **Spotify Extended Streaming History**,
+  **Last.fm** CSV/JSON, and **Rocksky** scrobbles over the public AppView —
+  and keeps it alongside what the player records. DuckDB reads the player's
+  SQLite and never writes it; the analytics file can be deleted and rebuilt
+  from its sources at any time.
+- **Sources are deduplicated against each other, by measurement rather than
+  assumption.** The same listen frequently arrives from two exports at once
+  and not at the same instant — a scrobbler that submits local time as UTC
+  leaves every scrobble hours from its Spotify twin, which unioned naively
+  inflates a history by a third and double-counts exactly the tracks played
+  most. The engine takes the modal clock offset between each ordered pair of
+  sources, trusts it only when enough pairs agree, and folds duplicates
+  within four minutes of it, keeping the copy from the source that knows
+  most. Hard-coding an offset would have been right for one timezone.
+- Matching is on the **primary artist credit** and a Unicode-folded title,
+  because Spotify records the album artist alone (`Riton`) where Last.fm
+  records the full credit (`Riton, Oliver Heldens, Vula`), and a title
+  written in Japanese or Cyrillic has no ASCII letters to fold on.
+- New `music-player analytics` commands: `import`, `rocksky`, `sync`,
+  `enrich`, `overview`, `top`, `clock`, `sessions`, `skips`, `drift`,
+  `transitions`, `rotation`, `on-this-day`, `origins`, and `query` for
+  anything the rest does not cover. Imports show progress bars and report
+  what they skipped rather than dropping it silently.
+- **Sessions** — runs of listens with no gap over thirty minutes — are the
+  unit most questions are actually about. `transitions` counts pairs within
+  a session, giving the transition graph your own listening has built.
+- `enrich` resolves imported tracks against Rocksky's `matchSong` to fill in
+  the album, genre, year and duration an export does not carry. Cached both
+  ways, so a track is asked about once and a miss is not retried forever.
+- The same figures are on the daemon as `AnalyticsService` (gRPC) and as
+  `listening_*` tools on the MCP server, so an agent can read your listening
+  history and build a set around it.
+- The desktop **Statistics** tab gains a *Listening history* panel: the
+  headline figures, a weekday × hour heatmap of when you listen, a
+  listens-over-time chart and all-time top artists and tracks. Kept below and
+  apart from the existing counters, which are about the library connected
+  right now rather than the whole imported history. A switch restricts it to
+  music the local library has (`--local-only` on the CLI, `local_only` on the
+  API and the MCP tools), matched on title and artist so an imported play
+  still counts when you own the track.
+
+### Fixed
+- The deduplicated corpus is materialised rather than computed per query. It
+  was a view whose test is a correlated `NOT EXISTS` over every listen, so it
+  re-ran on *every* query that touched it — 4.2s for a bare `count(*)` over
+  110k rows, against 0.019s on the base table. The desktop panel issues eight
+  such queries and took **77 seconds** to draw; it now takes **0.36**.
+- Enrichment no longer looks up internet-radio announcements. A stream records
+  one row per announced song with an explicit zero length, and asking the
+  catalogue about `Advertisement` by `Live365` returns a 500 — which is
+  correctly *not* cached as a miss, so those were re-asked on every run,
+  consuming the rate budget and writing nothing. Excluding them roughly
+  tripled the throughput of a backfill.
+- A genre of the literal string `"None"`, which the catalogue returns for a
+  track it has no genre for, is treated as absent instead of ranking as a
+  genre in its own right.
+- `server/build.rs` declared no `rerun-if-changed`, so editing a `.proto` left
+  Cargo serving the previously generated bindings and the change failed to
+  compile against a message that was right there in the file.
+
+### Changed
+- Building now needs `./scripts/fetch-duckdb.sh` once before `cargo`. It
+  fetches the prebuilt static DuckDB from upstream's GitHub release into
+  `vendor/`, so nothing compiles the DuckDB C++ sources and the binary stays
+  a single self-contained file. It cannot be a build script: `libduckdb-sys`
+  resolves the library when its own crate compiles, and Cargo offers no way
+  to order another crate's build script ahead of that.
+
 ## [0.4.4] — 2026-09-15
 
 ### Added

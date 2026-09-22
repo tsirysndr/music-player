@@ -1,0 +1,19 @@
+# Pin how `libduckdb-sys` finds DuckDB.
+#
+# These have to live here rather than in `analytics/build.rs`: a build script
+# cannot export environment variables to *another* crate's build script, and
+# `libduckdb-sys` reads them from the environment when it runs.
+#
+# Without `DUCKDB_LIB_DIR` the sys crate falls through to `pkg-config` and
+# links whichever libduckdb is installed system-wide — on a machine with
+# Homebrew's DuckDB that is a different build from the one the pregenerated
+# bindings were made against, which links cleanly and then misbehaves at
+# runtime. Naming the directory keeps it deterministic.
+#
+# `analytics/build.rs` populates this path from the upstream prebuilt static
+# release. The path carries no platform or version, because this file cannot
+# interpolate either; the build script keeps a stamp inside the directory and
+# re-extracts when the target or the DuckDB version changes.
+[env]
+DUCKDB_STATIC = "1"
+DUCKDB_LIB_DIR = { value = "vendor/duckdb/lib", relative = true }

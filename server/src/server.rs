@@ -24,10 +24,11 @@ use crate::{
 
 use crate::api::music::v1alpha1::{
     addons_service_server::AddonsServiceServer, analysis_service_server::AnalysisServiceServer,
-    core_service_server::CoreServiceServer, history_service_server::HistoryServiceServer,
-    library_service_server::LibraryServiceServer, mixer_service_server::MixerServiceServer,
-    playback_service_server::PlaybackServiceServer, playlist_service_server::PlaylistServiceServer,
-    servers_service_server::ServersServiceServer, tracklist_service_server::TracklistServiceServer,
+    analytics_service_server::AnalyticsServiceServer, core_service_server::CoreServiceServer,
+    history_service_server::HistoryServiceServer, library_service_server::LibraryServiceServer,
+    mixer_service_server::MixerServiceServer, playback_service_server::PlaybackServiceServer,
+    playlist_service_server::PlaylistServiceServer, servers_service_server::ServersServiceServer,
+    tracklist_service_server::TracklistServiceServer,
 };
 
 const BANNER: &str = r#"
@@ -140,6 +141,9 @@ impl MusicPlayerServer {
                 self.db.clone(),
             )))
             .add_service(AnalysisServiceServer::new(self.analysis()))
+            .add_service(AnalyticsServiceServer::new(
+                crate::analytics::Analytics::new(self.db.clone()),
+            ))
             .serve(addr)
             .await?;
         Ok(())
@@ -194,6 +198,9 @@ impl MusicPlayerServer {
                 self.db.clone(),
             )))
             .add_service(AnalysisServiceServer::new(self.analysis()))
+            .add_service(AnalyticsServiceServer::new(
+                crate::analytics::Analytics::new(self.db.clone()),
+            ))
             .serve_with_incoming(UnixListenerStream::new(listener))
             .await?;
         Ok(())

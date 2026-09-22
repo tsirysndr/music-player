@@ -33,3 +33,6 @@ cargo/
 /.clwb/
 
 # End of https://www.toptal.com/developers/gitignore/api/bazel
+
+# Prebuilt DuckDB static libraries, fetched by scripts/fetch-duckdb.sh
+/vendor/

@@ -1155,6 +1155,1064 @@ pub mod analysis_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
+/// Which listens a question is about.
+///
+/// `since`/`until` unset means all of recorded history, which may span years
+/// once an export has been imported.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Scope {
+    /// Unix seconds, inclusive.
+    #[prost(int64, optional, tag = "1")]
+    pub since: ::core::option::Option<i64>,
+    /// Unix seconds, exclusive.
+    #[prost(int64, optional, tag = "2")]
+    pub until: ::core::option::Option<i64>,
+    /// Count only tracks the local library has. Matched on title+artist, so a
+    /// play imported from Spotify still counts when the same track is in the
+    /// library — the question is "my history, for music I own", not "plays that
+    /// went through this player".
+    #[prost(bool, tag = "3")]
+    pub local_only: bool,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetOverviewRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetOverviewResponse {
+    #[prost(int64, tag = "1")]
+    pub listens: i64,
+    #[prost(int64, tag = "2")]
+    pub distinct_tracks: i64,
+    #[prost(int64, tag = "3")]
+    pub distinct_artists: i64,
+    #[prost(int64, tag = "4")]
+    pub distinct_albums: i64,
+    /// A floor, not an estimate: sources that record no duration (a bare
+    /// scrobble) contribute nothing.
+    #[prost(double, tag = "5")]
+    pub hours_played: f64,
+    #[prost(int64, tag = "6")]
+    pub sessions: i64,
+    #[prost(string, tag = "7")]
+    pub first_listen: ::prost::alloc::string::String,
+    #[prost(string, tag = "8")]
+    pub last_listen: ::prost::alloc::string::String,
+    #[prost(int64, tag = "9")]
+    pub active_days: i64,
+    #[prost(int64, tag = "10")]
+    pub longest_streak: i64,
+    #[prost(message, repeated, tag = "11")]
+    pub sources: ::prost::alloc::vec::Vec<Source>,
+}
+/// Where the history came from, and how much of it survived deduplication.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Source {
+    #[prost(string, tag = "1")]
+    pub origin: ::prost::alloc::string::String,
+    #[prost(int64, tag = "2")]
+    pub raw: i64,
+    #[prost(int64, tag = "3")]
+    pub canonical: i64,
+    #[prost(string, tag = "4")]
+    pub first: ::prost::alloc::string::String,
+    #[prost(string, tag = "5")]
+    pub last: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetTopRequest {
+    #[prost(enumeration = "TopKind", tag = "1")]
+    pub kind: i32,
+    #[prost(message, optional, tag = "2")]
+    pub scope: ::core::option::Option<Scope>,
+    #[prost(uint32, tag = "3")]
+    pub limit: u32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Rank {
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// The artist, for a track or album row; empty otherwise.
+    #[prost(string, tag = "2")]
+    pub secondary: ::prost::alloc::string::String,
+    #[prost(int64, tag = "3")]
+    pub listens: i64,
+    #[prost(double, tag = "4")]
+    pub hours: f64,
+    #[prost(string, tag = "5")]
+    pub last_played: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetTopResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub ranks: ::prost::alloc::vec::Vec<Rank>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetClockRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ClockCell {
+    /// 0 = Sunday.
+    #[prost(int32, tag = "1")]
+    pub weekday: i32,
+    #[prost(int32, tag = "2")]
+    pub hour: i32,
+    #[prost(int64, tag = "3")]
+    pub listens: i64,
+    #[prost(double, optional, tag = "4")]
+    pub avg_bpm: ::core::option::Option<f64>,
+    #[prost(double, optional, tag = "5")]
+    pub avg_valence: ::core::option::Option<f64>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetClockResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub cells: ::prost::alloc::vec::Vec<ClockCell>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSessionsRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+    #[prost(uint32, tag = "2")]
+    pub limit: u32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetSessionsResponse {
+    #[prost(int64, tag = "1")]
+    pub sessions: i64,
+    #[prost(double, tag = "2")]
+    pub avg_tracks: f64,
+    #[prost(double, tag = "3")]
+    pub median_minutes: f64,
+    #[prost(double, tag = "4")]
+    pub longest_minutes: f64,
+    /// Tracks that most often open a session.
+    #[prost(message, repeated, tag = "5")]
+    pub openers: ::prost::alloc::vec::Vec<Rank>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSkipsRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+    #[prost(uint32, tag = "2")]
+    pub limit: u32,
+    #[prost(int64, tag = "3")]
+    pub min_listens: i64,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SkipRow {
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub secondary: ::prost::alloc::string::String,
+    #[prost(int64, tag = "3")]
+    pub listens: i64,
+    #[prost(int64, tag = "4")]
+    pub skips: i64,
+    #[prost(double, tag = "5")]
+    pub skip_rate: f64,
+    /// Median fraction of the track heard before moving on.
+    #[prost(double, optional, tag = "6")]
+    pub median_completion: ::core::option::Option<f64>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetSkipsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub rows: ::prost::alloc::vec::Vec<SkipRow>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetDriftRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+    /// day, week, month, quarter or year.
+    #[prost(string, tag = "2")]
+    pub bucket: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DriftPoint {
+    #[prost(string, tag = "1")]
+    pub bucket: ::prost::alloc::string::String,
+    #[prost(int64, tag = "2")]
+    pub listens: i64,
+    #[prost(double, optional, tag = "3")]
+    pub avg_bpm: ::core::option::Option<f64>,
+    #[prost(double, optional, tag = "4")]
+    pub avg_valence: ::core::option::Option<f64>,
+    #[prost(double, optional, tag = "5")]
+    pub avg_arousal: ::core::option::Option<f64>,
+    #[prost(double, optional, tag = "6")]
+    pub median_year: ::core::option::Option<f64>,
+    #[prost(double, tag = "7")]
+    pub discovery_rate: f64,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetDriftResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub points: ::prost::alloc::vec::Vec<DriftPoint>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetTransitionsRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+    #[prost(uint32, tag = "2")]
+    pub limit: u32,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Transition {
+    #[prost(string, tag = "1")]
+    pub from_title: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub from_artist: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub to_title: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub to_artist: ::prost::alloc::string::String,
+    #[prost(int64, tag = "5")]
+    pub times: i64,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetTransitionsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub transitions: ::prost::alloc::vec::Vec<Transition>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetRotationRequest {
+    #[prost(message, optional, tag = "1")]
+    pub scope: ::core::option::Option<Scope>,
+    #[prost(uint32, tag = "2")]
+    pub limit: u32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetRotationResponse {
+    #[prost(double, tag = "1")]
+    pub top_1_percent_share: f64,
+    #[prost(double, tag = "2")]
+    pub top_10_percent_share: f64,
+    #[prost(double, tag = "3")]
+    pub gini: f64,
+    #[prost(int64, tag = "4")]
+    pub library_tracks: i64,
+    #[prost(int64, tag = "5")]
+    pub library_played: i64,
+    #[prost(message, repeated, tag = "6")]
+    pub rediscover: ::prost::alloc::vec::Vec<Rank>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SyncRequest {}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SyncResponse {
+    #[prost(uint64, tag = "1")]
+    pub listens: u64,
+    #[prost(uint64, tag = "2")]
+    pub tracks: u64,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum TopKind {
+    Unspecified = 0,
+    Artists = 1,
+    Tracks = 2,
+    Albums = 3,
+    Genres = 4,
+}
+impl TopKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "TOP_KIND_UNSPECIFIED",
+            Self::Artists => "TOP_KIND_ARTISTS",
+            Self::Tracks => "TOP_KIND_TRACKS",
+            Self::Albums => "TOP_KIND_ALBUMS",
+            Self::Genres => "TOP_KIND_GENRES",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TOP_KIND_UNSPECIFIED" => Some(Self::Unspecified),
+            "TOP_KIND_ARTISTS" => Some(Self::Artists),
+            "TOP_KIND_TRACKS" => Some(Self::Tracks),
+            "TOP_KIND_ALBUMS" => Some(Self::Albums),
+            "TOP_KIND_GENRES" => Some(Self::Genres),
+            _ => None,
+        }
+    }
+}
+/// Generated client implementations.
+pub mod analytics_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value
+    )]
+    use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
+    #[derive(Debug, Clone)]
+    pub struct AnalyticsServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl AnalyticsServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> AnalyticsServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> AnalyticsServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::Body>>>::Error:
+                Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            AnalyticsServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        pub async fn get_overview(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetOverviewRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetOverviewResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalyticsService/GetOverview",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetOverview",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_top(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTopRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetTopResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalyticsService/GetTop");
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("music.v1alpha1.AnalyticsService", "GetTop"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_clock(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetClockRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetClockResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalyticsService/GetClock");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetClock",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_sessions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetSessionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetSessionsResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalyticsService/GetSessions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetSessions",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_skips(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetSkipsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetSkipsResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalyticsService/GetSkips");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetSkips",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_drift(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetDriftRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetDriftResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalyticsService/GetDrift");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetDrift",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_transitions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTransitionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetTransitionsResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalyticsService/GetTransitions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetTransitions",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_rotation(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetRotationRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetRotationResponse>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/music.v1alpha1.AnalyticsService/GetRotation",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "music.v1alpha1.AnalyticsService",
+                "GetRotation",
+            ));
+            self.inner.unary(req, path, codec).await
+        }
+        /// Mirror anything the player has recorded since the last call. Safe to call
+        /// often — it is incremental and does nothing when there is nothing new.
+        pub async fn sync(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SyncRequest>,
+        ) -> std::result::Result<tonic::Response<super::SyncResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path =
+                http::uri::PathAndQuery::from_static("/music.v1alpha1.AnalyticsService/Sync");
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("music.v1alpha1.AnalyticsService", "Sync"));
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
+/// Generated server implementations.
+pub mod analytics_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with AnalyticsServiceServer.
+    #[async_trait]
+    pub trait AnalyticsService: std::marker::Send + std::marker::Sync + 'static {
+        async fn get_overview(
+            &self,
+            request: tonic::Request<super::GetOverviewRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetOverviewResponse>, tonic::Status>;
+        async fn get_top(
+            &self,
+            request: tonic::Request<super::GetTopRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetTopResponse>, tonic::Status>;
+        async fn get_clock(
+            &self,
+            request: tonic::Request<super::GetClockRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetClockResponse>, tonic::Status>;
+        async fn get_sessions(
+            &self,
+            request: tonic::Request<super::GetSessionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetSessionsResponse>, tonic::Status>;
+        async fn get_skips(
+            &self,
+            request: tonic::Request<super::GetSkipsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetSkipsResponse>, tonic::Status>;
+        async fn get_drift(
+            &self,
+            request: tonic::Request<super::GetDriftRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetDriftResponse>, tonic::Status>;
+        async fn get_transitions(
+            &self,
+            request: tonic::Request<super::GetTransitionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetTransitionsResponse>, tonic::Status>;
+        async fn get_rotation(
+            &self,
+            request: tonic::Request<super::GetRotationRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetRotationResponse>, tonic::Status>;
+        /// Mirror anything the player has recorded since the last call. Safe to call
+        /// often — it is incremental and does nothing when there is nothing new.
+        async fn sync(
+            &self,
+            request: tonic::Request<super::SyncRequest>,
+        ) -> std::result::Result<tonic::Response<super::SyncResponse>, tonic::Status>;
+    }
+    #[derive(Debug)]
+    pub struct AnalyticsServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> AnalyticsServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for AnalyticsServiceServer<T>
+    where
+        T: AnalyticsService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/music.v1alpha1.AnalyticsService/GetOverview" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetOverviewSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetOverviewRequest>
+                        for GetOverviewSvc<T>
+                    {
+                        type Response = super::GetOverviewResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetOverviewRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_overview(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetOverviewSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetTop" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetTopSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetTopRequest> for GetTopSvc<T> {
+                        type Response = super::GetTopResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetTopRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_top(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetTopSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetClock" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetClockSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetClockRequest> for GetClockSvc<T> {
+                        type Response = super::GetClockResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetClockRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_clock(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetClockSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetSessions" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetSessionsSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetSessionsRequest>
+                        for GetSessionsSvc<T>
+                    {
+                        type Response = super::GetSessionsResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetSessionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_sessions(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetSessionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetSkips" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetSkipsSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetSkipsRequest> for GetSkipsSvc<T> {
+                        type Response = super::GetSkipsResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetSkipsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_skips(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetSkipsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetDrift" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetDriftSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetDriftRequest> for GetDriftSvc<T> {
+                        type Response = super::GetDriftResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetDriftRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_drift(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetDriftSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetTransitions" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetTransitionsSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService>
+                        tonic::server::UnaryService<super::GetTransitionsRequest>
+                        for GetTransitionsSvc<T>
+                    {
+                        type Response = super::GetTransitionsResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetTransitionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_transitions(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetTransitionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/GetRotation" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetRotationSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::GetRotationRequest>
+                        for GetRotationSvc<T>
+                    {
+                        type Response = super::GetRotationResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetRotationRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AnalyticsService>::get_rotation(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetRotationSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/music.v1alpha1.AnalyticsService/Sync" => {
+                    #[allow(non_camel_case_types)]
+                    struct SyncSvc<T: AnalyticsService>(pub Arc<T>);
+                    impl<T: AnalyticsService> tonic::server::UnaryService<super::SyncRequest> for SyncSvc<T> {
+                        type Response = super::SyncResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SyncRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut =
+                                async move { <T as AnalyticsService>::sync(&inner, request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SyncSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => Box::pin(async move {
+                    let mut response = http::Response::new(tonic::body::Body::default());
+                    let headers = response.headers_mut();
+                    headers.insert(
+                        tonic::Status::GRPC_STATUS,
+                        (tonic::Code::Unimplemented as i32).into(),
+                    );
+                    headers.insert(
+                        http::header::CONTENT_TYPE,
+                        tonic::metadata::GRPC_CONTENT_TYPE,
+                    );
+                    Ok(response)
+                }),
+            }
+        }
+    }
+    impl<T> Clone for AnalyticsServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "music.v1alpha1.AnalyticsService";
+    impl<T> tonic::server::NamedService for AnalyticsServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetVersionRequest {}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

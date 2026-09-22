@@ -16,6 +16,7 @@ version = "0.4.4"
 
 members = [
   "analysis",
+  "analytics",
   "client",
   "desktop",
   "discovery",
@@ -43,6 +44,10 @@ path = "src/main.rs"
 
 [dependencies.music-player-provider]
 path = "provider"
+version = "0.4.4"
+
+[dependencies.music-player-analytics]
+path = "analytics"
 version = "0.4.4"
 
 [dependencies.music-player-server]
@@ -135,6 +140,7 @@ futures = "0.3.24"
 futures-channel = "0.3.24"
 md5 = "0.7.0"
 owo-colors = "3.5.0"
+indicatif = "0.17"
 sea-orm = {version = "2.0.2", features = ["runtime-tokio-rustls", "sqlx-sqlite"]}
 serde_json = "1.0.85"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

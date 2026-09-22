@@ -8337,6 +8337,7 @@ dependencies = [
  "slint",
  "slint-build",
  "souvlaki",
+ "tempfile",
  "tokio",
  "toml 0.8.23",
  "tonic",

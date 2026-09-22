@@ -2224,17 +2224,7 @@ async fn refresh_analytics(weak: &Weak<AppWindow>, state: &Arc<Mutex<WorkerState
     if source != "local" {
         adopt_unknown_rows(&source, state).await;
     }
-    let mut most_played = analytics_rows(
-        "SELECT v.track_id, v.title, v.artist, v.play_count, v.last_played, al.cover \
-         FROM v_most_played v \
-         LEFT JOIN track t ON t.id = v.track_id \
-         LEFT JOIN album al ON al.id = t.album_id \
-         WHERE v.source = ? \
-         ORDER BY v.play_count DESC, v.last_played DESC \
-         LIMIT 200",
-        [source.as_str().into()],
-    )
-    .await;
+    let mut most_played = analytics_rows(MOST_PLAYED_SQL, [source.as_str().into()]).await;
     fill_missing_art(&mut most_played);
     let mut data = load_stats(&source, state).await;
     // The lists above come from SQLite and only know local covers; the
@@ -4229,6 +4219,21 @@ fn non_empty(value: String) -> Option<String> {
     (!trimmed.is_empty()).then(|| trimmed.to_owned())
 }
 
+/// The Most Played screen, and the Statistics tab's chart of the same name.
+///
+/// The `ORDER BY` is not redundant with the one inside `v_most_played`: a
+/// view's ordering is not carried through a select that joins onto it, and
+/// leaving it off silently returned rows in physical order — a track with
+/// five plays above one with seven.
+pub(crate) const MOST_PLAYED_SQL: &str = "SELECT v.track_id, v.title, v.artist, \
+     v.play_count, v.last_played, al.cover \
+     FROM v_most_played v \
+     LEFT JOIN track t ON t.id = v.track_id \
+     LEFT JOIN album al ON al.id = t.album_id \
+     WHERE v.source = ? \
+     ORDER BY v.play_count DESC, v.last_played DESC \
+     LIMIT 200";
+
 /// The artwork each row wants, by position.
 fn art_of(rows: &[StatRowData]) -> Vec<Option<String>> {
     rows.iter().map(|row| row.art.clone()).collect()
@@ -4493,5 +4498,70 @@ mod history_tests {
             with_cover * 2 > data.top_tracks.len(),
             "most played tracks should carry a cover"
         );
+    }
+}
+
+#[cfg(test)]
+mod most_played_tests {
+    use super::*;
+    use sea_orm::{ConnectionTrait, DbBackend, Statement};
+
+    /// The Most Played screen must be ordered by play count.
+    ///
+    /// `v_most_played` orders internally, but SQLite does not carry a view's
+    /// ordering through a select that joins onto it — which is exactly what
+    /// fetching the album cover added. The screen then listed a track with
+    /// five plays above one with seven.
+    #[tokio::test]
+    async fn most_played_is_ordered_by_play_count() {
+        use migration::{Migrator, MigratorTrait};
+
+        let dir = tempfile::tempdir().unwrap();
+        let url = format!(
+            "sqlite://{}?mode=rwc",
+            dir.path().join("music-player.sqlite3").display()
+        );
+        let conn = sea_orm::Database::connect(&url).await.unwrap();
+        Migrator::up(&conn, None).await.unwrap();
+
+        // Inserted in an order that is not the answer, so physical order
+        // cannot pass for sorted.
+        for (id, title, plays) in [
+            ("t1", "Five", 5),
+            ("t2", "Nine", 9),
+            ("t3", "Seven", 7),
+            ("t4", "Six", 6),
+        ] {
+            for sql in [
+                format!(
+                    "INSERT INTO track (id, title, artist, genre, duration, uri) \
+                     VALUES ('{id}', '{title}', 'Someone', 'Rock', 100.0, '/m/{id}.mp3')"
+                ),
+                format!(
+                    "INSERT INTO track_stats (track_id, play_count, last_played, source, \
+                     title, artist) VALUES ('{id}', {plays}, 1750000000, 'local', \
+                     '{title}', 'Someone')"
+                ),
+            ] {
+                conn.execute_raw(Statement::from_string(DbBackend::Sqlite, sql))
+                    .await
+                    .unwrap();
+            }
+        }
+
+        let rows = conn
+            .query_all_raw(Statement::from_sql_and_values(
+                DbBackend::Sqlite,
+                MOST_PLAYED_SQL,
+                ["local".into()],
+            ))
+            .await
+            .unwrap();
+
+        let counts: Vec<i64> = rows
+            .iter()
+            .map(|row| row.try_get_by_index::<i64>(3).unwrap_or(0))
+            .collect();
+        assert_eq!(counts, vec![9, 7, 6, 5], "most played first");
     }
 }

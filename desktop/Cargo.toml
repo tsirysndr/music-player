@@ -117,3 +117,6 @@ souvlaki = {version = "0.8", default-features = false, features = ["use_zbus"]}
 
 [build-dependencies]
 slint-build = "1.17"
+
+[dev-dependencies]
+tempfile = "3.3.0"

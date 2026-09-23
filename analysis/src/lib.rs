@@ -12,11 +12,13 @@
 
 mod decode;
 mod features;
+pub mod fingerprint;
 pub mod key;
 pub mod tags;
 mod waveform;
 
 pub use decode::{decode, Decoded};
+pub use fingerprint::{fingerprint, fingerprint_file, Fingerprint, FINGERPRINT_SECONDS};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

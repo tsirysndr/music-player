@@ -12,13 +12,21 @@ pub async fn auto_scan_music_library(db: Database) {
     match track::Entity::find().all(db.clone().get_connection()).await {
         Ok(result) => {
             if result.is_empty() {
-                scan_music_library(false, db).await.unwrap_or_default();
+                scan_music_library(false, db.clone())
+                    .await
+                    .unwrap_or_default();
             }
         }
         Err(e) => {
             error!("Error: {}", e);
         }
     }
+    // Detached, and started at boot rather than waiting for the first periodic
+    // refresh: a library that has never been fingerprinted would otherwise sit
+    // unidentified for however long `library_refresh_interval` is. It finds
+    // nothing to do on a library that is already through it, so starting it
+    // every time costs a query.
+    music_player_scanner::spawn_fingerprint_and_identify(db);
 }
 
 pub async fn scan_music_library(enable_log: bool, db: Database) -> Result<Vec<Song>, Error> {
@@ -40,12 +48,16 @@ pub async fn periodic_scan_music_library() {
     let interval = std::time::Duration::from_secs(interval_minutes as u64 * 60);
     loop {
         tokio::time::sleep(interval).await;
-        let db = Database::new().await;
+        // The process-wide handle, not a new pool: a pool costs a file
+        // descriptor per connection, and opening one on every tick of a loop
+        // that runs for the life of the daemon runs the process out of them.
+        let db = music_player_storage::shared().await.clone();
         if let Err(e) = scan_music_library(false, db.clone()).await {
             error!("Library refresh failed: {}", e);
         }
         // Detached here, unlike the `scan` command: this loop runs inside a
         // daemon that outlives it, and the next refresh is a long way off.
-        music_player_scanner::spawn_key_and_bpm_analysis(db);
+        music_player_scanner::spawn_key_and_bpm_analysis(db.clone());
+        music_player_scanner::spawn_fingerprint_and_identify(db);
     }
 }

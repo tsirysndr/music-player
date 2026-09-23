@@ -1,6 +1,14 @@
 #[cfg(test)]
 mod tests;
 
+pub mod acoustid;
+mod identify;
+
+pub use identify::{
+    fingerprint_and_identify, fingerprint_library, identify_unknown_tracks,
+    spawn_fingerprint_and_identify,
+};
+
 use anyhow::Error;
 use futures::stream::{self, StreamExt};
 use music_player_entity::{album, artist, artist_tracks, playlist_tracks, track};
@@ -199,7 +207,8 @@ pub async fn refresh_music_library(enable_log: bool, db: Database) -> Result<Vec
         tracing::warn!("smart playlist refresh failed: {e}");
     }
 
-    // Key and tempo are deliberately *not* run from here.
+    // Key and tempo — and fingerprinting, and identification — are
+    // deliberately *not* run from here.
     //
     // They decode every new track in full, which is minutes of work for a
     // library of any size, and the right way to do that differs by caller: a

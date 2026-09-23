@@ -76,6 +76,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
   - [Rocksky scrobbling](#rocksky-scrobbling)
   - [AT Protocol sync](#at-protocol-sync)
 - [Audio analysis & auto-DJ](#audio-analysis--auto-dj)
+- [Acoustic fingerprints & missing tags](#acoustic-fingerprints--missing-tags)
 - [AI agents (MCP)](#ai-agents-mcp)
 - [Listening analytics](#listening-analytics)
 - [Casting](#casting)
@@ -94,6 +95,7 @@ Audio decoding and playback are powered by the [Rockbox](https://www.rockbox.org
 - 🎧 **Rocksky scrobbling** — scrobble your plays to [Rocksky](https://rocksky.app) on the [AT Protocol](https://atproto.com)
 - 📻 **Internet radio** — search and browse thousands of stations (Radio Browser + TuneIn), bookmark them, with a fullscreen now-playing player
 - 🛰️ **AT Protocol sync** — radio bookmarks and liked songs restored from your atproto repo, written back to your PDS, and kept live over Jetstream
+- 🔍 **Acoustic fingerprinting** (Chromaprint) — every file identified by its audio, and badly tagged ones named from AcoustID/MusicBrainz the way Picard does it
 - 📊 **Listening analytics** (DuckDB) — import years of Spotify, Last.fm and Rocksky history, deduplicated across sources, then ask it about sessions, skips, taste drift and what actually follows what
 - 🔌 Flexible **audio output**: system device (cpal), stdout, FIFO, Unix or TCP socket
 
@@ -378,6 +380,7 @@ scrobble = true    # Rocksky scrobbling
 atproto = true     # AT Protocol sync (bookmarks, likes, listening status)
 atproto_car_max_age_hours = 24  # re-download the atproto repo archive at most once a day
 cache = false      # cache remote tracks on disk before they play (see Track cache)
+acoustid_api_key = ""  # identify badly tagged files from their audio (see Acoustic fingerprints)
 ```
 
 The library can also be refreshed manually at any time — `music-player scan` from the CLI, or the `scan` mutation in GraphQL. Re-scans only pick up what's new; existing entries are untouched.
@@ -519,6 +522,44 @@ Analysis is on demand, not automatic: it costs a decode per track, and a
 download first for a remote server. Start a pass from an agent
 (`analyze_library`) or leave it alone — everything else works without it, and an
 unanalysed track simply shows a flat line where its waveform would be.
+
+## Acoustic fingerprints & missing tags
+
+Tags lie. Files get ripped with no tags at all, downloaded as `track03.mp3`, or
+tagged by something that wrote "Unknown Artist" and moved on. The audio does
+not lie, so every local file also gets a **Chromaprint** acoustic fingerprint —
+the same fingerprint [AcoustID](https://acoustid.org) indexes, computed by a
+pure-Rust port, so there is no C library to install and every platform gets the
+same answer. It is robust to the encoder, the bitrate and the volume: two rips
+of the same recording fingerprint alike even when nothing about their bytes or
+their tags does.
+
+Fingerprinting runs after a scan, never during one. Only the first two minutes
+of each file are decoded, a few files at a time, and in the daemon it runs at a
+background pace with the rest of the time given back — nothing is waiting on
+it, and a player that stutters while its library is being catalogued is a worse
+player. A fingerprint is stored once and never recomputed.
+
+With an AcoustID key configured, the files whose tags are **missing** are then
+looked up and filled in from the MusicBrainz recording their audio matches —
+title, artist, album, year, track and disc number, plus the recording and
+release MBIDs — which is what MusicBrainz Picard does, minus the window:
+
+```toml
+acoustid_api_key = "your-key"   # or export ACOUSTID_API_KEY
+```
+
+Keys are free and take a minute: [acoustid.org/new-application](https://acoustid.org/new-application).
+Without one nothing is sent anywhere; the fingerprints are still computed and
+stored, and turning the key on later is a lookup rather than a rescan.
+
+Two rules keep this honest. **Tags that exist are never overwritten** — they
+came from whoever made the file and beat a guess from a database, so only the
+blanks are filled. And a candidate recording whose length disagrees with the
+file by more than 15 seconds is rejected, because a popular song matches its
+own remixes and radio edits, and tagging the album version as the extended mix
+is worse than leaving it blank. Every answer is stored, including "not found",
+so nothing is ever asked twice.
 
 ## AI agents (MCP)
 

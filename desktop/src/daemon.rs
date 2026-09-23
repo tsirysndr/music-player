@@ -233,13 +233,19 @@ async fn auto_scan_music_library(db: Database) {
     match track::Entity::find().all(db.get_connection()).await {
         Ok(result) => {
             if result.is_empty() {
-                if let Err(e) = music_player_scanner::refresh_music_library(false, db).await {
+                if let Err(e) = music_player_scanner::refresh_music_library(false, db.clone()).await
+                {
                     tracing::error!("initial library scan failed: {e}");
                 }
             }
         }
         Err(e) => tracing::error!("library check failed: {e}"),
     }
+    // Detached, at a background pace: fingerprinting decodes audio and the
+    // identification that follows it talks to the network, and neither is
+    // anything the app is waiting for. Finds nothing to do on a library that
+    // has already been through it.
+    music_player_scanner::spawn_fingerprint_and_identify(db);
 }
 
 /// Periodically rescan the music directory (settings.library_refresh_interval
@@ -252,10 +258,14 @@ async fn periodic_scan_music_library() {
     let interval = Duration::from_secs(interval_minutes * 60);
     loop {
         tokio::time::sleep(interval).await;
-        let db = Database::new().await;
-        if let Err(e) = music_player_scanner::refresh_music_library(false, db).await {
+        // The process-wide handle, not a new pool: a pool costs a file
+        // descriptor per connection, and opening one on every tick of a loop
+        // that runs for the life of the app runs the process out of them.
+        let db = music_player_storage::shared().await.clone();
+        if let Err(e) = music_player_scanner::refresh_music_library(false, db.clone()).await {
             tracing::error!("periodic library scan failed: {e}");
         }
+        music_player_scanner::spawn_fingerprint_and_identify(db);
     }
 }
 

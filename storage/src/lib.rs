@@ -20,6 +20,7 @@ pub mod searcher;
 pub mod smart_playlist;
 pub mod track_analysis;
 pub mod track_cache;
+pub mod track_fingerprint;
 
 pub mod repo;
 

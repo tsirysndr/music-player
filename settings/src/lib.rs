@@ -162,6 +162,16 @@ pub struct Settings {
     /// player. Turning it on is a decision; `music-player cache` shows the cost.
     #[serde(default)]
     pub cache: bool,
+    /// Application key for the AcoustID lookup API, used to identify tracks
+    /// whose tags are missing from their acoustic fingerprint.
+    ///
+    /// Empty means no lookups: fingerprints are still computed and stored —
+    /// they are what a duplicate check compares — but nothing is sent
+    /// anywhere. AcoustID keys are free and per-application, which is why
+    /// there is no default to ship: https://acoustid.org/new-application.
+    /// `ACOUSTID_API_KEY` in the environment is honoured too.
+    #[serde(default)]
+    pub acoustid_api_key: Option<String>,
     /// Register as a Rocksky remote-player device (needs `rocksky login`),
     /// so the daemon shows up in the web/desktop miniplayer device picker.
     #[serde(default = "default_true")]
@@ -268,6 +278,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         atproto_force_car_sync: false,
         atproto_car_max_age_hours: default_car_max_age_hours(),
         cache: false,
+        acoustid_api_key: Some("".to_string()),
         remote_player: true,
         typesense: None,
         audio: AudioSettings::default(),
@@ -320,6 +331,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
             default_car_max_age_hours() as i64,
         )?
         .set_default("cache", false)?
+        .set_default("acoustid_api_key", "")?
         .set_default("remote_player", true)?
         .build()
 }

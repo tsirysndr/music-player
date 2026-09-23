@@ -178,9 +178,23 @@ async fn scan() -> CmdResult {
         .map_err(|e| e.to_string())?;
 
     // Awaited, not spawned: this command exits as soon as it returns, so a
-    // background task would be killed before it decoded anything — which is
+    // background task would be killed before it did anything — which is
     // exactly why a scan used to leave every key and tempo null.
     //
+    // Fingerprinting comes first of the two. It decodes two minutes per track
+    // rather than all of it, and what it produces — a name for a file that had
+    // none — is the part a user watching this actually sees.
+    let identified =
+        music_player_scanner::fingerprint_and_identify(&db, music_player_scanner::Pace::Foreground)
+            .await;
+    if identified > 0 {
+        println!(
+            "{} track{} identified from their audio",
+            identified.to_string().bright_green(),
+            if identified == 1 { "" } else { "s" }
+        );
+    }
+
     // It decodes each new track in full, so a first scan of a large library
     // takes a while. The tracks are already indexed and playable by this point;
     // what is still running only fills in two columns.

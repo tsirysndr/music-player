@@ -24,6 +24,7 @@ mod m20260910_000001_add_track_disc;
 mod m20260910_000002_drop_detected_keys;
 mod m20260913_000001_add_play_history;
 mod m20260913_000002_per_source_analytics;
+mod m20260923_000001_create_track_fingerprint;
 
 /// Create the database file if needed and bring the schema up to date,
 /// without going through the sea-orm migration CLI (which parses argv).
@@ -66,6 +67,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260910_000002_drop_detected_keys::Migration),
             Box::new(m20260913_000001_add_play_history::Migration),
             Box::new(m20260913_000002_per_source_analytics::Migration),
+            Box::new(m20260923_000001_create_track_fingerprint::Migration),
         ]
     }
 }

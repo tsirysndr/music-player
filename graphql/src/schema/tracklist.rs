@@ -1,7 +1,7 @@
 use async_graphql::*;
 use futures_util::Stream;
 use music_player_entity::{album as album_entity, artist as artist_entity, track as track_entity};
-use music_player_playback::player::PlayerCommand;
+use music_player_playback::player::{normalize_queue, PlayerCommand};
 use music_player_renderer::CurrentReceiverDevice;
 use music_player_storage::repo::album::AlbumRepository;
 use music_player_storage::repo::artist::ArtistRepository;
@@ -9,6 +9,7 @@ use music_player_storage::repo::playlist::PlaylistRepository;
 use music_player_storage::repo::track::TrackRepository;
 use music_player_storage::Database;
 use music_player_tracklist::Tracklist as TracklistState;
+use music_player_types::source::SourceHandle;
 use music_player_types::types;
 use music_player_types::types::{CHROMECAST_DEVICE, MUSIC_PLAYER_DEVICE};
 use sea_orm::EntityTrait;
@@ -16,8 +17,8 @@ use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
-use crate::load_tracks;
 use crate::replace_host;
+use crate::{load_tracks_with_resolver, reject_source_receiver, source_resolver, validate_queue};
 
 use super::provider;
 use crate::simple_broker::SimpleBroker;
@@ -79,6 +80,31 @@ impl TracklistQuery {
     }
 }
 
+// Run before consulting the browsing provider or any URL decorator. The
+// receiver is checked again when committing, because it may change during auth.
+async fn saved_source_track(
+    ctx: &Context<'_>,
+    mut track: track_entity::Model,
+) -> Result<Option<track_entity::Model>, Error> {
+    normalize_queue(std::slice::from_mut(&mut track)).map_err(|e| Error::new(e.to_string()))?;
+    if !SourceHandle::is_handle(&track.id) {
+        return Ok(None);
+    }
+    let source = SourceHandle::parse(&track.id).map_err(|e| Error::new(e.to_string()))?;
+    {
+        let device = ctx
+            .data::<Arc<Mutex<CurrentReceiverDevice>>>()?
+            .lock()
+            .await;
+        reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
+    }
+    let result = source_resolver(ctx)?
+        .track_handle(&source)
+        .await
+        .map_err(provider::err)?;
+    Ok(Some(result.into()))
+}
+
 #[derive(Default)]
 pub struct TracklistMutation;
 
@@ -91,16 +117,34 @@ impl TracklistMutation {
             .unwrap();
         let db = ctx.data::<Database>().unwrap();
         let id = track.id.to_string();
+        if let Some(track) = saved_source_track(ctx, track.into()).await? {
+            let device = ctx
+                .data::<Arc<Mutex<CurrentReceiverDevice>>>()?
+                .lock()
+                .await;
+            reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
+            player_cmd
+                .lock()
+                .unwrap()
+                .send(PlayerCommand::LoadTracklist {
+                    tracks: vec![track.clone()],
+                    start_index: None,
+                })
+                .map_err(|_| Error::new("Player command channel closed"))?;
+            return Ok(vec![track.into()]);
+        }
 
-        let track: track_entity::Model;
+        let mut track: track_entity::Model;
 
         if let Some(current) = provider::connected(ctx).await {
             let result = current.provider.track(&id).await.map_err(provider::err)?;
             track = provider::decorate(result, &current.config).into();
+            validate_queue(source_resolver(ctx)?, std::slice::from_mut(&mut track)).await?;
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;
 
+            reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
             let receiver = device.client.as_mut();
 
             if let Some(receiver) = receiver {
@@ -138,7 +182,8 @@ impl TracklistMutation {
                 .all(db.get_connection())
                 .await?;
         let (_, album) = result.into_iter().next().unwrap();
-        track.album = album.unwrap();
+        track.album = album.unwrap_or_default();
+        validate_queue(source_resolver(ctx)?, std::slice::from_mut(&mut track)).await?;
 
         player_cmd
             .lock()
@@ -162,11 +207,30 @@ impl TracklistMutation {
         Ok(vec![])
     }
 
-    async fn add_tracks(&self, ctx: &Context<'_>, _tracks: Vec<TrackInput>) -> Result<bool, Error> {
-        let _player_cmd = ctx
-            .data::<Arc<std::sync::Mutex<UnboundedSender<PlayerCommand>>>>()
-            .unwrap();
-        todo!()
+    async fn add_tracks(&self, ctx: &Context<'_>, tracks: Vec<TrackInput>) -> Result<bool, Error> {
+        let mut tracks: Vec<track_entity::Model> = tracks.into_iter().map(Into::into).collect();
+        normalize_queue(&mut tracks).map_err(|e| Error::new(e.to_string()))?;
+        let mut device = ctx
+            .data::<Arc<Mutex<CurrentReceiverDevice>>>()?
+            .lock()
+            .await;
+        reject_source_receiver(&tracks, device.client.is_some())?;
+        validate_queue(source_resolver(ctx)?, &mut tracks).await?;
+        if let Some(receiver) = device.client.as_mut() {
+            for track in tracks {
+                receiver.load(track.into()).await?;
+            }
+        } else if !tracks.is_empty() {
+            ctx.data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()?
+                .lock()
+                .unwrap()
+                .send(PlayerCommand::LoadTracklist {
+                    tracks,
+                    start_index: None,
+                })
+                .map_err(|_| Error::new("Player command channel closed"))?;
+        }
+        Ok(true)
     }
 
     async fn clear_tracklist(&self, ctx: &Context<'_>) -> Result<bool, Error> {
@@ -258,6 +322,27 @@ impl TracklistMutation {
     }
 
     async fn play_next(&self, ctx: &Context<'_>, id: ID) -> Result<bool, Error> {
+        if let Some(track) = saved_source_track(
+            ctx,
+            track_entity::Model {
+                id: id.to_string(),
+                ..Default::default()
+            },
+        )
+        .await?
+        {
+            let device = ctx
+                .data::<Arc<Mutex<CurrentReceiverDevice>>>()?
+                .lock()
+                .await;
+            reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
+            ctx.data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()?
+                .lock()
+                .unwrap()
+                .send(PlayerCommand::PlayNext(track))
+                .map_err(|_| Error::new("Player command channel closed"))?;
+            return Ok(true);
+        }
         let db = ctx.data::<Database>().unwrap();
         let devices = ctx.data::<Arc<StdMutex<Vec<types::Device>>>>().unwrap();
         let devices = devices.lock().unwrap().clone();
@@ -272,6 +357,11 @@ impl TracklistMutation {
 
             let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
             let mut device = current_device.lock().await;
+
+            normalize_queue(std::slice::from_mut(&mut track))
+                .map_err(|e| Error::new(e.to_string()))?;
+            reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
+            validate_queue(source_resolver(ctx)?, std::slice::from_mut(&mut track)).await?;
 
             // With no receiver the local engine plays it — which is the common
             // case, and which this used to unwrap and panic on. Falling
@@ -298,6 +388,10 @@ impl TracklistMutation {
         let current_device = ctx.data::<Arc<Mutex<CurrentReceiverDevice>>>().unwrap();
         let mut device = current_device.lock().await;
 
+        normalize_queue(std::slice::from_mut(&mut track)).map_err(|e| Error::new(e.to_string()))?;
+        reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
+        validate_queue(source_resolver(ctx)?, std::slice::from_mut(&mut track)).await?;
+
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == CHROMECAST_DEVICE;
@@ -318,6 +412,66 @@ impl TracklistMutation {
             .unwrap()
             .send(PlayerCommand::PlayNext(track_entity::Model { ..track }))
             .unwrap();
+        Ok(true)
+    }
+
+    /// An id-only entry point. Stable sources are resolved through saved accounts.
+    async fn play_track(&self, ctx: &Context<'_>, id: ID) -> Result<bool, Error> {
+        let db = ctx.data::<Database>()?;
+        let player_cmd = ctx.data::<Arc<StdMutex<UnboundedSender<PlayerCommand>>>>()?;
+        let id = id.to_string();
+        let source = saved_source_track(
+            ctx,
+            track_entity::Model {
+                id: id.clone(),
+                ..Default::default()
+            },
+        )
+        .await?;
+        let (mut track, source_ip) = if let Some(track) = source {
+            (track, None)
+        } else if let Some(current) = provider::connected(ctx).await {
+            let track = current.provider.track(&id).await.map_err(provider::err)?;
+            (
+                provider::decorate(track, &current.config).into(),
+                Some(current.provider.host().to_owned()),
+            )
+        } else {
+            (
+                TrackRepository::new(db.get_connection()).find(&id).await?,
+                None,
+            )
+        };
+        let mut device = ctx
+            .data::<Arc<Mutex<CurrentReceiverDevice>>>()?
+            .lock()
+            .await;
+        normalize_queue(std::slice::from_mut(&mut track)).map_err(|e| Error::new(e.to_string()))?;
+        reject_source_receiver(std::slice::from_ref(&track), device.client.is_some())?;
+        // Only legacy local-library URIs need host decoration for a receiver.
+        if source_ip.is_none() && device.client.is_some() {
+            let devices = ctx
+                .data::<Arc<StdMutex<Vec<types::Device>>>>()?
+                .lock()
+                .unwrap()
+                .clone();
+            let cast = device.client.as_ref().unwrap().device_type() == CHROMECAST_DEVICE;
+            track = update_track_url(devices.clone(), track, cast)?;
+            let legacy: types::Track = track.into();
+            track = update_cover_url(devices, legacy.clone(), cast)
+                .unwrap_or(legacy)
+                .into();
+        }
+        load_tracks_with_resolver(
+            source_resolver(ctx)?,
+            player_cmd,
+            device.client.as_mut(),
+            source_ip,
+            vec![track],
+            Some(0),
+            false,
+        )
+        .await?;
         Ok(true)
     }
 
@@ -346,7 +500,8 @@ impl TracklistMutation {
             let mut device = current_device.lock().await;
             let receiver = device.client.as_mut();
 
-            load_tracks(
+            load_tracks_with_resolver(
+                source_resolver(ctx)?,
                 player_cmd,
                 receiver,
                 Some(source_ip),
@@ -366,6 +521,8 @@ impl TracklistMutation {
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == CHROMECAST_DEVICE;
+            normalize_queue(&mut result.tracks).map_err(|e| Error::new(e.to_string()))?;
+            reject_source_receiver(&result.tracks, true)?;
             result = update_tracks_url(devices.clone(), result, will_play_on_chromecast)?;
             result.tracks = result
                 .tracks
@@ -379,7 +536,8 @@ impl TracklistMutation {
                 .collect();
         }
 
-        load_tracks(
+        load_tracks_with_resolver(
+            source_resolver(ctx)?,
             player_cmd,
             device.client.as_mut(),
             None,
@@ -415,7 +573,8 @@ impl TracklistMutation {
             let mut device = current_device.lock().await;
             let receiver = device.client.as_mut();
 
-            load_tracks(
+            load_tracks_with_resolver(
+                source_resolver(ctx)?,
                 player_cmd,
                 receiver,
                 Some(source_ip),
@@ -435,6 +594,8 @@ impl TracklistMutation {
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == CHROMECAST_DEVICE;
+            normalize_queue(&mut artist.tracks).map_err(|e| Error::new(e.to_string()))?;
+            reject_source_receiver(&artist.tracks, true)?;
             artist = update_tracks_url(devices.clone(), artist, will_play_on_chromecast)?;
             artist.tracks = artist
                 .tracks
@@ -448,7 +609,8 @@ impl TracklistMutation {
                 .collect();
         }
 
-        load_tracks(
+        load_tracks_with_resolver(
+            source_resolver(ctx)?,
             player_cmd,
             device.client.as_mut(),
             None,
@@ -489,7 +651,8 @@ impl TracklistMutation {
             let mut device = current_device.lock().await;
             let receiver = device.client.as_mut();
 
-            load_tracks(
+            load_tracks_with_resolver(
+                source_resolver(ctx)?,
                 player_cmd,
                 receiver,
                 Some(source_ip),
@@ -511,6 +674,10 @@ impl TracklistMutation {
         if device.client.is_some() {
             let receiver = device.client.as_mut().unwrap();
             let will_play_on_chromecast = receiver.device_type() == CHROMECAST_DEVICE;
+            let mut tracks: Vec<track_entity::Model> =
+                playlist.tracks.iter().cloned().map(Into::into).collect();
+            normalize_queue(&mut tracks).map_err(|e| Error::new(e.to_string()))?;
+            reject_source_receiver(&tracks, true)?;
             playlist = update_tracks_url(devices.clone(), playlist, will_play_on_chromecast)?;
             playlist.tracks = playlist
                 .tracks
@@ -526,7 +693,8 @@ impl TracklistMutation {
         let tracks: Vec<track_entity::Model> =
             playlist.tracks.into_iter().map(Into::into).collect();
 
-        load_tracks(
+        load_tracks_with_resolver(
+            source_resolver(ctx)?,
             player_cmd,
             device.client.as_mut(),
             None,
@@ -571,3 +739,7 @@ impl TracklistSubscription {
         SimpleBroker::<TracklistChanged>::subscribe()
     }
 }
+
+#[cfg(test)]
+#[path = "tracklist/source_tests.rs"]
+mod source_tests;

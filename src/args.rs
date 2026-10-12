@@ -137,7 +137,14 @@ async fn extension(matches: &ArgMatches) -> CmdResult {
             )
             .await
         }
-        Some(("list", _)) => crate::extension::list().await,
+        Some(("list", m)) => crate::extension::list(m.get_flag("local")).await,
+        Some(("enable", m)) => {
+            crate::extension::set_enabled(m.get_one::<String>("id").unwrap(), true).await
+        }
+        Some(("disable", m)) => {
+            crate::extension::set_enabled(m.get_one::<String>("id").unwrap(), false).await
+        }
+        Some(("rescan", _)) => crate::extension::rescan().await,
         Some(("uninstall", m)) => {
             crate::extension::uninstall(m.get_one::<String>("id").unwrap(), m.get_flag("yes")).await
         }

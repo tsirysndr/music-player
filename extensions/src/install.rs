@@ -245,6 +245,7 @@ async fn install_bare_wasm(
         readme: String::new(),
         entry: "plugin.wasm".to_string(),
         capabilities: capabilities.to_vec(),
+        source_api_version: None,
         permissions: Default::default(),
     };
     std::fs::write(

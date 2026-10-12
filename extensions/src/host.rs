@@ -15,7 +15,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, TryLockError};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error};
@@ -29,12 +29,81 @@ use crate::abi::{
     PredicateResponse, PredicateSpec, SavedRadio, SourceAlbum, SourceArtist, SourceInfo,
     SourcePlaylist, StreamRequest, StreamResponse, TrackInfo,
 };
-use crate::manifest::{Capability, Manifest};
+use crate::manifest::{Capability, Manifest, SourceProtocol};
+
+mod source_v1;
+mod source_v2;
 
 /// How long one call into an extension may take before it is cut off. Generous
 /// enough for a metadata provider or a source to make an HTTP request, short
 /// enough that a runaway loop does not wedge a scan.
 const CALL_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// No guest code ran. The caller may retry while its request is still current.
+/// Kept distinct from guest failures: retrying an executed resolve may allocate
+/// a second remote session.
+#[derive(Debug)]
+pub(crate) struct SourceInstanceBusy;
+
+impl std::fmt::Display for SourceInstanceBusy {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("source instance is busy")
+    }
+}
+
+impl std::error::Error for SourceInstanceBusy {}
+
+const SOURCE_V2_EXPORTS: [&str; 6] = [
+    "source_identity_v2",
+    "browse_media_v2",
+    "get_media_item_v2",
+    "get_audio_options_v2",
+    "resolve_audio_v2",
+    "release_audio_v2",
+];
+const SOURCE_V1_EXPORTS: [&str; 6] = [
+    "source_info",
+    "list_albums",
+    "list_artists",
+    "list_tracks",
+    "list_playlists",
+    "get_stream_url",
+];
+
+fn check_optional_call(protocol: Option<SourceProtocol>, function: &str) -> Result<(), Error> {
+    if SOURCE_V2_EXPORTS.contains(&function) {
+        return Err(anyhow!(
+            "source v2 exports require the strict call_source_v2 entry point"
+        ));
+    }
+    if protocol == Some(SourceProtocol::V2) && SOURCE_V1_EXPORTS.contains(&function) {
+        return Err(anyhow!(
+            "a source v2 instance cannot call legacy source exports"
+        ));
+    }
+    Ok(())
+}
+
+fn check_v2_call(protocol: Option<SourceProtocol>, function: &str) -> Result<(), Error> {
+    if protocol != Some(SourceProtocol::V2) {
+        return Err(anyhow!(
+            "source v2 was not selected when this instance loaded"
+        ));
+    }
+    if !SOURCE_V2_EXPORTS.contains(&function) {
+        return Err(anyhow!("not a supported source v2 export"));
+    }
+    Ok(())
+}
+
+fn decode_source_v2<O: DeserializeOwned>(raw: &[u8]) -> Result<O, Error> {
+    if raw.is_empty() {
+        return Err(anyhow!("source v2 returned an empty response"));
+    }
+    // Do not echo guest response values, which may contain credentials.
+    serde_json::from_slice(raw)
+        .map_err(|_| anyhow!("source v2 returned invalid JSON or response shape"))
+}
 
 /// The user's library, as the `query_*` host functions need it.
 ///
@@ -87,6 +156,8 @@ pub struct Extension {
     /// The Extism plugin. Behind a mutex because a plugin owns a single
     /// WebAssembly instance, so calls into it must be serialized.
     plugin: Mutex<Plugin>,
+    /// Fixed at load: later mutations of the public manifest cannot downgrade it.
+    source_protocol: Option<SourceProtocol>,
     /// The config the extension can see: its manifest defaults with the user's
     /// values layered on top.
     config: BTreeMap<String, String>,
@@ -101,6 +172,7 @@ impl Extension {
         context: HostContext,
     ) -> Result<Self, Error> {
         let manifest = Manifest::load(dir)?;
+        let source_protocol = manifest.source_protocol()?;
         let wasm_path = manifest.entry_path(dir);
 
         // Only declared keys are visible: an extension cannot read settings it
@@ -122,10 +194,19 @@ impl Extension {
         let plugin = build_plugin(extism_manifest, &manifest, config.clone(), context)
             .with_context(|| format!("loading {}", wasm_path.display()))?;
 
+        if source_protocol == Some(SourceProtocol::V2) {
+            for function in SOURCE_V2_EXPORTS {
+                if !plugin.function_exists(function) {
+                    return Err(anyhow!("source v2 is missing required export {function}"));
+                }
+            }
+        }
+
         Ok(Self {
             manifest,
             dir: dir.to_path_buf(),
             plugin: Mutex::new(plugin),
+            source_protocol,
             config,
         })
     }
@@ -139,6 +220,12 @@ impl Extension {
         &self.config
     }
 
+    /// The protocol frozen when the module was loaded, independent of later
+    /// changes to the public manifest value.
+    pub fn loaded_source_protocol(&self) -> Option<SourceProtocol> {
+        self.source_protocol
+    }
+
     /// Call an export with a JSON body and decode its JSON reply.
     ///
     /// A missing export is `Ok(None)`: an extension with the `events`
@@ -149,6 +236,7 @@ impl Extension {
         function: &str,
         input: &I,
     ) -> Result<Option<O>, Error> {
+        check_optional_call(self.source_protocol, function)?;
         let mut plugin = self
             .plugin
             .lock()
@@ -169,6 +257,35 @@ impl Extension {
                 self.manifest.id
             )
         })
+    }
+
+    /// Mandatory source v2 call. Never falls back to optional/legacy exports.
+    /// The caller must still validate request/response identity and semantics.
+    /// Admission never waits for another guest call. A busy instance returns a
+    /// typed error before execution; scheduling/retry belongs to the caller.
+    /// CALL_TIMEOUT covers execution only, not per-request cancellation.
+    pub(crate) fn call_source_v2<I: Serialize, O: DeserializeOwned>(
+        &self,
+        function: &str,
+        input: &I,
+    ) -> Result<O, Error> {
+        check_v2_call(self.source_protocol, function)?;
+        let body =
+            serde_json::to_vec(input).map_err(|_| anyhow!("could not encode source v2 request"))?;
+        let mut plugin = match self.plugin.try_lock() {
+            Ok(plugin) => plugin,
+            Err(TryLockError::WouldBlock) => return Err(SourceInstanceBusy.into()),
+            Err(TryLockError::Poisoned(_)) => {
+                return Err(anyhow!("source v2 instance lock is poisoned"));
+            }
+        };
+        if !plugin.function_exists(function) {
+            return Err(anyhow!("source v2 is missing required export {function}"));
+        }
+        let raw = plugin
+            .call::<&[u8], &[u8]>(function, &body)
+            .map_err(|_| anyhow!("source v2 export {function} failed"))?;
+        decode_source_v2(raw)
     }
 
     /// Call an export that takes no input.
@@ -247,6 +364,7 @@ impl Extension {
 
     /// Describe the source this extension provides.
     pub fn source_info(&self) -> Result<Option<SourceInfo>, Error> {
+        check_optional_call(self.source_protocol, "source_info")?;
         if !self.manifest.has(Capability::Source) {
             return Ok(None);
         }
@@ -274,6 +392,7 @@ impl Extension {
         function: &str,
         request: &BrowseRequest,
     ) -> Result<Vec<O>, Error> {
+        check_optional_call(self.source_protocol, function)?;
         if !self.manifest.has(Capability::Source) {
             return Ok(Vec::new());
         }
@@ -284,6 +403,7 @@ impl Extension {
 
     /// Resolve one of the source's track ids to a playable url.
     pub fn stream_url(&self, track_id: &str) -> Result<Option<StreamResponse>, Error> {
+        check_optional_call(self.source_protocol, "get_stream_url")?;
         if !self.manifest.has(Capability::Source) {
             return Ok(None);
         }
@@ -462,6 +582,50 @@ fn guard<'a>(
 mod tests {
     use super::*;
 
+    #[test]
+    fn source_protocol_gates_prevent_optional_calls_and_legacy_fallback() {
+        for function in SOURCE_V1_EXPORTS {
+            assert!(check_optional_call(Some(SourceProtocol::V2), function).is_err());
+            assert!(check_optional_call(Some(SourceProtocol::V1), function).is_ok());
+            assert!(check_optional_call(None, function).is_ok());
+            assert!(check_v2_call(Some(SourceProtocol::V2), function).is_err());
+        }
+        for function in SOURCE_V2_EXPORTS {
+            assert!(check_v2_call(Some(SourceProtocol::V2), function).is_ok());
+            for protocol in [None, Some(SourceProtocol::V1), Some(SourceProtocol::V2)] {
+                assert!(check_optional_call(protocol, function).is_err());
+            }
+            assert!(check_v2_call(None, function).is_err());
+            assert!(check_v2_call(Some(SourceProtocol::V1), function).is_err());
+        }
+        for function in ["on_track_played", "get_lyrics", "unknown_v2"] {
+            assert!(check_optional_call(Some(SourceProtocol::V2), function).is_ok());
+            assert!(check_v2_call(Some(SourceProtocol::V2), function).is_err());
+        }
+    }
+
+    #[test]
+    fn strict_source_response_rejects_empty_malformed_and_wrong_shape() {
+        #[derive(serde::Deserialize)]
+        struct Reply {
+            index: i32,
+        }
+        for raw in [
+            b"".as_slice(),
+            b"   ",
+            b"{",
+            b"null",
+            b"{}",
+            br#"{"index":"secret"}"#,
+        ] {
+            assert!(decode_source_v2::<Reply>(raw).is_err());
+        }
+        assert_eq!(
+            decode_source_v2::<Reply>(br#"{"index":0}"#).unwrap().index,
+            0
+        );
+    }
+
     struct FixedLibrary {
         tracks: Vec<TrackInfo>,
     }
@@ -531,3 +695,6 @@ mod tests {
         assert!(library.saved_radios().unwrap().is_empty());
     }
 }
+
+#[cfg(test)]
+mod source_v2_tests;

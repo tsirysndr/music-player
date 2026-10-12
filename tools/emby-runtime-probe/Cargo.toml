@@ -1,0 +1,12 @@
+[package]
+name = "emby-runtime-probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+rockbox-playback = { path = "../../third-party/rockbox-playback-0.7.0" }
+music-player-transport = { path = "../../transport" }
+serde_json = "1"

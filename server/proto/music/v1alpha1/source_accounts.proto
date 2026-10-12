@@ -1,0 +1,93 @@
+syntax = "proto3";
+package music.v1alpha1;
+
+import "music/v1alpha1/library.proto";
+
+// Saved extension configuration, independent of the native browsing server.
+// Values are write-only; definitions expose keys, never credential defaults.
+message ExtensionSourceDefinition {
+  string extension_id = 1;
+  string name = 2;
+  bool enabled = 3;
+  uint32 source_api_version = 4;
+  repeated string config_keys = 5;
+}
+message ExtensionSourceAccount {
+  string id = 1;
+  string extension_id = 2;
+  string name = 3;
+  uint32 source_api_version = 4;
+  uint64 config_revision = 5;
+  // Stored binding only, not a claim that the server is reachable.
+  bool identity_bound = 6;
+  repeated string overridden_config_keys = 7;
+}
+message SourceConfigValue {
+  string key = 1;
+  string value = 2; // Empty is a value, including for an empty password.
+}
+message SourceConfigChange {
+  string key = 1;
+  oneof change {
+    string set_value = 2;
+    bool remove = 3; // Must be true. Restores the manifest default.
+  }
+}
+message ListExtensionSourceDefinitionsRequest {}
+message ListExtensionSourceDefinitionsResponse {
+  repeated ExtensionSourceDefinition definitions = 1;
+}
+message ListSourceAccountsRequest {}
+message ListSourceAccountsResponse { repeated ExtensionSourceAccount accounts = 1; }
+message GetSourceAccountRequest { string id = 1; }
+message GetSourceAccountResponse { ExtensionSourceAccount account = 1; }
+message CreateSourceAccountRequest {
+  string extension_id = 1;
+  string name = 2;
+  repeated SourceConfigValue config = 3;
+}
+message CreateSourceAccountResponse { ExtensionSourceAccount account = 1; }
+message UpdateSourceAccountRequest {
+  string id = 1;
+  uint64 expected_revision = 2;
+  optional string name = 3;
+  repeated SourceConfigChange changes = 4; // Omitted keys are unchanged.
+}
+message UpdateSourceAccountResponse { ExtensionSourceAccount account = 1; }
+message ConnectSourceAccountRequest { string id = 1; }
+message ConnectSourceAccountResponse { ExtensionSourceAccount account = 1; }
+message DeleteSourceAccountRequest { string id = 1; }
+message DeleteSourceAccountResponse { bool deleted = 1; }
+
+enum SourceBrowseList {
+  SOURCE_BROWSE_LIST_UNSPECIFIED = 0; // v2 root/container navigation
+  SOURCE_BROWSE_LIST_TRACKS = 1;
+  SOURCE_BROWSE_LIST_ALBUMS = 2;
+  SOURCE_BROWSE_LIST_ARTISTS = 3;
+  SOURCE_BROWSE_LIST_PLAYLISTS = 4;
+}
+message BrowseSourceMediaRequest {
+  string account_id = 1;
+  optional string parent = 2; // Stable scoped handle, not a bare item ID.
+  SourceBrowseList list = 3;
+  optional string query = 4;
+  uint64 offset = 5;
+  optional uint32 limit = 6; // Absent means 100; valid range 1..500.
+}
+message BrowseSourceMediaResponse {
+  string account_id = 1;
+  repeated MediaEntry entries = 2;
+  optional uint64 next_offset = 3; // Absent means exhausted, no total cap.
+}
+
+service SourceAccountsService {
+  rpc ListExtensionSourceDefinitions(ListExtensionSourceDefinitionsRequest) returns (ListExtensionSourceDefinitionsResponse);
+  rpc ListSourceAccounts(ListSourceAccountsRequest) returns (ListSourceAccountsResponse);
+  rpc GetSourceAccount(GetSourceAccountRequest) returns (GetSourceAccountResponse);
+  // Save only; connect is explicit. Never automatically retry an uncertain mutation.
+  rpc CreateSourceAccount(CreateSourceAccountRequest) returns (CreateSourceAccountResponse);
+  rpc UpdateSourceAccount(UpdateSourceAccountRequest) returns (UpdateSourceAccountResponse);
+  rpc ConnectSourceAccount(ConnectSourceAccountRequest) returns (ConnectSourceAccountResponse);
+  rpc DeleteSourceAccount(DeleteSourceAccountRequest) returns (DeleteSourceAccountResponse);
+  rpc BrowseSourceMedia(BrowseSourceMediaRequest) returns (BrowseSourceMediaResponse);
+}

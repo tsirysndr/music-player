@@ -1,4 +1,5 @@
 import { FC } from "react";
+import { Link } from "react-router-dom";
 import { AppShell } from "../Layout";
 import {
   EmptyState,
@@ -237,6 +238,10 @@ const Extensions: FC<ExtensionsProps> = ({
         ))}
       </div>
     </PageToolbar>
+    <div className="mb-4 space-y-1 text-sm">
+      <Link to="/source-accounts" className="text-accent underline">Source accounts and media</Link>
+      <p className="text-muted">Manage saved source accounts, connect, and browse their media.</p>
+    </div>
 
     {loading ? (
       <ul className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">

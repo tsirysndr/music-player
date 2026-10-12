@@ -78,6 +78,6 @@ serde = {version = "1.0.145", features = ["serde_derive"]}
 serde_derive = "1.0.145"
 tokio = {version = "1.21.2", features = ["full"]}
 
-[dev-dependencies.music-player-migration]
+[dependencies.music-player-migration]
 path = "../migration"
 version = "0.4.5"

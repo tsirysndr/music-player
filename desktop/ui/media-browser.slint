@@ -1,0 +1,240 @@
+import { ListView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+
+export struct MediaItem {
+    id: string,
+    title: string,
+    subtitle: string,
+    is-container: bool,
+    playable: bool,
+    is-audio-option: bool,
+    is-occurrence: bool,
+}
+
+export struct MediaCrumb {
+    title: string,
+}
+
+// Text actions use the same skin tokens as the rest of the desktop.
+export component MediaButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> enabled: true;
+    callback clicked();
+    forward-focus: focus;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { if (root.enabled) { root.clicked(); } }
+
+    min-width: 0px;
+    preferred-width: caption.preferred-width + 24px;
+    height: max(32px, caption.preferred-height + 12px);
+    horizontal-stretch: 0;
+    border-radius: Theme.control-radius;
+    border-width: 1px;
+    border-color: focus.has-focus ? Theme.accent : Theme.border;
+    background: root.enabled && touch.has-hover ? Theme.hover-bg : Theme.panel-bg;
+
+    caption := Text {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        text: root.label;
+        color: root.enabled ? Theme.text : Theme.text-muted;
+        font-size: 12px;
+        font-family: Theme.font-ui;
+        wrap: word-wrap;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    focus := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { focus.focus(); root.clicked(); }
+    }
+}
+
+export component MediaBrowser inherits Rectangle {
+    in property <[MediaItem]> items;
+    in property <[MediaCrumb]> crumbs;
+    in property <bool> loading;
+    in property <bool> busy;
+    in property <bool> cancellable;
+    in property <string> message;
+    in property <string> offset-text;
+    in property <bool> has-next;
+    in property <bool> has-previous;
+    in property <bool> editing-occurrence;
+    callback refresh();
+    callback open(int);
+    callback breadcrumb(int);
+    callback page(bool);
+    callback play(int);
+    callback enqueue(int);
+    callback cancel();
+    callback audio-options(int);
+    callback queue-choices();
+
+    VerticalLayout {
+        padding-top: 4px;
+        padding-bottom: 16px;
+        spacing: 10px;
+
+        // A deep hierarchy or long series name stays readable without
+        // making the window wider. The breadcrumb index is never a row ID.
+        if root.crumbs.length > 0 : Rectangle {
+            height: min(112px, breadcrumb-body.preferred-height);
+            clip: true;
+            Flickable {
+                width: parent.width;
+                height: parent.height;
+                viewport-width: self.width;
+                viewport-height: breadcrumb-body.preferred-height;
+                breadcrumb-body := VerticalLayout {
+                    width: parent.width;
+                    spacing: 4px;
+                    for crumb[index] in root.crumbs : MediaButton {
+                        label: index == 0 ? crumb.title : "› " + crumb.title;
+                        horizontal-stretch: 1;
+                        enabled: !root.loading && !root.busy;
+                        clicked => { root.breadcrumb(index); }
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            MediaButton {
+                label: "Queue audio choices";
+                enabled: !root.loading && !root.busy;
+                clicked => { root.queue-choices(); }
+            }
+            MediaButton {
+                label: "Previous";
+                enabled: root.has-previous && !root.loading && !root.busy;
+                clicked => { root.page(false); }
+            }
+            MediaButton {
+                label: "Next";
+                enabled: root.has-next && !root.loading && !root.busy;
+                clicked => { root.page(true); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            MediaButton {
+                label: "Refresh";
+                enabled: !root.loading && !root.busy;
+                clicked => { root.refresh(); }
+            }
+        }
+        if root.offset-text != "" : Text {
+            text: root.offset-text;
+            color: Theme.text-dim;
+            font-size: 11px;
+            wrap: word-wrap;
+        }
+        if root.busy || root.loading : HorizontalLayout {
+            spacing: 12px;
+            Text {
+                text: root.loading ? "Loading media…" : root.cancellable ? "Preparing queue…" : "Sending queue request…";
+                color: Theme.text-dim;
+                font-size: 12px;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+                vertical-alignment: center;
+            }
+            if root.cancellable : MediaButton {
+                label: "Cancel";
+                clicked => { root.cancel(); }
+            }
+        }
+        // Messages include connection/capability errors supplied by Rust.
+        if root.message != "" : Text {
+            text: root.message;
+            color: Theme.text-dim;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+
+        if root.loading : Text {
+            text: "";
+            color: Theme.text-dim;
+            font-size: 13px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            vertical-stretch: 1;
+        }
+        if !root.loading && root.items.length == 0 : Text {
+            text: root.message == "" ? "No media here." : "";
+            color: Theme.text-dim;
+            font-size: 13px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            vertical-stretch: 1;
+        }
+        if !root.loading && root.items.length > 0 : ListView {
+            vertical-stretch: 1;
+            viewport-width: self.width;
+            for item[index] in root.items : Rectangle {
+                width: 100%;
+                height: row-body.preferred-height;
+                background: Theme.panel-bg;
+                border-radius: Theme.control-radius;
+                row-body := VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+                    Text {
+                        text: item.title;
+                        color: Theme.text;
+                        font-size: 13px;
+                        font-weight: 600;
+                        min-width: 0px;
+                        wrap: word-wrap;
+                    }
+                    if item.subtitle != "" : Text {
+                        // Rust formats the original season/episode numbers.
+                        text: item.subtitle;
+                        color: Theme.text-dim;
+                        font-size: 11px;
+                        min-width: 0px;
+                        wrap: word-wrap;
+                    }
+                    if item.is-container || item.playable || item.is-audio-option || item.is-occurrence : HorizontalLayout {
+                        spacing: 8px;
+                        if item.is-container : MediaButton {
+                            label: "Open";
+                            enabled: !root.busy;
+                            clicked => { root.open(index); }
+                        }
+                        if !item.is-container && item.playable && !item.is-audio-option && !item.is-occurrence : MediaButton {
+                            label: "Play";
+                            enabled: !root.busy;
+                            clicked => { root.play(index); }
+                        }
+                        if !item.is-container && !item.is-audio-option && (item.playable || item.is-occurrence) : MediaButton {
+                            label: item.is-occurrence ? "Edit audio choice" : "Audio options";
+                            enabled: !root.busy && item.playable;
+                            clicked => { root.audio-options(index); }
+                        }
+                        if item.is-container || item.is-audio-option : MediaButton {
+                            label: item.is-audio-option ? (root.editing-occurrence ? "Apply to this occurrence" : "Add this choice to queue") : "Add to queue";
+                            enabled: !root.busy && (item.is-container || item.playable);
+                            clicked => { root.enqueue(index); }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                }
+            }
+        }
+    }
+}

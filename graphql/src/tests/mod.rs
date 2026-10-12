@@ -17,6 +17,7 @@ use crate::{
 };
 
 pub mod library;
+mod media;
 pub mod objects;
 pub mod playback;
 pub mod playlist;
@@ -65,6 +66,11 @@ pub async fn setup_schema() -> (
             Mutation::default(),
             Subscription::default(),
         )
+        .data(music_player_playback::source_resolver::SourceResolver::new(
+            db.clone(),
+            "graphql-library-fixture".into(),
+            true,
+        ))
         .data(db)
         .data(Arc::clone(&cmd_tx))
         .data(Arc::clone(&tracklist))

@@ -6,15 +6,16 @@
 //!    [`ProviderFactory`](crate::ProviderFactory).
 //! 2. One `.register(...)` line in [`register_builtin`].
 //!
-//! That is the whole contract. The clients build their add-server form from
-//! the registry, so a new backend turns up in the Slint desktop and the web UI
-//! without either of them being told about it.
+//! The web UI builds its add-server form from registry descriptions. The Slint
+//! desktop uses an explicit list of server kinds and needs a separate UI update
+//! when a backend is added.
 //!
 //! Every backend here talks HTTP and owns nothing but its own client, which is
 //! what keeps this crate below the server crate in the dependency graph — the
 //! gRPC layer needs to route reads through a source, and it could not if a
 //! source needed the gRPC client.
 
+pub mod emby;
 pub mod jellyfin;
 pub mod kodi;
 pub mod music_player;
@@ -33,6 +34,7 @@ pub fn register_builtin(registry: &mut ProviderRegistry) {
     registry
         .register(subsonic::SubsonicFactory)
         .register(jellyfin::JellyfinFactory)
+        .register(emby::EmbyFactory::default())
         .register(music_player::MusicPlayerFactory)
         .register(kodi::KodiFactory)
         .register(plex::PlexFactory)
@@ -56,6 +58,7 @@ mod tests {
         for kind in [
             "subsonic",
             "jellyfin",
+            "emby",
             "music-player",
             "kodi",
             "plex",

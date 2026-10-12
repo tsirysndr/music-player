@@ -1,0 +1,11 @@
+[package]
+name = "emby-engine-baseline"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+rockbox-playback = "=0.7.0"
+serde_json = "1"

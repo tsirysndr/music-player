@@ -1,7 +1,12 @@
 #[cfg(test)]
+mod audio_tests;
+mod entry;
+#[cfg(test)]
 mod tests;
+pub use entry::QueueEntry;
 
 use music_player_entity::track::Model as Track;
+use music_player_types::audio::{AudioPin, AudioSelection};
 use rand::seq::SliceRandom;
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -29,9 +34,9 @@ pub struct Levels {
 
 #[derive(Debug, Clone)]
 pub struct Tracklist {
-    tracks: Vec<Track>,
-    played: Vec<Track>,
-    current_track: Option<Track>,
+    tracks: Vec<QueueEntry>,
+    played: Vec<QueueEntry>,
+    current_track: Option<QueueEntry>,
     playback_state: PlaybackState,
     levels: Levels,
     /// The playback modes, so a client can *read* them rather than only set
@@ -46,7 +51,7 @@ pub struct Tracklist {
 impl Tracklist {
     pub fn new(tracks: Vec<Track>) -> Self {
         Self {
-            tracks,
+            tracks: tracks.into_iter().map(QueueEntry::new).collect(),
             played: Vec::new(),
             current_track: None,
             playback_state: PlaybackState::default(),
@@ -68,7 +73,7 @@ impl Tracklist {
     }
 
     pub fn add_track(&mut self, track: Track) {
-        self.tracks.push(track);
+        self.tracks.push(QueueEntry::new(track));
     }
 
     pub fn next_track(&mut self) -> Option<Track> {
@@ -79,10 +84,22 @@ impl Tracklist {
         let next_track = self.tracks.remove(0);
         self.current_track = Some(next_track.clone());
         self.played.push(next_track.clone());
-        Some(next_track)
+        Some(next_track.track)
     }
 
     pub fn previous_track(&mut self) -> Option<Track> {
+        // Removing the currently sounding occurrence does not stop playback.
+        // In that case the last retained history entry is already Previous;
+        // do not pop it as if it were still the current occurrence.
+        if self.current_track.as_ref().is_some_and(|current| {
+            self.played
+                .last()
+                .is_none_or(|last| last.occurrence_id != current.occurrence_id)
+        }) {
+            let previous = self.played.last()?.clone();
+            self.current_track = Some(previous.clone());
+            return Some(previous.track);
+        }
         if self.played.len() < 2 {
             return None;
         }
@@ -100,11 +117,14 @@ impl Tracklist {
 
         self.played.push(previous_track.clone());
 
-        Some(previous_track)
+        Some(previous_track.track)
     }
 
     pub fn current_track(&self) -> (Option<Track>, usize) {
-        (self.current_track.clone(), self.played.len())
+        (
+            self.current_track.as_ref().map(|entry| entry.track.clone()),
+            self.played.len(),
+        )
     }
 
     /// Replace the current track in place, keeping the queue split intact.
@@ -112,15 +132,18 @@ impl Tracklist {
     /// onto the station entry — the history copy is updated too so the queue
     /// drawer and the now-playing bar keep showing the same thing.
     pub fn update_current_track(&mut self, track: Track) {
-        if self.current_track.as_ref().map(|t| t.id.as_str()) != Some(track.id.as_str()) {
+        let Some(current) = self.current_track.as_mut() else {
+            return;
+        };
+        if current.track.id != track.id {
             return;
         }
         if let Some(last) = self.played.last_mut() {
-            if last.id == track.id {
-                *last = track.clone();
+            if last.occurrence_id == current.occurrence_id {
+                last.track = track.clone();
             }
         }
-        self.current_track = Some(track);
+        current.track = track;
     }
 
     /// Record a like/unlike on every queued copy of the track — up-next,
@@ -134,8 +157,8 @@ impl Tracklist {
             .chain(self.played.iter_mut())
             .chain(self.current_track.iter_mut())
         {
-            if track.id == id {
-                track.liked = Some(liked);
+            if track.track.id == id {
+                track.track.liked = Some(liked);
             }
         }
     }
@@ -156,14 +179,23 @@ impl Tracklist {
             .chain(self.played.iter_mut())
             .chain(self.current_track.iter_mut())
         {
-            if track.liked.is_some() {
-                track.liked = Some(starred.contains(&track.id));
+            if track.track.liked.is_some() {
+                track.track.liked = Some(starred.contains(&track.track.id));
             }
         }
     }
 
     pub fn tracks(&self) -> (Vec<Track>, Vec<Track>) {
-        (self.played.clone(), self.tracks.clone())
+        (
+            self.played
+                .iter()
+                .map(|entry| entry.track.clone())
+                .collect(),
+            self.tracks
+                .iter()
+                .map(|entry| entry.track.clone())
+                .collect(),
+        )
     }
 
     pub fn is_empty(&self) -> bool {
@@ -180,8 +212,8 @@ impl Tracklist {
     }
 
     pub fn remove_track(&mut self, track: Track) {
-        self.tracks.retain(|t| t.id != track.id);
-        self.played.retain(|t| t.id != track.id);
+        self.tracks.retain(|t| t.track.id != track.id);
+        self.played.retain(|t| t.track.id != track.id);
     }
 
     pub fn remove_track_at(&mut self, index: usize) {
@@ -193,19 +225,35 @@ impl Tracklist {
     }
 
     pub fn insert(&mut self, index: usize, track: Track) {
-        self.tracks.insert(index, track);
+        self.tracks.insert(index, QueueEntry::new(track));
     }
 
     pub fn insert_tracks(&mut self, index: usize, tracks: Vec<Track>) {
-        self.tracks.splice(index..index, tracks);
+        self.tracks
+            .splice(index..index, tracks.into_iter().map(QueueEntry::new));
     }
 
     pub fn insert_next(&mut self, track: Track) {
-        self.tracks.insert(0, track);
+        self.tracks.insert(0, QueueEntry::new(track));
+    }
+
+    /// Preserve the complete browse metadata and requested audio choice.
+    /// Validation precedes mutation; each insertion is a new occurrence.
+    pub fn insert_next_with_selection(
+        &mut self,
+        track: Track,
+        selection: AudioSelection,
+    ) -> Result<String, &'static str> {
+        let mut entry = QueueEntry::new(track);
+        entry.selection = selection;
+        entry.validate()?;
+        let id = entry.occurrence_id.clone();
+        self.tracks.insert(0, entry);
+        Ok(id)
     }
 
     pub fn queue(&mut self, tracks: Vec<Track>) {
-        self.tracks.extend(tracks);
+        self.tracks.extend(tracks.into_iter().map(QueueEntry::new));
     }
 
     pub fn shuffle(&mut self) {
@@ -214,7 +262,7 @@ impl Tracklist {
 
     /// The upcoming track, without advancing.
     pub fn peek_next(&self) -> Option<Track> {
-        self.tracks.first().cloned()
+        self.tracks.first().map(|entry| entry.track.clone())
     }
 
     pub fn play_track_at(&mut self, index: usize) -> (Option<Track>, usize) {
@@ -268,13 +316,30 @@ impl Tracklist {
 
     pub fn load_tracks(&mut self, tracks: Vec<Track>) {
         self.clear();
-        self.tracks = tracks;
+        self.tracks = tracks.into_iter().map(QueueEntry::new).collect();
     }
 
     /// Rebuild the exact queue split from a persisted snapshot. The current
     /// track is the last `played` entry — the same invariant `next_track`
     /// maintains — and playback starts out paused at `position_ms`.
     pub fn restore(&mut self, played: Vec<Track>, tracks: Vec<Track>, position_ms: u32) {
+        self.restore_entries(
+            played.into_iter().map(QueueEntry::new).collect(),
+            tracks.into_iter().map(QueueEntry::new).collect(),
+            position_ms,
+        )
+        .expect("new queue entries have unique identities and no audio choices");
+    }
+
+    /// Preserve the identities and choices of both history and upcoming entries.
+    /// Validate the complete snapshot before replacing any existing queue.
+    pub fn restore_entries(
+        &mut self,
+        played: Vec<QueueEntry>,
+        tracks: Vec<QueueEntry>,
+        position_ms: u32,
+    ) -> Result<(), &'static str> {
+        validate_entries(played.iter().chain(tracks.iter()))?;
         self.current_track = played.last().cloned();
         self.played = played;
         self.tracks = tracks;
@@ -282,5 +347,117 @@ impl Tracklist {
             position_ms,
             is_playing: false,
         };
+        Ok(())
     }
+
+    pub fn entries(&self) -> (Vec<QueueEntry>, Vec<QueueEntry>) {
+        (self.played.clone(), self.tracks.clone())
+    }
+
+    pub fn current_entry(&self) -> Option<QueueEntry> {
+        self.current_track.clone()
+    }
+
+    /// New incoming items always receive fresh occurrence identities. A pin is
+    /// committed only after playback has accepted a resolution.
+    pub fn queue_with_selection(
+        &mut self,
+        tracks: Vec<(Track, AudioSelection)>,
+    ) -> Result<Vec<String>, &'static str> {
+        let mut entries = Vec::with_capacity(tracks.len());
+        for (track, selection) in tracks {
+            let mut entry = QueueEntry::new(track);
+            entry.selection = selection;
+            entry.validate()?;
+            entries.push(entry);
+        }
+        let ids = entries
+            .iter()
+            .map(|entry| entry.occurrence_id.clone())
+            .collect();
+        self.tracks.extend(entries);
+        Ok(ids)
+    }
+
+    /// The current occurrence can outlive its removal from the visible queue.
+    /// Match by occurrence identity, never by the media item's shared ID.
+    pub fn accept_current_pin(
+        &mut self,
+        occurrence_id: &str,
+        pin: AudioPin,
+    ) -> Result<(), &'static str> {
+        let current = self
+            .current_track
+            .as_ref()
+            .filter(|entry| entry.occurrence_id == occurrence_id)
+            .ok_or("audio resolution belongs to a different queue occurrence")?;
+        let mut candidate = current.clone();
+        candidate.pin = Some(pin);
+        candidate.validate()?;
+        for entry in self.played.iter_mut().chain(self.tracks.iter_mut()) {
+            if entry.occurrence_id == occurrence_id {
+                entry.pin = candidate.pin.clone();
+            }
+        }
+        self.current_track = Some(candidate);
+        Ok(())
+    }
+
+    /// Editing an occurrence's choice invalidates its old pin. The player must
+    /// restart a current occurrence at zero, so another version cannot inherit
+    /// a position on an unverified timeline.
+    pub fn select_audio(
+        &mut self,
+        occurrence_id: &str,
+        selection: AudioSelection,
+    ) -> Result<bool, &'static str> {
+        let existing = self
+            .current_track
+            .iter()
+            .chain(self.played.iter())
+            .chain(self.tracks.iter())
+            .find(|entry| entry.occurrence_id == occurrence_id)
+            .ok_or("queue occurrence no longer exists")?;
+        let mut candidate = existing.clone();
+        let source = music_player_types::source::SourceHandle::parse(&candidate.track.uri)
+            .map_err(|_| "audio choices require a stable media source")?;
+        if source.kind() != music_player_types::source::ResourceKind::Item {
+            return Err("audio choices require a playable media source");
+        }
+        if matches!(source, music_player_types::source::SourceHandle::Local(_)) {
+            return Err("source v1 does not support audio selection");
+        }
+        candidate.selection = selection;
+        candidate.pin = None;
+        candidate.validate()?;
+        let is_current = self
+            .current_track
+            .as_ref()
+            .is_some_and(|entry| entry.occurrence_id == occurrence_id);
+        for entry in self
+            .current_track
+            .iter_mut()
+            .chain(self.played.iter_mut())
+            .chain(self.tracks.iter_mut())
+        {
+            if entry.occurrence_id == occurrence_id {
+                entry.selection = candidate.selection.clone();
+                entry.pin = None;
+            }
+        }
+        Ok(is_current)
+    }
+}
+
+pub fn validate_entries<'a>(
+    entries: impl IntoIterator<Item = &'a QueueEntry>,
+) -> Result<(), &'static str> {
+    let mut ids = std::collections::HashSet::new();
+    for entry in entries {
+        entry.validate()?;
+        if !ids.insert(entry.occurrence_id.as_str()) {
+            return Err("duplicate queue occurrence identity");
+        }
+    }
+    Ok(())
 }

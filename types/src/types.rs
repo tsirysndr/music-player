@@ -8,6 +8,8 @@ use rockbox_metadata::Metadata as AudioMetadata;
 use upnp_client::types::Metadata;
 use url::Url;
 
+use crate::source::SourceRef;
+
 pub const CHROMECAST_SERVICE_NAME: &str = "_googlecast._tcp.local.";
 
 pub const CHROMECAST_DEVICE: &str = "Chromecast";
@@ -355,11 +357,14 @@ impl Connected for Device {
 
 #[derive(Default, Debug, Clone)]
 pub struct Track {
+    /// Local/backend ID, or a canonical SourceRef handle for managed sources.
+    /// Source-aware API boundaries validate it with `source::normalize_track`.
     pub id: String,
     pub title: String,
     pub duration: Option<f32>,
     pub disc_number: u32,
     pub track_number: Option<u32>,
+    /// Managed sources mirror their handle here; it is not a fetchable URL.
     pub uri: String,
     pub artists: Vec<Artist>,
     pub album: Option<Album>,
@@ -426,8 +431,8 @@ impl From<Track> for Metadata {
         Metadata {
             title: val.title,
             artist: Some(val.artist),
-            album: val.album.clone().map(|a| a.title),
-            album_art_uri: val.album.map(|a| a.cover.unwrap()),
+            album: val.album.as_ref().map(|a| a.title.clone()),
+            album_art_uri: val.album.and_then(|a| a.cover),
             ..Default::default()
         }
     }
@@ -443,9 +448,14 @@ pub trait RemoteCoverUrl {
 
 impl RemoteTrackUrl for Track {
     fn with_remote_track_url(&self, base_url: &str) -> Self {
-        // Tracks coming from streaming servers (Subsonic, Jellyfin, ...)
-        // already carry an authenticated absolute stream url; keep it as is.
-        if self.uri.starts_with("http://") || self.uri.starts_with("https://") {
+        // Preserve the entire reserved namespace, including invalid handles,
+        // for validation at source-aware boundaries instead of hiding it in
+        // a legacy /tracks URL. Decoration cannot report validation errors.
+        if SourceRef::is_handle(&self.id)
+            || SourceRef::is_handle(&self.uri)
+            || self.uri.starts_with("http://")
+            || self.uri.starts_with("https://")
+        {
             return self.clone();
         }
         Self {
@@ -470,7 +480,7 @@ impl RemoteCoverUrl for Track {
 impl RemoteCoverUrl for Album {
     fn with_remote_cover_url(&self, base_url: &str) -> Self {
         let cover_url = match self.cover {
-            Some(ref cover) => match cover.starts_with("http") {
+            Some(ref cover) => match cover.starts_with("http") || SourceRef::is_handle(cover) {
                 true => Some(cover.to_owned()),
                 false => Some(format!("{}/covers/{}", base_url, cover)),
             },
@@ -522,6 +532,11 @@ impl RemoteCoverUrl for Artist {
 impl RemoteTrackUrl for Artist {
     fn with_remote_track_url(&self, base_url: &str) -> Self {
         Self {
+            albums: self
+                .albums
+                .iter()
+                .map(|album| album.with_remote_track_url(base_url))
+                .collect(),
             songs: self
                 .songs
                 .iter()
@@ -576,5 +591,120 @@ mod disc_tests {
         // grow a "DISC 1" header just because a tagger wrote one.
         meta.disc_number = None;
         assert_eq!(Song::from(&meta).disc, None);
+    }
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+    use crate::source::{RemoteIdentity, ResourceKind};
+
+    fn handle() -> String {
+        SourceRef {
+            resolver: "emby".into(),
+            account_id: "saved-account".into(),
+            remote: RemoteIdentity {
+                server_id: "server".into(),
+                user_id: "user".into(),
+            },
+            kind: ResourceKind::Item,
+            item_id: "movie-1".into(),
+        }
+        .to_handle()
+    }
+
+    #[test]
+    fn decoration_cannot_hide_invalid_or_conflicting_source_inputs() {
+        for (id, uri) in [
+            (handle(), String::new()),
+            ("bare-id".into(), handle()),
+            ("mp-source:v2?".into(), "/local/path".into()),
+            (String::new(), "MP-SOURCE:invalid".into()),
+        ] {
+            let track = Track {
+                id: id.clone(),
+                uri: uri.clone(),
+                ..Default::default()
+            };
+            let decorated = track.with_remote_track_url("http://other-account.invalid");
+            assert_eq!(decorated.id, id);
+            assert_eq!(decorated.uri, uri);
+        }
+    }
+
+    #[test]
+    fn nested_artist_album_and_playlist_keep_source_handles() {
+        let handle = handle();
+        let track = Track {
+            id: handle.clone(),
+            uri: handle.clone(),
+            ..Default::default()
+        };
+        // A reserved handle in a cover slot must remain recognizable, even
+        // though native Emby currently returns None until a cover route exists.
+        let album = Album {
+            cover: Some(handle.clone()),
+            tracks: vec![
+                track.clone(),
+                Track {
+                    id: "local".into(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let artist = Artist {
+            albums: vec![album.clone()],
+            songs: vec![track.clone()],
+            ..Default::default()
+        };
+        let decorated = artist
+            .with_remote_track_url("http://peer")
+            .with_remote_cover_url("http://peer");
+        assert_eq!(decorated.albums[0].tracks[0].uri, handle);
+        assert_eq!(
+            decorated.albums[0].tracks[1].uri,
+            "http://peer/tracks/local"
+        );
+        assert_eq!(decorated.albums[0].cover.as_deref(), Some(handle.as_str()));
+        assert_eq!(decorated.songs[0].uri, handle);
+
+        let playlist = Playlist {
+            tracks: vec![Track {
+                album: Some(album),
+                ..track
+            }],
+            ..Default::default()
+        };
+        let decorated = playlist
+            .with_remote_track_url("http://peer")
+            .with_remote_cover_url("http://peer");
+        assert_eq!(decorated.tracks[0].uri, handle);
+        assert_eq!(
+            decorated.tracks[0].album.as_ref().unwrap().cover.as_deref(),
+            Some(handle.as_str())
+        );
+    }
+
+    #[test]
+    fn movie_and_album_without_art_have_optional_metadata() {
+        let movie: Metadata = Track {
+            title: "Movie".into(),
+            ..Default::default()
+        }
+        .into();
+        assert_eq!(movie.album, None);
+        assert_eq!(movie.album_art_uri, None);
+        let no_art: Metadata = Track {
+            album: Some(Album {
+                title: "Album".into(),
+                cover: None,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+        .into();
+        assert_eq!(no_art.album.as_deref(), Some("Album"));
+        assert_eq!(no_art.album_art_uri, None);
     }
 }

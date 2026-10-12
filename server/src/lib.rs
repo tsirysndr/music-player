@@ -10,6 +10,7 @@ pub mod analytics;
 pub mod atproto_sync;
 pub mod core;
 pub mod event;
+pub mod extensions;
 pub mod history;
 pub mod library;
 pub mod media_controls;
@@ -21,7 +22,11 @@ pub mod remote;
 pub mod scrobbler;
 pub mod server;
 pub mod servers;
+pub mod source_accounts;
 pub mod tracklist;
+/// Bounded gRPC metadata budget for complete media libraries and queues.
+pub const LIBRARY_MESSAGE_LIMIT: usize = 64 * 1024 * 1024;
+
 pub mod api {
     #[path = ""]
     pub mod music {

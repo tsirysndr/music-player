@@ -7,6 +7,8 @@ use music_player_webui::start_webui;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env::set_var("MUSIC_PLAYER_HTTP_PORT", "3001");
+    migration::apply().await;
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
@@ -14,9 +16,16 @@ async fn main() -> std::io::Result<()> {
     let cloned_tracklist = tracklist.clone();
     let cloned_cmd_tx = Arc::clone(&cmd_tx);
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
-    let _db = Database::new().await;
-    let (_, _) = Player::new(move |_| {}, cloned_cmd_tx, cloned_cmd_rx, cloned_tracklist);
-    env::set_var("MUSIC_PLAYER_HTTP_PORT", "3001");
+    let db = Database::new().await;
+    let sources = music_player_playback::source_resolver::SourceResolver::for_daemon(db.clone())
+        .map_err(|error| std::io::Error::other(error.to_string()))?;
+    let (_, _) = Player::with_source_resolver(
+        move |_| {},
+        cloned_cmd_tx,
+        cloned_cmd_rx,
+        cloned_tracklist,
+        sources.clone(),
+    );
     // One provider registry, shared by every API surface so they cannot
     // disagree about which server the library screens are reading from.
     let providers = {
@@ -26,5 +35,5 @@ async fn main() -> std::io::Result<()> {
             std::sync::Arc::new(registry),
         ))
     };
-    start_webui(cmd_tx, tracklist, providers).await
+    start_webui(cmd_tx, tracklist, providers, db, sources).await
 }

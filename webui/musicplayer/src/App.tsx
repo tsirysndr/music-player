@@ -9,11 +9,14 @@ import GenreDetailPage from "./Components/Genres/GenreDetailWithData";
 import GenresPage from "./Components/Genres";
 import FolderPage from "./Containers/Folder";
 import LikedPage from "./Containers/Liked";
+import MediaPage from "./Containers/Media";
 import PlaylistPage from "./Containers/Playlist";
 import PlaylistsPage from "./Containers/Playlists";
 import RadioPage from "./Containers/Radio";
 import SearchPage from "./Containers/Search";
 import ServersPage from "./Containers/Servers";
+import SourceAccountsPage from "./Containers/SourceAccounts";
+import SourceBrowsePage from "./Containers/SourceAccounts/Browse";
 import TracksPage from "./Containers/Tracks";
 import { LibraryAnalysisProvider } from "./Components/UI";
 import { useLibraryAnalyses } from "./Hooks/useLibraryAnalyses";
@@ -41,8 +44,11 @@ function App() {
           <Route path="/playlists" element={<PlaylistsPage />} />
           <Route path="/playlists/:id" element={<PlaylistPage />} />
           <Route path="/liked" element={<LikedPage />} />
+          <Route path="/media" element={<MediaPage />} />
           <Route path="/radio" element={<RadioPage />} />
           <Route path="/extensions" element={<ExtensionsPage />} />
+          <Route path="/source-accounts" element={<SourceAccountsPage />} />
+          <Route path="/source-accounts/:accountId" element={<SourceBrowsePage />} />
           <Route path="/servers" element={<ServersPage />} />
         </Routes>
       </LibraryAnalysisProvider>

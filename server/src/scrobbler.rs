@@ -78,6 +78,14 @@ pub(crate) fn current_track(tracklist: &Arc<Mutex<Tracklist>>) -> Option<Current
         return None;
     }
     let track = track?;
+    // Managed audio positions are source offsets/delivery estimates, not
+    // confirmed listening time. Neither music scrobbles nor play_stats may
+    // apply their duration threshold to these entries.
+    if music_player_types::source::SourceRef::is_handle(&track.id)
+        || music_player_types::source::SourceRef::is_handle(&track.uri)
+    {
+        return None;
+    }
     Some(Current {
         // Queue position plus title: a local file has no stable play id, and
         // the position alone would miss a repeat of the same index.

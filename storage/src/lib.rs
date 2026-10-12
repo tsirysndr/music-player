@@ -9,6 +9,7 @@ pub mod account;
 pub mod atproto;
 pub mod atradio;
 pub mod auto_dj;
+pub mod extension_source_accounts;
 pub mod extension_state;
 pub mod radio_resolve;
 pub mod radio_stream;

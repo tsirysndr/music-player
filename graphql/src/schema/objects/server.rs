@@ -15,7 +15,7 @@ pub struct Server {
     pub name: String,
     pub url: String,
     pub username: Option<String>,
-    /// Whether a password is stored, since the password itself is not exposed.
+    /// Whether a value is stored, including an explicitly empty password.
     pub has_password: bool,
     /// Whether this is the server the library screens are currently reading
     /// from.
@@ -31,7 +31,7 @@ impl Server {
             name: row.name,
             url: row.url,
             username: row.username,
-            has_password: row.password.is_some_and(|password| !password.is_empty()),
+            has_password: row.password.is_some(),
             connected,
         }
     }
@@ -75,4 +75,13 @@ pub struct ServerInput {
     /// Omit to keep whatever is already stored — the edit form never receives
     /// the current one, so a blank field cannot mean "clear it".
     pub password: Option<String>,
+    /// Omit to save by kind/url/username; set to edit this exact saved account.
+    /// Changing its kind or username requires saving another account.
+    pub id: Option<ID>,
+    /// Set a password, including an empty value. Cannot be combined with
+    /// clearPassword or a nonempty legacy password.
+    pub password_value: Option<String>,
+    /// Remove the stored password. Omitted/false leaves it unchanged.
+    #[graphql(default)]
+    pub clear_password: bool,
 }

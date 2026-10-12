@@ -4,13 +4,16 @@
 //! Jellyfin sign their stream links) or something relative to the server
 //! (`/tracks/<id>` on a music-player peer). The existing
 //! [`RemoteTrackUrl`]/[`RemoteCoverUrl`] impls in `music-player-types` know the
-//! difference and leave absolute uris alone; this is the one place that calls
+//! difference and leave absolute uris and reserved SourceRef handles alone.
+//! Source handles (including malformed ones) must reach source-aware API
+//! validation, never be hidden inside a peer's /tracks or /covers URL.
+//! This is the one place that calls
 //! them, so the gRPC and GraphQL paths cannot decorate differently.
 
 use crate::ProviderConfig;
 use music_player_types::types::{RemoteCoverUrl, RemoteTrackUrl};
 
-/// Absolutise one item's track and cover uris against its source.
+/// Absolutise legacy relative uris while preserving managed source identity.
 pub fn decorate<T>(item: T, config: &ProviderConfig) -> T
 where
     T: RemoteTrackUrl + RemoteCoverUrl,
@@ -93,5 +96,58 @@ mod tests {
         ];
         let decorated = decorate_all(tracks, &config());
         assert_eq!(decorated[1].uri, "http://peer.lan:5053/tracks/2");
+    }
+
+    #[test]
+    fn switching_browsing_account_does_not_rewrite_queued_source_identity() {
+        use music_player_types::source::{RemoteIdentity, ResourceKind, SourceRef};
+        use music_player_types::types::{Artist, Playlist};
+
+        let make_track = |account: &str| {
+            let handle = SourceRef {
+                resolver: "emby".into(),
+                account_id: account.into(),
+                remote: RemoteIdentity {
+                    server_id: "server".into(),
+                    user_id: account.into(),
+                },
+                kind: ResourceKind::Item,
+                item_id: "55508".into(),
+            }
+            .to_handle();
+            Track {
+                id: handle.clone(),
+                uri: handle,
+                album: None,
+                ..Default::default()
+            }
+        };
+        let a = make_track("account-a");
+        let b = make_track("account-b");
+        let playlist = Playlist {
+            tracks: vec![a.clone(), b.clone()],
+            ..Default::default()
+        };
+        let decorated = decorate(playlist, &config());
+        assert_eq!(decorated.tracks[0].id, a.id);
+        assert_eq!(decorated.tracks[0].uri, a.uri);
+        assert_eq!(decorated.tracks[1].id, b.id);
+        assert_eq!(decorated.tracks[1].uri, b.uri);
+        assert_ne!(decorated.tracks[0].id, decorated.tracks[1].id);
+        assert!(decorated.tracks.iter().all(|track| track.album.is_none()));
+
+        let artist = Artist {
+            albums: vec![Album {
+                tracks: vec![a.clone()],
+                cover: None,
+                ..Default::default()
+            }],
+            songs: vec![b.clone()],
+            ..Default::default()
+        };
+        let decorated = decorate(artist, &config());
+        assert_eq!(decorated.albums[0].tracks[0].uri, a.uri);
+        assert_eq!(decorated.albums[0].cover, None);
+        assert_eq!(decorated.songs[0].uri, b.uri);
     }
 }

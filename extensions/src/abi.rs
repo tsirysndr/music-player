@@ -10,6 +10,9 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Strict, independently versioned source protocol; legacy DTOs stay unchanged.
+pub mod source_v2;
+
 /// A track as an extension sees it — the tags, not the internals.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

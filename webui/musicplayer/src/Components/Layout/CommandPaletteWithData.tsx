@@ -50,6 +50,9 @@ const LIBRARY_QUERIES = [
   "GetLikedTracks",
   "Search",
   "GetSavedServers",
+  "GetConnectedServer",
+  "MediaBrowser",
+  "BrowseMedia",
 ];
 
 /** How each kind of server shows itself. */

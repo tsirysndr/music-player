@@ -89,6 +89,13 @@ pub struct Permissions {
     pub library_read: bool,
 }
 
+/// The source ABI selected before checking required exports.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SourceProtocol {
+    V1,
+    V2,
+}
+
 /// A parsed `plugin.json`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -130,6 +137,10 @@ pub struct Manifest {
     /// What this extension plugs into.
     #[serde(default)]
     pub capabilities: Vec<Capability>,
+    /// Source ABI version, independent of the extension package version.
+    /// Omitted by existing extensions, which continue to use v1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_api_version: Option<u32>,
     #[serde(default)]
     pub permissions: Permissions,
 }
@@ -157,6 +168,22 @@ fn parse(raw: &str, path: &Path) -> Result<Manifest, Error> {
 }
 
 impl Manifest {
+    /// Select the declared protocol; never infer it from package version or
+    /// from whichever exports happen to exist in a module.
+    pub fn source_protocol(&self) -> Result<Option<SourceProtocol>, Error> {
+        if !self.has(Capability::Source) {
+            if self.source_api_version.is_some() {
+                return Err(anyhow!("sourceApiVersion requires the source capability"));
+            }
+            return Ok(None);
+        }
+        match self.source_api_version.unwrap_or(1) {
+            1 => Ok(Some(SourceProtocol::V1)),
+            2 => Ok(Some(SourceProtocol::V2)),
+            version => Err(anyhow!("unsupported source API version {version}")),
+        }
+    }
+
     /// Read and check the manifest in `dir` — `plugin.toml` if present,
     /// otherwise `plugin.json`.
     pub fn load(dir: &Path) -> Result<Self, Error> {
@@ -181,6 +208,7 @@ impl Manifest {
     }
 
     fn validate(&self) -> Result<(), Error> {
+        self.source_protocol()?;
         if self.id.trim().is_empty() {
             return Err(anyhow!("the manifest needs an id"));
         }
@@ -277,6 +305,50 @@ mod tests {
         // Nothing is granted unless it is asked for.
         assert!(manifest.permissions.allowed_hosts.is_empty());
         assert!(!manifest.permissions.library_read);
+    }
+
+    #[test]
+    fn source_protocol_is_independent_of_package_version() {
+        let dir = tempfile::tempdir().unwrap();
+        for (declaration, expected) in [
+            ("", SourceProtocol::V1),
+            (",\"sourceApiVersion\":1", SourceProtocol::V1),
+            (",\"sourceApiVersion\":2", SourceProtocol::V2),
+        ] {
+            write(
+                dir.path(),
+                &format!(
+                    r#"{{"id":"x","name":"X","version":"99.0.0","capabilities":["source"]{declaration}}}"#
+                ),
+            );
+            let manifest = Manifest::load(dir.path()).unwrap();
+            assert_eq!(manifest.source_protocol().unwrap(), Some(expected));
+        }
+    }
+
+    #[test]
+    fn rejects_unsupported_or_inapplicable_source_protocol() {
+        let dir = tempfile::tempdir().unwrap();
+        for raw in [
+            r#"{"id":"x","name":"X","capabilities":["source"],"sourceApiVersion":0}"#,
+            r#"{"id":"x","name":"X","capabilities":["source"],"sourceApiVersion":3}"#,
+            r#"{"id":"x","name":"X","capabilities":["metadata"],"sourceApiVersion":2}"#,
+        ] {
+            write(dir.path(), raw);
+            assert!(Manifest::load(dir.path()).is_err());
+        }
+        write_as(
+            dir.path(),
+            "plugin.toml",
+            "id = 'x'\nname = 'X'\ncapabilities = ['source']\nsourceApiVersion = 2\n",
+        );
+        let manifest = Manifest::load(dir.path()).unwrap();
+        assert_eq!(
+            manifest.source_protocol().unwrap(),
+            Some(SourceProtocol::V2)
+        );
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert_eq!(json["sourceApiVersion"], 2);
     }
 
     #[test]

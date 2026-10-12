@@ -154,6 +154,60 @@ exports:
       $ref: "#/components/schemas/StreamResponse"
       contentType: application/json
 
+  source_identity_v2:
+    description: "Return authenticated remote server/user identity. Requires sourceApiVersion=2 and all six v2 exports. Failure must not fall back to legacy source calls."
+    input:
+      $ref: "#/components/schemas/SourceV2IdentityRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/SourceV2SourceIdentity"
+      contentType: application/json
+
+  browse_media_v2:
+    description: "Browse or search one explicit page of containers and leaves. Requires sourceApiVersion=2 and all six v2 exports. Failure must not fall back to legacy source calls."
+    input:
+      $ref: "#/components/schemas/SourceV2BrowseRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/SourceV2BrowseResponse"
+      contentType: application/json
+
+  get_media_item_v2:
+    description: "Read persistent metadata for one remote item. Requires sourceApiVersion=2 and all six v2 exports. Failure must not fall back to legacy source calls."
+    input:
+      $ref: "#/components/schemas/SourceV2ItemRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/SourceV2ItemResponse"
+      contentType: application/json
+
+  get_audio_options_v2:
+    description: "Read all version/audio candidates without allocating playback resources. Requires sourceApiVersion=2 and all six v2 exports. Failure must not fall back to legacy source calls."
+    input:
+      $ref: "#/components/schemas/SourceV2AudioOptionsRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/SourceV2AudioOptionsResponse"
+      contentType: application/json
+
+  resolve_audio_v2:
+    description: "Resolve the requested selection and absolute offset into a transient descriptor. Requires sourceApiVersion=2 and all six v2 exports. Failure must not fall back to legacy source calls."
+    input:
+      $ref: "#/components/schemas/SourceV2ResolveRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/SourceV2ResolveResponse"
+      contentType: application/json
+
+  release_audio_v2:
+    description: "Release only resources of this attempt and return an affirmative acknowledgement. Requires sourceApiVersion=2 and all six v2 exports. Failure must not fall back to legacy source calls."
+    input:
+      $ref: "#/components/schemas/SourceV2ReleaseRequest"
+      contentType: application/json
+    output:
+      $ref: "#/components/schemas/SourceV2ReleaseResponse"
+      contentType: application/json
+
 imports:
   log:
     description: |
@@ -594,3 +648,512 @@ components:
           description: |
             Extra request headers as a JSON object, for a source that needs an
             Authorization header. Empty when none are needed.
+
+    # Source v2 uses the existing XTP exports/components envelope.
+    # GENERATOR VALIDATION PENDING: oneOf tagged unions, required/nullable,
+    # additionalProperties, uint32/uint64 and full unsigned bounds are not
+    # demonstrated by existing bindings. Do not narrow to int64 or JS Number,
+    # stringify ticks, flatten unions, or omit fields to make generation pass.
+    # Rust serde DTOs in abi/source_v2.rs define the exact JSON contract.
+    SourceV2IdentityRequest:
+      type: "object"
+      description: "Empty JSON object. Authentication uses extension configuration; identity is returned by the plugin."
+      additionalProperties: false
+      properties: {}
+
+    SourceV2SourceIdentity:
+      type: "object"
+      description: "Actual remote server/user pair, checked and bound to a saved account by the host; both must be nonempty."
+      additionalProperties: false
+      required: ["serverId", "userId"]
+      properties:
+        serverId:
+          type: "string"
+        userId:
+          type: "string"
+
+    SourceV2BrowseRequest:
+      type: "object"
+      description: "Parent is a remote item ID, not a host handle. Null/absent parent browses root. Limit must be positive and host bounded; empty query browses."
+      additionalProperties: false
+      required: ["identity", "offset", "limit"]
+      properties:
+        identity:
+          $ref: "#/components/schemas/SourceV2SourceIdentity"
+        parentId:
+          type: "string"
+          nullable: true
+        query:
+          type: "string"
+          nullable: true
+        offset:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+        limit:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+
+    SourceV2BrowseResponse:
+      type: "object"
+      description: "nextOffset is required: null means exhausted, otherwise the checked next raw cursor must advance. Never infer continuation from item count."
+      additionalProperties: false
+      required: ["items", "nextOffset"]
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceV2MediaItem"
+        nextOffset:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+          nullable: true
+
+    SourceV2ItemRequest:
+      type: "object"
+      additionalProperties: false
+      required: ["identity", "itemId"]
+      properties:
+        identity:
+          $ref: "#/components/schemas/SourceV2SourceIdentity"
+        itemId:
+          type: "string"
+
+    SourceV2ItemResponse:
+      type: "object"
+      additionalProperties: false
+      required: ["item"]
+      properties:
+        item:
+          $ref: "#/components/schemas/SourceV2MediaItem"
+
+    SourceV2MediaItem:
+      type: "object"
+      description: "Persistent metadata only. Original title/type/season/episode must be retained. itemId is remote, never an authoritative source handle. Containers cannot be playable; leaves without audio are not playable. No URL, headers, session, lease or cover transport. runtimeTicks uses 100ns ticks."
+      additionalProperties: false
+      required: ["itemId", "title", "isContainer", "playable"]
+      properties:
+        itemId:
+          type: "string"
+        title:
+          type: "string"
+        itemType:
+          type: "string"
+          nullable: true
+        mediaType:
+          type: "string"
+          nullable: true
+        isContainer:
+          type: "boolean"
+        playable:
+          type: "boolean"
+        seasonNumber:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+          nullable: true
+        episodeNumber:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+          nullable: true
+        artist:
+          type: "string"
+          nullable: true
+        album:
+          type: "string"
+          nullable: true
+        albumArtist:
+          type: "string"
+          nullable: true
+        genre:
+          type: "string"
+          nullable: true
+        year:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+        trackNumber:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+        runtimeTicks:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+          nullable: true
+
+    SourceV2AudioOptionsRequest:
+      type: "object"
+      additionalProperties: false
+      required: ["identity", "itemId"]
+      properties:
+        identity:
+          $ref: "#/components/schemas/SourceV2SourceIdentity"
+        itemId:
+          type: "string"
+
+    SourceV2AudioOptionsResponse:
+      type: "object"
+      description: "Metadata-only: no stream opening or lease allocation. Empty versions/streams are meaningful. Host supplies the authoritative source handle."
+      additionalProperties: false
+      required: ["itemId", "versions"]
+      properties:
+        itemId:
+          type: "string"
+        versions:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceV2AudioVersionOption"
+
+    SourceV2AudioVersionOption:
+      type: "object"
+      description: "Corresponds to types::audio::AudioVersionOption. Real IDs/indices only, no array renumbering. Invalid/duplicate identities and live/open/close-required versions must be unavailable."
+      additionalProperties: false
+      required: ["id", "audioStreams"]
+      properties:
+        id:
+          type: "string"
+        name:
+          type: "string"
+          nullable: true
+        runtimeTicks:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+          nullable: true
+        defaultAudioStreamIndex:
+          type: "integer"
+          format: "int32"
+          minimum: -2147483648
+          maximum: 2147483647
+          nullable: true
+        unavailableReason:
+          type: "string"
+          nullable: true
+        audioStreams:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceV2AudioStreamOption"
+
+    SourceV2AudioStreamOption:
+      type: "object"
+      description: "All shared candidate fields. Preserve index zero and empty language; unavailableReason disables a candidate. Only audio streams. Negative/duplicate indices cannot be selectable."
+      additionalProperties: false
+      required: ["index", "isDefault"]
+      properties:
+        index:
+          type: "integer"
+          format: "int32"
+          minimum: -2147483648
+          maximum: 2147483647
+        title:
+          type: "string"
+          nullable: true
+        displayTitle:
+          type: "string"
+          nullable: true
+        language:
+          type: "string"
+          nullable: true
+        codec:
+          type: "string"
+          nullable: true
+        channels:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+        sampleRate:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+        isDefault:
+          type: "boolean"
+        unavailableReason:
+          type: "string"
+          nullable: true
+
+    SourceV2AudioPin:
+      type: "object"
+      description: "Shared AudioPin evidence in camelCase. Accepted choice belongs to one queue occurrence; IDs must be nonempty and selected index nonnegative. runtimeTicks uses 100ns ticks."
+      additionalProperties: false
+      required: ["mediaSourceId", "audioStreamIndex"]
+      properties:
+        mediaSourceId:
+          type: "string"
+        audioStreamIndex:
+          type: "integer"
+          format: "int32"
+          minimum: -2147483648
+          maximum: 2147483647
+        runtimeTicks:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+          nullable: true
+        etag:
+          type: "string"
+          nullable: true
+        codec:
+          type: "string"
+          nullable: true
+        channels:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+        sampleRate:
+          type: "integer"
+          format: "uint32"
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+
+    SourceV2SelectionAuto:
+      type: "object"
+      additionalProperties: false
+      required: ["type"]
+      properties:
+        type:
+          type: "string"
+          enum: ["auto"]
+
+    SourceV2SelectionExplicit:
+      type: "object"
+      additionalProperties: false
+      required: ["type", "mediaSourceId", "audioStreamIndex"]
+      properties:
+        type:
+          type: "string"
+          enum: ["explicit"]
+        mediaSourceId:
+          type: "string"
+        audioStreamIndex:
+          type: "integer"
+          format: "int32"
+          minimum: -2147483648
+          maximum: 2147483647
+
+    SourceV2SelectionPinned:
+      type: "object"
+      additionalProperties: false
+      required: ["type", "pin"]
+      properties:
+        type:
+          type: "string"
+          enum: ["pinned"]
+        pin:
+          $ref: "#/components/schemas/SourceV2AudioPin"
+
+    SourceV2AudioSelection:
+      description: "Required internally tagged union; no missing/unknown tag fallback to Auto. Explicit index 0 is valid. XTP oneOf generation remains unverified."
+      oneOf:
+        - $ref: "#/components/schemas/SourceV2SelectionAuto"
+        - $ref: "#/components/schemas/SourceV2SelectionExplicit"
+        - $ref: "#/components/schemas/SourceV2SelectionPinned"
+
+    SourceV2ResolveRequest:
+      type: "object"
+      description: "requestId is unique per attempt. formatExts are decoder hints, not MIME types. followRedirects absent means true; false disables redirects. Enabled redirects retain original caller headers including across origins. Expected identity and item are validated before resolution."
+      additionalProperties: false
+      required: ["requestId", "identity", "itemId", "offsetMs", "selection", "formatExts"]
+      properties:
+        requestId:
+          type: "string"
+        identity:
+          $ref: "#/components/schemas/SourceV2SourceIdentity"
+        itemId:
+          type: "string"
+        offsetMs:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+        selection:
+          $ref: "#/components/schemas/SourceV2AudioSelection"
+        formatExts:
+          type: "array"
+          items:
+            type: "string"
+        followRedirects:
+          type: "boolean"
+          default: true
+
+    SourceV2HttpHeader:
+      type: "object"
+      description: "Ordered structured transport header; sensitive, never Debug logged or persisted."
+      additionalProperties: false
+      required: ["name", "value"]
+      properties:
+        name:
+          type: "string"
+        value:
+          type: "string"
+
+    SourceV2ResolveResponse:
+      type: "object"
+      description: "Transient memory-only descriptor, no Debug. Echo requestId/offset exactly. actualPin must be present; null is allowed only for Auto with seekPolicy none. ServerOffset always requires a real pin, independently of timeline, so reopening preserves the selected media and audio track. Explicit/Pinned requests require matching evidence. URL/headers/opaque lease must never enter persistent metadata. formatExt and mimeType are distinct; adapter validates supported format and capability claims."
+      additionalProperties: false
+      required: ["requestId", "requestedOffsetMs", "url", "headers", "mimeType", "formatExt", "actualPin", "start", "timeline", "seekPolicy", "cachePolicy"]
+      properties:
+        requestId:
+          type: "string"
+        requestedOffsetMs:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+        url:
+          type: "string"
+        headers:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceV2HttpHeader"
+        mimeType:
+          type: "string"
+        formatExt:
+          type: "string"
+        actualPin:
+          $ref: "#/components/schemas/SourceV2AudioPin"
+          nullable: true
+        start:
+          $ref: "#/components/schemas/SourceV2StartPosition"
+        timeline:
+          $ref: "#/components/schemas/SourceV2Timeline"
+        seekPolicy:
+          $ref: "#/components/schemas/SourceV2SeekPolicy"
+        cachePolicy:
+          $ref: "#/components/schemas/SourceV2CachePolicy"
+        leaseId:
+          type: "string"
+          nullable: true
+
+    SourceV2StartRequestedOnly:
+      type: "object"
+      description: "Only requested position known; not evidence of calibrated start."
+      additionalProperties: false
+      required: ["type"]
+      properties:
+        type:
+          type: "string"
+          enum: ["requestedOnly"]
+
+    SourceV2StartCalibrated:
+      type: "object"
+      description: "Calibrated absolute media start and bounded error in milliseconds; no implicit zero or error tolerance."
+      additionalProperties: false
+      required: ["type", "offsetMs", "maxErrorMs"]
+      properties:
+        type:
+          type: "string"
+          enum: ["calibrated"]
+        offsetMs:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+        maxErrorMs:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+
+    SourceV2StartPosition:
+      oneOf:
+        - $ref: "#/components/schemas/SourceV2StartRequestedOnly"
+        - $ref: "#/components/schemas/SourceV2StartCalibrated"
+
+    SourceV2TimelineFinite:
+      type: "object"
+      description: "Finite full program duration in 100ns ticks. Duration is not a completeness witness."
+      additionalProperties: false
+      required: ["type", "durationTicks"]
+      properties:
+        type:
+          type: "string"
+          enum: ["finite"]
+        durationTicks:
+          type: "integer"
+          format: "uint64"
+          minimum: 0
+          maximum: 18446744073709551615
+
+    SourceV2TimelineLive:
+      type: "object"
+      additionalProperties: false
+      required: ["type"]
+      properties:
+        type:
+          type: "string"
+          enum: ["live"]
+
+    SourceV2TimelineUnknown:
+      type: "object"
+      additionalProperties: false
+      required: ["type"]
+      properties:
+        type:
+          type: "string"
+          enum: ["unknown"]
+
+    SourceV2Timeline:
+      oneOf:
+        - $ref: "#/components/schemas/SourceV2TimelineFinite"
+        - $ref: "#/components/schemas/SourceV2TimelineLive"
+        - $ref: "#/components/schemas/SourceV2TimelineUnknown"
+
+    SourceV2SeekPolicy:
+      type: "string"
+      enum: ["serverOffset", "none"]
+      description: "Only server-offset re-resolution or no seek. No random byte seek capability is implied."
+
+    SourceV2CachePolicy:
+      type: "string"
+      enum: ["noPersistentCache"]
+      description: "Transient transport only; no persistent URL, headers, lease or media cache."
+
+    SourceV2ReleaseRequest:
+      type: "object"
+      description: "Idempotent attempt-scoped cleanup. requestId works even if resolve never returned a lease. No global account/session cancellation. Sensitive opaque lease: no Debug."
+      additionalProperties: false
+      required: ["requestId", "identity", "itemId"]
+      properties:
+        requestId:
+          type: "string"
+        identity:
+          $ref: "#/components/schemas/SourceV2SourceIdentity"
+        itemId:
+          type: "string"
+        leaseId:
+          type: "string"
+          nullable: true
+
+    SourceV2ReleaseResponse:
+      type: "object"
+      description: "Nonempty JSON acknowledgement required. Host checks matching requestId and released=true, including already-released attempts. False is failure, not success."
+      additionalProperties: false
+      required: ["requestId", "released"]
+      properties:
+        requestId:
+          type: "string"
+        released:
+          type: "boolean"

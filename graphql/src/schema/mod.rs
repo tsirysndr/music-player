@@ -9,11 +9,13 @@ use self::{
     devices::{DevicesMutation, DevicesQuery, DevicesSubscription},
     extensions::{ExtensionsMutation, ExtensionsQuery},
     library::{LibraryMutation, LibraryQuery},
+    media::{MediaMutation, MediaQuery},
     mixer::{MixerMutation, MixerQuery},
     playback::{PlaybackMutation, PlaybackQuery, PlaybackSubscription},
     playlist::{PlaylistMutation, PlaylistQuery, PlaylistSubscription},
     radio::{RadioMutation, RadioQuery},
     servers::{ServersMutation, ServersQuery},
+    source_accounts::{SourceAccountsMutation, SourceAccountsQuery},
     tracklist::{TracklistMutation, TracklistQuery, TracklistSubscription},
 };
 
@@ -25,6 +27,7 @@ pub mod devices;
 pub mod extensions;
 pub mod history;
 pub mod library;
+pub mod media;
 pub mod mixer;
 pub mod objects;
 pub mod playback;
@@ -32,12 +35,14 @@ pub mod playlist;
 pub mod provider;
 pub mod radio;
 pub mod servers;
+pub mod source_accounts;
 pub mod tracklist;
 
 #[derive(MergedObject, Default)]
 pub struct Query(
     DevicesQuery,
     LibraryQuery,
+    MediaQuery,
     MixerQuery,
     PlaybackQuery,
     PlaylistQuery,
@@ -45,6 +50,7 @@ pub struct Query(
     RadioQuery,
     ExtensionsQuery,
     ServersQuery,
+    SourceAccountsQuery,
     AccountQuery,
     AnalysisQuery,
 );
@@ -53,6 +59,7 @@ pub struct Query(
 pub struct Mutation(
     DevicesMutation,
     LibraryMutation,
+    MediaMutation,
     MixerMutation,
     PlaybackMutation,
     PlaylistMutation,
@@ -60,6 +67,7 @@ pub struct Mutation(
     RadioMutation,
     ExtensionsMutation,
     ServersMutation,
+    SourceAccountsMutation,
     AccountMutation,
 );
 

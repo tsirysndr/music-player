@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests;
 
+pub mod emby;
+pub use emby::EmbyRuntimeSettings;
+
 use std::{
     env,
     fs::{self, File},
@@ -105,6 +108,9 @@ pub struct Settings {
     /// Where decoded audio is sent: "cpal" (system audio device, default),
     /// "stdout", "fifo:/path/to/pipe", "unix:/path/to/socket" or "tcp:host:port".
     pub audio_output: String,
+    /// Follow Emby redirects, retaining authentication headers across origins.
+    #[serde(default = "default_true")]
+    pub emby_follow_redirects: bool,
     /// How often (in minutes) the music directory is rescanned in the
     /// background. 0 disables periodic refresh.
     pub library_refresh_interval: u64,
@@ -216,6 +222,15 @@ fn default_car_max_age_hours() -> u64 {
     24
 }
 
+// Older/minimal settings files can omit device_id. Keep their default
+// stable across registry and playback reads, retaining the MD5-of-UUID format.
+fn default_device_id() -> String {
+    static DEFAULT_DEVICE_ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    DEFAULT_DEVICE_ID
+        .get_or_init(|| format!("{:x}", md5::compute(Uuid::new_v4().to_string())))
+        .clone()
+}
+
 pub fn read_settings() -> Result<Config, ConfigError> {
     let path = match env::consts::OS {
         "android" => "/storage/emulated/0/Android/data/com.tsirysndr.songbird/files".to_owned(),
@@ -239,7 +254,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
 
     fs::create_dir_all(&covers_path).unwrap();
 
-    let device_id = format!("{:x}", md5::compute(Uuid::new_v4().to_string()));
+    let device_id = default_device_id();
 
     let mut tmp = PathBuf::new();
     tmp.push("/tmp");
@@ -261,6 +276,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         device_id,
         http_port: 5053,
         audio_output: "cpal".to_string(),
+        emby_follow_redirects: true,
         library_refresh_interval: 30,
         radio_browser_url: DEFAULT_RADIO_BROWSER_URL.to_string(),
         tunein_url: DEFAULT_TUNEIN_URL.to_string(),
@@ -309,6 +325,7 @@ pub fn read_settings() -> Result<Config, ConfigError> {
         .set_default("device_id", default_settings.device_id)?
         .set_default("http_port", default_settings.http_port)?
         .set_default("audio_output", default_settings.audio_output)?
+        .set_default("emby_follow_redirects", true)?
         .set_default(
             "library_refresh_interval",
             default_settings.library_refresh_interval,

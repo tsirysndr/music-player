@@ -47,6 +47,16 @@ pub async fn is_enabled(db: &DatabaseConnection, id: &str) -> bool {
     }
 }
 
+/// Account playback needs an actual enabled-state read, not a fallback on error.
+/// Missing preference still means enabled; unavailable storage is an error.
+pub async fn source_enabled(db: &DatabaseConnection, id: &str) -> Result<bool, Error> {
+    extension::Entity::find_by_id(id.to_owned())
+        .one(db)
+        .await
+        .map(|row| row.is_none_or(|row| row.enabled))
+        .map_err(|_| Error::msg("could not read source extension state"))
+}
+
 /// Switch `id` on or off.
 ///
 /// Enabling deletes the row rather than storing `true`: enabled is the
@@ -133,6 +143,24 @@ mod tests {
     }
 
     const NOW: &str = "2026-09-07T16:00:00Z";
+
+    #[tokio::test]
+    async fn source_admission_distinguishes_missing_preference_from_failed_read() {
+        let db = db().await;
+        assert!(source_enabled(&db, "source").await.unwrap());
+        set_enabled(&db, "source", false, NOW).await.unwrap();
+        assert!(!source_enabled(&db, "source").await.unwrap());
+        set_enabled(&db, "source", true, NOW).await.unwrap();
+        assert!(source_enabled(&db, "source").await.unwrap());
+        let broken = Database::connect("sqlite::memory:").await.unwrap();
+        assert_eq!(
+            source_enabled(&broken, "source")
+                .await
+                .unwrap_err()
+                .to_string(),
+            "could not read source extension state"
+        );
+    }
 
     #[tokio::test]
     async fn everything_is_enabled_before_anything_is_stored() {

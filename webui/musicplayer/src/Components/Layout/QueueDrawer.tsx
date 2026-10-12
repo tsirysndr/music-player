@@ -1,12 +1,13 @@
 import { useAtom } from "jotai";
 import { useState } from "react";
+import MediaQueueAudio from "../../Containers/Media/MediaQueueAudio";
 import { useTimeFormat } from "../../Hooks/useFormat";
 import { usePlayback } from "../../Hooks/usePlayback";
 import { queueOpenAtom } from "../../State";
 import type { Track } from "../../Types";
 import { Artwork, IconButton, Icons, cn } from "../UI";
 
-type QueueTab = "queue" | "history";
+type QueueTab = "queue" | "history" | "audio";
 
 /**
  * The desktop's queue drawer: a now-playing card, what is up next, and the
@@ -90,7 +91,7 @@ const QueueDrawer = () => {
         </div>
 
         <div className="flex gap-2 px-4 pb-[10px]">
-          {(["queue", "history"] as const).map((value) => (
+          {(["queue", "history", "audio"] as const).map((value) => (
             <button
               key={value}
               type="button"
@@ -102,7 +103,7 @@ const QueueDrawer = () => {
                   : "text-dim hover:bg-hover"
               )}
             >
-              {value === "queue" ? "Play Queue" : "History"}
+              {value === "queue" ? "Play Queue" : value === "history" ? "History" : "Audio"}
             </button>
           ))}
         </div>
@@ -152,7 +153,7 @@ const QueueDrawer = () => {
         )}
 
         <div className="scrollbar-skin min-h-0 flex-1 overflow-y-auto">
-          {rows.length === 0 ? (
+          {tab === "audio" ? <MediaQueueAudio /> : rows.length === 0 ? (
             <p className="grid h-full place-items-center px-4 text-xs text-muted">
               {tab === "queue" ? "Nothing up next" : "No history yet"}
             </p>

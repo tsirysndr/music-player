@@ -18,6 +18,7 @@ version = "0.4.5"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde = { version = "1.0.145", features = ["derive"] }
 rockbox-metadata = "0.1.0"
 md5 = "0.7.0"
 mdns-sd = "0.5.9"

@@ -214,6 +214,7 @@ impl MusicProvider for Kodi {
             // No search endpoint — the trait's three filtered calls *are* the
             // Kodi idiom.
             native_search: false,
+            media_browse: false,
         }
     }
 

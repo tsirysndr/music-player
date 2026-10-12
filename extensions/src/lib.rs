@@ -20,6 +20,7 @@ pub mod install;
 pub mod library;
 pub mod manifest;
 pub mod registry;
+pub mod source_runtime;
 
 pub use abi::{Event, TrackInfo};
 pub use catalog::{installed, Installed, Status};

@@ -50,7 +50,7 @@ fn add_track() {
     assert!(tracklist.tracks.is_empty());
     tracklist.add_track(track.clone());
     assert_eq!(tracklist.tracks.len(), 1);
-    assert_eq!(tracklist.tracks[0], track);
+    assert_eq!(tracklist.tracks[0].track, track);
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn insert() {
     };
     tracklist.insert(0, track2.clone());
     assert_eq!(tracklist.len(), 2);
-    assert_eq!(tracklist.tracks[0], track2);
+    assert_eq!(tracklist.tracks[0].track, track2);
 }
 
 #[test]
@@ -220,7 +220,7 @@ fn insert_tracks() {
     };
     tracklist.insert_tracks(0, vec![track2.clone()]);
     assert_eq!(tracklist.len(), 2);
-    assert_eq!(tracklist.tracks[0], track2);
+    assert_eq!(tracklist.tracks[0].track, track2);
 }
 
 #[test]
@@ -244,7 +244,7 @@ fn insert_next() {
     };
     tracklist.insert_next(track2.clone());
     assert_eq!(tracklist.len(), 2);
-    assert_eq!(tracklist.tracks[0], track2);
+    assert_eq!(tracklist.tracks[0].track, track2);
 }
 
 #[test]
@@ -268,7 +268,7 @@ fn queue() {
     };
     tracklist.queue(vec![track2.clone()]);
     assert_eq!(tracklist.len(), 2);
-    assert_eq!(tracklist.tracks[1], track2);
+    assert_eq!(tracklist.tracks[1].track, track2);
 }
 
 #[test]

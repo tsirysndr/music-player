@@ -30,6 +30,9 @@ const LIBRARY_QUERIES = [
   "GetPlaylist",
   "GetLikedTracks",
   "Search",
+  "GetConnectedServer",
+  "MediaBrowser",
+  "BrowseMedia",
 ];
 
 const ServersWithData = () => {
@@ -55,14 +58,14 @@ const ServersWithData = () => {
   const { data: kindData } = useGetSourceKindsQuery();
 
   const refreshLibrary = async () => {
-    await refetch();
-    await Promise.all(
-      LIBRARY_QUERIES.map((name) =>
+    await Promise.all([
+      refetch(),
+      ...LIBRARY_QUERIES.map((name) =>
         queryClient.invalidateQueries({
           predicate: (query) => query.queryKey[0] === name,
         })
-      )
-    );
+      ),
+    ]);
   };
 
   const addServer = useAddServerMutation();

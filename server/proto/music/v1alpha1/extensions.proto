@@ -1,0 +1,35 @@
+syntax = "proto3";
+package music.v1alpha1;
+
+// Catalog operations use the same manager as account resolution and playback.
+// Installation/scaffolding remain local CLI filesystem operations.
+service ExtensionsService {
+  rpc ListExtensions(ListExtensionsRequest) returns (ListExtensionsResponse);
+  rpc SetExtensionEnabled(SetExtensionEnabledRequest) returns (SetExtensionEnabledResponse);
+  rpc RescanExtensions(RescanExtensionsRequest) returns (RescanExtensionsResponse);
+}
+
+// Manifest metadata only. Enabled does not imply a guest is already loaded.
+// Configuration values are deliberately absent.
+message InstalledExtension {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string author = 4;
+  string description = 5;
+  repeated string capabilities = 6;
+  repeated string allowed_hosts = 7;
+  bool library_read = 8;
+  bool enabled = 9;
+  repeated string topics = 10;
+  string directory = 11;
+}
+message ListExtensionsRequest {}
+message ListExtensionsResponse { repeated InstalledExtension extensions = 1; }
+message SetExtensionEnabledRequest {
+  string id = 1;
+  bool enabled = 2;
+}
+message SetExtensionEnabledResponse { InstalledExtension extension = 1; }
+message RescanExtensionsRequest {}
+message RescanExtensionsResponse { repeated InstalledExtension extensions = 1; }

@@ -9,9 +9,9 @@
 use super::objects::server::{Server, ServerInput, SourceKind};
 use super::provider;
 use async_graphql::*;
-use music_player_provider::ProviderConfig;
+use music_player_provider::{ProviderConfig, ProviderError};
 use music_player_storage::{
-    saved_servers::{self, NewServer},
+    saved_servers::{self, NewServer, PasswordUpdate},
     Database,
 };
 
@@ -52,17 +52,14 @@ impl ServersQuery {
         let Some(config) = provider::state(ctx).config().await else {
             return Ok(None);
         };
-        let db = ctx.data::<Database>().unwrap();
-        // A discovered peer has no saved row, so fall back to the live config.
-        if let Ok(Some(row)) = saved_servers::get(db.get_connection(), &config.id).await {
-            return Ok(Some(Server::from_row(row, Some(config.id.as_str()))));
-        }
+        // Saving edits does not rebuild the connection. Its actual config may
+        // differ from the saved row until the caller reconnects.
         Ok(Some(Server {
-            id: ID(config.id.clone()),
-            kind: config.kind.clone(),
-            name: config.name.clone(),
-            url: config.url.clone(),
-            username: config.username.clone(),
+            id: ID(config.id),
+            kind: config.kind,
+            name: config.name,
+            url: config.url,
+            username: config.username,
             has_password: config.password.is_some(),
             connected: true,
         }))
@@ -84,7 +81,7 @@ pub struct ServersMutation;
 
 #[Object]
 impl ServersMutation {
-    /// Save a server, or update the one already stored at that url.
+    /// Save by kind/url/username, or edit the exact account named by input.id.
     async fn add_server(&self, ctx: &Context<'_>, input: ServerInput) -> Result<Server, Error> {
         let db = ctx.data::<Database>().unwrap();
         let factory = provider::state(ctx)
@@ -101,8 +98,13 @@ impl ServersMutation {
             None => input.url.clone(),
         };
 
+        let password_update =
+            PasswordUpdate::from_fields(input.password, input.password_value, input.clear_password)
+                .map_err(|e| Error::new(e.to_string()))?;
         let server = NewServer::new(input.kind, input.name, url)
-            .with_credentials(input.username, input.password);
+            .with_credentials(input.username, None)
+            .with_id(input.id.map(|id| id.to_string()))
+            .with_password_update(password_update);
         let row = saved_servers::upsert(db.get_connection(), &server, &now())
             .await
             .map_err(|e| Error::new(e.to_string()))?;
@@ -146,11 +148,27 @@ impl ServersMutation {
             username: row.username.clone(),
             password: row.password.clone(),
         };
+        let snapshot = &row;
         let connected = provider::state(ctx)
-            .connect(config)
+            .connect_checked(config, |identity| async move {
+                match identity {
+                    Some(remote) => {
+                        saved_servers::bind_remote_identity(db.get_connection(), snapshot, &remote)
+                            .await
+                            .map_err(ProviderError::other)?;
+                        Ok(())
+                    }
+                    None if snapshot.kind == "emby" => Err(ProviderError::Other(
+                        "Emby did not confirm the remote account identity".into(),
+                    )),
+                    None => Ok(()),
+                }
+            })
             .await
             .map_err(provider::err)?;
-        provider::restamp_queue_likes(ctx, connected);
+        if connected.provider.capabilities().liked {
+            provider::restamp_queue_likes(ctx, connected);
+        }
 
         Ok(Server::from_row(row, Some(id.as_str())))
     }

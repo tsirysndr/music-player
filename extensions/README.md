@@ -267,7 +267,7 @@ any directory.
 
 ### By hand
 
-**From a directory** — drop it into an extensions path and restart:
+**From a directory** — drop it into an extensions path, then rescan the daemon:
 
 ```
 ~/.config/music-player/extensions/com.example.lyrics/
@@ -289,6 +289,15 @@ music-player extension install https://example.com/plugin.wasm -c metadata
 Downloads are staged in a temporary directory and moved into place only once the
 module loads, so a failed install cannot leave a half-written extension behind.
 They land in `<app dir>/extensions-cache/`.
+
+Installation and removal operate on the local filesystem. Run
+`music-player extension rescan` against the daemon that uses those directories
+after either operation. Source extensions load on their next use; non-source
+extensions require a daemon restart to load or unload.
+
+`music-player extension list` reads the daemon selected by `music-player connect`.
+Use `music-player extension list --local` to inspect local manifests and flags
+without contacting a daemon. Neither list loads a WASM module.
 
 ---
 
@@ -319,14 +328,27 @@ Toggle it from the **Extensions** view in the web UI or the Slint desktop app.
 Both also have a rescan button, which picks up an extension added or removed on
 disk and drops the stored flags for anything no longer there.
 
-Switching one off takes effect the next time the daemon starts. Unloading a
-WebAssembly module mid-session would pull the ground out from under whatever
-happens to be in the middle of a call into it, so a module that is already
-running keeps running.
+Source extensions stop accepting new operations as soon as the daemon accepts
+the change. Existing playback leases keep their original instance for cleanup;
+an already playing stream is not forcibly stopped. Re-enabling creates a new
+instance on its next use and does not revive old handles. Non-source extensions
+keep their startup loading behavior and require a daemon restart.
 
-Nothing else about an extension is stored: its name, version, capabilities and
-permissions are read from the manifest on disk every time, because that is what
-changes when one is upgraded.
+The CLI uses the same daemon manager:
+
+```sh
+music-player extension disable com.example.source
+music-player extension enable com.example.source
+music-player extension rescan
+```
+
+If a mutation loses its reply, read the current state with `extension list`
+before trying again. The clients do not automatically repeat mutations.
+
+The catalog reads names, versions, capabilities and permissions from manifests.
+Saved source accounts separately persist configuration overrides and connection
+identity; removing an extension does not delete those accounts. Configuration
+values are write-only in account APIs.
 
 ---
 

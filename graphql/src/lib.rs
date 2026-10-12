@@ -10,15 +10,21 @@ use async_graphql::Schema;
 use futures_util::StreamExt;
 use music_player_discovery::{discover, SERVICE_NAME};
 use music_player_entity::track as track_entity;
-use music_player_playback::player::PlayerCommand;
+use music_player_playback::{
+    player::{normalize_queue, PlayerCommand},
+    source_resolver::SourceResolver,
+};
 use music_player_renderer::Player;
 use music_player_settings::{read_settings, Settings};
+use music_player_storage::Database;
+use music_player_types::source::SourceHandle;
 use music_player_types::types::RemoteCoverUrl;
 use music_player_types::types::RemoteTrackUrl;
 use music_player_types::types::{Device, CHROMECAST_SERVICE_NAME};
 use rand::seq::SliceRandom;
 use schema::{Mutation, Query, Subscription};
 use std::{
+    collections::HashSet,
     sync::{Arc, Mutex},
     thread,
 };
@@ -30,6 +36,15 @@ pub mod schema;
 pub mod simple_broker;
 
 pub type MusicPlayerSchema = Schema<Query, Mutation, Subscription>;
+
+/// Schema builders must inject the daemon's shared SourceResolver with .data().
+/// Missing configuration is an error; never create an account manager per request.
+pub(crate) fn source_resolver<'a>(
+    ctx: &'a async_graphql::Context<'_>,
+) -> async_graphql::Result<&'a SourceResolver> {
+    ctx.data::<SourceResolver>()
+        .map_err(|_| async_graphql::Error::new("Shared source resolver is not configured"))
+}
 
 const MEDIA_RENDERER: &str = "urn:schemas-upnp-org:device:MediaRenderer";
 const MEDIA_SERVER: &str = "urn:schemas-upnp-org:device:MediaServer";
@@ -155,7 +170,67 @@ pub async fn scan_devices() -> Result<Arc<std::sync::Mutex<Vec<Device>>>, Box<dy
     Ok(devices)
 }
 
+/// Queue metadata may contain handles from several saved accounts. Validate
+/// all syntax first, then check each account/identity once without networking.
+pub(crate) async fn validate_queue(
+    resolver: &SourceResolver,
+    tracks: &mut [track_entity::Model],
+) -> Result<(), Error> {
+    normalize_queue(tracks)?;
+    let mut checked = HashSet::new();
+    for track in tracks {
+        if SourceHandle::is_handle(&track.id) {
+            let source = SourceHandle::parse(&track.id)?;
+            let identity = match &source {
+                SourceHandle::Remote(source) => (Some(source.remote.clone()), None),
+                SourceHandle::Local(source) => (None, Some(source.config_revision)),
+            };
+            if checked.insert((
+                source.resolver().to_owned(),
+                source.account_id().to_owned(),
+                identity,
+            )) {
+                resolver.validate_handle(&source).await?;
+            }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn reject_source_receiver(
+    tracks: &[track_entity::Model],
+    remote: bool,
+) -> Result<(), Error> {
+    if remote
+        && tracks
+            .iter()
+            .any(|track| SourceHandle::is_handle(&track.id) || SourceHandle::is_handle(&track.uri))
+    {
+        return Err(Error::msg("Saved sources are unsupported on remote receivers: URL-only playback and remote account mapping are unavailable"));
+    }
+    Ok(())
+}
+
 pub async fn load_tracks(
+    db: &Database,
+    player_cmd: &Arc<Mutex<UnboundedSender<PlayerCommand>>>,
+    player: Option<&mut Box<dyn Player + Send>>,
+    source_ip: Option<String>,
+    tracks: Vec<track_entity::Model>,
+    position: Option<u32>,
+    shuffle: bool,
+) -> Result<(), Error> {
+    // Compatibility for external native callers. Schema operations must use
+    // load_tracks_with_resolver with their injected daemon resolver.
+    let resolver = SourceResolver::from_settings(db.clone());
+    load_tracks_with_resolver(
+        &resolver, player_cmd, player, source_ip, tracks, position, shuffle,
+    )
+    .await
+}
+
+pub async fn load_tracks_with_resolver(
+    resolver: &SourceResolver,
     player_cmd: &Arc<Mutex<UnboundedSender<PlayerCommand>>>,
     player: Option<&mut Box<dyn Player + Send>>,
     source_ip: Option<String>,
@@ -163,6 +238,13 @@ pub async fn load_tracks(
     position: Option<u32>,
     shuffle: bool,
 ) -> Result<(), Error> {
+    normalize_queue(&mut tracks)?;
+    reject_source_receiver(&tracks, player.is_some())?;
+    validate_queue(resolver, &mut tracks).await?;
+    let start_index = position.unwrap_or(0) as usize;
+    if !tracks.is_empty() && start_index >= tracks.len() {
+        return Err(Error::msg("Invalid start index"));
+    }
     if shuffle {
         tracks.shuffle(&mut rand::thread_rng());
     }
@@ -191,14 +273,18 @@ pub async fn load_tracks(
         player
             .load_tracks(
                 tracks.clone().into_iter().map(Into::into).collect(),
-                Some(0),
+                Some(i32::try_from(start_index).map_err(|_| Error::msg("Invalid start index"))?),
             )
             .await?;
         return Ok(());
     }
     let player_cmd_tx = player_cmd.lock().unwrap();
-    player_cmd_tx.send(PlayerCommand::Stop).unwrap();
-    player_cmd_tx.send(PlayerCommand::Clear).unwrap();
+    player_cmd_tx
+        .send(PlayerCommand::Stop)
+        .map_err(|_| Error::msg("Player command channel closed"))?;
+    player_cmd_tx
+        .send(PlayerCommand::Clear)
+        .map_err(|_| Error::msg("Player command channel closed"))?;
     // One command: loading the tracklist and *then* asking for an index opened
     // the first track's stream and immediately replaced it, which against a
     // remote server is a wasted connection and a real delay before anything
@@ -206,9 +292,9 @@ pub async fn load_tracks(
     player_cmd_tx
         .send(PlayerCommand::LoadTracklist {
             tracks,
-            start_index: Some(position.unwrap_or(0) as usize),
+            start_index: Some(start_index),
         })
-        .unwrap();
+        .map_err(|_| Error::msg("Player command channel closed"))?;
     Ok(())
 }
 

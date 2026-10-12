@@ -26,7 +26,15 @@ async fn start_webui() {
     let cloned_tracklist = tracklist.clone();
     let cloned_cmd_tx = Arc::clone(&cmd_tx);
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
-    let (_, _) = Player::new(move |_| {}, cloned_cmd_tx, cloned_cmd_rx, cloned_tracklist);
+    let sources =
+        music_player_playback::source_resolver::SourceResolver::from_settings(db_conn.clone());
+    let (_, _) = Player::with_source_resolver(
+        move |_| {},
+        cloned_cmd_tx,
+        cloned_cmd_rx,
+        cloned_tracklist,
+        sources.clone(),
+    );
 
     thread::spawn(move || {
         let rt = runtime::Builder::new_current_thread()
@@ -39,7 +47,7 @@ async fn start_webui() {
             let providers = std::sync::Arc::new(music_player_provider::ProviderState::new(
                 std::sync::Arc::new(registry),
             ));
-            super::start_webui(cmd_tx, tracklist, providers).await
+            super::start_webui(cmd_tx, tracklist, providers, db_conn, sources).await
         })
         .unwrap();
     });
@@ -104,6 +112,21 @@ async fn start_webui() {
 
     let res = client.get("/search").await.unwrap();
     assert_eq!(res.status(), 200);
+
+    let index = super::Asset::get("index.html").unwrap();
+    for path in [
+        "/source-accounts",
+        "/source-accounts/",
+        "/source-accounts/synthetic-account",
+    ] {
+        let mut res = client.get(path).await.unwrap();
+        assert_eq!(res.status(), 200, "{path}");
+        assert_eq!(
+            res.body_bytes().await.unwrap(),
+            index.data.as_ref(),
+            "{path}"
+        );
+    }
 
     let _res = client
         .get("/covers/ecd3fb5214ef4faf77a0eba4eedb2638.jpg")

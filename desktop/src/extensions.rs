@@ -1,20 +1,12 @@
-//! The extensions view's data.
-//!
-//! Reads the manifests in the configured search paths and pairs each with the
-//! enabled flag stored in the `extension` table, exactly as the daemon's
-//! `extensions` GraphQL query does — the two clients show the same list from
-//! the same scan rather than from two different notions of what is installed.
-//!
-//! Nothing here loads a module: instantiating WebAssembly to draw a list would
-//! cost the user a visible pause on a tab they may only be browsing. The one
-//! thing that costs is whether an enabled module *would* load, which is why
-//! [`Extension::error`] is only ever filled in by the daemon's own startup log,
-//! not by this.
+//! Extension data comes from the selected daemon, including embedded mode.
+//! A catalog query does not load WASM; mutations invalidate its shared manager.
 
 use anyhow::Error;
-use music_player_extensions::{catalog, search_paths};
-use music_player_settings::{get_application_directory, read_settings, Settings};
-use music_player_storage::extension_state;
+use music_player_server::api::music::v1alpha1::{
+    extensions_service_client::ExtensionsServiceClient, InstalledExtension, ListExtensionsRequest,
+    RescanExtensionsRequest, SetExtensionEnabledRequest,
+};
+use tonic::transport::Channel;
 
 /// One installed extension, flattened into what the row displays.
 #[derive(Clone, Debug, Default)]
@@ -43,35 +35,18 @@ impl Extension {
     }
 }
 
-/// The configured extension paths, or none when settings cannot be read —
-/// which only means falling back to the default location.
-fn extension_paths() -> Vec<String> {
-    read_settings()
-        .ok()
-        .and_then(|config| config.try_deserialize::<Settings>().ok())
-        .map(|settings| settings.extension_paths)
-        .unwrap_or_default()
+fn client(channel: Channel) -> ExtensionsServiceClient<Channel> {
+    ExtensionsServiceClient::new(channel)
+        .max_decoding_message_size(music_player_server::LIBRARY_MESSAGE_LIMIT)
+        .max_encoding_message_size(music_player_server::LIBRARY_MESSAGE_LIMIT)
 }
 
-/// Scan every search path and return what is installed, in id order.
-pub async fn load() -> Vec<Extension> {
-    let paths = search_paths(&get_application_directory(), &extension_paths());
-    let db = music_player_storage::shared().await;
-    let enabled = extension_state::enabled_map(db.get_connection()).await;
-
-    catalog::installed(&paths, &enabled)
+fn rows(installed: Vec<InstalledExtension>) -> Vec<Extension> {
+    installed
         .into_iter()
-        .map(|installed| {
-            // Read the flag before the manifest moves out of `installed`.
-            let enabled = installed.enabled();
-            let manifest = installed.manifest;
-            let capabilities = manifest
-                .capabilities
-                .iter()
-                .map(|capability| capability.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
-            let hosts = manifest.permissions.allowed_hosts.join(", ");
+        .map(|manifest| {
+            let capabilities = manifest.capabilities.join(", ");
+            let hosts = manifest.allowed_hosts.join(", ");
             let haystack = [
                 manifest.id.as_str(),
                 manifest.name.as_str(),
@@ -91,8 +66,8 @@ pub async fn load() -> Vec<Extension> {
                 description: manifest.description,
                 capabilities,
                 hosts,
-                library_read: manifest.permissions.library_read,
-                enabled,
+                library_read: manifest.library_read,
+                enabled: manifest.enabled,
                 error: String::new(),
                 haystack,
             }
@@ -100,42 +75,44 @@ pub async fn load() -> Vec<Extension> {
         .collect()
 }
 
-/// Switch an extension on or off, and hand back the refreshed list.
-///
-/// The flag is stored immediately, but a module the daemon already loaded
-/// keeps running until it next starts — unloading WebAssembly mid-session
-/// would pull the ground out from under whatever is calling into it.
-pub async fn set_enabled(id: &str, enabled: bool) -> Result<Vec<Extension>, Error> {
-    let db = music_player_storage::shared().await;
-    extension_state::set_enabled(
-        db.get_connection(),
-        id,
-        enabled,
-        &chrono::Utc::now().to_rfc3339(),
-    )
-    .await?;
-    Ok(load().await)
+pub async fn load(channel: Channel) -> Result<Vec<Extension>, Error> {
+    Ok(rows(
+        client(channel)
+            .list_extensions(ListExtensionsRequest {})
+            .await?
+            .into_inner()
+            .extensions,
+    ))
 }
-
-/// Re-read the directories, dropping the stored flags for anything that is no
-/// longer installed.
-///
-/// A leftover row is harmless while it matches nothing, but it would switch an
-/// extension straight back off if it were ever reinstalled, which is not what
-/// deleting it meant.
-pub async fn rescan() -> Vec<Extension> {
-    let extensions = load().await;
-    let installed: Vec<String> = extensions
-        .iter()
-        .map(|extension| extension.id.clone())
-        .collect();
-
-    let db = music_player_storage::shared().await;
-    if let Err(e) = extension_state::prune(db.get_connection(), &installed).await {
-        // Not fatal: the list is still right, there is just a stale row left.
-        tracing::warn!("could not prune the extension state: {e}");
-    }
-    extensions
+pub async fn set_enabled(
+    channel: Channel,
+    id: &str,
+    enabled: bool,
+) -> Result<Vec<Extension>, Error> {
+    let mut client = client(channel);
+    // Send once: a lost reply does not prove the mutation failed.
+    client
+        .set_extension_enabled(SetExtensionEnabledRequest {
+            id: id.into(),
+            enabled,
+        })
+        .await?;
+    Ok(rows(
+        client
+            .list_extensions(ListExtensionsRequest {})
+            .await?
+            .into_inner()
+            .extensions,
+    ))
+}
+pub async fn rescan(channel: Channel) -> Result<Vec<Extension>, Error> {
+    Ok(rows(
+        client(channel)
+            .rescan_extensions(RescanExtensionsRequest {})
+            .await?
+            .into_inner()
+            .extensions,
+    ))
 }
 
 #[cfg(test)]

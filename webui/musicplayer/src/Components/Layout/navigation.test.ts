@@ -4,7 +4,7 @@ import { isActive, NAV, PRIMARY_TABS, titleForPath } from "./navigation";
 const entry = (to: string) => NAV.find((candidate) => candidate.to === to)!;
 
 describe("NAV", () => {
-  it("lists the library sections in the desktop's order", () => {
+  it("lists the library sections including media navigation", () => {
     expect(NAV.map((section) => section.to)).toEqual([
       "/albums",
       "/artists",
@@ -12,6 +12,7 @@ describe("NAV", () => {
       "/tracks",
       "/liked",
       "/playlists",
+      "/media",
       "/radio",
       "/extensions",
       "/servers",
@@ -70,6 +71,7 @@ describe("titleForPath", () => {
     expect(titleForPath("/extensions")).toBe("Extensions");
     expect(titleForPath("/radio")).toBe("Internet Radio");
     expect(titleForPath("/liked")).toBe("Liked tracks");
+    expect(titleForPath("/media")).toBe("Media libraries");
   });
 
   it("names the record type on a detail page", () => {

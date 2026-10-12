@@ -15,7 +15,12 @@
 //! queue points back at the source object.
 
 use crate::{MusicProvider, ProviderConfig, ProviderError, ProviderRegistry};
-use std::sync::Arc;
+use music_player_types::source::RemoteIdentity;
+use std::future::Future;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
 use tokio::sync::RwLock;
 
 /// A live connection and the config it was built from.
@@ -38,6 +43,7 @@ impl std::fmt::Debug for ConnectedProvider {
 pub struct ProviderState {
     registry: Arc<ProviderRegistry>,
     current: RwLock<Option<ConnectedProvider>>,
+    connect_generation: AtomicU64,
     /// Host/port pairs that are this daemon itself. Connecting to one would
     /// make every library read call back into us and recurse.
     own_addresses: RwLock<Vec<(String, u16)>>,
@@ -48,6 +54,7 @@ impl ProviderState {
         Self {
             registry,
             current: RwLock::new(None),
+            connect_generation: AtomicU64::new(0),
             own_addresses: RwLock::new(Vec::new()),
         }
     }
@@ -91,29 +98,77 @@ impl ProviderState {
         &self,
         config: ProviderConfig,
     ) -> Result<ConnectedProvider, ProviderError> {
+        self.connect_checked(config, |identity| async move {
+            if identity.is_some() {
+                return Err(ProviderError::Other(
+                    "this source requires saved-account identity verification".into(),
+                ));
+            }
+            Ok(())
+        })
+        .await
+    }
+
+    /// Authenticate and verify the saved account before replacing the current
+    /// source. The verifier owns the storage snapshot captured BEFORE this call.
+    /// An error or cancellation leaves the previous connection available.
+    pub async fn connect_checked<F, V>(
+        &self,
+        config: ProviderConfig,
+        verify: V,
+    ) -> Result<ConnectedProvider, ProviderError>
+    where
+        V: FnOnce(Option<RemoteIdentity>) -> F + Send,
+        F: Future<Output = Result<(), ProviderError>> + Send,
+    {
+        let generation = self
+            .connect_generation
+            .fetch_add(1, Ordering::SeqCst)
+            .wrapping_add(1);
         self.reject_self(&config).await?;
 
         let source = self.registry.connect(&config).await?;
         source.ping().await?;
+        verify(source.remote_identity()).await?;
 
         let connected = ConnectedProvider {
             config,
             provider: source,
         };
-        *self.current.write().await = Some(connected.clone());
+        let mut current = self.current.write().await;
+        if self.connect_generation.load(Ordering::SeqCst) != generation {
+            return Err(ProviderError::Other(
+                "connection request was superseded".into(),
+            ));
+        }
+        *current = Some(connected.clone());
+        drop(current);
         tracing::info!(
             kind = connected.config.kind,
-            url = connected.config.url,
+            account_id = connected.config.id,
             "connected to provider"
         );
         Ok(connected)
     }
 
-    /// Returns what was disconnected, or `None` if nothing was.
+    /// Returns what was disconnected, or `None` if nothing was or a newer
+    /// request superseded this disconnect while it waited for the write lock.
     pub async fn disconnect(&self) -> Option<ProviderConfig> {
-        let previous = self.current.write().await.take();
+        let generation = self
+            .connect_generation
+            .fetch_add(1, Ordering::SeqCst)
+            .wrapping_add(1);
+        let mut current = self.current.write().await;
+        if self.connect_generation.load(Ordering::SeqCst) != generation {
+            return None;
+        }
+        let previous = current.take();
+        drop(current);
         if let Some(previous) = &previous {
-            tracing::info!(url = previous.config.url, "disconnected from provider");
+            tracing::info!(
+                account_id = previous.config.id,
+                "disconnected from provider"
+            );
         }
         previous.map(|connected| connected.config)
     }
@@ -150,12 +205,15 @@ mod tests {
     use crate::{registry::ProviderFactory, Album, Artist, Page, Track};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    struct Stub(&'static str);
+    struct Stub(&'static str, Option<RemoteIdentity>);
 
     #[async_trait::async_trait]
     impl MusicProvider for Stub {
         fn kind(&self) -> &'static str {
             "stub"
+        }
+        fn remote_identity(&self) -> Option<RemoteIdentity> {
+            self.1.clone()
         }
         fn base_url(&self) -> &str {
             self.0
@@ -187,6 +245,7 @@ mod tests {
     struct FlakyFactory {
         ok_for: usize,
         calls: AtomicUsize,
+        identity: Option<RemoteIdentity>,
     }
 
     #[async_trait::async_trait]
@@ -210,17 +269,23 @@ mod tests {
             }
             // Leaked so the stub can hand back a `&'static str` base url; only
             // ever a handful per test.
-            Ok(Arc::new(Stub(Box::leak(
-                config.url.clone().into_boxed_str(),
-            ))))
+            Ok(Arc::new(Stub(
+                Box::leak(config.url.clone().into_boxed_str()),
+                self.identity.clone(),
+            )))
         }
     }
 
     fn state(ok_for: usize) -> ProviderState {
+        identified_state(ok_for, None)
+    }
+
+    fn identified_state(ok_for: usize, identity: Option<RemoteIdentity>) -> ProviderState {
         let mut registry = ProviderRegistry::new();
         registry.register(FlakyFactory {
             ok_for,
             calls: AtomicUsize::new(0),
+            identity,
         });
         ProviderState::new(Arc::new(registry))
     }
@@ -228,6 +293,179 @@ mod tests {
     #[tokio::test]
     async fn starts_on_the_local_library() {
         assert!(state(1).current().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn actual_identity_must_be_verified_before_it_becomes_current() {
+        let identity = RemoteIdentity {
+            server_id: "server-a".into(),
+            user_id: "family".into(),
+        };
+        let state = identified_state(4, Some(identity.clone()));
+        let config = ProviderConfig::new("stub", "Verified", "http://one.lan");
+        assert!(state.connect(config.clone()).await.is_err());
+        assert!(state.current().await.is_none());
+        state
+            .connect_checked(config, move |actual| async move {
+                assert_eq!(actual, Some(identity));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let rejected = state
+            .connect_checked(
+                ProviderConfig::new("stub", "Mismatch", "http://two.lan"),
+                |_| async { Err(ProviderError::Other("identity mismatch".into())) },
+            )
+            .await;
+        assert!(rejected.is_err());
+        assert_eq!(state.current().await.unwrap().config.name, "Verified");
+    }
+
+    #[tokio::test]
+    async fn cancelled_verification_does_not_publish_or_hold_the_current_lock() {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let state = Arc::new(state(2));
+            state
+                .connect(ProviderConfig::new("stub", "Original", "http://one.lan"))
+                .await
+                .unwrap();
+            let entered = Arc::new(tokio::sync::Notify::new());
+            let worker = {
+                let state = state.clone();
+                let entered = entered.clone();
+                tokio::spawn(async move {
+                    state
+                        .connect_checked(
+                            ProviderConfig::new("stub", "Pending", "http://two.lan"),
+                            |_| async move {
+                                entered.notify_one();
+                                std::future::pending::<Result<(), ProviderError>>().await
+                            },
+                        )
+                        .await
+                })
+            };
+            entered.notified().await;
+            assert_eq!(state.current().await.unwrap().config.name, "Original");
+            worker.abort();
+            assert!(worker.await.unwrap_err().is_cancelled());
+            assert_eq!(state.current().await.unwrap().config.name, "Original");
+        })
+        .await
+        .expect("cancelled-verification fixture timed out");
+    }
+
+    #[tokio::test]
+    async fn disconnect_waiting_for_lock_preserves_a_later_connect_intent() {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let state = Arc::new(state(2));
+            state
+                .connect(ProviderConfig::new("stub", "Original", "http://one.lan"))
+                .await
+                .unwrap();
+
+            // Poll the real disconnect with the write lock held: it issues its
+            // ticket and must stop at lock acquisition, without a timing race.
+            let locked = state.current.write().await;
+            let before = state.connect_generation.load(Ordering::SeqCst);
+            let disconnect = state.disconnect();
+            tokio::pin!(disconnect);
+            std::future::poll_fn(|cx| {
+                assert!(disconnect.as_mut().poll(cx).is_pending());
+                std::task::Poll::Ready(())
+            })
+            .await;
+            assert_eq!(
+                state.connect_generation.load(Ordering::SeqCst),
+                before.wrapping_add(1)
+            );
+
+            let entered = Arc::new(tokio::sync::Notify::new());
+            let release = Arc::new(tokio::sync::Notify::new());
+            let latest = {
+                let state = state.clone();
+                let entered = entered.clone();
+                let release = release.clone();
+                tokio::spawn(async move {
+                    state
+                        .connect_checked(
+                            ProviderConfig::new("stub", "Latest", "http://latest.lan"),
+                            |_| async move {
+                                entered.notify_one();
+                                release.notified().await;
+                                Ok(())
+                            },
+                        )
+                        .await
+                })
+            };
+            entered.notified().await;
+            drop(locked);
+
+            // The newer connect is still verifying. The stale disconnect must
+            // leave the original available until the latest request can swap it.
+            assert!(disconnect.await.is_none());
+            assert_eq!(state.current().await.unwrap().config.name, "Original");
+            release.notify_one();
+            assert_eq!(latest.await.unwrap().unwrap().config.name, "Latest");
+            assert_eq!(state.current().await.unwrap().config.name, "Latest");
+        })
+        .await
+        .expect("disconnect-order fixture timed out");
+    }
+
+    #[tokio::test]
+    async fn late_verification_cannot_override_a_later_connect_or_disconnect() {
+        for disconnect in [false, true] {
+            tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                let state = Arc::new(state(3));
+                state
+                    .connect(ProviderConfig::new("stub", "Original", "http://one.lan"))
+                    .await
+                    .unwrap();
+                let entered = Arc::new(tokio::sync::Notify::new());
+                let release = Arc::new(tokio::sync::Notify::new());
+                let pending = {
+                    let state = state.clone();
+                    let entered = entered.clone();
+                    let release = release.clone();
+                    tokio::spawn(async move {
+                        state
+                            .connect_checked(
+                                ProviderConfig::new("stub", "Late", "http://late.lan"),
+                                |_| async move {
+                                    entered.notify_one();
+                                    release.notified().await;
+                                    Ok(())
+                                },
+                            )
+                            .await
+                    })
+                };
+                entered.notified().await;
+                if disconnect {
+                    state.disconnect().await;
+                } else {
+                    state
+                        .connect(ProviderConfig::new("stub", "Latest", "http://latest.lan"))
+                        .await
+                        .unwrap();
+                }
+                release.notify_one();
+                assert!(
+                    matches!(pending.await.unwrap(), Err(ProviderError::Other(message))
+                    if message == "connection request was superseded")
+                );
+                if disconnect {
+                    assert!(state.current().await.is_none());
+                } else {
+                    assert_eq!(state.current().await.unwrap().config.name, "Latest");
+                }
+            })
+            .await
+            .expect("connection-order fixture timed out");
+        }
     }
 
     #[tokio::test]

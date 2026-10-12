@@ -37,6 +37,11 @@ jobs:
         run: |
           choco install protoc -y
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Chocolatey may report success after a feed error without installing.
+          $protoc = (Get-Command protoc -CommandType Application -ErrorAction Stop).Source
+          & $protoc --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "PROTOC=$protoc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           rustup toolchain install 1.98.0-x86_64-pc-windows-gnu --profile minimal
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           rustup default 1.98.0-x86_64-pc-windows-gnu
@@ -109,7 +114,7 @@ jobs:
           "$hash  $asset" | Set-Content -Encoding ascii "$asset.sha256"
 
       - name: Save validation artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-cli-x86_64
           path: '*.tar.gz*'

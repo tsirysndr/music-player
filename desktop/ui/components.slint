@@ -1575,6 +1575,7 @@ export component PaletteRow inherits Rectangle {
                     : root.item.kind == "playlist" ? Icons.playlist
                     : root.item.kind == "server" ? Icons.broadcast
                     : root.item.kind == "jellyfin" ? Icons.jellyfin
+                    : root.item.kind == "emby" ? Icons.server
                     : root.item.kind == "subsonic" ? Icons.navidrome : Icons.artist;
                 colorize: root.selected ? Theme.accent : Theme.text-dim;
                 width: 15px;
@@ -2903,7 +2904,8 @@ export component ServerRow inherits Rectangle {
         padding-right: 10px;
         spacing: 12px;
         Image {
-            source: root.server.kind == "jellyfin" ? Icons.jellyfin : Icons.navidrome;
+            source: root.server.kind == "jellyfin" ? Icons.jellyfin
+                : root.server.kind == "emby" ? Icons.server : Icons.navidrome;
             colorize: Theme.accent;
             width: 20px;
             height: 20px;
@@ -2934,7 +2936,8 @@ export component ServerRow inherits Rectangle {
                 }
             }
             Text {
-                text: (root.server.kind == "jellyfin" ? "Jellyfin · " : "Subsonic · ") + root.server.url;
+                text: (root.server.kind == "jellyfin" ? "Jellyfin · "
+                    : root.server.kind == "emby" ? "Emby · " : "Subsonic · ") + root.server.url;
                 color: Theme.text-dim;
                 font-size: 11px;
                 overflow: elide;

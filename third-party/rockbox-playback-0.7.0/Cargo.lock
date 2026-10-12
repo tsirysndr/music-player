@@ -1099,6 +1099,7 @@ name = "rockbox-playback"
 version = "0.7.0"
 dependencies = [
  "cpal",
+ "libc",
  "quick-xml",
  "reqwest",
  "rockbox-codecs",

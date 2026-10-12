@@ -8,6 +8,7 @@ pub mod artist_genres;
 pub mod artist_tracks;
 pub mod atproto_repo_sync;
 pub mod extension;
+pub mod extension_source_account;
 pub mod folder;
 pub mod genre;
 pub mod playlist;

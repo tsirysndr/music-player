@@ -242,13 +242,36 @@ A simple music player written in Rust — single binary, zero dependency"#,
                 .subcommand(
                     Command::new("list")
                         .alias("ls")
-                        .about("List installed extensions"),
+                        .about("List extensions on the selected daemon")
+                        .arg(
+                            Arg::new("local")
+                                .long("local")
+                                .help(
+                                    "Inspect local manifests and flags without contacting a daemon",
+                                )
+                                .action(clap::ArgAction::SetTrue),
+                        ),
+                )
+                .subcommand(
+                    Command::new("enable")
+                        .about("Enable an extension on the selected daemon")
+                        .arg(arg!(<id> "Extension id")),
+                )
+                .subcommand(
+                    Command::new("disable")
+                        .about("Disable an extension on the selected daemon")
+                        .arg(arg!(<id> "Extension id")),
+                )
+                .subcommand(
+                    Command::new("rescan").about(
+                        "Refresh the selected daemon after installing or removing extensions",
+                    ),
                 )
                 .subcommand(
                     Command::new("uninstall")
                         .aliases(["remove", "rm"])
-                        .about("Remove an installed extension")
-                        .arg(arg!(<id> "Extension id, as shown by `extension list`"))
+                        .about("Remove a locally installed extension; then rescan its daemon")
+                        .arg(arg!(<id> "Extension id, as shown by `extension list --local`"))
                         .arg(
                             Arg::new("yes")
                                 .long("yes")
@@ -260,7 +283,7 @@ A simple music player written in Rust — single binary, zero dependency"#,
                 .subcommand(
                     Command::new("install")
                         .alias("add")
-                        .about("Install an extension from a url")
+                        .about("Install an extension locally from a url; then rescan its daemon")
                         .arg(arg!(<url> "Url of a .wasm, or of a plugin.toml/plugin.json"))
                         .arg(
                             Arg::new("capabilities")
@@ -468,9 +491,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .await?;
         db.create_indexes().await;
+        if let Err(error) = music_player_storage::saved_servers::import_legacy_once(
+            conn,
+            &chrono::Utc::now().to_rfc3339(),
+        )
+        .await
+        {
+            tracing::warn!(%error, "legacy saved account import will retry next startup");
+        }
     }
 
     let db = Database::new().await;
+    let sources = music_player_playback::source_resolver::SourceResolver::for_daemon(db.clone())?;
     let tracklist = Arc::new(std::sync::Mutex::new(Tracklist::new_empty()));
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cloned_tracklist = Arc::clone(&tracklist);
@@ -480,7 +512,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cloned_cmd_rx = Arc::clone(&cmd_rx);
     let cmd_tx_ws = Arc::clone(&cloned_cmd_tx);
     let cmd_tx_webui = Arc::clone(&cloned_cmd_tx);
-    let (_, _) = Player::new(
+    let (_, _) = Player::with_source_resolver(
         move |event| {
             let peers = cloned_peer_map.lock().unwrap();
 
@@ -536,6 +568,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cloned_cmd_tx,
         cloned_cmd_rx,
         Arc::clone(&tracklist),
+        sources.clone(),
     );
 
     let err = parsed.err().unwrap().to_string();
@@ -602,6 +635,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // paused). Daemon mode only — `open`/tests must not touch it.
         let _ = cmd_tx.lock().unwrap().send(PlayerCommand::RestoreQueue);
 
+        let grpc_sources = sources.clone();
+        let ws_sources = sources.clone();
         let grpc_db = db.clone();
         let grpc_providers = Arc::clone(&providers);
         let ws_providers = Arc::clone(&providers);
@@ -618,6 +653,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     grpc_db,
                     grpc_providers,
                 )
+                .with_source_resolver(grpc_sources)
                 .start(),
             ) {
                 Ok(_) => {}
@@ -635,6 +671,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
             match runtime.block_on(
                 MusicPlayerServer::new(tracklist_ws, cmd_tx_ws, peer_map_ws, ws_db, ws_providers)
+                    .with_source_resolver(ws_sources)
                     .start_ws(),
             ) {
                 Ok(_) => {}
@@ -643,7 +680,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
-        start_webui(cmd_tx_webui, tracklist_webui, providers_webui).await?;
+        start_webui(cmd_tx_webui, tracklist_webui, providers_webui, db, sources).await?;
         return Ok(());
     }
 

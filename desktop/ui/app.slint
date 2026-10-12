@@ -13,8 +13,9 @@ import {
     ExtensionItem, ExtensionRow,
     StatItem, StatRow, StatCard, ClockHeatmap, HeatCell, BarChart, RankChart, ChartBar} from "components.slint";
 import { Icons } from "icons.slint";
+import { MediaBrowser, MediaItem, MediaCrumb, MediaButton } from "media-browser.slint";
 
-export { Theme }
+export { Theme, MediaItem, MediaCrumb }
 
 export component AppWindow inherits Window {
     title: "Music Player";
@@ -30,6 +31,34 @@ export component AppWindow inherits Window {
     in-out property <[ArtistItem]> artists: [];
     in-out property <[TrackItem]> tracks: [];
     in-out property <[TrackItem]> liked: [];
+
+    // Media models and row indices belong to the Rust browser controller.
+    in-out property <[MediaItem]> media-items: [];
+    in-out property <[MediaCrumb]> media-crumbs: [];
+    in-out property <bool> media-loading: false;
+    in-out property <bool> media-busy: false;
+    in-out property <bool> media-cancellable: false;
+    in-out property <string> media-message: "";
+    in-out property <string> media-offset-text: "";
+    in-out property <bool> media-has-next: false;
+    in-out property <bool> media-has-previous: false;
+    in-out property <bool> media-editing-occurrence: false;
+    callback media-audio-options(int);
+    callback media-queue-choices();
+    callback media-refresh();
+    callback media-open(int);
+    callback media-breadcrumb(int);
+    callback media-page(bool);
+    callback media-play(int);
+    callback media-enqueue(int);
+    callback media-cancel();
+    // Explicit navigation retires ownership synchronously; this hook also
+    // covers programmatic visibility changes. Entering does not cancel work.
+    callback media-leave();
+    private property <bool> media-page-visible: root.current-tab == 10 && !root.show-detail && !root.show-artist;
+    changed media-page-visible => {
+        if !root.media-page-visible { root.media-leave(); }
+    }
 
     // ── Now playing ─────────────────────────────────────────────────────────
     in-out property <string> now-title: "Nothing playing";
@@ -105,7 +134,7 @@ export component AppWindow inherits Window {
 
     // ── App state ───────────────────────────────────────────────────────────
     // 0 albums, 1 artists, 2 tracks, 3 liked, 4 servers, 5 playlists,
-    // 6 radio, 7 extensions, 8 most played, 9 statistics
+    // 6 radio, 7 extensions, 8 most played, 9 statistics, 10 media libraries
     in-out property <int> current-tab: 0;
     // ── Analytics ───────────────────────────────────────────────────────────
     in-out property <[StatItem]> most-played: [];
@@ -279,6 +308,7 @@ export component AppWindow inherits Window {
     /// can reach the fields the row does not show (topics, id).
     in-out property <string> extension-filter: "";
     in-out property <bool> extensions-loading: true;
+    in-out property <string> extensions-error: "";
     /// The first library fetch is in flight. Every list screen shows its
     /// placeholder rows until it lands — including after a server switch,
     /// which re-reads everything.
@@ -411,6 +441,7 @@ export component AppWindow inherits Window {
     callback cycle-skin();
     /// Re-scan the extension directories and re-apply the filter.
     callback extensions-refresh();
+    callback extensions-load();
     callback extension-filter-changed(string);
     /// Switch one on or off. The row does not change until the rescan that
     /// follows confirms it.
@@ -632,7 +663,7 @@ export component AppWindow inherits Window {
                 return accept;
             }
             if (event.text == "r") {
-                root.current-tab = 6;
+                root.media-leave(); root.current-tab = 6;
                 root.radio-tab = 0;
                 root.radio-category = "";
                 root.show-radio-search = true;
@@ -650,7 +681,7 @@ export component AppWindow inherits Window {
             }
             // Straight to the add-server form, for a server not saved yet.
             if (event.text == "A") {
-                root.current-tab = 4;
+                root.media-leave(); root.current-tab = 4;
                 root.show-detail = false;
                 root.show-artist = false;
                 root.server-error = "";
@@ -716,7 +747,7 @@ export component AppWindow inherits Window {
             if (event.text == "n") {
                 // New playlist, from anywhere. Lands on the playlists tab so
                 // the result is visible once it is created.
-                root.current-tab = 5;
+                root.media-leave(); root.current-tab = 5;
                 root.show-detail = false; root.show-artist = false;
                 root.open-playlist-form("", "", "");
                 return accept;
@@ -817,44 +848,55 @@ export component AppWindow inherits Window {
                     icon: Icons.disc;
                     label: "Albums";
                     active: root.current-tab == 0;
-                    clicked => { root.current-tab = 0; root.show-detail = false; root.show-artist = false; }
+                    clicked => { root.media-leave(); root.current-tab = 0; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.artist;
                     label: "Artists";
                     active: root.current-tab == 1;
-                    clicked => { root.current-tab = 1; root.show-detail = false; root.show-artist = false; }
+                    clicked => { root.media-leave(); root.current-tab = 1; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.list-music;
                     label: "Tracks";
                     active: root.current-tab == 2;
-                    clicked => { root.current-tab = 2; root.show-detail = false; root.show-artist = false; }
+                    clicked => { root.media-leave(); root.current-tab = 2; root.show-detail = false; root.show-artist = false; }
+                }
+                SidebarItem {
+                    icon: Icons.folder;
+                    label: "Media libraries";
+                    active: root.current-tab == 10;
+                    clicked => {
+                        root.current-tab = 10;
+                        root.show-detail = false;
+                        root.show-artist = false;
+                        root.media-refresh();
+                    }
                 }
                 SidebarItem {
                     icon: Icons.heart;
                     label: "Liked";
                     active: root.current-tab == 3;
-                    clicked => { root.current-tab = 3; root.show-detail = false; root.show-artist = false; }
+                    clicked => { root.media-leave(); root.current-tab = 3; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.playlist;
                     label: "Playlists";
                     active: root.current-tab == 5;
-                    clicked => { root.current-tab = 5; root.show-detail = false; root.show-artist = false; }
+                    clicked => { root.media-leave(); root.current-tab = 5; root.show-detail = false; root.show-artist = false; }
                 }
                 SidebarItem {
                     icon: Icons.broadcast;
                     label: "Internet Radio";
                     active: root.current-tab == 6;
-                    clicked => { root.current-tab = 6; root.show-detail = false; root.show-artist = false; root.radio-tab = 0; root.radio-category = ""; }
+                    clicked => { root.media-leave(); root.current-tab = 6; root.show-detail = false; root.show-artist = false; root.radio-tab = 0; root.radio-category = ""; }
                 }
                 SidebarItem {
                     icon: Icons.server;
                     label: "Servers";
                     active: root.current-tab == 4;
                     clicked => {
-                        root.current-tab = 4;
+                        root.media-leave(); root.current-tab = 4;
                         root.show-detail = false;
                         root.show-artist = false;
                         // Another client may have added one since this list
@@ -867,10 +909,10 @@ export component AppWindow inherits Window {
                     label: "Extensions";
                     active: root.current-tab == 7;
                     clicked => {
-                        root.current-tab = 7;
+                        root.media-leave(); root.current-tab = 7;
                         root.show-detail = false; root.show-artist = false;
                         root.extensions-loading = true;
-                        root.extensions-refresh();
+                        root.extensions-load();
                     }
                 }
                 SidebarItem {
@@ -878,7 +920,7 @@ export component AppWindow inherits Window {
                     label: "Most Played";
                     active: root.current-tab == 8;
                     clicked => {
-                        root.current-tab = 8;
+                        root.media-leave(); root.current-tab = 8;
                         root.show-detail = false; root.show-artist = false;
                         root.load-most-played();
                     }
@@ -888,7 +930,7 @@ export component AppWindow inherits Window {
                     label: "Statistics";
                     active: root.current-tab == 9;
                     clicked => {
-                        root.current-tab = 9;
+                        root.media-leave(); root.current-tab = 9;
                         root.show-detail = false; root.show-artist = false;
                         root.load-stats();
                     }
@@ -1115,6 +1157,7 @@ export component AppWindow inherits Window {
                             : root.current-tab == 7 ? "Extensions"
                             : root.current-tab == 8 ? "Most Played"
                             : root.current-tab == 9 ? "Statistics"
+                            : root.current-tab == 10 ? "Media libraries"
                             : "Servers";
                         color: Theme.text;
                         font-size: 20px;
@@ -1180,6 +1223,31 @@ export component AppWindow inherits Window {
                 background: Theme.window-bg;
                 vertical-stretch: 1;
 
+                if root.current-tab == 10 && !root.show-detail && !root.show-artist : MediaBrowser {
+                    x: 24px;
+                    width: parent.width - 48px;
+                    height: parent.height;
+                    items: root.media-items;
+                    crumbs: root.media-crumbs;
+                    loading: root.media-loading;
+                    busy: root.media-busy;
+                    cancellable: root.media-cancellable;
+                    message: root.media-message;
+                    offset-text: root.media-offset-text;
+                    has-next: root.media-has-next;
+                    has-previous: root.media-has-previous;
+                    editing-occurrence: root.media-editing-occurrence;
+                    audio-options(index) => { root.media-audio-options(index); }
+                    queue-choices => { root.media-queue-choices(); }
+                    refresh => { root.media-refresh(); }
+                    open(index) => { root.media-open(index); }
+                    breadcrumb(index) => { root.media-breadcrumb(index); }
+                    page(forward) => { root.media-page(forward); }
+                    play(index) => { root.media-play(index); }
+                    enqueue(index) => { root.media-enqueue(index); }
+                    cancel => { root.media-cancel(); }
+                }
+
                 // Albums grid — placeholders while the first fetch is out.
                 if root.current-tab == 0 && root.library-loading : Rectangle {
                     property <float> cols: max(2, floor((self.width - 48px) / 196px));
@@ -1220,7 +1288,7 @@ export component AppWindow inherits Window {
                             root.detail-label = "";
                             root.detail-tracks = [];
                             root.detail-loading = true;
-                            root.show-detail = true;
+                            root.media-leave(); root.show-detail = true;
                             root.open-album(a.id);
                         }
                         shuffle-play => { root.play-album-shuffled(a.id); }
@@ -1749,6 +1817,12 @@ export component AppWindow inherits Window {
                         }
                     }
 
+                    if root.extensions-error != "" : Text {
+                        text: root.extensions-error;
+                        color: Theme.text-muted;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
                     if root.extensions-loading : RadioSkeletonList {
                         rows: 4;
                         vertical-stretch: 1;
@@ -1766,7 +1840,7 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
-                    if !root.extensions-loading && root.extensions.length == 0 : Text {
+                    if !root.extensions-loading && root.extensions-error == "" && root.extensions.length == 0 : Text {
                         text: root.extension-filter != "" || root.extension-state-filter != 0
                             ? "No extension matches that filter."
                             : "No extension installed. Create one with `music-player extension init <id>`.";
@@ -2032,7 +2106,7 @@ export component AppWindow inherits Window {
                                             root.detail-label = "";
                                             root.detail-tracks = [];
                                             root.detail-loading = true;
-                                            root.show-detail = true;
+                                            root.media-leave(); root.show-detail = true;
                                             root.open-album(a.id);
                                         }
                                         shuffle-play => { root.play-album-shuffled(a.id); }
@@ -2712,6 +2786,20 @@ export component AppWindow inherits Window {
                     icon-size: 15px;
                     y: (parent.height - self.height) / 2;
                     clicked => { root.show-queue = false; }
+                }
+            }
+
+            // This opens a separate occurrence snapshot; never join the legacy
+            // TrackItem list to audio choices by track ID or positional index.
+            MediaButton {
+                label: "Queue audio choices";
+                horizontal-stretch: 1;
+                clicked => {
+                    root.show-queue = false;
+                    root.show-detail = false;
+                    root.show-artist = false;
+                    root.current-tab = 10;
+                    root.media-queue-choices();
                 }
             }
 
@@ -3852,7 +3940,7 @@ export component AppWindow inherits Window {
                         letter-spacing: 1px;
                     }
                     kind-dd := Dropdown {
-                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player", "Kodi", "Plex", "Rocksky"];
+                        options: ["Subsonic / Navidrome", "Jellyfin", "music-player", "Kodi", "Plex", "Rocksky", "Emby"];
                         current: 0;
                         menu-width: 190px;
                         selected(i) => { self.current = i; }
@@ -3873,7 +3961,7 @@ export component AppWindow inherits Window {
                     height: kind-dd.current == 5 ? 0px : self.preferred-height;
                     // The port each kind actually listens on, so the example is
                     // one that would work rather than one to be edited.
-                    placeholder: kind-dd.current == 1 ? "http://192.168.1.10:8096"
+                    placeholder: (kind-dd.current == 1 || kind-dd.current == 6) ? "http://192.168.1.10:8096"
                         : kind-dd.current == 2 ? "http://192.168.1.10:5053"
                         : kind-dd.current == 3 ? "http://192.168.1.10:8080"
                         : kind-dd.current == 4 ? "http://192.168.1.10:32400"
@@ -3943,6 +4031,7 @@ export component AppWindow inherits Window {
                                             : kind-dd.current == 3 ? "kodi"
                                             : kind-dd.current == 4 ? "plex"
                                             : kind-dd.current == 5 ? "rocksky"
+                                            : kind-dd.current == 6 ? "emby"
                                             : "subsonic",
                                         name-field.text == "" ? url-field.text : name-field.text,
                                         url-field.text,
@@ -4491,7 +4580,7 @@ export component AppWindow inherits Window {
                             // `n` would type into the filter.
                             if (event.modifiers.control && event.text == "n") {
                                 root.show-server-switcher = false;
-                                root.current-tab = 4;
+                                root.media-leave(); root.current-tab = 4;
                                 root.server-error = "";
                                 root.show-server-form = true;
                                 return accept;

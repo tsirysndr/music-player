@@ -17,13 +17,16 @@
 
 pub mod backends;
 pub mod config;
+pub mod emby_playback;
 pub mod http;
+pub mod media;
 pub mod registry;
 pub mod state;
 pub mod url;
 
 pub use backends::{builtin_registry, register_builtin};
 pub use config::ProviderConfig;
+pub use media::MediaEntry;
 pub use registry::{ProviderFactory, ProviderKindInfo, ProviderRegistry};
 pub use state::{ConnectedProvider, ProviderState};
 
@@ -85,6 +88,8 @@ pub struct ProviderCapabilities {
     /// The backend has a real search endpoint. When false the default
     /// [`MusicProvider::search`] fans out to three filtered list calls instead.
     pub native_search: bool,
+    /// Hierarchical media navigation and recursive container track listing.
+    pub media_browse: bool,
 }
 
 #[derive(Debug, Default)]
@@ -149,6 +154,12 @@ pub trait MusicProvider: Send + Sync + 'static {
     /// The registry key — `"subsonic"`, `"jellyfin"`, `"kodi"`, …
     fn kind(&self) -> &'static str;
 
+    /// Actual identity returned by authentication, distinct from a local saved
+    /// account ID. The host must verify/bind it before publishing the source.
+    fn remote_identity(&self) -> Option<music_player_types::source::RemoteIdentity> {
+        None
+    }
+
     /// Absolute base url, scheme included, no trailing slash. Non-empty by
     /// construction: [`ProviderFactory::connect`] refuses an empty one, which is
     /// what stops relative track and cover uris from escaping unresolved.
@@ -173,6 +184,32 @@ pub trait MusicProvider: Send + Sync + 'static {
     async fn track(&self, id: &str) -> Result<Track, ProviderError>;
 
     // ── provided ────────────────────────────────────────────────────────────
+
+    /// Navigate roots (`None`) or immediate children of a stable container
+    /// handle. Entries retain containers and non-playable leaves.
+    async fn browse(
+        &self,
+        _parent: Option<&str>,
+        _page: Page,
+    ) -> Result<Vec<MediaEntry>, ProviderError> {
+        Err(ProviderError::Unsupported {
+            kind: self.kind(),
+            feature: "media browsing",
+        })
+    }
+
+    /// Recursively list Audio/Video leaves under a stable container handle.
+    /// This returns queue metadata and does not allocate playback sessions.
+    async fn container_tracks(
+        &self,
+        _parent: &str,
+        _page: Page,
+    ) -> Result<Vec<Track>, ProviderError> {
+        Err(ProviderError::Unsupported {
+            kind: self.kind(),
+            feature: "container tracks",
+        })
+    }
 
     /// Empty rather than an error: a server with no playlist concept should
     /// show an empty Playlists screen, not a red banner.

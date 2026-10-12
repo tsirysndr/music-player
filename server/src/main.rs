@@ -22,13 +22,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
     let cmd_tx = Arc::new(std::sync::Mutex::new(cmd_tx));
     let cmd_rx = Arc::new(std::sync::Mutex::new(cmd_rx));
+    migration::apply().await;
     let db = Database::new().await;
+    let sources = music_player_playback::source_resolver::SourceResolver::for_daemon(db.clone())?;
+    if let Err(error) = music_player_storage::saved_servers::import_legacy_once(
+        db.get_connection(),
+        &chrono::Utc::now().to_rfc3339(),
+    )
+    .await
+    {
+        tracing::warn!(%error, "legacy saved account import will retry next startup");
+    }
 
-    let (_, _) = Player::new(
+    let (_, _) = Player::with_source_resolver(
         |_| {},
         Arc::clone(&cmd_tx),
         Arc::clone(&cmd_rx),
         Arc::clone(&tracklist),
+        sources.clone(),
     );
 
     // One provider registry per process, shared by the gRPC server and the
@@ -49,6 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db,
         providers,
     )
+    .with_source_resolver(sources)
     .start()
     .await?;
 

@@ -15,7 +15,7 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, Default, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "saved_server")]
 pub struct Model {
-    /// `md5(kind + "\0" + url)`, so adding the same server twice is one row.
+    /// Immutable local account handle. New rows use UUIDs; legacy IDs stay valid.
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     /// `subsonic`, `jellyfin`, `music-player`, `kodi`, …
@@ -27,6 +27,10 @@ pub struct Model {
     /// Stored as given. Never returned over the API — callers are told only
     /// whether one is set.
     pub password: Option<String>,
+    /// Authenticated remote identity, pinned as a pair on first successful bind.
+    /// Configuration edits never clear or replace it. NULL means not yet bound.
+    pub remote_server_id: Option<String>,
+    pub remote_user_id: Option<String>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }

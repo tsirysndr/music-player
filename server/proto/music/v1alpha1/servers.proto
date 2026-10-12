@@ -15,6 +15,7 @@ message Server {
   // Absolute, scheme included.
   string url = 4;
   string username = 5;
+  // A value is configured, including an explicitly empty password.
   bool has_password = 6;
   // The library screens are currently reading from this one.
   bool connected = 7;
@@ -58,6 +59,14 @@ message AddServerRequest {
   // Omit to keep whatever is stored: the password is never handed back, so a
   // blank field cannot mean "clear it".
   string password = 5;
+  // Omit to save by kind/url/username. Set to edit this exact saved account;
+  // kind and username must still match. Address edits keep the saved id.
+  optional string id = 6;
+  // Presence means Set, including the empty string. Cannot be combined with
+  // clear_password or a nonempty legacy password.
+  optional string password_value = 7;
+  // Remove the stored password. False (the default) does not clear it.
+  bool clear_password = 8;
 }
 message AddServerResponse {
   Server server = 1;

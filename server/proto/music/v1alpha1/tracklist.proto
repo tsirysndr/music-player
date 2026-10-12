@@ -77,7 +77,56 @@ message PlayTrackAtRequest { uint32 index = 1; }
 
 message PlayTrackAtResponse {}
 
+// Omit both fields for Auto; otherwise both are required. Index zero is valid.
+// No accepted pin may be submitted by a client.
+message MediaQueueChoice {
+  optional string media_source_id = 1;
+  optional int32 audio_stream_index = 2;
+}
+message SelectedMediaEntry {
+  metadata.v1alpha1.Track track = 1;
+  MediaQueueChoice choice = 2;
+}
+message AddSelectedMediaRequest { repeated SelectedMediaEntry entries = 1; }
+// Newly allocated occurrence IDs in input order.
+message AddSelectedMediaResponse { repeated string occurrence_ids = 1; }
+message PlaySelectedMediaRequest {
+  SelectedMediaEntry entry = 1;
+  // false plays now; true inserts next without changing current playback.
+  bool next = 2;
+}
+message PlaySelectedMediaResponse { string occurrence_id = 1; }
+message SelectMediaAudioRequest {
+  string occurrence_id = 1;
+  MediaQueueChoice choice = 2;
+}
+message SelectMediaAudioResponse {}
+message MediaQueueAcceptedAudio {
+  string media_source_id = 1;
+  int32 audio_stream_index = 2;
+  optional uint64 runtime_ticks = 3;
+  optional string codec = 4;
+  optional uint32 channels = 5;
+  optional uint32 sample_rate = 6;
+}
+message MediaQueueOccurrence {
+  string occurrence_id = 1;
+  metadata.v1alpha1.Track track = 2;
+  MediaQueueChoice choice = 3;
+  MediaQueueAcceptedAudio accepted_audio = 4;
+}
+message GetMediaQueueRequest {}
+message GetMediaQueueResponse {
+  MediaQueueOccurrence current = 1;
+  repeated MediaQueueOccurrence played = 2;
+  repeated MediaQueueOccurrence upcoming = 3;
+}
+
 service TracklistService {
+  rpc PlaySelectedMedia(PlaySelectedMediaRequest) returns (PlaySelectedMediaResponse) {}
+  rpc AddSelectedMedia(AddSelectedMediaRequest) returns (AddSelectedMediaResponse) {}
+  rpc SelectMediaAudio(SelectMediaAudioRequest) returns (SelectMediaAudioResponse) {}
+  rpc GetMediaQueue(GetMediaQueueRequest) returns (GetMediaQueueResponse) {}
   rpc AddTrack(AddTrackRequest) returns (AddTrackResponse) {}
   rpc AddTracks(AddTracksRequest) returns (AddTracksResponse) {}
   rpc LoadTracks(LoadTracksRequest) returns (LoadTracksResponse) {}

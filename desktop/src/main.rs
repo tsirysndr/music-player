@@ -7,9 +7,12 @@
 //! thread_local; the tokio worker in rpc.rs pushes plain data across via
 //! upgrade_in_event_loop.
 
+#![recursion_limit = "256"]
+
 mod daemon;
 mod extensions;
 mod likes;
+mod media;
 mod radio;
 mod rpc;
 mod skin;
@@ -527,6 +530,7 @@ pub fn ui_show_album_detail(app: &AppWindow, detail: rpc::AlbumDetailData) {
     app.set_detail_meta(meta.into());
     app.set_detail_label(detail.label.into());
     app.set_detail_tracks(ModelRc::new(VecModel::from(rows)));
+    media::invalidate(app);
     app.set_show_detail(true);
     app.set_detail_loading(false);
 }
@@ -581,6 +585,7 @@ pub fn ui_show_artist_detail(app: &AppWindow, id: &str) {
     app.set_artist_detail_meta(meta.into());
     app.set_artist_detail_albums(ModelRc::new(VecModel::from(albums)));
     app.set_artist_detail_tracks(ModelRc::new(VecModel::from(tracks)));
+    media::invalidate(app);
     app.set_show_artist(true);
 }
 
@@ -757,6 +762,7 @@ pub fn ui_show_playlist(
     app.set_pl_detail_tracks(ModelRc::new(VecModel::from(items)));
     app.set_pl_detail_loading(false);
     app.set_pl_detail_open(true);
+    media::invalidate(app);
     app.set_current_tab(5);
     if open_picker {
         app.invoke_open_track_picker();
@@ -1189,6 +1195,8 @@ fn switcher_results(query: &str) -> Vec<PaletteItem> {
                 out.push(server_row(
                     if srv.kind == "jellyfin" {
                         "jellyfin"
+                    } else if srv.kind == "emby" {
+                        "emby"
                     } else {
                         "subsonic"
                     },
@@ -1542,6 +1550,7 @@ fn main() -> Result<(), slint::PlatformError> {
     // The worker retries until the (embedded or external) daemon answers.
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<rpc::Cmd>();
     rpc::start(app.as_weak(), rx);
+    media::bind(&app, &tx);
 
     // macOS Now Playing center (media keys, Control Center, AirPods).
     #[cfg(target_os = "macos")]
@@ -1782,6 +1791,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 STATE.with(|s| s.borrow_mut().active_provider.clear());
                 app.set_provider_name("".into());
                 app.set_provider_url("".into());
+                media::invalidate(&app);
                 let _ = tx.send(rpc::Cmd::DisconnectProvider);
                 let (host, port) = match id.rsplit_once(':') {
                     Some((h, p)) => (h.to_string(), p.parse().unwrap_or(5051)),
@@ -1805,6 +1815,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 if let Some(srv) = srv {
                     app.set_current_tab(4);
                     app.set_server_error("".into());
+                    media::invalidate(&app);
                     let _ = tx.send(rpc::Cmd::ConnectServer(srv));
                 }
             }
@@ -2228,6 +2239,7 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     {
         let tx = tx.clone();
+        let app_weak = app.as_weak();
         app.on_server_delete(move |idx| {
             let id = STATE.with(|s| {
                 s.borrow()
@@ -2236,6 +2248,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     .map(|srv| srv.id.clone())
             });
             if let Some(id) = id {
+                media::invalidate(&app_weak.unwrap());
                 let _ = tx.send(rpc::Cmd::DeleteServer(id));
             }
         });
@@ -2283,6 +2296,7 @@ fn main() -> Result<(), slint::PlatformError> {
             app.set_provider_url("".into());
             set_active_provider("");
             refresh_servers_model(&app);
+            media::invalidate(&app);
             let _ = tx.send(rpc::Cmd::DisconnectProvider);
         });
     }
@@ -2294,6 +2308,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let srv = STATE.with(|s| s.borrow().servers.get(idx as usize).cloned());
             if let Some(srv) = srv {
                 app.set_server_error("".into());
+                media::invalidate(&app);
                 let _ = tx.send(rpc::Cmd::ConnectServer(srv));
             }
         });
@@ -2386,6 +2401,12 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = tx.clone();
         app.on_radio_stations(move || {
             let _ = tx.send(rpc::Cmd::RadioStations);
+        });
+    }
+    {
+        let tx = tx.clone();
+        app.on_extensions_load(move || {
+            let _ = tx.send(rpc::Cmd::ExtensionsLoad);
         });
     }
     {

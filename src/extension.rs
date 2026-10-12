@@ -8,9 +8,10 @@
 
 use std::path::{Path, PathBuf};
 
+use music_player_client::extensions::ExtensionsClient;
 use music_player_extensions::manifest::MANIFEST_FILES;
 use music_player_extensions::manifest::{Capability, Permissions};
-use music_player_extensions::{install_from_url, search_paths, Manifest, Registry};
+use music_player_extensions::{catalog, install_from_url, search_paths, Manifest};
 use music_player_settings::{get_application_directory, read_settings, Settings};
 use music_player_storage::extension_state;
 use owo_colors::OwoColorize;
@@ -128,6 +129,7 @@ pub async fn init(
         readme: String::new(),
         entry: "plugin.wasm".to_owned(),
         capabilities: capabilities.clone(),
+        source_api_version: None,
         permissions: Permissions::default(),
     };
     std::fs::write(dir.join("plugin.toml"), manifest_toml(&manifest))?;
@@ -172,8 +174,43 @@ pub async fn init(
     Ok(())
 }
 
-/// `extension list` — what is installed, and whether it loaded.
-pub async fn list() -> CmdResult {
+async fn daemon() -> Result<ExtensionsClient, Box<dyn std::error::Error>> {
+    let settings = read_settings()?.try_deserialize::<Settings>()?;
+    ExtensionsClient::new(settings.host, settings.port)
+        .await
+        .map_err(|error| error.into())
+}
+
+/// The default list reflects the daemon selected by `music-player connect`.
+pub async fn list(local: bool) -> CmdResult {
+    if !local {
+        let installed = daemon().await?.list().await?;
+        if installed.is_empty() {
+            println!("No extensions installed on the selected daemon.");
+        }
+        for extension in installed {
+            println!(
+                "  {} {} {}",
+                extension.id.bold(),
+                extension.version,
+                if extension.enabled {
+                    "enabled"
+                } else {
+                    "disabled"
+                }
+            );
+            println!(
+                "      {} · {}",
+                extension.capabilities.join(", "),
+                extension.directory
+            );
+            if !extension.description.is_empty() {
+                println!("      {}", extension.description);
+            }
+        }
+        return Ok(());
+    }
+    // Explicit offline inspection only; never loads an additional WASM guest.
     let app_dir = get_application_directory();
     let paths = search_paths(&app_dir, &extension_paths());
 
@@ -184,14 +221,11 @@ pub async fn list() -> CmdResult {
     }
     println!();
 
-    // The stored enabled flags are read, so an extension switched off in either
-    // UI reports as disabled here rather than as loaded. Nothing is *written*
-    // from this command: it is a report of what the daemon would load, not a
-    // second source of truth.
+    // Local flags are a catalog snapshot, not daemon runtime status.
     let db = music_player_storage::shared().await;
     let enabled = extension_state::enabled_map(db.get_connection()).await;
-    let registry = Registry::load_all(&paths, &enabled, &Default::default(), Default::default());
-    if registry.is_empty() {
+    let installed = catalog::installed(&paths, &enabled);
+    if installed.is_empty() {
         println!("No extensions installed.");
         println!(
             "Create one with {} or install one with {}.",
@@ -202,11 +236,11 @@ pub async fn list() -> CmdResult {
     }
 
     println!("{}", "Installed".bold());
-    for installed in registry.installed() {
-        let status = match (&installed.extension, &installed.error) {
-            (Some(_), _) => "loaded".green().to_string(),
-            (None, Some(e)) => format!("{} {e}", "failed".red()),
-            (None, None) => "disabled".yellow().to_string(),
+    for installed in installed {
+        let status = if installed.enabled() {
+            "enabled"
+        } else {
+            "disabled"
         };
         println!(
             "  {} {} {}",
@@ -232,6 +266,32 @@ pub async fn list() -> CmdResult {
     Ok(())
 }
 
+pub async fn set_enabled(id: &str, enabled: bool) -> CmdResult {
+    let extension = daemon().await?.set_enabled(id, enabled).await?;
+    println!(
+        "{} {}",
+        extension.id,
+        if extension.enabled {
+            "enabled"
+        } else {
+            "disabled"
+        }
+    );
+    Ok(())
+}
+
+pub async fn rescan() -> CmdResult {
+    let installed = daemon().await?.rescan().await?;
+    println!(
+        "Refreshed {} extensions on the selected daemon.",
+        installed.len()
+    );
+    println!(
+        "Source extensions reload on their next use; other extensions load at daemon startup."
+    );
+    Ok(())
+}
+
 /// `extension install <url>` — download an extension into the cache.
 pub async fn install(url: &str, capabilities_arg: &str) -> CmdResult {
     let capabilities = parse_capabilities(capabilities_arg)?;
@@ -245,7 +305,8 @@ pub async fn install(url: &str, capabilities_arg: &str) -> CmdResult {
         manifest.version,
         dir.display()
     );
-    println!("Restart music-player to load it.");
+    println!("Run `music-player extension rescan` against the daemon using this directory.");
+    println!("Non-source extensions load at daemon startup.");
     Ok(())
 }
 
@@ -297,7 +358,8 @@ pub async fn uninstall(id: &str, yes: bool) -> CmdResult {
             .map_err(|e| format!("could not remove {}: {e}", dir.display()))?;
     }
     println!("{} {}", "Uninstalled".green().bold(), id.bold());
-    println!("Restart music-player to unload it.");
+    println!("Run `music-player extension rescan` against the daemon using these directories.");
+    println!("Non-source extensions already loaded require a daemon restart.");
     Ok(())
 }
 
@@ -380,6 +442,10 @@ fn build_command(language: &str) -> &'static str {
 /// Serialize a manifest as commented TOML — friendlier to edit than the
 /// round-tripped output `toml::to_string` would give.
 fn manifest_toml(manifest: &Manifest) -> String {
+    let source_api_version = manifest
+        .source_api_version
+        .map(|version| format!("sourceApiVersion = {version}\n"))
+        .unwrap_or_default();
     let capabilities = manifest
         .capabilities
         .iter()
@@ -410,6 +476,7 @@ entry = "{entry}"
 
 # The host calls only the exports these cover.
 capabilities = [{capabilities}]
+{source_api_version}
 
 [permissions]
 # Hosts this extension may reach. Empty means no network at all.
@@ -533,6 +600,7 @@ mod tests {
             readme: String::new(),
             entry: "plugin.wasm".into(),
             capabilities: vec![Capability::Metadata, Capability::Source],
+            source_api_version: None,
             permissions: Permissions::default(),
         };
         let dir = tempfile::tempdir().unwrap();
@@ -546,6 +614,14 @@ mod tests {
         // Nothing is granted by default.
         assert!(loaded.permissions.allowed_hosts.is_empty());
         assert!(!loaded.permissions.library_read);
+        assert_eq!(loaded.source_api_version, None);
+        let mut versioned = manifest;
+        versioned.source_api_version = Some(2);
+        std::fs::write(dir.path().join("plugin.toml"), manifest_toml(&versioned)).unwrap();
+        assert_eq!(
+            Manifest::load(dir.path()).unwrap().source_api_version,
+            Some(2)
+        );
     }
 
     #[test]
@@ -564,6 +640,7 @@ mod tests {
             readme: String::new(),
             entry: "plugin.wasm".into(),
             capabilities: vec![Capability::Predicates],
+            source_api_version: None,
             permissions: Permissions::default(),
         };
         let readme = readme(&manifest, "rust", true);

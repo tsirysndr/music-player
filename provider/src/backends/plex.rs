@@ -206,6 +206,7 @@ impl MusicProvider for Plex {
             // Plex has star ratings, not likes.
             liked: false,
             native_search: true,
+            media_browse: false,
         }
     }
 

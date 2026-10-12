@@ -112,6 +112,7 @@ impl MusicProvider for MusicPlayer {
             playlists: true,
             liked: true,
             native_search: true,
+            media_browse: false,
         }
     }
 

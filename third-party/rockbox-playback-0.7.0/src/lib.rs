@@ -37,6 +37,11 @@
 pub mod adaptive;
 mod crossfade;
 pub mod m3u;
+mod managed;
+pub use managed::{
+    StreamOutputBoundary, StreamOutputSnapshot, StreamPhase, StreamReadEnd, StreamSession,
+    StreamSnapshot,
+};
 pub mod output;
 mod resume;
 pub mod source;
@@ -757,6 +762,7 @@ impl PlayerConfigBuilder {
 }
 
 enum Command {
+    OpenStream(managed::StreamInput),
     SetQueue(Vec<PathBuf>),
     Enqueue(PathBuf),
     /// Insert one or more tracks at a Rockbox insertion position.
@@ -852,9 +858,42 @@ struct Shared {
     /// Mirror of the engine's queue so the handle can read it (for
     /// `queue()` / `export_m3u`) without a round-trip to the engine thread.
     queue: Mutex<Vec<PathBuf>>,
+    managed: Mutex<Option<StreamSession>>,
+    next_generation: AtomicU64,
+    // ring also gates revocation and final nonblocking writes.
+    output_generation: AtomicU64,
+    output_session: Mutex<Option<StreamSession>>,
+    output_boundary: StreamOutputBoundary,
+    output_epoch: AtomicU64,
+    output_nonblocking: bool,
+    output_backpressure: AtomicU64,
+    output_bytes: AtomicU64,
+    output_nonzero_bytes: AtomicU64,
+    output_failed: AtomicBool,
+    writer_exited: AtomicBool,
 }
 
 impl Shared {
+    fn revoke_output(&self, generation: u64) {
+        let mut ring = self.ring.lock().unwrap();
+        if self.output_generation.load(Ordering::Relaxed) == generation {
+            self.output_generation.store(0, Ordering::Relaxed);
+            self.output_session.lock().unwrap().take();
+            self.output_epoch.fetch_add(1, Ordering::Relaxed);
+            self.target_amp.store(0f32.to_bits(), Ordering::Relaxed);
+            ring.clear();
+        }
+    }
+
+    // Called under the ring/output gate, after actual output acceptance.
+    fn record_stream_output(&self, frames: usize) {
+        if frames > 0 {
+            if let Some(session) = self.output_session.lock().unwrap().as_ref() {
+                session.record_output(frames);
+            }
+        }
+    }
+
     fn set_volume_bits(&self, v: f32) {
         self.volume
             .store(v.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
@@ -968,6 +1007,20 @@ impl Drop for StreamSink {
     }
 }
 
+/// Byte-stream writer observations, not an audible-consumption clock.
+/// Counters cover the writer lifetime, including silence and alignment padding.
+#[derive(Debug, Clone, Copy)]
+pub struct OutputSnapshot {
+    pub nonblocking: bool,
+    pub generation: u64,
+    pub epoch: u64,
+    pub backpressure_events: u64,
+    pub bytes_written: u64,
+    pub nonzero_bytes_written: u64,
+    pub output_failed: bool,
+    pub writer_exited: bool,
+}
+
 /// The player handle. Cloneable-free but `Send` controls are issued
 /// through it; the output backend lives here and keeps output alive for the
 /// player's lifetime.
@@ -1028,6 +1081,78 @@ impl Player {
         Ok(assemble(config, rate, shared, OutputHandle::Stream(sink)))
     }
 
+    /// Start one forward-only, host-owned stream. No URL or credentials enter
+    /// the persisted queue. The host must supply an idempotent, nonblocking
+    /// wake callback that cancels every blocked read and joins on reader drop.
+    /// Pause/stop/queue replacement cancel this session. Resume/seek require
+    /// the host to resolve a new stream at its confirmed absolute checkpoint.
+    /// EOF never auto-advances: completion requires evidence outside this API.
+    /// Byte-stream cancellation requires a nonblocking FIFO/socket output.
+    /// Legacy stdout and socket construction are outside that guarantee.
+    /// Data already submitted to a device/receiver cannot be recalled here.
+    pub fn play_stream(
+        &self,
+        reader: Box<dyn std::io::Read + Send>,
+        format_ext: String,
+        metadata: Metadata,
+        wake: impl Fn() + Send + Sync + 'static,
+    ) -> StreamSession {
+        let mut active = self.shared.managed.lock().unwrap();
+        if let Some(old) = active.as_ref() {
+            old.cancel();
+        }
+        let generation = self.shared.next_generation.fetch_add(1, Ordering::Relaxed);
+        let weak = Arc::downgrade(&self.shared);
+        let input =
+            managed::StreamInput::new(reader, format_ext, metadata, generation, wake, move || {
+                if let Some(shared) = weak.upgrade() {
+                    shared.revoke_output(generation);
+                }
+            });
+        let session = input.session.clone();
+        session.configure_output(self.sample_rate(), self.shared.output_boundary);
+        {
+            let mut ring = self.shared.ring.lock().unwrap();
+            ring.clear();
+            self.shared
+                .target_amp
+                .store(0f32.to_bits(), Ordering::Relaxed);
+            self.shared
+                .output_generation
+                .store(generation, Ordering::Relaxed);
+            *self.shared.output_session.lock().unwrap() = Some(session.clone());
+            self.shared.output_epoch.fetch_add(1, Ordering::Relaxed);
+        }
+        *active = Some(session.clone());
+        let _ = self.tx.send(Command::OpenStream(input));
+        session
+    }
+
+    // Serialize invalidation with registration so a stop cannot miss a
+    // queued-but-not-yet-opened stream. Never wait for network IO here.
+    fn send_invalidating(&self, command: Command) {
+        let mut active = self.shared.managed.lock().unwrap();
+        if let Some(session) = active.take() {
+            session.cancel();
+        }
+        let _ = self.tx.send(command);
+    }
+
+    /// Byte acceptance is not receiver consumption. CPAL is not counted here.
+    pub fn output_snapshot(&self) -> OutputSnapshot {
+        let _gate = self.shared.ring.lock().unwrap();
+        OutputSnapshot {
+            nonblocking: self.shared.output_nonblocking,
+            generation: self.shared.output_generation.load(Ordering::Relaxed),
+            epoch: self.shared.output_epoch.load(Ordering::Relaxed),
+            backpressure_events: self.shared.output_backpressure.load(Ordering::Relaxed),
+            bytes_written: self.shared.output_bytes.load(Ordering::Relaxed),
+            nonzero_bytes_written: self.shared.output_nonzero_bytes.load(Ordering::Relaxed),
+            output_failed: self.shared.output_failed.load(Ordering::Relaxed),
+            writer_exited: self.shared.writer_exited.load(Ordering::Relaxed),
+        }
+    }
+
     /// The output sample rate everything is resampled to.
     pub fn sample_rate(&self) -> u32 {
         self.shared.output_rate.load(Ordering::Relaxed)
@@ -1044,7 +1169,7 @@ impl Player {
         P: Into<PathBuf>,
     {
         let v: Vec<PathBuf> = tracks.into_iter().map(Into::into).collect();
-        let _ = self.tx.send(Command::SetQueue(v));
+        self.send_invalidating(Command::SetQueue(v));
     }
 
     /// Append one track to the end of the queue. The track may be a **local
@@ -1148,7 +1273,7 @@ impl Player {
     /// Empty the queue and stop playback. Also clears any saved resume state
     /// so the next launch starts fresh.
     pub fn clear_queue(&self) {
-        let _ = self.tx.send(Command::Clear);
+        self.send_invalidating(Command::Clear);
     }
 
     // ---- resume (auto-persist / restore) --------------------------------
@@ -1167,7 +1292,7 @@ impl Player {
     pub fn resume(&self) -> Option<ResumeState> {
         let path = self.resume_file.as_ref()?;
         let state = resume::load(path)?;
-        let _ = self.tx.send(Command::Resume(state.clone()));
+        self.send_invalidating(Command::Resume(state.clone()));
         Some(state)
     }
 
@@ -1221,26 +1346,26 @@ impl Player {
         let _ = self.tx.send(Command::Play);
     }
     pub fn pause(&self) {
-        let _ = self.tx.send(Command::Pause);
+        self.send_invalidating(Command::Pause);
     }
     /// Toggle play/pause.
     pub fn toggle(&self) {
-        let _ = self.tx.send(Command::Toggle);
+        self.send_invalidating(Command::Toggle);
     }
     pub fn stop(&self) {
-        let _ = self.tx.send(Command::Stop);
+        self.send_invalidating(Command::Stop);
     }
     /// Skip to the next track (honours the crossfade manual-skip mode).
     pub fn next(&self) {
-        let _ = self.tx.send(Command::Next);
+        self.send_invalidating(Command::Next);
     }
     /// Skip to the previous track.
     pub fn previous(&self) {
-        let _ = self.tx.send(Command::Previous);
+        self.send_invalidating(Command::Previous);
     }
     /// Jump to a specific queue index.
     pub fn skip_to(&self, index: usize) {
-        let _ = self.tx.send(Command::SkipTo(index));
+        self.send_invalidating(Command::SkipTo(index));
     }
     /// Seek within the current track.
     pub fn seek(&self, pos: Duration) {
@@ -1433,7 +1558,7 @@ impl Player {
 
 impl Drop for Player {
     fn drop(&mut self) {
-        let _ = self.tx.send(Command::Shutdown);
+        self.send_invalidating(Command::Shutdown);
         if let Some(e) = self.engine.take() {
             let _ = e.join();
         }
@@ -1466,6 +1591,25 @@ fn make_shared(config: &PlayerConfig, rate: u32) -> Arc<Shared> {
         meta: Mutex::new(None),
         dsp: Mutex::new(config.dsp.clone()),
         queue: Mutex::new(Vec::new()),
+        managed: Mutex::new(None),
+        next_generation: AtomicU64::new(1),
+        output_generation: AtomicU64::new(0),
+        output_session: Mutex::new(None),
+        output_boundary: match config.output {
+            OutputConfig::Cpal => StreamOutputBoundary::DeviceBuffer,
+            OutputConfig::Stdout => StreamOutputBoundary::Unavailable,
+            _ => StreamOutputBoundary::ByteStream,
+        },
+        output_epoch: AtomicU64::new(0),
+        output_nonblocking: matches!(
+            config.output,
+            OutputConfig::Fifo(_) | OutputConfig::Unix { .. } | OutputConfig::Tcp { .. }
+        ),
+        output_backpressure: AtomicU64::new(0),
+        output_bytes: AtomicU64::new(0),
+        output_nonzero_bytes: AtomicU64::new(0),
+        output_failed: AtomicBool::new(false),
+        writer_exited: AtomicBool::new(false),
     })
 }
 
@@ -1538,17 +1682,25 @@ fn spawn_stream_writer(
             let alpha = LevelMeter::alpha(rate);
             let band_alphas = LevelMeter::band_alphas(rate);
             let mut next = Instant::now() + frame_dur;
+            let mut last_epoch = 0;
+            let mut wire_offset = 0usize;
 
             while !stop_thread.load(Ordering::Relaxed) {
+                let mut ring = shared.ring.lock().unwrap();
+                let epoch = shared.output_epoch.load(Ordering::Relaxed);
+                if epoch != last_epoch {
+                    cur_amp = 0.0;
+                    last_epoch = epoch;
+                }
                 let target = f32::from_bits(shared.target_amp.load(Ordering::Relaxed));
                 let gain_l = f32::from_bits(shared.balance_gain_l.load(Ordering::Relaxed));
                 let gain_r = f32::from_bits(shared.balance_gain_r.load(Ordering::Relaxed));
 
+                let mut media_frames = 0;
                 if target == 0.0 && cur_amp == 0.0 {
                     // Paused/stopped: emit silence, freeze the ring.
                     buf.iter_mut().for_each(|b| *b = 0);
                 } else {
-                    let mut ring = shared.ring.lock().unwrap();
                     for frame in buf.chunks_mut(4) {
                         if cur_amp < target {
                             cur_amp = (cur_amp + step).min(target);
@@ -1559,6 +1711,9 @@ fn spawn_stream_writer(
                         if cur_amp == 0.0 && target == 0.0 {
                             frame.fill(0);
                             continue;
+                        }
+                        if ring.len() >= 2 {
+                            media_frames += 1;
                         }
                         let l = ring.pop_front().unwrap_or(0);
                         let r = ring.pop_front().unwrap_or(0);
@@ -1576,14 +1731,34 @@ fn spawn_stream_writer(
                             (lv as f32 + rv as f32) / (2.0 * 32768.0),
                         );
                     }
-                    drop(ring);
                     shared.set_levels(meter.take());
                 }
+                drop(ring);
 
-                // A write/flush error means the consumer went away (pipe
-                // closed, socket reset): stop cleanly rather than spin.
-                if writer.write_all(&buf).is_err() || writer.flush().is_err() {
-                    break;
+                if shared.output_nonblocking {
+                    match write_output_chunk(
+                        &mut *writer,
+                        &buf,
+                        media_frames,
+                        epoch,
+                        &shared,
+                        &stop_thread,
+                        &mut wire_offset,
+                    ) {
+                        Ok(true) => {}
+                        Ok(false) => continue, // revoked: discard unsent bytes
+                        Err(_) => {
+                            shared.output_failed.store(true, Ordering::Relaxed);
+                            break;
+                        }
+                    }
+                } else {
+                    // Legacy stdout may block. Never hold the generation gate
+                    // around it or advertise cancellable output for this path.
+                    if writer.write_all(&buf).is_err() || writer.flush().is_err() {
+                        shared.output_failed.store(true, Ordering::Relaxed);
+                        break;
+                    }
                 }
 
                 // Pace to real time. If we fell behind (scheduling hiccup),
@@ -1598,6 +1773,7 @@ fn spawn_stream_writer(
                     next = now + frame_dur;
                 }
             }
+            shared.writer_exited.store(true, Ordering::Relaxed);
         })
         .expect("spawn output writer thread");
 
@@ -1605,6 +1781,69 @@ fn spawn_stream_writer(
         stop,
         thread: Some(thread),
     }
+}
+
+// Every final write is nonblocking and serialized with generation revocation.
+// Bytes already accepted by the kernel cannot be recalled. Preserve S16LE
+// stereo framing if cancellation lands in the middle of a partial frame.
+fn write_output_chunk(
+    writer: &mut dyn Write,
+    pcm: &[u8],
+    media_frames: usize,
+    epoch: u64,
+    shared: &Shared,
+    stop: &AtomicBool,
+    wire_offset: &mut usize,
+) -> std::io::Result<bool> {
+    debug_assert!(media_frames <= pcm.len() / 4);
+    let padding = (4 - *wire_offset) % 4;
+    let mut pending = vec![0; padding];
+    pending.extend_from_slice(pcm);
+    let mut offset = 0;
+    while offset < pending.len() {
+        if stop.load(Ordering::Relaxed) {
+            return Ok(false);
+        }
+        let result = {
+            let _gate = shared.ring.lock().unwrap();
+            if shared.output_epoch.load(Ordering::Relaxed) != epoch {
+                return Ok(false);
+            }
+            let result = writer.write(&pending[offset..]);
+            if let Ok(count) = result {
+                // Count only fully accepted media frames. A partial old frame,
+                // alignment padding and synthesized underrun silence add no time.
+                let before = (offset.saturating_sub(padding) / 4).min(media_frames);
+                let after = ((offset + count).saturating_sub(padding) / 4).min(media_frames);
+                shared.record_stream_output(after - before);
+                shared
+                    .output_bytes
+                    .fetch_add(count as u64, Ordering::Relaxed);
+                shared.output_nonzero_bytes.fetch_add(
+                    pending[offset..offset + count]
+                        .iter()
+                        .filter(|b| **b != 0)
+                        .count() as u64,
+                    Ordering::Relaxed,
+                );
+            }
+            result
+        };
+        match result {
+            Ok(0) => return Err(std::io::ErrorKind::WriteZero.into()),
+            Ok(count) => {
+                offset += count;
+                *wire_offset = (*wire_offset + count) % 4;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                shared.output_backpressure.fetch_add(1, Ordering::Relaxed);
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(true)
 }
 
 /// Build the cpal output stream: drains the ring buffer, converts i16 →
@@ -1730,11 +1969,18 @@ fn build_stream(
     let alpha = LevelMeter::alpha(rate);
     let band_alphas = LevelMeter::band_alphas(rate);
 
+    let mut last_epoch = 0;
     let err_fn = |e| eprintln!("rockbox-playback: output stream error: {e}");
     let stream = device
         .build_output_stream(
             &config,
             move |data: &mut [f32], _| {
+                let mut ring = shared.ring.lock().unwrap();
+                let epoch = shared.output_epoch.load(Ordering::Relaxed);
+                if epoch != last_epoch {
+                    cur_amp = 0.0;
+                    last_epoch = epoch;
+                }
                 let target = f32::from_bits(shared.target_amp.load(Ordering::Relaxed));
                 let gain_l = f32::from_bits(shared.balance_gain_l.load(Ordering::Relaxed));
                 let gain_r = f32::from_bits(shared.balance_gain_r.load(Ordering::Relaxed));
@@ -1748,7 +1994,7 @@ fn build_stream(
                     shared.set_levels(Levels::default());
                     return;
                 }
-                let mut ring = shared.ring.lock().unwrap();
+                let mut media_frames = 0;
                 for frame in data.chunks_mut(2) {
                     if cur_amp < target {
                         cur_amp = (cur_amp + step).min(target);
@@ -1760,6 +2006,9 @@ fn build_stream(
                     if cur_amp == 0.0 && target == 0.0 {
                         frame.fill(0.0);
                         continue;
+                    }
+                    if ring.len() >= 2 && frame.len() == 2 {
+                        media_frames += 1;
                     }
                     let l = ring.pop_front().unwrap_or(0);
                     let r = ring.pop_front().unwrap_or(0);
@@ -1777,6 +2026,7 @@ fn build_stream(
                         (frame[0] + frame.get(1).copied().unwrap_or(frame[0])) * 0.5,
                     );
                 }
+                shared.record_stream_output(media_frames);
                 shared.set_levels(meter.take());
             },
             err_fn,
@@ -1857,6 +2107,7 @@ struct Engine {
     /// its decoder is open. Dropped — and the temp file deleted — when the
     /// track is reset. Boxed as `Any` so the field needn't be `cfg`-gated.
     current_source: Option<Box<dyn std::any::Any + Send>>,
+    managed: Option<StreamSession>,
     /// Live-radio (ICY) metadata for the current stream, if any: the station
     /// base metadata plus a handle to the changing `StreamTitle`.
     #[cfg(feature = "http")]
@@ -1906,6 +2157,7 @@ impl Engine {
             pending_seek: None,
             last_save: Instant::now(),
             current_source: None,
+            managed: None,
             #[cfg(feature = "http")]
             current_icy: None,
         }
@@ -1921,6 +2173,32 @@ impl Engine {
             // Drain pending commands; returns false on Shutdown.
             if !self.pump_commands(false) {
                 break;
+            }
+
+            if self
+                .managed
+                .as_ref()
+                .is_some_and(StreamSession::is_cancelled)
+            {
+                self.reset_current();
+                self.playing = false;
+                self.set_state(ST_STOPPED);
+            }
+            // Retain ended managed streams and position; no auto-advance.
+            if self.managed.is_some() && self.decoder.is_none() {
+                if self.shared.ring_frames() == 0 {
+                    self.set_state(ST_STOPPED);
+                }
+                match self.rx.recv_timeout(Duration::from_millis(25)) {
+                    Ok(cmd) => {
+                        if !self.handle(cmd) {
+                            break;
+                        }
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                    Err(_) => {}
+                }
+                continue;
             }
 
             // Paused: keep the decoder and buffered audio; idle until a
@@ -1962,7 +2240,7 @@ impl Engine {
                 continue;
             }
 
-            if !self.playing || self.queue.is_empty() {
+            if !self.playing || (self.queue.is_empty() && self.managed.is_none()) {
                 self.set_state(ST_STOPPED);
                 // Idle: block until a command arrives.
                 match self.rx.recv() {
@@ -2006,7 +2284,7 @@ impl Engine {
     /// or trigger a crossfade near the track's end.
     fn decode_step(&mut self) {
         // Near-end crossfade detection (auto skip).
-        if self.should_start_crossfade() {
+        if self.managed.is_none() && self.should_start_crossfade() {
             self.crossfade_to_next(true);
             return;
         }
@@ -2014,6 +2292,14 @@ impl Engine {
         let chunk = match self.next_output_chunk() {
             Some(c) => c,
             None => {
+                if let Some(session) = self.managed.clone() {
+                    let code = self.decoder.as_ref().and_then(Decoder::status);
+                    session.decoder_ended(code);
+                    drop(self.decoder.take());
+                    session.decoder_joined();
+                    self.playing = false;
+                    return;
+                }
                 // End of track — advance (auto). Ring keeps this track's
                 // buffered tail so playback is gapless.
                 self.dsp.flush();
@@ -2137,6 +2423,7 @@ impl Engine {
     /// Push frames to the ring, sleeping while it is full but staying
     /// responsive to commands.
     fn push_frames(&mut self, pcm: &[i16]) {
+        let generation = self.managed.as_ref().map(StreamSession::generation);
         let cap = self.cfg.buffer_frames * 2;
         let mut pos = 0;
         while pos < pcm.len() {
@@ -2146,7 +2433,14 @@ impl Engine {
                 if !self.pump_commands(true) {
                     return; // shutdown
                 }
-                if !self.playing || self.decoder.is_none() {
+                if generation != self.managed.as_ref().map(StreamSession::generation)
+                    || self
+                        .managed
+                        .as_ref()
+                        .is_some_and(StreamSession::is_cancelled)
+                    || !self.playing
+                    || self.decoder.is_none()
+                {
                     return; // stopped / seeked / skipped — drop stale audio
                 }
                 let len = self.shared.ring.lock().unwrap().len();
@@ -2156,6 +2450,10 @@ impl Engine {
                 std::thread::sleep(Duration::from_millis(15));
             }
             let mut ring = self.shared.ring.lock().unwrap();
+            // Recheck under the gate: cancellation can race the check above.
+            if self.shared.output_generation.load(Ordering::Relaxed) != generation.unwrap_or(0) {
+                return;
+            }
             let space = cap.saturating_sub(ring.len());
             let end = (pos + space).min(pcm.len());
             ring.extend(&pcm[pos..end]);
@@ -2179,6 +2477,9 @@ impl Engine {
     /// Returns false on Shutdown.
     fn handle(&mut self, cmd: Command) -> bool {
         match cmd {
+            Command::OpenStream(input) => {
+                self.open_managed(input);
+            }
             Command::Shutdown => {
                 // Persist the exact position on exit, like Rockbox saves on
                 // power-off — but only mid-session (a finished queue already
@@ -2186,6 +2487,7 @@ impl Engine {
                 if self.playing || self.paused {
                     self.save_resume();
                 }
+                self.reset_current();
                 self.shutdown = true;
                 return false;
             }
@@ -2220,6 +2522,9 @@ impl Engine {
             }
             Command::SaveResume => self.save_resume(),
             Command::Play => {
+                if self.managed.is_some() {
+                    return true;
+                }
                 if self.queue.is_empty() {
                     return true;
                 }
@@ -2466,6 +2771,9 @@ impl Engine {
     }
 
     fn seek(&mut self, pos: Duration) {
+        if self.managed.is_some() {
+            return;
+        }
         if let Some(dec) = self.decoder.as_mut() {
             dec.seek(pos);
             self.decoded_us = pos.as_micros() as u64;
@@ -2479,6 +2787,55 @@ impl Engine {
     }
 
     // ---- queue / decoder helpers ----------------------------------------
+
+    fn open_managed(&mut self, input: managed::StreamInput) {
+        self.reset_current();
+        self.queue.clear();
+        self.sync_queue();
+        self.index = 0;
+        self.pending_seek = None;
+        self.finishing = false;
+        self.paused = false;
+        let session = input.session.clone();
+        self.managed = Some(session.clone());
+        if session.is_cancelled() {
+            drop(input);
+            session.decoder_joined();
+            return;
+        }
+        session.set_phase(StreamPhase::Opening);
+        let managed::StreamInput {
+            reader,
+            format_ext,
+            metadata,
+            ..
+        } = input;
+        match Decoder::open_stream(Box::new(reader), &format_ext, metadata) {
+            Ok(dec) if !session.is_cancelled() => {
+                self.install_decoder(dec, false);
+                self.shared.index.store(usize::MAX, Ordering::Relaxed);
+                self.playing = true;
+                {
+                    let _gate = self.shared.ring.lock().unwrap();
+                    if self.shared.output_generation.load(Ordering::Relaxed) == session.generation()
+                    {
+                        self.shared
+                            .target_amp
+                            .store(self.shared.volume_f32().to_bits(), Ordering::Relaxed);
+                    }
+                }
+                session.set_phase(StreamPhase::Decoding);
+            }
+            Ok(dec) => {
+                drop(dec);
+                session.decoder_joined();
+            }
+            Err(_) => {
+                session.set_phase(StreamPhase::Failed);
+                session.decoder_joined();
+            }
+        }
+    }
 
     fn open_current(&mut self) -> bool {
         let Some(path) = self.queue.get(self.index).cloned() else {
@@ -2654,6 +3011,18 @@ impl Engine {
     }
 
     fn reset_current(&mut self) {
+        if let Some(session) = self.managed.take() {
+            session.cancel();
+            drop(self.decoder.take());
+            session.decoder_joined();
+            let mut active = self.shared.managed.lock().unwrap();
+            if active
+                .as_ref()
+                .is_some_and(|s| s.generation() == session.generation())
+            {
+                *active = None;
+            }
+        }
         self.decoder = None;
         self.decoded_us = 0;
         self.current_source = None; // drop any HTTP temp cache
@@ -3781,3 +4150,6 @@ mod level_meter_tests {
         assert!(levels.left <= 1.0 && levels.low_left <= 1.0, "{levels:?}");
     }
 }
+
+#[cfg(test)]
+mod output_tests;

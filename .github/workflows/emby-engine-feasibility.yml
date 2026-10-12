@@ -1,0 +1,117 @@
+name: Emby engine feasibility
+
+on:
+  push:
+    branches: [feat/emby-audio-engine-probe, feat/emby-audio-runtime]
+    paths:
+      - tools/emby-engine-probe/**
+      - tools/emby-runtime-probe/**
+      - transport/**
+      - third-party/rockbox-playback-0.7.0/**
+      - .github/workflows/emby-engine-feasibility.yml
+      - .github/action-versions.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emby-engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Public Player evidence (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PROBE_DIR: tools/emby-engine-probe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install experiment dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg libasound2-dev pkg-config
+          rustup toolchain install 1.96.0 --profile minimal
+      - name: Record environment and build real engine
+        run: |
+          mkdir -p "$PROBE_DIR/results"
+          {
+            git rev-parse HEAD
+            uname -a
+            rustc +1.96.0 --version
+            cargo +1.96.0 --version
+            ffmpeg -version
+            sha256sum "$PROBE_DIR/Cargo.lock" "$PROBE_DIR/src/main.rs" "$PROBE_DIR/run.py"
+          } > "$PROBE_DIR/results/environment.txt"
+          cargo +1.96.0 build --locked --manifest-path "$PROBE_DIR/Cargo.toml" 2>&1 | tee "$PROBE_DIR/results/build.log"
+      - name: Run bounded loopback experiments
+        timeout-minutes: 4
+        run: python3 "$PROBE_DIR/run.py"
+      - name: Verify evidence and report capability gaps
+        run: python3 "$PROBE_DIR/verify.py" "$PROBE_DIR/results" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Retain evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: emby-engine-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tools/emby-engine-probe/results/
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime:
+    name: Managed Player cancellation (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PROBE_DIR: tools/emby-runtime-probe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install experiment dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg libasound2-dev pkg-config
+          rustup toolchain install 1.96.0 --profile minimal
+      - name: Record environment and build real engine
+        run: |
+          mkdir -p "$PROBE_DIR/results"
+          {
+            git rev-parse HEAD
+            uname -a
+            rustc +1.96.0 --version
+            cargo +1.96.0 --version
+            ffmpeg -version
+            sha256sum "$PROBE_DIR/Cargo.lock" "$PROBE_DIR/src/main.rs" "$PROBE_DIR/run.py"
+          } > "$PROBE_DIR/results/environment.txt"
+          cargo +1.96.0 build --locked --manifest-path "$PROBE_DIR/Cargo.toml" 2>&1 | tee "$PROBE_DIR/results/build.log"
+      - name: Check output generation and reader lifecycle invariants
+        timeout-minutes: 2
+        run: |
+          cargo +1.96.0 test --locked --manifest-path "$PROBE_DIR/Cargo.toml" -p rockbox-playback --lib output_tests:: 2>&1 | tee "$PROBE_DIR/results/output-unit.log"
+          cargo +1.96.0 test --locked --manifest-path "$PROBE_DIR/Cargo.toml" -p rockbox-playback --lib managed::tests:: 2>&1 | tee "$PROBE_DIR/results/managed-unit.log"
+      - name: Check redirect following and header forwarding
+        timeout-minutes: 2
+        run: cargo +1.96.0 test --locked --manifest-path "$PROBE_DIR/Cargo.toml" -p music-player-transport --test redirects 2>&1 | tee "$PROBE_DIR/results/redirect-tests.log"
+      - name: Verify public Player replacement and stale cancellation
+        timeout-minutes: 2
+        run: python3 "$PROBE_DIR/replacement.py" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Verify FIFO and socket backpressure cancellation
+        timeout-minutes: 3
+        run: python3 "$PROBE_DIR/output.py" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Run bounded loopback experiments
+        timeout-minutes: 5
+        run: python3 "$PROBE_DIR/run.py"
+      - name: Verify evidence and report capability gaps
+        run: python3 "$PROBE_DIR/verify.py" "$PROBE_DIR/results" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Retain evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: emby-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tools/emby-runtime-probe/results/
+          if-no-files-found: error
+          retention-days: 14

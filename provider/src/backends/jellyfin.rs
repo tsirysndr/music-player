@@ -270,6 +270,7 @@ impl MusicProvider for Jellyfin {
             playlists: true,
             liked: true,
             native_search: true,
+            media_browse: false,
         }
     }
 

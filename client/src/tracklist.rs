@@ -1,4 +1,9 @@
 use anyhow::Error;
+use music_player_server::api::music::v1alpha1::{
+    AddSelectedMediaRequest, AddSelectedMediaResponse, GetMediaQueueRequest, GetMediaQueueResponse,
+    PlaySelectedMediaRequest, PlaySelectedMediaResponse, SelectMediaAudioRequest,
+    SelectMediaAudioResponse,
+};
 use music_player_server::api::{
     metadata::v1alpha1::Track,
     music::v1alpha1::{
@@ -14,9 +19,69 @@ pub struct TracklistClient {
 }
 
 impl TracklistClient {
+    /// Complete metadata and selection are sent in one command. No ID-only
+    /// fallback and no automatic retry after an uncertain acknowledgement.
+    pub async fn play_selected_media(
+        &mut self,
+        request: PlaySelectedMediaRequest,
+    ) -> Result<PlaySelectedMediaResponse, Error> {
+        Ok(tokio::time::timeout(
+            std::time::Duration::from_secs(15),
+            self.client.play_selected_media(request),
+        ).await.map_err(|_| tonic::Status::deadline_exceeded(
+            "Playback request timed out; it may still apply. Check the play queue before trying again.",
+        ))??.into_inner())
+    }
+
+    /// No legacy fallback: an older daemon's Unimplemented is returned to the caller.
+    /// An uncertain command may still apply. An unchanged refreshed queue does
+    /// not prove failure; do not retry the mutation on that basis.
+    pub async fn add_selected_media(
+        &mut self,
+        request: AddSelectedMediaRequest,
+    ) -> Result<AddSelectedMediaResponse, Error> {
+        Ok(tokio::time::timeout(
+            std::time::Duration::from_secs(15),
+            self.client.add_selected_media(request),
+        )
+        .await
+        .map_err(|_| tonic::Status::deadline_exceeded(
+            "Queue request timed out; outcome unknown. The delayed command may still apply. A refresh showing no change does not prove failure. Do not retry this mutation.",
+        ))??
+        .into_inner())
+    }
+
+    pub async fn select_media_audio(
+        &mut self,
+        request: SelectMediaAudioRequest,
+    ) -> Result<SelectMediaAudioResponse, Error> {
+        Ok(tokio::time::timeout(
+            std::time::Duration::from_secs(15),
+            self.client.select_media_audio(request),
+        )
+        .await
+        .map_err(|_| tonic::Status::deadline_exceeded(
+            "Queue request timed out; outcome unknown. The delayed command may still apply. A refresh showing no change does not prove failure. Do not retry this mutation.",
+        ))??
+        .into_inner())
+    }
+
+    /// Occurrence IDs and optional u64 ticks are preserved without narrowing.
+    pub async fn get_media_queue(&mut self) -> Result<GetMediaQueueResponse, Error> {
+        Ok(tokio::time::timeout(
+            std::time::Duration::from_secs(15),
+            self.client.get_media_queue(GetMediaQueueRequest {}),
+        )
+        .await
+        .map_err(|_| tonic::Status::deadline_exceeded("Reading the media queue timed out."))??
+        .into_inner())
+    }
+
     pub async fn new(host: String, port: u16) -> Result<Self, Error> {
         let url = format!("http://{}:{}", host, port);
-        let client = TracklistServiceClient::connect(url).await?;
+        let client = TracklistServiceClient::connect(url)
+            .await?
+            .max_decoding_message_size(music_player_server::LIBRARY_MESSAGE_LIMIT);
         Ok(Self { client })
     }
 

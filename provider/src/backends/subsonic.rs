@@ -255,6 +255,7 @@ impl MusicProvider for Subsonic {
             playlists: true,
             liked: true,
             native_search: true,
+            media_browse: false,
         }
     }
 

@@ -26,6 +26,14 @@ path = "../settings"
 version = "0.4.5"
 
 [dependencies]
+music-player-extensions = { path = "../extensions", version = "0.4.5" }
+http = "1"
+mime = "0.3"
+url = "2"
+music-player-provider = { path = "../provider", version = "0.4.5" }
+music-player-types = { path = "../types", version = "0.4.5" }
+music-player-transport = { path = "../transport" }
+uuid = { version = "1", features = ["v4"] }
 anyhow = "1.0.67"
 async-trait = "0.1.57"
 serde = {version = "1.0.145", features = ["derive"]}
@@ -34,3 +42,7 @@ futures-util = "0.3.24"
 tracing = "0.1"
 rockbox-playback = "0.7.0"
 tokio = {version = "1.21.0", features = ["full"]}
+
+[dev-dependencies]
+music-player-migration = { path = "../migration", version = "0.4.5" }
+sea-orm = { version = "2.0.2", features = ["sqlx-sqlite", "runtime-tokio-rustls"] }

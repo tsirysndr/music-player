@@ -4128,6 +4128,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66b7e2430c6dff6a955451e2cfc438f09cea1965a9d6f87f7e3b90decc014099"
 
 [[package]]
+name = "enum-as-inner"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1e6a265c649f3f5979b601d26f1d05ada116434c87741c9493cb56218f76cbc"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "enumflags2"
 version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5483,11 +5495,36 @@ dependencies = [
  "futures-channel",
  "futures-io",
  "futures-util",
- "hickory-proto",
+ "hickory-proto 0.26.3",
  "idna",
  "ipnet",
  "jni 0.22.4",
  "rand 0.10.2",
+ "thiserror 2.0.20",
+ "tinyvec",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "hickory-proto"
+version = "0.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8a6fe56c0038198998a6f217ca4e7ef3a5e51f46163bd6dd60b5c71ca6c6502"
+dependencies = [
+ "async-trait",
+ "cfg-if 1.0.4",
+ "data-encoding",
+ "enum-as-inner",
+ "futures-channel",
+ "futures-io",
+ "futures-util",
+ "idna",
+ "ipnet",
+ "once_cell",
+ "rand 0.9.5",
+ "ring 0.17.14",
  "thiserror 2.0.20",
  "tinyvec",
  "tokio",
@@ -5517,6 +5554,27 @@ dependencies = [
 
 [[package]]
 name = "hickory-resolver"
+version = "0.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc62a9a99b0bfb44d2ab95a7208ac952d31060efc16241c87eaf36406fecf87a"
+dependencies = [
+ "cfg-if 1.0.4",
+ "futures-util",
+ "hickory-proto 0.25.2",
+ "ipconfig",
+ "moka",
+ "once_cell",
+ "parking_lot 0.12.5",
+ "rand 0.9.5",
+ "resolv-conf",
+ "smallvec",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "hickory-resolver"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f3da5255c95d5a716857d54b5b8f4e8d67c3484d3beaaaae2ce25063b3ba981"
@@ -5524,7 +5582,7 @@ dependencies = [
  "cfg-if 1.0.4",
  "futures-util",
  "hickory-net",
- "hickory-proto",
+ "hickory-proto 0.26.3",
  "ipconfig",
  "ipnet",
  "jni 0.22.4",
@@ -6882,7 +6940,7 @@ checksum = "37605d1d386326d594b7714ab84b0ded0e91d4bb003214f663eacf99f1b49da5"
 dependencies = [
  "bon",
  "bytes",
- "hickory-resolver",
+ "hickory-resolver 0.26.3",
  "http 1.5.0",
  "jacquard-common",
  "jacquard-lexicon",
@@ -8194,6 +8252,7 @@ name = "music-player"
 version = "0.4.5"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "crossterm 0.29.0",
  "dirs",
@@ -8475,15 +8534,25 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures-util",
+ "http 1.5.0",
+ "mime",
  "music-player-entity",
+ "music-player-extensions",
+ "music-player-migration",
+ "music-player-provider",
  "music-player-settings",
  "music-player-storage",
  "music-player-tracklist",
+ "music-player-transport",
+ "music-player-types",
  "rockbox-playback",
+ "sea-orm",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -8494,6 +8563,7 @@ dependencies = [
  "base64 0.22.1",
  "jsonrpsee",
  "md5",
+ "music-player-settings",
  "music-player-types",
  "reqwest 0.12.28",
  "serde",
@@ -8575,6 +8645,7 @@ dependencies = [
  "music-player-analysis",
  "music-player-analytics",
  "music-player-entity",
+ "music-player-extensions",
  "music-player-migration",
  "music-player-playback",
  "music-player-provider",
@@ -8649,6 +8720,7 @@ dependencies = [
  "tokio-tungstenite 0.24.0",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -8657,7 +8729,19 @@ version = "0.4.5"
 dependencies = [
  "atlist-rs",
  "music-player-entity",
+ "music-player-types",
  "rand 0.8.8",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "music-player-transport"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "tokio",
 ]
 
 [[package]]
@@ -8671,6 +8755,7 @@ dependencies = [
  "music-player-discovery",
  "music-player-settings",
  "rockbox-metadata",
+ "serde",
  "upnp-client",
  "url",
 ]
@@ -11330,6 +11415,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2 0.4.19",
+ "hickory-resolver 0.25.2",
  "http 1.5.0",
  "http-body 1.1.0",
  "http-body-util",
@@ -11339,6 +11425,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "once_cell",
  "percent-encoding",
  "pin-project-lite 0.2.17",
  "quinn",
@@ -11486,6 +11573,7 @@ name = "rockbox-playback"
 version = "0.7.0"
 dependencies = [
  "cpal",
+ "libc",
  "quick-xml 0.37.5",
  "reqwest 0.12.28",
  "rockbox-codecs",

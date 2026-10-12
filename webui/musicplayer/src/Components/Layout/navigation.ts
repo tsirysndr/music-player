@@ -8,7 +8,7 @@ export type NavEntry = {
   matches?: string[];
 };
 
-/** The library sections, in the order the desktop sidebar lists them. */
+/** Shared by the web sidebar and the phone's More menu. */
 export const NAV: NavEntry[] = [
   { to: "/albums", label: "Albums", icon: Icons.disc },
   { to: "/artists", label: "Artists", icon: Icons.artist },
@@ -21,6 +21,7 @@ export const NAV: NavEntry[] = [
     icon: Icons.playlist,
     matches: ["/folders"],
   },
+  { to: "/media", label: "Media libraries", icon: Icons.folder },
   { to: "/radio", label: "Internet Radio", icon: Icons.broadcast },
   { to: "/extensions", label: "Extensions", icon: Icons.extension },
   { to: "/servers", label: "Servers", icon: Icons.server },

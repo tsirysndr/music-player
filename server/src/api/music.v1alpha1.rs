@@ -7842,6 +7842,17 @@ pub struct AddServerRequest {
     /// blank field cannot mean "clear it".
     #[prost(string, tag = "5")]
     pub password: ::prost::alloc::string::String,
+    /// Omit to save by kind/url/username. Set to edit this exact saved account;
+    /// kind and username must still match. Address edits keep the saved id.
+    #[prost(string, optional, tag = "6")]
+    pub id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Presence means Set, including the empty string. Cannot be combined with
+    /// clear_password or a nonempty legacy password.
+    #[prost(string, optional, tag = "7")]
+    pub password_value: ::core::option::Option<::prost::alloc::string::String>,
+    /// Remove the stored password. False (the default) does not clear it.
+    #[prost(bool, tag = "8")]
+    pub clear_password: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AddServerResponse {

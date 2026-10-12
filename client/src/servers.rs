@@ -55,16 +55,21 @@ impl ServersClient {
         username: &str,
         password: &str,
     ) -> Result<Server, Error> {
-        let response = self
-            .client
-            .add_server(tonic::Request::new(AddServerRequest {
-                kind: kind.to_owned(),
-                name: name.to_owned(),
-                url: url.to_owned(),
-                username: username.to_owned(),
-                password: password.to_owned(),
-            }))
-            .await?;
+        self.save(AddServerRequest {
+            kind: kind.to_owned(),
+            name: name.to_owned(),
+            url: url.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned(),
+            ..Default::default()
+        })
+        .await
+    }
+
+    /// Save or edit an exact account with explicit password Set/Clear fields.
+    /// `add` keeps its legacy empty-password-means-unchanged behavior.
+    pub async fn save(&mut self, request: AddServerRequest) -> Result<Server, Error> {
+        let response = self.client.add_server(tonic::Request::new(request)).await?;
         response
             .into_inner()
             .server

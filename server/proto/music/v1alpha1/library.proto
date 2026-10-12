@@ -83,7 +83,83 @@ message LikeTrackRequest {
 
 message LikeTrackResponse {}
 
+// Account-labelled navigation; media containers are not playable tracks.
+message MediaBrowser {
+  string server_id = 1;
+  bool supported = 2;
+}
+message MediaEntry {
+  string id = 1;
+  string title = 2;
+  optional string item_type = 3;
+  optional string media_type = 4;
+  bool is_container = 5;
+  optional uint64 season_number = 6;
+  optional uint64 episode_number = 7;
+  metadata.v1alpha1.Track track = 8;
+}
+message GetMediaBrowserRequest {}
+message GetMediaBrowserResponse { MediaBrowser browser = 1; }
+message BrowseMediaRequest {
+  string server_id = 1;
+  optional string parent = 2;
+  int32 offset = 3;
+  // Absent means 100; otherwise must be from 1 to 500.
+  optional int32 limit = 4;
+}
+message BrowseMediaResponse {
+  string server_id = 1;
+  repeated MediaEntry entries = 2;
+  optional int32 next_offset = 3;
+}
+message GetMediaContainerTracksRequest {
+  string server_id = 1;
+  string parent = 2;
+  int32 offset = 3;
+  // Absent means 100; <= 0 expands every leaf, all or error.
+  optional int32 limit = 4;
+}
+message GetMediaContainerTracksResponse {
+  string server_id = 1;
+  repeated metadata.v1alpha1.Track tracks = 2;
+}
+
+// Candidate metadata only: showing choices does not start a playback session.
+message GetMediaAudioOptionsRequest {
+  // Stable source handle, including the saved account; never a bare item id.
+  string source = 1;
+}
+message AudioStreamOption {
+  int32 index = 1;
+  optional string title = 2;
+  optional string display_title = 3;
+  optional string language = 4;
+  optional string codec = 5;
+  optional uint32 channels = 6;
+  optional uint32 sample_rate = 7;
+  bool is_default = 8;
+  optional string unavailable_reason = 9;
+}
+message AudioVersionOption {
+  string id = 1;
+  optional string name = 2;
+  optional uint64 runtime_ticks = 3;
+  optional int32 default_audio_stream_index = 4;
+  optional string unavailable_reason = 5;
+  repeated AudioStreamOption audio_streams = 6;
+}
+message GetMediaAudioOptionsResponse {
+  string source = 1;
+  repeated AudioVersionOption versions = 2;
+}
+
 service LibraryService {
+  rpc GetMediaAudioOptions(GetMediaAudioOptionsRequest)
+      returns (GetMediaAudioOptionsResponse) {}
+  rpc GetMediaBrowser(GetMediaBrowserRequest) returns (GetMediaBrowserResponse) {}
+  rpc BrowseMedia(BrowseMediaRequest) returns (BrowseMediaResponse) {}
+  rpc GetMediaContainerTracks(GetMediaContainerTracksRequest)
+      returns (GetMediaContainerTracksResponse) {}
   rpc LikeTrack(LikeTrackRequest) returns (LikeTrackResponse) {}
   rpc Scan(ScanRequest) returns (ScanResponse) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}

@@ -13,6 +13,7 @@ version = "0.4.5"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
+exclude = ["transport"]
 
 members = [
   "analysis",
@@ -132,6 +133,7 @@ version = "2.0.2"
 
 [dependencies]
 anyhow = "1.0.67"
+chrono = "0.4.23"
 clap = "4.5"
 crossterm = {version = "0.29", features = ["serde"]}
 dirs = "4.0.0"

@@ -10,6 +10,12 @@ use super::{album::Album, artist::Artist};
 pub struct TrackInput {
     pub id: ID,
     pub title: String,
+    /// Optional for old clients; legacy sources cannot recover this by ID.
+    pub artist: Option<String>,
+    /// Display tags only; clients cannot invent an album identity from them.
+    pub album_title: Option<String>,
+    pub album_artist: Option<String>,
+    pub album_year: Option<u32>,
     pub duration: Option<f32>,
     pub disc_number: u32,
     pub track_number: Option<u32>,
@@ -180,9 +186,17 @@ impl From<TrackInput> for Model {
         Model {
             id: val.id.0,
             title: val.title,
+            artist: val.artist.unwrap_or_default(),
+            album: music_player_entity::album::Model {
+                title: val.album_title.unwrap_or_default(),
+                artist: val.album_artist.unwrap_or_default(),
+                year: val.album_year,
+                ..Default::default()
+            },
             uri: val.uri,
             duration: val.duration,
             track: val.track_number,
+            disc: Some(val.disc_number).filter(|disc| *disc > 0),
             ..Default::default()
         }
     }

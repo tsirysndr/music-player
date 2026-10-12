@@ -1,7 +1,7 @@
 //! How a source is addressed, independent of how it was discovered.
 //!
 //! A saved row in the database, an mDNS peer and a server configured in
-//! `settings.toml` all reduce to the same five fields. Collapsing them here is
+//! `settings.toml` all reduce to this connection config. Collapsing them here is
 //! what stops the connect path from re-deriving a base url three different
 //! ways — the bug that used to leave `base_url` as `None` for a music-player
 //! peer and panic the first resolver that unwrapped it.
@@ -11,7 +11,9 @@ use music_player_types::types::Device;
 /// Everything needed to reach a server. `url` is non-empty and absolute.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProviderConfig {
-    /// The saved-server row id, or the device id for a discovered peer.
+    /// For a saved account, its opaque row id copied unchanged from storage.
+    /// Ad hoc configs use a URL-derived id; discovery uses the device id.
+    /// Neither can identify a saved account by URL alone.
     pub id: String,
     pub kind: String,
     pub name: String,
@@ -22,12 +24,14 @@ pub struct ProviderConfig {
 }
 
 impl ProviderConfig {
-    /// Stable across restarts and idempotent on re-add: the same server added
-    /// twice is one row.
+    /// A deterministic id for ad hoc configs, not a saved-account identity.
+    /// Saved rows retain their own id across URL and password edits.
     pub fn id_for(kind: &str, url: &str) -> String {
         format!("{:x}", md5::compute(format!("{kind}\0{}", normalize(url))))
     }
 
+    /// Construct an ad hoc config. Saved-account callers must copy the row's
+    /// id and credentials instead of deriving an id from its address.
     pub fn new(kind: impl Into<String>, name: impl Into<String>, url: &str) -> Self {
         let kind = kind.into();
         let url = normalize(url);
@@ -42,10 +46,10 @@ impl ProviderConfig {
     }
 
     pub fn with_credentials(mut self, username: Option<String>, password: Option<String>) -> Self {
-        // Empty strings are how a form says "no credentials"; normalising here
-        // keeps every backend from having to check twice.
+        // Password update semantics belong to storage/API inputs. Some("")
+        // here is an explicitly configured empty password, not an omission.
         self.username = username.filter(|value| !value.is_empty());
-        self.password = password.filter(|value| !value.is_empty());
+        self.password = password;
         self
     }
 
@@ -131,12 +135,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_id_survives_a_trailing_slash() {
+    fn the_ad_hoc_id_survives_a_trailing_slash() {
         let bare = ProviderConfig::new("subsonic", "NAS", "http://nas.lan:4533");
         let slashed = ProviderConfig::new("subsonic", "NAS", "http://nas.lan:4533/");
         assert_eq!(
             bare.id, slashed.id,
-            "the same server added twice is one row"
+            "equivalent ad hoc addresses have the same derived id"
         );
         assert_eq!(slashed.url, "http://nas.lan:4533");
     }
@@ -149,11 +153,29 @@ mod tests {
     }
 
     #[test]
-    fn empty_credentials_read_as_none() {
+    fn an_empty_username_reads_as_none() {
         let config = ProviderConfig::new("subsonic", "x", "http://h:1")
             .with_credentials(Some(String::new()), Some("pw".into()));
         assert_eq!(config.username, None);
         assert_eq!(config.password.as_deref(), Some("pw"));
+    }
+
+    #[test]
+    fn an_explicit_empty_password_survives_into_the_connection_config() {
+        let config = ProviderConfig {
+            id: "saved-account-handle".into(),
+            ..ProviderConfig::new("jellyfin", "Family", "http://media.test:8096")
+        }
+        .with_credentials(Some("family".into()), Some(String::new()));
+        assert_eq!(config.id, "saved-account-handle");
+        assert_eq!(config.username.as_deref(), Some("family"));
+        assert_eq!(config.password.as_deref(), Some(""));
+        assert_eq!(
+            config
+                .with_credentials(Some("family".into()), None)
+                .password,
+            None
+        );
     }
 
     /// A music-player peer is advertised over mDNS with no `base_url` at all.

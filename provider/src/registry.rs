@@ -3,9 +3,9 @@
 //! **Adding a kind of server is one file and one line.** Write a
 //! [`MusicProvider`] plus a [`ProviderFactory`] in `addons/src/sources/`, then add
 //! one `.register(...)` to `register_builtin`. Nothing else in the codebase
-//! needs to know it exists: the clients build their add-server form from
-//! [`ProviderRegistry::describe`], so a new backend shows up in both UIs on its
-//! own.
+//! needs to know it exists on the server side: the web client builds its
+//! add-server form from [`ProviderRegistry::describe`]. The Slint desktop
+//! currently keeps its own kind list in `desktop/ui/app.slint`.
 
 use crate::{MusicProvider, ProviderConfig, ProviderError};
 use std::sync::Arc;

@@ -11,6 +11,10 @@ description = "The remote music source trait and registry of music player"
 path = "../types"
 version = "0.4.5"
 
+[dependencies.music-player-settings]
+path = "../settings"
+version = "0.4.5"
+
 [dependencies]
 async-trait = "0.1.60"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
@@ -22,6 +26,9 @@ urlencoding = "2.1"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0"
 md5 = "0.7.0"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "rt", "time"] }
 tracing = "0.1.37"
 url = "2.3.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util"] }

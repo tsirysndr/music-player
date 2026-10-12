@@ -109,10 +109,18 @@ impl OutputConfig {
 /// tracks. The FIFO must already exist (`mkfifo`).
 #[cfg(unix)]
 fn open_fifo(path: &std::path::Path) -> io::Result<Box<dyn Write + Send>> {
+    use std::os::unix::fs::{FileTypeExt, OpenOptionsExt};
     let f = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
+        .custom_flags(libc::O_NONBLOCK)
         .open(path)?;
+    if !f.metadata()?.file_type().is_fifo() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "output path is not a FIFO",
+        ));
+    }
     Ok(Box::new(f))
 }
 
@@ -133,9 +141,14 @@ fn open_unix(path: &std::path::Path, mode: SocketMode) -> io::Result<Box<dyn Wri
             let _ = std::fs::remove_file(path);
             let listener = UnixListener::bind(path)?;
             let (stream, _) = listener.accept()?;
+            stream.set_nonblocking(true)?;
             Ok(Box::new(stream))
         }
-        SocketMode::Connect => Ok(Box::new(UnixStream::connect(path)?)),
+        SocketMode::Connect => {
+            let stream = UnixStream::connect(path)?;
+            stream.set_nonblocking(true)?;
+            Ok(Box::new(stream))
+        }
     }
 }
 
@@ -157,6 +170,7 @@ fn open_tcp(addr: &str, mode: SocketMode) -> io::Result<Box<dyn Write + Send>> {
         SocketMode::Connect => TcpStream::connect(addr)?,
     };
     // Latency over throughput: PCM chunks are small and time-sensitive.
+    stream.set_nonblocking(true)?;
     stream.set_nodelay(true).ok();
     Ok(Box::new(stream))
 }

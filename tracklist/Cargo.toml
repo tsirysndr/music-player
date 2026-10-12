@@ -1,6 +1,6 @@
 [package]
 name = "music-player-tracklist"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -12,10 +12,10 @@ description = "The tracklist manager for the music player"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 
 [dependencies]
-music-player-types = { path = "../types", version = "0.4.5" }
+music-player-types = { path = "../types", version = "0.4.6-rc.1" }
 serde = { version = "1.0.145", features = ["derive"] }
 uuid = { version = "1.2.1", features = ["v4"] }
 atlist-rs = "0.2.1"

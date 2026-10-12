@@ -58,6 +58,8 @@ install -m 0644 "$repo_root/LICENSE" "$stage_root/usr/share/licenses/$package_na
 
 build_deb() {
   local deb_arch=$architecture
+  # Debian prereleases must sort before the final version, not after it.
+  local deb_version=${version//-/\~}
   case "$deb_arch" in
     amd64|arm64) ;;
     x86_64) deb_arch=amd64 ;;
@@ -86,7 +88,7 @@ build_deb() {
   fi
   sed \
     -e "s/@DEPENDS@/$depends/g" \
-    -e "s/@VERSION@/$version/g" \
+    -e "s/@VERSION@/$deb_version/g" \
     -e "s/@DEB_ARCH@/$deb_arch/g" \
     "$script_dir/$control_template" > "$package_root/DEBIAN/control"
   dpkg-deb --build --root-owner-group "$package_root" \

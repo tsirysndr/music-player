@@ -21,6 +21,12 @@ rpm=(dist/music-player-cli-*.rpm)
 [[ $(dpkg-deb -f "${deb[0]}" Package) == music-player-cli ]]
 [[ $(dpkg-deb -f "${deb[0]}" Conflicts) == music-player ]]
 [[ $(dpkg-deb -f "${deb[0]}" Architecture) == "$ARCH" ]]
+package_version=${RELEASE_VERSION//-/\~}
+[[ $(dpkg-deb -f "${deb[0]}" Version) == "$package_version" ]]
+[[ $(rpm -qp --qf '%{VERSION}' "${rpm[0]}") == "$package_version" ]]
+if [[ "$RELEASE_VERSION" == *-* ]]; then
+  dpkg --compare-versions "$package_version" lt "${RELEASE_VERSION%%-*}"
+fi
 dpkg-deb -f "${deb[0]}" > "$evidence/deb-$ARCH.txt"
 rpm -qp --requires "${rpm[0]}" > "$evidence/rpm-$ARCH.txt"
 rpm -qp --conflicts "${rpm[0]}" | grep -qx music-player

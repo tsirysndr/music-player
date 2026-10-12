@@ -5,33 +5,33 @@ edition = "2021"
 license = "MIT"
 name = "music-player-playback"
 repository = "https://github.com/tsirysndr/music-player"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 
 [dependencies.music-player-tracklist]
 path = "../tracklist"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 
 [dependencies.music-player-entity]
 path = "../entity"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.4.5"
+version = "0.4.6-rc.1"
 
 [dependencies]
-music-player-extensions = { path = "../extensions", version = "0.4.5" }
+music-player-extensions = { path = "../extensions", version = "0.4.6-rc.1" }
 http = "1"
 mime = "0.3"
 url = "2"
-music-player-provider = { path = "../provider", version = "0.4.5" }
-music-player-types = { path = "../types", version = "0.4.5" }
+music-player-provider = { path = "../provider", version = "0.4.6-rc.1" }
+music-player-types = { path = "../types", version = "0.4.6-rc.1" }
 music-player-transport = { path = "../transport" }
 uuid = { version = "1", features = ["v4"] }
 anyhow = "1.0.67"
@@ -44,5 +44,5 @@ rockbox-playback = "0.7.0"
 tokio = {version = "1.21.0", features = ["full"]}
 
 [dev-dependencies]
-music-player-migration = { path = "../migration", version = "0.4.5" }
+music-player-migration = { path = "../migration", version = "0.4.6-rc.1" }
 sea-orm = { version = "2.0.2", features = ["sqlx-sqlite", "runtime-tokio-rustls"] }

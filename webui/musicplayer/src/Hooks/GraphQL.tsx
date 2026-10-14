@@ -1615,6 +1615,13 @@ export type PlayPlaylistMutationVariables = Exact<{
 
 export type PlayPlaylistMutation = { __typename?: 'Mutation', playPlaylist: boolean };
 
+export type PlayTrackMutationVariables = Exact<{
+  trackId: Scalars['ID']['input'];
+}>;
+
+
+export type PlayTrackMutation = { __typename?: 'Mutation', playTrack: boolean };
+
 export type PlayTrackAtMutationVariables = Exact<{
   position: Scalars['Int']['input'];
 }>;
@@ -4182,6 +4189,30 @@ usePlayPlaylistMutation.getKey = () => ['PlayPlaylist'];
 
 
 usePlayPlaylistMutation.fetcher = (variables: PlayPlaylistMutationVariables, options?: RequestInit['headers']) => fetcher<PlayPlaylistMutation, PlayPlaylistMutationVariables>(PlayPlaylistDocument, variables, options);
+
+export const PlayTrackDocument = `
+    mutation PlayTrack($trackId: ID!) {
+  playTrack(id: $trackId)
+}
+    `;
+
+export const usePlayTrackMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(options?: UseMutationOptions<PlayTrackMutation, TError, PlayTrackMutationVariables, TContext>) => {
+
+    return useMutation<PlayTrackMutation, TError, PlayTrackMutationVariables, TContext>(
+      {
+    mutationKey: ['PlayTrack'],
+    mutationFn: (variables?: PlayTrackMutationVariables) => fetcher<PlayTrackMutation, PlayTrackMutationVariables>(PlayTrackDocument, variables)(),
+    ...options
+  }
+    )};
+
+usePlayTrackMutation.getKey = () => ['PlayTrack'];
+
+
+usePlayTrackMutation.fetcher = (variables: PlayTrackMutationVariables, options?: RequestInit['headers']) => fetcher<PlayTrackMutation, PlayTrackMutationVariables>(PlayTrackDocument, variables, options);
 
 export const PlayTrackAtDocument = `
     mutation PlayTrackAt($position: Int!) {

@@ -34,6 +34,12 @@ export const PLAY_TRACK_AT = gql`
   }
 `;
 
+export const PLAY_TRACK = gql`
+  mutation PlayTrack($trackId: ID!) {
+    playTrack(id: $trackId)
+  }
+`;
+
 export const REMOVE_TRACK_AT = gql`
   mutation RemoveTrackAt($position: Int!) {
     removeTrack(position: $position)

@@ -18,6 +18,7 @@ pub mod play_stats;
 pub mod playback;
 pub mod playlist;
 pub mod remote;
+mod remote_waveform;
 pub mod scrobbler;
 pub mod server;
 pub mod servers;

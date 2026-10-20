@@ -625,7 +625,12 @@ impl PlayerInternal {
         {
             let mut queue = self.tracklist.lock().unwrap();
             queue.set_volume(self.engine.volume());
-            queue.set_codec(status.metadata.as_ref().map(|m| m.codec.to_lowercase()));
+            queue.set_audio_format(
+                status
+                    .metadata
+                    .as_ref()
+                    .map(|m| (m.codec.to_lowercase(), m.sample_rate, m.bitrate)),
+            );
         }
         // Published every tick so a meter has something current to read; the
         // engine measures the PCM it actually hands to the output.

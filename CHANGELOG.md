@@ -13,8 +13,8 @@ This file starts at 0.2.1. For earlier releases see the
 ### Fixed
 
 #### Complete metadata on Rocksky remote controllers
-- Publish waveform readiness and 256 amplitude peaks, resampled from the stored
-  400-bar analysis. Missing analysis runs in the background; changing tracks
+- Publish waveform readiness and 256 full-scale RMS levels using playerd’s
+  calculation, avoiding boosted desktop display peaks. Analysis runs in the background; changing tracks
   cancels the old request and clears its visible waveform. Live radio does not
   trigger whole-track analysis.
 - Report actual shuffle, repeat, engine volume and decoded codec, plus available

@@ -42,7 +42,7 @@ pub struct Tracklist {
     /// 0 off, 1 all, 2 one.
     repeat_mode: i32,
     volume: Option<f32>,
-    codec: Option<String>,
+    audio_format: Option<(String, u32, u32)>,
 }
 
 impl Tracklist {
@@ -56,7 +56,7 @@ impl Tracklist {
             shuffle: false,
             repeat_mode: 0,
             volume: None,
-            codec: None,
+            audio_format: None,
         }
     }
     pub fn new_empty() -> Self {
@@ -69,7 +69,7 @@ impl Tracklist {
             shuffle: false,
             repeat_mode: 0,
             volume: None,
-            codec: None,
+            audio_format: None,
         }
     }
 
@@ -251,11 +251,22 @@ impl Tracklist {
     }
 
     pub fn codec(&self) -> Option<String> {
-        self.codec.clone()
+        self.audio_format
+            .as_ref()
+            .map(|f| f.0.clone())
+            .filter(|s| !s.is_empty())
     }
 
-    pub fn set_codec(&mut self, codec: Option<String>) {
-        self.codec = codec.filter(|s| !s.is_empty());
+    pub fn sample_rate(&self) -> Option<u32> {
+        self.audio_format.as_ref().map(|f| f.1).filter(|n| *n > 0)
+    }
+
+    pub fn bitrate(&self) -> Option<u32> {
+        self.audio_format.as_ref().map(|f| f.2).filter(|n| *n > 0)
+    }
+
+    pub fn set_audio_format(&mut self, format: Option<(String, u32, u32)>) {
+        self.audio_format = format;
     }
 
     pub fn volume(&self) -> Option<f32> {

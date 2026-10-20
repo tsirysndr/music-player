@@ -230,26 +230,6 @@ fn codec_of(uri: &str) -> Option<String> {
 /// No queue push — see the module docs.
 type Track = music_player_entity::track::Model;
 
-/// Peak-preserving resampling. Even a narrow transient must survive 400 -> 256.
-fn waveform_peaks(peaks: &[u8]) -> Option<Vec<u8>> {
-    if peaks.is_empty() {
-        return None;
-    }
-    Some(
-        (0..256)
-            .map(|i| {
-                let start = i * peaks.len() / 256;
-                let end = ((i + 1) * peaks.len()).div_ceil(256).min(peaks.len());
-                peaks[start..end.max(start + 1)]
-                    .iter()
-                    .copied()
-                    .max()
-                    .unwrap_or(0)
-            })
-            .collect(),
-    )
-}
-
 fn repeat(mode: i32) -> RemoteRepeat {
     match mode {
         1 => RemoteRepeat::All,
@@ -319,8 +299,8 @@ fn now_playing(track: Option<&Track>, queue: &Tracklist) -> RemoteNowPlaying {
         np.album_art = artwork(track);
         np.duration_ms = duration_ms(track.duration);
         np.codec = queue.codec().or_else(|| codec_of(&track.uri));
-        np.sample_rate = track.sample_rate.filter(|n| *n > 0);
-        np.bitrate = track.bitrate.filter(|n| *n > 0);
+        np.sample_rate = queue.sample_rate().or(track.sample_rate.filter(|n| *n > 0));
+        np.bitrate = queue.bitrate().or(track.bitrate.filter(|n| *n > 0));
     }
     np
 }
@@ -329,7 +309,6 @@ fn now_playing(track: Option<&Track>, queue: &Tracklist) -> RemoteNowPlaying {
 struct Enrichment {
     sample_rate: Option<u32>,
     bitrate: Option<u32>,
-    waveform: Option<Vec<u8>>,
     album_art: String,
 }
 
@@ -397,7 +376,6 @@ async fn enrich(
     source: String,
     progress: tokio::sync::watch::Sender<Enrichment>,
 ) -> Enrichment {
-    use music_player_storage::track_analysis::{self, TrackRef};
     let db = music_player_storage::shared().await;
     let conn = db.get_connection();
     let mut result = Enrichment::default();
@@ -413,23 +391,7 @@ async fn enrich(
         }
     }
     let _ = progress.send(result.clone());
-    if duration_ms(track.duration) == 0 || track.id.starts_with("radio:") {
-        return result;
-    }
-    let reference = TrackRef {
-        id: track.id,
-        uri: track.uri,
-        artist: track.artist,
-        title: track.title,
-    };
-    if let Ok(Ok(analysis)) = tokio::time::timeout(
-        Duration::from_secs(120),
-        track_analysis::ensure(conn, &source, &reference),
-    )
-    .await
-    {
-        result.waveform = waveform_peaks(&analysis.waveform);
-    }
+
     result
 }
 
@@ -507,18 +469,29 @@ async fn status_loop(
             }
             np.sample_rate = np.sample_rate.or(data.sample_rate);
             np.bitrate = np.bitrate.or(data.bitrate);
-            np.waveform = data.waveform.clone();
-            if np.waveform.is_some() {
-                np.waveform_status = Some("ready".into());
-            }
         }
-        if np.waveform.is_none()
-            && work.is_some()
-            && np.duration_ms > 0
-            && !track.as_ref().is_some_and(|t| t.id.starts_with("radio:"))
-        {
-            np.waveform_status = Some("pending".into());
-        }
+        // Use the same full-scale RMS calibration as playerd, never the
+        // percentile-normalized desktop display peaks stored by track analysis.
+        let waveform_source = track
+            .as_ref()
+            .filter(|t| np.duration_ms > 0 && !t.id.starts_with("radio:"))
+            .map(|t| t.uri.as_str())
+            .unwrap_or("");
+        let directory = dirs::cache_dir()
+            .unwrap_or_else(std::env::temp_dir)
+            .join("music-player/remote-waveforms-rms");
+        let waveform = crate::remote_waveform::request(waveform_source, &directory);
+        np.waveform_status = Some(
+            waveform["status"]
+                .as_str()
+                .filter(|s| *s != "idle")
+                .unwrap_or("unavailable")
+                .to_owned(),
+        );
+        np.waveform = waveform
+            .get("peaks")
+            .and_then(|v| serde_json::from_value::<Vec<u8>>(v.clone()).ok())
+            .filter(|v| v.len() == 256);
         if let Some(item) = items.get_mut(index as usize) {
             item.album_art = np.album_art.clone();
         }
@@ -566,7 +539,7 @@ mod tests {
         queue.set_volume(0.5);
         queue.set_modes(true, 1);
         let mut np = now_playing(Some(&track), &queue);
-        np.waveform = waveform_peaks(&vec![42; 400]);
+        np.waveform = Some(vec![42; 256]);
         np.waveform_status = Some("ready".into());
         player.set_now_playing(np);
         player.set_queue(vec![queue_item(&track)], 0);
@@ -617,6 +590,25 @@ mod tests {
     }
 
     #[test]
+    fn decoded_format_is_published_for_remote_tracks_without_library_tags() {
+        let track = Track {
+            uri: "https://example.test/stream".into(),
+            ..Default::default()
+        };
+        let mut queue = Tracklist::new_empty();
+        queue.set_audio_format(Some(("aac".into(), 48000, 256)));
+        let np = now_playing(Some(&track), &queue);
+        assert_eq!(np.codec.as_deref(), Some("aac"));
+        assert_eq!(np.sample_rate, Some(48000));
+        assert_eq!(np.bitrate, Some(256));
+        queue.set_audio_format(None);
+        let np = now_playing(Some(&track), &queue);
+        assert!(np.codec.is_none());
+        assert!(np.sample_rate.is_none());
+        assert!(np.bitrate.is_none());
+    }
+
+    #[test]
     fn artwork_is_portable_and_bounded() {
         assert!(thumbnail(b"not an image").is_empty());
         let image = image::RgbImage::from_pixel(512, 512, image::Rgb([20, 40, 60]));
@@ -652,19 +644,6 @@ mod tests {
         assert_eq!(items[count - 1].title, current.unwrap().title);
     }
 
-    #[test]
-    fn waveform_resampling_preserves_silence_transients_and_endpoints() {
-        assert!(waveform_peaks(&[]).is_none());
-        assert_eq!(waveform_peaks(&[0; 400]), Some(vec![0; 256]));
-        assert_eq!(waveform_peaks(&[83]), Some(vec![83; 256]));
-        for at in 0..400 {
-            let mut input = vec![0; 400];
-            input[at] = 255;
-            let out = waveform_peaks(&input).unwrap();
-            assert_eq!(out.len(), 256);
-            assert!(out.contains(&255));
-        }
-    }
     #[test]
     fn publishes_metadata_and_real_transport_and_clears_on_stop() {
         let mut track = Track {

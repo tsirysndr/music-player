@@ -56,9 +56,11 @@ path = "../rsql"
 version = "0.4.4"
 
 [dependencies]
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 anyhow = "1.0.67"
 dirs = "4.0.0"
-rocksky-sdk = {version = "0.11.2", features = ["remote-player"]}
+rocksky-sdk = {version = "0.14.0", features = ["remote-player"]}
 serde_json = "1.0.85"
 tracing = "0.1"
 chrono = "0.4.23"

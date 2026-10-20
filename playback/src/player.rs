@@ -622,6 +622,11 @@ impl PlayerInternal {
     /// Reconcile the engine's status with the tracklist state and emit events.
     fn poll_engine(&mut self) {
         let status = self.engine.status();
+        {
+            let mut queue = self.tracklist.lock().unwrap();
+            queue.set_volume(self.engine.volume());
+            queue.set_codec(status.metadata.as_ref().map(|m| m.codec.to_lowercase()));
+        }
         // Published every tick so a meter has something current to read; the
         // engine measures the PCM it actually hands to the output.
         self.maybe_prefetch_next(&status);
@@ -1183,6 +1188,10 @@ impl PlayerInternal {
     fn handle_set_volume(&mut self, volume: u16) {
         let volume = volume.min(100);
         self.engine.set_volume(volume as f32 / 100.0);
+        self.tracklist
+            .lock()
+            .unwrap()
+            .set_volume(volume as f32 / 100.0);
         self.send_event(PlayerEvent::VolumeSet { volume });
     }
 
@@ -1229,7 +1238,14 @@ impl PlayerInternal {
     }
 
     fn handle_remove_track(&mut self, index: usize) {
-        self.tracklist.lock().unwrap().remove_track_at(index);
+        {
+            let mut queue = self.tracklist.lock().unwrap();
+            let (played, upcoming) = queue.tracks();
+            if index >= played.len() + upcoming.len() {
+                return;
+            }
+            queue.remove_track_at(index);
+        }
         self.resync_engine_next();
     }
 

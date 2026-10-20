@@ -159,7 +159,6 @@ fn boot() {
         // the standalone server spawns it, and the embedded daemon must too.
         music_player_server::play_stats::spawn(Arc::clone(&tracklist));
         music_player_server::atproto_sync::spawn(Arc::clone(&tracklist));
-        music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
     });
     // MPRIS media controls (Linux only; the app handles macOS Now Playing).
     music_player_server::media_controls::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
@@ -180,6 +179,14 @@ fn boot() {
             registry,
         )))
     };
+
+    runtime.block_on(async {
+        music_player_server::remote::spawn(
+            Arc::clone(&tracklist),
+            Arc::clone(&cmd_tx),
+            Arc::clone(&providers),
+        );
+    });
 
     // gRPC server
     {

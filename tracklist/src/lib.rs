@@ -41,6 +41,8 @@ pub struct Tracklist {
     shuffle: bool,
     /// 0 off, 1 all, 2 one.
     repeat_mode: i32,
+    volume: Option<f32>,
+    codec: Option<String>,
 }
 
 impl Tracklist {
@@ -53,6 +55,8 @@ impl Tracklist {
             levels: Levels::default(),
             shuffle: false,
             repeat_mode: 0,
+            volume: None,
+            codec: None,
         }
     }
     pub fn new_empty() -> Self {
@@ -64,6 +68,8 @@ impl Tracklist {
             levels: Levels::default(),
             shuffle: false,
             repeat_mode: 0,
+            volume: None,
+            codec: None,
         }
     }
 
@@ -242,6 +248,24 @@ impl Tracklist {
 
     pub fn set_levels(&mut self, levels: Levels) {
         self.levels = levels;
+    }
+
+    pub fn codec(&self) -> Option<String> {
+        self.codec.clone()
+    }
+
+    pub fn set_codec(&mut self, codec: Option<String>) {
+        self.codec = codec.filter(|s| !s.is_empty());
+    }
+
+    pub fn volume(&self) -> Option<f32> {
+        self.volume
+    }
+
+    pub fn set_volume(&mut self, volume: f32) {
+        if volume.is_finite() {
+            self.volume = Some(volume.clamp(0.0, 1.0));
+        }
     }
 
     pub fn shuffle_enabled(&self) -> bool {

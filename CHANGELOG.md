@@ -10,6 +10,23 @@ This file starts at 0.2.1. For earlier releases see the
 
 ## [Unreleased]
 
+### Fixed
+
+#### Complete metadata on Rocksky remote controllers
+- Publish waveform readiness and 256 amplitude peaks, resampled from the stored
+  400-bar analysis. Missing analysis runs in the background; changing tracks
+  cancels the old request and clears its visible waveform. Live radio does not
+  trigger whole-track analysis.
+- Report actual shuffle, repeat, engine volume and decoded codec, plus available
+  bitrate and sample rate. Artwork and format enrichment publish independently
+  of the slower waveform analysis.
+- Send queue metadata and its zero-based current index, including track numbers
+  and linked song/album AT URIs. Local current-track covers are bounded JPEG
+  thumbnails usable by other devices; remote artwork URLs remain intact.
+- Queue jump/remove use the daemon's queue commands; unsupported enqueue/move
+  operations report an error instead of silently succeeding.
+- Upgrade the remote-player SDK to 0.14.0 for waveform and bitrate wire support.
+
 ### Added
 
 #### Listening analytics over your whole history, not just this player's

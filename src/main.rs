@@ -595,7 +595,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // smart playlists filter on them.
         music_player_server::play_stats::spawn(Arc::clone(&tracklist));
         music_player_server::atproto_sync::spawn(Arc::clone(&tracklist));
-        music_player_server::remote::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
+        music_player_server::remote::spawn(
+            Arc::clone(&tracklist),
+            Arc::clone(&cmd_tx),
+            Arc::clone(&providers),
+        );
         // MPRIS media controls (Linux only; no-op elsewhere).
         music_player_server::media_controls::spawn(Arc::clone(&tracklist), Arc::clone(&cmd_tx));
         // Arm queue persistence + restore the last session's queue (cued

@@ -8565,11 +8565,13 @@ version = "0.4.4"
 dependencies = [
  "anyhow",
  "async-stream 0.3.6",
+ "base64 0.22.1",
  "chrono",
  "dirs",
  "futures",
  "futures-channel",
  "futures-util",
+ "image",
  "log",
  "md5",
  "music-player-analysis",
@@ -11498,9 +11500,9 @@ dependencies = [
 
 [[package]]
 name = "rocksky-sdk"
-version = "0.11.2"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8defe56fd92bc027b3f990e75b61a3bf44b5221fbf597f14ad6e0e26cc850c50"
+checksum = "0cd395d325b9cb12235730195c0e03a694475cbf1acb0c42e694d6196b37f39a"
 dependencies = [
  "chrono",
  "futures",

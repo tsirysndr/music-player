@@ -230,6 +230,12 @@ fn codec_of(uri: &str) -> Option<String> {
 /// No queue push — see the module docs.
 type Track = music_player_entity::track::Model;
 
+// A modest display gain keeps RMS dynamics readable without track-by-track
+// normalization. Apply only when publishing, so cached analysis stays calibrated.
+fn waveform_display_level(level: u8) -> u8 {
+    ((u16::from(level) * 14 + 5) / 10).min(255) as u8
+}
+
 fn repeat(mode: i32) -> RemoteRepeat {
     match mode {
         1 => RemoteRepeat::All,
@@ -491,7 +497,8 @@ async fn status_loop(
         np.waveform = waveform
             .get("peaks")
             .and_then(|v| serde_json::from_value::<Vec<u8>>(v.clone()).ok())
-            .filter(|v| v.len() == 256);
+            .filter(|v| v.len() == 256)
+            .map(|levels| levels.into_iter().map(waveform_display_level).collect());
         if let Some(item) = items.get_mut(index as usize) {
             item.album_art = np.album_art.clone();
         }
@@ -539,7 +546,7 @@ mod tests {
         queue.set_volume(0.5);
         queue.set_modes(true, 1);
         let mut np = now_playing(Some(&track), &queue);
-        np.waveform = Some(vec![42; 256]);
+        np.waveform = Some(vec![waveform_display_level(42); 256]);
         np.waveform_status = Some("ready".into());
         player.set_now_playing(np);
         player.set_queue(vec![queue_item(&track)], 0);
@@ -573,7 +580,7 @@ mod tests {
         .unwrap();
         player.disconnect();
         let first = &observed[0];
-        assert_eq!(first["waveform"], serde_json::json!(vec![42; 256]));
+        assert_eq!(first["waveform"], serde_json::json!(vec![59; 256]));
         assert_eq!(first["waveform_status"], "ready");
         assert_eq!(first["codec"], "flac");
         assert_eq!(first["sample_rate"], 48000);

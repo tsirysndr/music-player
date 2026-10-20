@@ -8,26 +8,40 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
-## [Unreleased]
-
-### Fixed
-
-#### Complete metadata on Rocksky remote controllers
-- Publish waveform readiness and 256 full-scale RMS levels using playerd’s
-  calculation with a modest 1.4× display gain, avoiding normalized desktop peaks. Analysis runs in the background; changing tracks
-  cancels the old request and clears its visible waveform. Live radio does not
-  trigger whole-track analysis.
-- Report actual shuffle, repeat, engine volume and decoded codec, plus available
-  bitrate and sample rate. Artwork and format enrichment publish independently
-  of the slower waveform analysis.
-- Send queue metadata and its zero-based current index, including track numbers
-  and linked song/album AT URIs. Local current-track covers are bounded JPEG
-  thumbnails usable by other devices; remote artwork URLs remain intact.
-- Queue jump/remove use the daemon's queue commands; unsupported enqueue/move
-  operations report an error instead of silently succeeding.
-- Upgrade the remote-player SDK to 0.14.0 for waveform and bitrate wire support.
+## [0.4.5] — 2026-10-20
 
 ### Added
+
+#### Tracks are identified by their audio, not their tags
+- Tags lie: files arrive with none at all, as `track03.mp3`, or tagged
+  `Unknown Artist` by something that gave up. Every local file now also gets
+  a **Chromaprint** acoustic fingerprint — the one AcoustID indexes — and the
+  files whose tags are missing are named from the MusicBrainz recording that
+  fingerprint matches. Chromaprint comes from `rusty-chromaprint`, a pure-Rust
+  port rather than a statically linked libchromaprint: no build script, no
+  system dependency, the same answer on every target. Verified against
+  `fpcalc` — mp3 and wav agree to under 1% bit error, AAC to 5.7%, which is
+  symphonia and ffmpeg disagreeing about encoder delay and well inside
+  AcoustID's tolerance.
+- Fingerprinting and identification are two passes on top of a scan that has
+  already finished, for the reason key and tempo are: they decode audio and
+  talk to the network, and whether to await or detach that is the caller's
+  decision. `scan` awaits them; the daemon detaches them at a background pace.
+  Fingerprinting decodes only the first two minutes of a file and streams from
+  disk, so several run at once without holding one in memory — eight workers in
+  the foreground, one or two plus proportional rests in the background.
+  Identification is sequential with a gap, because AcoustID is somebody else's
+  free service.
+- Only tracks actually missing something are asked about, and **tags that exist
+  are never overwritten**: they came from whoever made the file and beat a guess
+  from a database. A candidate recording whose length disagrees by more than 15
+  seconds is rejected — a popular song matches its own remixes, and tagging the
+  album cut as the extended mix is worse than the blank it started with. Every
+  answer is stored, misses included, so nothing is asked twice.
+- Lookups need an AcoustID application key (`acoustid_api_key`, or
+  `ACOUSTID_API_KEY`) — they are free and cannot be invented, so there is none
+  to ship. Without one the fingerprints are still computed and stored, and
+  turning the key on later is a lookup rather than a rescan.
 
 #### Listening analytics over your whole history, not just this player's
 - `play_history` records every listen, but a library that has only ever been
@@ -74,7 +88,82 @@ This file starts at 0.2.1. For earlier releases see the
   API and the MCP tools), matched on title and artist so an imported play
   still counts when you own the track.
 
+### Changed
+
+- Building now needs `./scripts/fetch-duckdb.sh` once before `cargo`. It
+  fetches the prebuilt static DuckDB from upstream's GitHub release into
+  `vendor/`, so nothing compiles the DuckDB C++ sources and the binary stays
+  a single self-contained file. It cannot be a build script: `libduckdb-sys`
+  resolves the library when its own crate compiles, and Cargo offers no way
+  to order another crate's build script ahead of that.
+
 ### Fixed
+
+#### The catalogue decides how a radio announcement reads
+- An ICY `StreamTitle` carries two halves and no rule about their order. The
+  engine split on the first `" - "` and called the left half the artist, so a
+  station that announces the title first was scrobbled backwards — silently,
+  and with a match to back it up, because `matchSong` is fuzzy to a fault:
+  asked about *Muse* as a title by an artist called *Madness*, it answers
+  Marillion's *Muse in the Madness* rather than nothing. A reading is now
+  believed only when the catalogue answers about **both halves it was asked
+  about**, compared on letters and digits alone — stations drop apostrophes the
+  catalogue keeps. The likely reading is asked about first and, once confirmed,
+  nothing else is asked, so the common case still costs one call; the reverse
+  is tried behind it and has to be confirmed to win. When neither is, the first
+  reading stands.
+- Splitting also catches en and em dashes. An unspaced hyphen is left alone —
+  it belongs to Jay-Z and Blink-182 more often than it separates anything — and
+  an announcement with no two halves still never counts as a play, so idents and
+  jingles go on leaving the song around them alone.
+- A single unanswered `matchSong` no longer writes a radio play off for good.
+  The call reaches out to external metadata providers and, when they do not
+  answer, returns an empty body that reads exactly like *this announcement is
+  not a song*: five songs went that way in an afternoon of radio, four of which
+  matched plainly when asked again. A miss now has to repeat three times, 30s
+  apart — well inside a song — before the announcement is dropped.
+
+#### Complete metadata on Rocksky remote controllers
+- Publish waveform readiness and 256 full-scale RMS levels using playerd’s
+  calculation with a modest 1.4× display gain, avoiding normalized desktop peaks. Analysis runs in the background; changing tracks
+  cancels the old request and clears its visible waveform. Live radio does not
+  trigger whole-track analysis.
+- Report actual shuffle, repeat, engine volume and decoded codec, plus available
+  bitrate and sample rate. Artwork and format enrichment publish independently
+  of the slower waveform analysis.
+- Send queue metadata and its zero-based current index, including track numbers
+  and linked song/album AT URIs. Local current-track covers are bounded JPEG
+  thumbnails usable by other devices; remote artwork URLs remain intact.
+- Queue jump/remove use the daemon's queue commands; unsupported enqueue/move
+  operations report an error instead of silently succeeding.
+- Upgrade the remote-player SDK to 0.14.0 for waveform and bitrate wire support.
+
+#### Imported history lost its artwork, and the panel its charts
+- Artwork was missing for a quarter of the most-played tracks, and the cause
+  was the album parameter. It is meant to steer a match toward the right
+  release, and when it disagrees with the catalogue's spelling it does not
+  merely fail to help — it narrows the search until nothing matches: *Good
+  Ones* by Charli xcx resolves instantly with no album and misses with *CRASH*,
+  which is the album the export holds for it. A miss with an album is now asked
+  again without one, which took a 400-track retry from 18 resolved to 278.
+- That only helped because a miss can now be retried at all. An empty answer
+  from a busy catalogue is indistinguishable from a real absence, and caching it
+  forever is what left mainstream tracks permanently without art. Misses expire
+  after a week, and `enrich --retry-misses` ignores the wait. Artist pictures
+  expire on the same terms.
+- DuckDB allows a single writer, so while an import runs the desktop panel
+  cannot read it. `load_history` returned a default `HistoryData` in that case,
+  which the UI read as *there is no history* and hid nine years of charts — the
+  feature looked broken for as long as a backfill took. It now returns an
+  `Option`: `None` is *could not read it just now*, distinct from `Some(empty)`,
+  and the UI leaves what is on screen alone.
+- Most Played is ordered by play count again. Fetching each row's album cover
+  added a join onto `v_most_played`, and SQLite does not carry a view's internal
+  ordering through a select that joins onto it, so the screen returned rows in
+  physical order — a track with five plays above one with seven. The three
+  affected queries now state their own `ORDER BY`.
+
+#### Queries, builds and tests
 - The deduplicated corpus is materialised rather than computed per query. It
   was a view whose test is a correlated `NOT EXISTS` over every listen, so it
   re-ran on *every* query that touched it — 4.2s for a bare `count(*)` over
@@ -92,14 +181,19 @@ This file starts at 0.2.1. For earlier releases see the
 - `server/build.rs` declared no `rerun-if-changed`, so editing a `.proto` left
   Cargo serving the previously generated bindings and the change failed to
   compile against a message that was right there in the file.
-
-### Changed
-- Building now needs `./scripts/fetch-duckdb.sh` once before `cargo`. It
-  fetches the prebuilt static DuckDB from upstream's GitHub release into
-  `vendor/`, so nothing compiles the DuckDB C++ sources and the binary stays
-  a single self-contained file. It cannot be a build script: `libduckdb-sys`
-  resolves the library when its own crate compiles, and Cargo offers no way
-  to order another crate's build script ahead of that.
+- CI failed with *could not find native static library* `duckdb_static`:
+  `scripts/fetch-duckdb.sh` never ran there. Every workflow that invokes cargo
+  now runs it after checkout. Two cannot — Windows has no static DuckDB for an
+  MSVC target and ships the DLL beside the binary, and a nix build has no
+  network, so the derivations take duckdb from nixpkgs — and both work by
+  setting `DUCKDB_LIB_DIR`/`DUCKDB_STATIC` in the environment, which overrides
+  `.cargo/config.toml` because `[env]` without `force = true` yields to a
+  variable that is already set.
+- The MCP catalogue test asserts a literal list of tool names, and the nine
+  `listening_*` tools were missing from it. A second test pins the gap that let
+  that through: those tools dispatch via their own `names()` list, so one added
+  to the catalogue and not to that list would be advertised and then answer
+  *unknown tool*.
 
 ## [0.4.4] — 2026-09-15
 
@@ -856,6 +950,8 @@ outright. See the README for setup.
 Stack modernization: the Rockbox playback engine, SQLite FTS5 search, a ratatui
 TUI and a Tauri 2 desktop app.
 
+[0.4.5]: https://github.com/tsirysndr/music-player/compare/v0.4.4...v0.4.5
+[0.4.4]: https://github.com/tsirysndr/music-player/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/tsirysndr/music-player/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/tsirysndr/music-player/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/tsirysndr/music-player/compare/v0.4.0...v0.4.1

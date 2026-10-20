@@ -1,6 +1,6 @@
 [package]
 name = "music-player-mcp"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -9,19 +9,19 @@ description = "A Model Context Protocol server for music-player, so an agent can
 
 [dependencies.music-player-analytics]
 path = "../analytics"
-version = "0.4.4"
+version = "0.4.5"
 
 [dependencies.music-player-client]
 path = "../client"
-version = "0.4.4"
+version = "0.4.5"
 
 [dependencies.music-player-server]
 path = "../server"
-version = "0.4.4"
+version = "0.4.5"
 
 [dependencies.music-player-types]
 path = "../types"
-version = "0.4.4"
+version = "0.4.5"
 
 [dependencies]
 anyhow = "1.0.67"

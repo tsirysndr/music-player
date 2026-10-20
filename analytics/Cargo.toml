@@ -1,6 +1,6 @@
 [package]
 name = "music-player-analytics"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2021"
 repository = "https://github.com/tsirysndr/music-player"
 license = "MIT"
@@ -9,11 +9,11 @@ description = "The listening-analytics engine of music player: a DuckDB lens ove
 
 [dependencies.music-player-settings]
 path = "../settings"
-version = "0.4.4"
+version = "0.4.5"
 
 [dependencies.music-player-storage]
 path = "../storage"
-version = "0.4.4"
+version = "0.4.5"
 
 [dependencies]
 # Linked against the prebuilt static libduckdb from the upstream GitHub
@@ -32,7 +32,7 @@ tracing = "0.1"
 
 [dev-dependencies.music-player-migration]
 path = "../migration"
-version = "0.4.4"
+version = "0.4.5"
 
 [dev-dependencies]
 tempfile = "3.3.0"

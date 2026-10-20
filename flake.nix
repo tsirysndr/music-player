@@ -72,7 +72,7 @@
           commonArgs = {
             inherit src;
             pname = "music-player";
-            version = "0.4.4";
+            version = "0.4.5";
             strictDeps = true;
 
             # Only the daemon/CLI: the Slint desktop client is a workspace

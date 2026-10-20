@@ -300,7 +300,9 @@ fn pending(analytics: &Analytics, limit: u32, retry_misses: bool) -> Result<Vec<
     let stale = if retry_misses {
         "OR NOT m.resolved".to_string()
     } else {
-        format!("OR (NOT m.resolved AND m.matched_at < now() - INTERVAL {RETRY_MISSES_AFTER_DAYS} DAY)")
+        format!(
+            "OR (NOT m.resolved AND m.matched_at < now() - INTERVAL {RETRY_MISSES_AFTER_DAYS} DAY)"
+        )
     };
     let mut statement = analytics.conn().prepare(&format!(
         "SELECT l.match_key, mode(l.title), mode(l.artist), mode(l.album)

@@ -41,16 +41,30 @@ const SKIP: &[&str] = &["tpcds", "tpch"];
 fn main() {
     println!("cargo:rerun-if-env-changed=DUCKDB_LIB_DIR");
 
-    let Some(lib_dir) = vendored_lib_dir() else {
+    let lib_dir = match vendored_lib_dir() {
+        Vendored::Usable(lib_dir) => lib_dir,
+        // The archives on disk are for another platform, and `libduckdb-sys`
+        // has already been pointed at them by DUCKDB_LIB_DIR — it links them
+        // whatever they contain. Letting that through produces a wall of
+        // `ignoring file … found architecture 'arm64', required architecture
+        // 'x86_64'` and then every DuckDB symbol undefined, which names
+        // neither the cause nor the fix.
+        Vendored::WrongPlatform { stamp, want } => panic!(
+            "vendor/duckdb/lib holds {stamp}, but this build needs {want}.\n\
+             Run: ./scripts/fetch-duckdb.sh --target {}",
+            env::var("TARGET").unwrap_or_default()
+        ),
         // Not fatal. A build that overrides DUCKDB_LIB_DIR/DUCKDB_STATIC to
         // use a shared library, or targets a platform with no prebuilt static
         // release, is legitimate and already has its own link flags from the
         // sys crate; only the support archives below would be missing, and
         // those come with the shared library.
-        println!(
-            "cargo:warning=vendor/duckdb/lib is missing or stale — run scripts/fetch-duckdb.sh"
-        );
-        return;
+        Vendored::Absent => {
+            println!(
+                "cargo:warning=vendor/duckdb/lib is missing or stale — run scripts/fetch-duckdb.sh"
+            );
+            return;
+        }
     };
     println!(
         "cargo:rerun-if-changed={}",
@@ -111,23 +125,71 @@ fn archive_name(path: &Path) -> Option<String> {
     Some(stem.strip_prefix("lib").unwrap_or(stem).to_owned())
 }
 
-/// `vendor/duckdb/lib`, but only when its stamp says it holds a complete set
-/// of archives for this platform and DuckDB version.
-fn vendored_lib_dir() -> Option<PathBuf> {
-    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").ok()?);
-    let root = manifest
-        .ancestors()
-        .find(|dir| dir.join("Cargo.toml").exists() && dir.join("migration").is_dir())?;
-    let lib_dir = root.join("vendor/duckdb/lib");
+/// What `vendor/duckdb/lib` holds, as its stamp reports it.
+enum Vendored {
+    /// A complete set of archives for this target and DuckDB version.
+    Usable(PathBuf),
+    /// Archives for a different target or DuckDB version. `fetch-duckdb.sh`
+    /// re-extracts on a target change, so this is a fetch that was skipped or
+    /// run for the wrong target — on a machine that builds more than one.
+    WrongPlatform { stamp: String, want: String },
+    /// Nothing vendored, or a build pointed at its own DuckDB.
+    Absent,
+}
 
-    let platform = match env::var("TARGET").ok()?.as_str() {
+/// Read the stamp in `vendor/duckdb/lib` and say whether it matches this
+/// build's target.
+fn vendored_lib_dir() -> Vendored {
+    let Some(lib_dir) = vendor_lib_path() else {
+        return Vendored::Absent;
+    };
+    let Ok(target) = env::var("TARGET") else {
+        return Vendored::Absent;
+    };
+    // Must match the table in `scripts/fetch-duckdb.sh`.
+    let platform = match target.as_str() {
         "aarch64-apple-darwin" => "osx-arm64",
         "x86_64-apple-darwin" => "osx-amd64",
         "x86_64-unknown-linux-gnu" => "linux-amd64",
         "aarch64-unknown-linux-gnu" => "linux-arm64",
-        _ => return None,
+        // No prebuilt static release for this target; the sys crate is
+        // linking something else entirely.
+        _ => return Vendored::Absent,
     };
     let want = format!("{DUCKDB_VERSION}-{platform}");
-    let stamp = fs::read_to_string(lib_dir.join(".stamp")).ok()?;
-    (stamp.trim() == want).then_some(lib_dir)
+
+    let Ok(stamp) = fs::read_to_string(lib_dir.join(".stamp")) else {
+        return Vendored::Absent;
+    };
+    let stamp = stamp.trim().to_owned();
+    if stamp == want {
+        Vendored::Usable(lib_dir)
+    } else if points_at_vendor(&lib_dir) {
+        Vendored::WrongPlatform { stamp, want }
+    } else {
+        // A stale directory nothing is linking against: the build was sent
+        // elsewhere by DUCKDB_LIB_DIR and the mismatch cannot hurt it.
+        Vendored::Absent
+    }
+}
+
+/// `<workspace root>/vendor/duckdb/lib`.
+fn vendor_lib_path() -> Option<PathBuf> {
+    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").ok()?);
+    let root = manifest
+        .ancestors()
+        .find(|dir| dir.join("Cargo.toml").exists() && dir.join("migration").is_dir())?;
+    Some(root.join("vendor/duckdb/lib"))
+}
+
+/// Whether `libduckdb-sys` is actually linking the vendored directory — it
+/// reads `DUCKDB_LIB_DIR`, which `.cargo/config.toml` defaults to this path
+/// and the nix and Windows builds override.
+fn points_at_vendor(lib_dir: &Path) -> bool {
+    let Ok(configured) = env::var("DUCKDB_LIB_DIR") else {
+        return false;
+    };
+    let configured = PathBuf::from(configured);
+    fs::canonicalize(&configured).unwrap_or(configured)
+        == fs::canonicalize(lib_dir).unwrap_or_else(|_| lib_dir.to_owned())
 }

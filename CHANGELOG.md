@@ -189,6 +189,17 @@ This file starts at 0.2.1. For earlier releases see the
   setting `DUCKDB_LIB_DIR`/`DUCKDB_STATIC` in the environment, which overrides
   `.cargo/config.toml` because `[env]` without `force = true` yields to a
   variable that is already set.
+- The DuckDB archive is chosen by the **target**, not the host.
+  `fetch-duckdb.sh` read `uname -m`, so the `x86_64-apple-darwin` release job —
+  cross-compiling on an arm64 macOS runner — vendored the arm64 archive and the
+  link became a wall of *ignoring file … found architecture 'arm64', required
+  architecture 'x86_64'* with every DuckDB symbol undefined. The script now
+  takes `--target` (and reads `CARGO_BUILD_TARGET`/`TARGET`), the release
+  workflows pass their matrix target, and a plain run still resolves the host.
+  `analytics/build.rs` no longer merely warns when the vendored archives are for
+  another platform: it fails with the stamp it found, the one it needs, and the
+  command to fix it, since `libduckdb-sys` links whatever `DUCKDB_LIB_DIR`
+  holds regardless.
 - The MCP catalogue test asserts a literal list of tool names, and the nine
   `listening_*` tools were missing from it. A second test pins the gap that let
   that through: those tools dispatch via their own `names()` list, so one added

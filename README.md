@@ -733,3 +733,12 @@ Playback isn't limited to the machine running the daemon — from the web UI or 
   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tsirysndr/music-player&type=Date" />
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tsirysndr/music-player&type=Date" />
 </picture>
+
+## CI with Dagger and PureScript
+
+Linux tests, coverage, Clippy, web builds, releases, and Nix checks run through
+PureScript modules in [`.dagger/`](.dagger/README.md), using Dagger
+**1.0.0-beta.21**. Run the same pipelines locally with `mise exec -- dagger`.
+The guide covers commands, artifacts, caches, and the native platform jobs that
+remain in GitHub Actions. The vendored PureScript SDK is an unofficial personal
+experiment.

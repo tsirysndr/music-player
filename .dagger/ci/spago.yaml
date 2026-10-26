@@ -1,0 +1,12 @@
+package:
+  name: music-player-ci
+  dependencies:
+    - aff
+    - dagger-sdk
+    - effect
+    - exceptions
+    - maybe
+    - prelude
+workspace:
+  packageSet:
+    registry: 77.8.0

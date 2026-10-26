@@ -36,3 +36,10 @@ cargo/
 
 # Prebuilt DuckDB static libraries, fetched by scripts/fetch-duckdb.sh
 /vendor/
+
+# Dagger CI outputs
+/artifacts/
+/release-source/
+.dagger/**/.spago/
+.dagger/**/output/
+.dagger/**/node_modules/

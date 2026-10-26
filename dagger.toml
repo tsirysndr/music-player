@@ -1,0 +1,9 @@
+[modules.purescript]
+source = ".dagger/sdk/purescript"
+
+[sdks.purescript]
+module = "purescript"
+
+[sdks.purescript.scopes.".dagger/ci"]
+is-module = true
+name = "music-player-ci"

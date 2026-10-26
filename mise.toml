@@ -1,0 +1,9 @@
+# Beta releases are distributed by dl.dagger.io, not GitHub Releases.
+[tools."http:dagger"]
+version = "1.0.0-beta.21"
+
+[tools."http:dagger".platforms]
+macos-arm64 = { url = "https://dl.dagger.io/dagger/releases/1.0.0-beta.21/dagger_v1.0.0-beta.21_darwin_arm64.tar.gz", checksum = "sha256:781f4862c022a19b9a4c498b59e1d9cfda1ee3cdc8ce210e4545bd8842a7416d" }
+macos-x64 = { url = "https://dl.dagger.io/dagger/releases/1.0.0-beta.21/dagger_v1.0.0-beta.21_darwin_amd64.tar.gz", checksum = "sha256:fdbe191c965d240ee9cc90719fa9dca1586805cbb89b0a0087314a84a0937354" }
+linux-arm64 = { url = "https://dl.dagger.io/dagger/releases/1.0.0-beta.21/dagger_v1.0.0-beta.21_linux_arm64.tar.gz", checksum = "sha256:ba9d55638636918a3404313511bceba5cc0af22f487c1c1b6a5ba60ce70a61bb" }
+linux-x64 = { url = "https://dl.dagger.io/dagger/releases/1.0.0-beta.21/dagger_v1.0.0-beta.21_linux_amd64.tar.gz", checksum = "sha256:c5ac777a5c99089869660943381136e22177b59a46412e310c2fef594760a041" }

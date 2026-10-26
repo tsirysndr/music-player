@@ -1,0 +1,15 @@
+The original SDK implementation is licensed under the MIT License.
+
+schema/introspection.json and the schema-derived API descriptions originate from
+Dagger (https://github.com/dagger/dagger), licensed under Apache-2.0.
+The upstream license is preserved in schema/LICENSE.
+
+Snapshot: live Dagger v1.0.0-beta.21 introspection
+Engine commit: a7a2e64e853be92728f05aad9dc07bebe63c7448
+Query: cmd/codegen/introspection/introspection.graphql
+Module dependency bindings are generated ahead of execution using the
+engine-provided schema and should be committed with the module sources.
+
+The committed bootstrap bindings under runtime/ are also generated from or
+vendor the Dagger project under Apache-2.0. The Python SDK retains its own
+LICENSE file; the Go bindings use the upstream license referenced above.

@@ -1,0 +1,22 @@
+{
+  "name": "dagger-purescript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "spago build",
+    "generate": "node scripts/generate.mjs",
+    "check-generated": "node scripts/generate.mjs --check",
+    "test": "node --test test/*.test.mjs && spago test && node scripts/generate.mjs --check",
+    "test:integration": "spago run --main Test.Integration",
+    "test:modules": "node scripts/test-modules.mjs"
+  },
+  "devDependencies": {
+    "purescript": "0.15.16",
+    "spago": "1.0.5"
+  },
+  "license": "MIT"
+}

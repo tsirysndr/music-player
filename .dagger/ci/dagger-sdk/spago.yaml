@@ -1,0 +1,20 @@
+package:
+  name: dagger-sdk
+  dependencies:
+    - aff
+    - argonaut-codecs
+    - argonaut-core
+    - arrays
+    - console
+    - effect
+    - either
+    - exceptions
+    - foldable-traversable
+    - maybe
+    - newtype
+    - nullable
+    - prelude
+    - strings
+    - tuples
+    - foreign-object
+    - typelevel-prelude

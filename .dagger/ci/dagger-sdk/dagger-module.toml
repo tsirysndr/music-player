@@ -1,0 +1,10 @@
+name = "purescript-sdk"
+engineVersion = "v1.0.0-beta.21"
+include = ["src/**", "scripts/**", "spago.yaml", "package.json", "LICENSE", "NOTICE"]
+source = "runtime"
+
+[runtime]
+  source = "go"
+
+[codegen]
+  automaticGitignore = false

@@ -20,69 +20,34 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
     steps:
+      # Keep pipeline tooling at the workflow revision, even for an older release tag.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
-
+          path: release-source
+      - name: Set up Dagger
+        uses: ./.github/actions/setup-dagger
       - name: Set release version
-        run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> "$GITHUB_ENV"
         env:
           TAG_INPUT: ${{ inputs.tag }}
 
-      - name: Vendor DuckDB
-        # `libduckdb-sys` resolves `-l static=duckdb_static` when its own crate
-        # compiles, and Cargo gives no way to order another crate's build script
-        # ahead of that — so the libraries must be on disk before cargo runs at
-        # all. The target, not the host, decides the archive: a macOS runner is
-        # arm64 and still builds x86_64-apple-darwin. See scripts/fetch-duckdb.sh.
-        run: ./scripts/fetch-duckdb.sh --target ${{ matrix.target }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Install Rust 1.98.0
-        run: |
-          rustup toolchain install 1.98.0 --profile minimal
-          rustup default 1.98.0
-          rustup target add ${{ matrix.target }}
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler
-
-      - name: Build webui
-        run: |
-          cd webui/musicplayer
-          bun install
-          bun run build
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Package binary
-        run: |
-          ASSET=music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
-          tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player
-          sha256sum $ASSET.tar.gz > $ASSET.tar.gz.sha256
+      - name: Build and package Linux binary
+        run: >-
+          dagger api call -m .dagger/ci linux-release
+          --source ./release-source
+          --target "${{ matrix.target }}"
+          --version "$RELEASE_VERSION"
+          export --path artifacts/release
 
       - name: Upload release assets
         run: |
-          gh release upload ${{ env.RELEASE_VERSION }} \
-            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
-            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 \
+          gh release upload "$RELEASE_VERSION" \
+            artifacts/release/music-player_"${RELEASE_VERSION}"_"${{ matrix.target }}".tar.gz \
+            artifacts/release/music-player_"${RELEASE_VERSION}"_"${{ matrix.target }}".tar.gz.sha256 \
             --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

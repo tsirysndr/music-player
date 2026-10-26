@@ -1,0 +1,22 @@
+name: Dagger integration pipeline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-dagger
+      - name: Integration tests and release build
+        run: ./.dagger/run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration-and-build
+          path: artifacts/
+          if-no-files-found: error

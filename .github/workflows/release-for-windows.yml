@@ -8,7 +8,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           choco install protoc
@@ -47,7 +47,7 @@ jobs:
           arc archive music-player_x86_64-pc-windows-gnu.tar.gz  target\release\music-player.exe target\release\duckdb.dll
           checksum -t sha256  -f="music-player_x86_64-pc-windows-gnu.tar.gz" > music-player_x86_64-pc-windows-gnu.tar.gz.sha256
       - name: Releasing assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             music-player_x86_64-pc-windows-gnu.tar.gz

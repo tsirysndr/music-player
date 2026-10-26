@@ -42,23 +42,34 @@ jobs:
         env:
           TAG_INPUT: ${{ inputs.tag }}
 
-      - name: Vendor DuckDB
-        # `libduckdb-sys` resolves `-l static=duckdb_static` when its own crate
-        # compiles, and Cargo gives no way to order another crate's build script
-        # ahead of that — so the libraries must be on disk before cargo runs at
-        # all. The target, not the host, decides the archive: a macOS runner is
-        # arm64 and still builds x86_64-apple-darwin. See scripts/fetch-duckdb.sh.
-        run: ./scripts/fetch-duckdb.sh --target ${{ matrix.target }}
+      - name: Set up Dagger (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-dagger
+
+      - name: Build and package Linux desktop
+        if: runner.os == 'Linux'
+        run: >-
+          dagger api call -m .dagger/ci linux-release
+          --source . --target "${{ matrix.target }}"
+          --version "$RELEASE_VERSION" --desktop
+          export --path .
+
+      - name: Vendor DuckDB (macOS)
+        if: runner.os == 'macOS'
+        run: ./scripts/fetch-duckdb.sh --target "${{ matrix.target }}"
 
       - uses: oven-sh/setup-bun@v2
+        if: runner.os == 'macOS'
 
-      - name: Install Rust 1.98.0
+      - name: Install Rust 1.98.0 (macOS)
+        if: runner.os == 'macOS'
         run: |
           rustup toolchain install 1.98.0 --profile minimal
           rustup default 1.98.0
-          rustup target add ${{ matrix.target }}
+          rustup target add "${{ matrix.target }}"
 
       - uses: actions/cache@v4
+        if: runner.os == 'macOS'
         with:
           path: |
             ~/.cargo/registry/index/
@@ -67,52 +78,20 @@ jobs:
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-slint-desktop-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config protobuf-compiler \
-            libasound2-dev libdbus-1-dev libfontconfig1-dev \
-            libxkbcommon-dev libwayland-dev libfontconfig1-dev
-
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install protobuf
 
-      # music-player-webui embeds webui/musicplayer/build at compile time.
-      - name: Build webui
+      - name: Build webui (macOS)
+        if: runner.os == 'macOS'
+        working-directory: webui/musicplayer
         run: |
-          cd webui/musicplayer
           bun install
           bun run build
 
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }} -p music-player -p music-player-desktop
-
-      - name: Install Linux packaging tools
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y dpkg-dev rpm
-
-      - name: Build Debian and RPM packages
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          case "${{ matrix.target }}" in
-            x86_64-unknown-linux-gnu) package_arch=x86_64 ;;
-            aarch64-unknown-linux-gnu) package_arch=aarch64 ;;
-            *) echo "Unsupported Linux target: ${{ matrix.target }}" >&2; exit 1 ;;
-          esac
-          ./dist/package-linux.sh all \
-            "${{ env.RELEASE_VERSION }}" \
-            "$package_arch" \
-            "target/${{ matrix.target }}/release"
-
-      - name: Package binary (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          ASSET=music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
-          tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player-desktop
-          sha256sum $ASSET.tar.gz > $ASSET.tar.gz.sha256
+      - name: Build desktop (macOS)
+        if: runner.os == 'macOS'
+        run: cargo build --release --target "${{ matrix.target }}" -p music-player -p music-player-desktop
 
       # Ships an ad-hoc signed `Music Player.app`. The asset names are kept
       # byte-identical to the ones earlier releases used so that

@@ -1,0 +1,9 @@
+name: Set up Dagger
+description: Install the repository-pinned Dagger 1.0.0-beta.21 CLI
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v2
+    - name: Check CLI version
+      shell: bash
+      run: dagger version

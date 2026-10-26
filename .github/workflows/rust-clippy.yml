@@ -17,44 +17,15 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Vendor DuckDB
-        # `libduckdb-sys` resolves `-l static=duckdb_static` when its own crate
-        # compiles, and Cargo gives no way to order another crate's build script
-        # ahead of that — so the libraries must be on disk before cargo runs at
-        # all. See scripts/fetch-duckdb.sh.
-        run: ./scripts/fetch-duckdb.sh
-
-      - name: Install Rust 1.98.0
-        run: |
-          rustup toolchain install 1.98.0 --profile minimal --component clippy
-          rustup default 1.98.0
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-clippy-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev pkg-config protobuf-compiler
-
-      - name: Install sarif tools
-        run: cargo install clippy-sarif sarif-fmt
-
-      - name: Run rust-clippy
-        run: cargo clippy --all-features --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+      - uses: actions/checkout@v4
+      - name: Set up Dagger
+        uses: ./.github/actions/setup-dagger
+      - name: Analyze with Clippy
+        run: dagger api call -m .dagger/ci clippy --source . export --path artifacts/rust-clippy-results.sarif
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: rust-clippy-results.sarif
+          sarif_file: artifacts/rust-clippy-results.sarif
           wait-for-processing: true

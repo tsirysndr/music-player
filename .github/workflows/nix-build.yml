@@ -16,12 +16,26 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Nix
+        if: runner.os == 'macOS'
         uses: DeterminateSystems/nix-installer-action@v16
 
       - name: Build
+        if: runner.os == 'macOS'
         run: nix build -L
 
       - name: Show binary info
+        if: runner.os == 'macOS'
         run: |
           ls -la result/bin/
           file result/bin/music-player
+
+      - name: Set up Dagger (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-dagger
+
+      - name: Build with Nix in Dagger (Linux)
+        if: runner.os == 'Linux'
+        env:
+          PLATFORM: ${{ runner.arch == 'ARM64' && 'linux/arm64' || 'linux/amd64' }}
+        run: >-
+          dagger api call -m .dagger/ci nix-flake --source . --platform "$PLATFORM"

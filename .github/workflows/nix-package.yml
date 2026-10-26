@@ -42,11 +42,34 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build
+        if: runner.os == 'macOS'
         run: |
           nix-build nix -A ${{ matrix.attr }} \
             -I nixpkgs=channel:nixos-unstable
 
       - name: Show binary info
+        if: runner.os == 'macOS'
         run: |
           ls -la result/bin/
           file result/bin/${{ matrix.attr }}
+
+      - name: Set up Dagger (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-dagger
+
+      - name: Build with Nix in Dagger (Linux)
+        if: runner.os == 'Linux'
+        env:
+          PLATFORM: ${{ runner.arch == 'ARM64' && 'linux/arm64' || 'linux/amd64' }}
+        run: >-
+          dagger api call -m .dagger/ci nix-package --source . --platform "$PLATFORM" --attribute "${{ matrix.attr }}"
+          export --path artifacts/nix
+
+      # Import the Dagger-built closure so the existing Cachix post action can publish it.
+      - name: Import Nix result for Cachix (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          nix copy --from "file://$PWD/artifacts/nix/store" "$(cat artifacts/nix/store-path)"
+          ln -s "$(cat artifacts/nix/store-path)" result
+          ls -la result/bin/
+          file "result/bin/${{ matrix.attr }}"

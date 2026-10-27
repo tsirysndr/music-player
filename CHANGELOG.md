@@ -8,6 +8,39 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.6] — 2026-10-27
+
+### Fixed
+
+#### The equalizer's outermost sliders did nothing, and the tone knobs could only cut
+- Bands 0 and 9 are *shelving* filters, and they were programmed at Rockbox's
+  default cutoffs — 32 Hz and 16 kHz. A shelf reaches only half its gain at the
+  cutoff and nothing an octave in from it, so measured through the DSP, +6 dB on
+  band 0 gave +3.0 dB at 32 Hz, **-0.4 dB at 64 Hz** and -0.3 dB at 100 Hz: the
+  bass slider was inaudible. Q was also pinned at 1.0 for every band, where a
+  shelf dips just above its cutoff — which is why Rockbox's own defaults use 0.7
+  there. Each band now carries its own cutoff and Q, with the two shelves placed
+  where music has energy (64 Hz and 12 kHz) at Q 0.7 and the peaking bands left
+  at Rockbox's Q 1.0. A +6 dB move on the bottom three sliders measures
+  +7.9/+10.2/+11.0 dB at 32/50/64 Hz, against +5.3/+5.7/+7.5 before; a
+  +10/+9/+7/+4 bass curve measures +12.7/+15.7/+16.6 against +8.5/+8.5/+11.0.
+  The slider labels are unchanged — 32 Hz…16 kHz remain the nominal band centres.
+- `bass` and `treble` attenuated the rest of the spectrum instead of boosting
+  their own end of it. The engine mirrored `firmware/sound.c`, which prescales
+  the signal by the larger of the two boosts — but not the line after it, which
+  hands that gain back on the analog volume. With only half the pair ported, a
+  boost cancelled itself exactly: `bass = +6` measured -0.25 dB at 40 Hz and
+  -6.0 dB at 4 kHz. Fixed upstream in rockbox-dsp 0.4.0, taken here through
+  rockbox-playback 0.8.0; `bass = +6` now measures +5.7 dB at 40 Hz, +5.4 at
+  64 Hz and about 0 above 1 kHz. Boosting hot material can now clip, which the
+  prescale had been hiding — the engine exposes it as adjustable headroom, not
+  yet surfaced as a setting.
+
+### Changed
+
+- CI runs its portable jobs through Dagger, driven by PureScript modules in
+  place of FluentCI, and the pipelines and their local commands are documented.
+
 ## [0.4.5] — 2026-10-20
 
 ### Added
@@ -961,6 +994,7 @@ outright. See the README for setup.
 Stack modernization: the Rockbox playback engine, SQLite FTS5 search, a ratatui
 TUI and a Tauri 2 desktop app.
 
+[0.4.6]: https://github.com/tsirysndr/music-player/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/tsirysndr/music-player/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/tsirysndr/music-player/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/tsirysndr/music-player/compare/v0.4.2...v0.4.3

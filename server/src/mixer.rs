@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use music_player_playback::player::PlayerCommand;
+use music_player_playback::player::{PlayerCommand, EQ_BAND_FILTERS};
 use music_player_settings::{read_settings, save_audio_settings, AudioSettings, Settings};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -120,7 +120,7 @@ impl MixerService for Mixer {
                 .enumerate()
                 .map(|(i, &cutoff)| EqBand {
                     cutoff,
-                    q: 10,
+                    q: (EQ_BAND_FILTERS[i].1 * 10.0).round() as i32,
                     gain: (audio.eq_band_gains.get(i).copied().unwrap_or(0.0) * 10.0).round()
                         as i32,
                 })

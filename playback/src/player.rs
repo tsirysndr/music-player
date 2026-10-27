@@ -5,7 +5,6 @@ use music_player_tracklist::{PlaybackState, Tracklist};
 use rockbox_playback::{
     CrossfadeMode, CrossfadeSettings, EqBand, Equalizer, MixMode, OutputConfig,
     PlaybackState as EngineState, Player as Engine, PlayerConfig, ReplayGainMode, EQ_BANDS,
-    EQ_BAND_FREQUENCIES,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -963,11 +962,12 @@ impl PlayerInternal {
             PlayerCommand::SetEqEnabled(enabled) => self.engine.set_eq_enabled(enabled),
             PlayerCommand::SetEqBandGain { band, gain_db } => {
                 if band < EQ_BANDS {
+                    let (cutoff_hz, q) = EQ_BAND_FILTERS[band];
                     self.engine.set_eq_band(
                         band,
                         EqBand {
-                            cutoff_hz: EQ_BAND_FREQUENCIES[band],
-                            q: 1.0,
+                            cutoff_hz,
+                            q,
                             gain_db,
                         },
                     );
@@ -1393,18 +1393,49 @@ fn queue_file() -> PathBuf {
         .join("queue.json")
 }
 
+/// The filter each EQ band actually programs into the engine: cutoff/centre
+/// frequency in Hz and Q. `EQ_BAND_FREQUENCIES` stays the *nominal* centre
+/// each slider is labelled with; only the two shelving bands depart from it.
+///
+/// Rockbox's own defaults put the low shelf at 32 Hz and the high shelf at
+/// 16 kHz. A shelf only reaches half its gain at the cutoff and nothing an
+/// octave in from it, so those two sliders are close to inaudible: measured
+/// through the Rockbox DSP, +6 dB on band 0 gives +3.0 dB at 32 Hz, -0.4 dB
+/// at 64 Hz and -0.3 dB at 100 Hz — dragging the bottom slider does almost
+/// nothing. Rockbox exposes the cutoff so you can move it; we only expose
+/// gain, so the shelves are placed where music has energy instead (64 Hz and
+/// 12 kHz) and given the Q 0.7 that Rockbox recommends for shelving filters
+/// (at Q 1.0 a shelf dips just above its cutoff).
+///
+/// With this table a +6 dB move on the bottom three sliders measures
+/// +7.9/+10.2/+11.0 dB at 32/50/64 Hz instead of +5.3/+5.7/+7.5 dB. Widening
+/// the peaking bands (Q 0.8) adds roughly another dB and spreads it further
+/// into the low mids, at the cost of overlapping neighbouring sliders more.
+pub const EQ_BAND_FILTERS: [(i32, f32); EQ_BANDS] = [
+    (64, 0.7), // low shelf — everything below ~64 Hz
+    (64, 1.0),
+    (125, 1.0),
+    (250, 1.0),
+    (500, 1.0),
+    (1_000, 1.0),
+    (2_000, 1.0),
+    (4_000, 1.0),
+    (8_000, 1.0),
+    (12_000, 0.7), // high shelf — everything above ~12 kHz
+];
+
 /// How often the queue snapshot is refreshed while playing (track changes
 /// save immediately).
 const QUEUE_SAVE_INTERVAL: Duration = Duration::from_secs(5);
 
 /// Push the persisted `[audio]` settings into a freshly opened engine.
 pub fn apply_audio_settings(engine: &Engine, audio: &AudioSettings) {
-    let bands = EQ_BAND_FREQUENCIES
+    let bands = EQ_BAND_FILTERS
         .iter()
         .enumerate()
-        .map(|(i, &cutoff_hz)| EqBand {
+        .map(|(i, &(cutoff_hz, q))| EqBand {
             cutoff_hz,
-            q: 1.0,
+            q,
             gain_db: audio.eq_band_gains.get(i).copied().unwrap_or(0.0),
         })
         .collect();

@@ -52,7 +52,7 @@ jobs:
           dagger api call -m .dagger/ci linux-release
           --source . --target "${{ matrix.target }}"
           --version "$RELEASE_VERSION" --desktop
-          export --path .
+          export --path artifacts/release
 
       - name: Vendor DuckDB (macOS)
         if: runner.os == 'macOS'
@@ -112,7 +112,8 @@ jobs:
           mv "dist/build/Music Player.dmg" "$DMG"
           shasum -a 256 $DMG > $DMG.sha256
 
-      - name: Upload release assets
+      - name: Upload macOS archive
+        if: runner.os == 'macOS'
         run: |
           gh release upload ${{ env.RELEASE_VERSION }} \
             music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
@@ -129,12 +130,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Linux packages to GitHub release
+      - name: Upload Linux release assets with Dagger
         if: runner.os == 'Linux'
         shell: bash
-        run: gh release upload "${{ env.RELEASE_VERSION }}" dist/*.deb dist/*.deb.sha256 dist/*.rpm dist/*.rpm.sha256 --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          args=()
+          for file in artifacts/release/**/*; do
+            [[ -f "$file" ]] || continue
+            args+=(--files "${file#artifacts/release/}")
+          done
+          ((${#args[@]} > 0)) || { echo "No release assets found" >&2; exit 1; }
+          dagger api call -m .dagger/modules/github-assets upload \
+            --assets artifacts/release "${args[@]}" --repository "$GITHUB_REPOSITORY" \
+            --tag "$RELEASE_VERSION" --token env:GH_TOKEN --clobber \
+            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB-$TARGET"
 
       - name: Check Gemfury secrets
         if: runner.os == 'Linux'
@@ -157,8 +171,14 @@ jobs:
           FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
           FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
         run: |
-          for package in dist/*.deb dist/*.rpm; do
-            curl -fsS -F package=@"$package" \
-              "https://${FURY_TOKEN}@push.fury.io/${FURY_ACCOUNT}/"
-            echo
+          set -euo pipefail
+          shopt -s nullglob
+          args=()
+          for file in artifacts/release/dist/*.deb artifacts/release/dist/*.rpm; do
+            args+=(--files "${file#artifacts/release/}")
           done
+          ((${#args[@]} > 0)) || { echo "No packages found" >&2; exit 1; }
+          dagger api call -m .dagger/modules/gemfury upload \
+            --packages artifacts/release "${args[@]}" --account "$FURY_ACCOUNT" \
+            --token env:FURY_TOKEN \
+            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB-${{ matrix.target }}"

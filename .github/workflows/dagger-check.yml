@@ -1,0 +1,38 @@
+name: Dagger module checks
+on:
+  push:
+    paths: ['.dagger/**', '.github/**', 'dagger.toml']
+  pull_request:
+    paths: ['.dagger/**', '.github/**', 'dagger.toml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm install --global purescript@0.15.16 spago@1.0.5
+      - run: pip install PyYAML==6.0.3
+      - name: Compile CI and run graph tests without an engine
+        working-directory: .dagger/ci
+        run: |
+          spago build -p music-player-ci --pedantic-packages
+          node --test checks/*.test.mjs
+      - name: Check standalone modules and workflow uploads without an engine
+        run: |
+          python3 .dagger/check-modules.py
+          python3 .dagger/check.py
+          python3 .dagger/check-uploads.py
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.2'
+          cache: false
+      - name: Lint workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= .github/workflows/*.yml

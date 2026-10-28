@@ -7,3 +7,20 @@ module = "purescript"
 [sdks.purescript.scopes.".dagger/ci"]
 is-module = true
 name = "music-player-ci"
+
+
+[sdks.purescript.scopes.".dagger/modules/linux-packaging"]
+is-module = true
+name = "linux-packaging"
+
+[sdks.purescript.scopes.".dagger/modules/archive"]
+is-module = true
+name = "archive"
+
+[sdks.purescript.scopes.".dagger/modules/gemfury"]
+is-module = true
+name = "gemfury"
+
+[sdks.purescript.scopes.".dagger/modules/github-assets"]
+is-module = true
+name = "github-assets"

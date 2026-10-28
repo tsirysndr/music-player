@@ -12,7 +12,7 @@ import Effect.Aff (Aff)
 
 prepared :: Client -> Platform -> String -> Directory -> Container
 prepared client arch purpose source = Base.container client arch "rust:1.98.0-bookworm"
-  # Base.shell "apt-get update && apt-get install -y --no-install-recommends libasound2-dev pkg-config protobuf-compiler libfontconfig1-dev libdbus-1-dev libxkbcommon-dev libwayland-dev curl unzip ca-certificates dpkg-dev rpm && rm -rf /var/lib/apt/lists/*"
+  # Base.shell "apt-get update && apt-get install -y --no-install-recommends libasound2-dev pkg-config protobuf-compiler libfontconfig1-dev libdbus-1-dev libxkbcommon-dev libwayland-dev curl unzip ca-certificates && rm -rf /var/lib/apt/lists/*"
   # Container.withMountedCache "/usr/local/cargo/registry" (Query.cacheVolume "music-player-cargo-registry" client)
   # Container.withMountedCache "/usr/local/cargo/git" (Query.cacheVolume "music-player-cargo-git" client)
   # Container.withDirectory "/src" (Base.sourceTree client source)

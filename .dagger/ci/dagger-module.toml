@@ -1,6 +1,6 @@
 name = "music-player-ci"
 engineVersion = "v1.0.0-beta.21"
-include = ["src/**", "dagger-sdk/**", "spago.yaml", "package.json"]
+include = ["../lib/**", "spago.lock", "src/**", "dagger-sdk/**", "spago.yaml", "package.json"]
 
 [runtime]
 source = "../sdk/purescript"

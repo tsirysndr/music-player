@@ -6,6 +6,16 @@ The vendored SDK is a **personal, unofficial experimental SDK**, not an official
 Dagger SDK. Its source and generated bindings are committed so a fresh clone
 can run CI without a sibling checkout or a published SDK package.
 
+## Reusable release modules
+
+Four standalone modules are available under [`modules/`](modules/README.md):
+`linux-packaging` (deb/rpm), `archive` (tar.gz/SHA-256), `gemfury`, and
+`github-assets`. `CI.Release` reuses their shared PureScript implementations.
+Linux workflows call the upload modules directly with Dagger Secrets, publishing
+only the exported `artifacts/release` directory. Desktop metadata still comes
+from the existing `dist/` templates; the standalone packaging script remains
+available for developers.
+
 ## Run locally
 
 Install [mise](https://mise.jdx.dev) and start Docker, then run from the repository
@@ -69,9 +79,10 @@ container boundary.
 | [Main](ci/src/Main.purs) | Typed Dagger function registration using named handlers and `ado` |
 
 GitHub workflows retain their triggers, release selection, matrices, permissions,
-and uploads. Native macOS/Windows compilation, macOS app signing/DMGs, and
-FlakeHub publishing stay on their original runners. Codecov, GitHub releases,
-SARIF, Gemfury, and Cachix credentials stay in the GitHub upload steps.
+and overwrite behavior. Native macOS/Windows compilation, macOS app signing/DMGs, and
+FlakeHub publishing stay on their original runners. Codecov,
+SARIF and Cachix retain their existing upload steps. Linux GitHub and Gemfury
+credentials are passed to the upload modules as Secrets.
 
 Release workflows check out pipeline tooling at `github.workflow_sha` and build
 the requested release tree separately. The desktop workflow retains its original
@@ -131,3 +142,19 @@ readiness and cleans up the process even if tests fail.
 `CI.Integration` implements database migration and live daemon testing;
 `CI.Pipeline` composes tests and builds. No remote pipeline imports, Deno runtime,
 FluentCI SDK, or legacy JSON configuration remain.
+
+## Validate without an engine
+
+```sh
+cd .dagger/ci
+spago build -p music-player-ci --pedantic-packages
+node --test checks/*.test.mjs
+cd ../..
+python3 .dagger/check-modules.py
+python3 .dagger/check.py
+python3 .dagger/check-uploads.py
+```
+
+The Dagger module checks workflow runs these offline checks and actionlint.
+Upload shell blocks are tested with a fake executable; no engine or external
+publication is used. These checks do not replace end-to-end container validation.

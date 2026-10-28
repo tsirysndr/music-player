@@ -1,0 +1,15 @@
+package:
+  name: release-gemfury
+  dependencies:
+    - prelude
+    - effect
+    - dagger-sdk
+    - release-lib
+workspace:
+  extraPackages:
+    dagger-sdk:
+      path: ../../ci/dagger-sdk
+    release-lib:
+      path: ../../lib
+  packageSet:
+    registry: 77.8.0

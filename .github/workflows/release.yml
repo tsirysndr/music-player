@@ -43,11 +43,21 @@ jobs:
           --version "$RELEASE_VERSION"
           export --path artifacts/release
 
-      - name: Upload release assets
-        run: |
-          gh release upload "$RELEASE_VERSION" \
-            artifacts/release/music-player_"${RELEASE_VERSION}"_"${{ matrix.target }}".tar.gz \
-            artifacts/release/music-player_"${RELEASE_VERSION}"_"${{ matrix.target }}".tar.gz.sha256 \
-            --clobber
+      - name: Upload release assets with Dagger
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          args=()
+          for file in artifacts/release/**/*; do
+            [[ -f "$file" ]] || continue
+            args+=(--files "${file#artifacts/release/}")
+          done
+          ((${#args[@]} > 0)) || { echo "No release assets found" >&2; exit 1; }
+          dagger api call -m .dagger/modules/github-assets upload \
+            --assets artifacts/release "${args[@]}" --repository "$GITHUB_REPOSITORY" \
+            --tag "$RELEASE_VERSION" --token env:GH_TOKEN --clobber \
+            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB-$TARGET"

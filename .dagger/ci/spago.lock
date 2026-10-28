@@ -33,11 +33,15 @@
         "core": {
           "dependencies": [
             "aff",
+            "arrays",
             "dagger-sdk",
             "effect",
             "exceptions",
+            "foldable-traversable",
             "maybe",
-            "prelude"
+            "prelude",
+            "release-lib",
+            "strings"
           ]
         },
         "test": {
@@ -692,7 +696,11 @@
         "zipperarray": "2.0.0"
       }
     },
-    "extra_packages": {}
+    "extra_packages": {
+      "release-lib": {
+        "path": "../lib"
+      }
+    }
   },
   "packages": {
     "aff": {
@@ -1208,6 +1216,20 @@
       "dependencies": [
         "effect",
         "prelude"
+      ]
+    },
+    "release-lib": {
+      "type": "local",
+      "path": "../lib",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "dagger-sdk",
+        "exceptions",
+        "foldable-traversable",
+        "maybe",
+        "prelude",
+        "strings"
       ]
     },
     "safe-coerce": {

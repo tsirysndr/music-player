@@ -1,0 +1,11 @@
+package:
+  name: release-lib
+  dependencies:
+    - prelude
+    - aff
+    - arrays
+    - strings
+    - foldable-traversable
+    - maybe
+    - exceptions
+    - dagger-sdk

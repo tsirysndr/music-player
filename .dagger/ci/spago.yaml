@@ -2,11 +2,18 @@ package:
   name: music-player-ci
   dependencies:
     - aff
+    - release-lib
+    - arrays
+    - strings
+    - foldable-traversable
     - dagger-sdk
     - effect
     - exceptions
     - maybe
     - prelude
 workspace:
+  extraPackages:
+    release-lib:
+      path: ../lib
   packageSet:
     registry: 77.8.0

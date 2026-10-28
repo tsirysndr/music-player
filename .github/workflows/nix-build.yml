@@ -38,4 +38,4 @@ jobs:
         env:
           PLATFORM: ${{ runner.arch == 'ARM64' && 'linux/arm64' || 'linux/amd64' }}
         run: >-
-          dagger api call -m .dagger/ci nix-flake --source . --platform "$PLATFORM"
+          dagger --progress logs -v api call -m .dagger/ci nix-flake --source . --platform "$PLATFORM"

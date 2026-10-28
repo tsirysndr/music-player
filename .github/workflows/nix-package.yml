@@ -62,7 +62,7 @@ jobs:
         env:
           PLATFORM: ${{ runner.arch == 'ARM64' && 'linux/arm64' || 'linux/amd64' }}
         run: >-
-          dagger api call -m .dagger/ci nix-package --source . --platform "$PLATFORM" --attribute "${{ matrix.attr }}"
+          dagger --progress logs -v api call -m .dagger/ci nix-package --source . --platform "$PLATFORM" --attribute "${{ matrix.attr }}"
           export --path artifacts/nix
 
       # Import the Dagger-built closure so the existing Cachix post action can publish it.

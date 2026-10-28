@@ -21,7 +21,7 @@ jobs:
       - name: Set up Dagger
         uses: ./.github/actions/setup-dagger
       - name: Analyze with Clippy
-        run: dagger api call -m .dagger/ci clippy --source . export --path artifacts/rust-clippy-results.sarif
+        run: dagger --progress logs -v api call -m .dagger/ci clippy --source . export --path artifacts/rust-clippy-results.sarif
         continue-on-error: true
 
       - name: Upload analysis results to GitHub

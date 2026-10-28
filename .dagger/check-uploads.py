@@ -9,7 +9,7 @@ def check(repo, names):
         for job in doc['jobs'].values():
             for step in job.get('steps', []):
                 script = step.get('run', '')
-                if 'dagger api call -m .dagger/modules/' not in script:
+                if 'api call -m .dagger/modules/' not in script:
                     continue
                 if '/gemfury' in script:
                     assert "steps.gemfury.outputs.available == 'true'" in step.get('if', ''), name

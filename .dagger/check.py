@@ -34,7 +34,7 @@ for path in (root / '.github/workflows').glob('*.yml'):
     for job in doc['jobs'].values():
         steps = job.get('steps', [])
         for index, step in enumerate(steps):
-            calls = re.findall(r'dagger api call -m (\.dagger/[^ ]+) ([a-z][a-z0-9-]*)', step.get('run', ''))
+            calls = re.findall(r'dagger(?: --progress (?:plain|logs))?(?: -v)? api call -m (\.dagger/[^ ]+) ([a-z][a-z0-9-]*)', step.get('run', ''))
             for module, function in calls:
                 functions = cli_functions if module == '.dagger/ci' else {re.sub(r'[A-Z]', lambda m: '-' + m[0].lower(), name) for name in expected[module.rsplit('/', 1)[1]]}
                 assert function in functions, (path, function)

@@ -12,13 +12,13 @@ for job in "$@"; do
     test|clippy)
       report=lcov.info
       if [ "$job" = clippy ]; then report=rust-clippy-results.sarif; fi
-      mise exec -- dagger api call -m .dagger/ci "$job" --source "$source_dir" --platform "$platform" export --path "artifacts/$report"
+      mise exec -- dagger --progress logs -v api call -m .dagger/ci "$job" --source "$source_dir" --platform "$platform" export --path "artifacts/$report"
       ;;
     build)
-      mise exec -- dagger api call -m .dagger/ci build --source "$source_dir" --target "$target" --tag "$tag" export --path artifacts
+      mise exec -- dagger --progress logs -v api call -m .dagger/ci build --source "$source_dir" --target "$target" --tag "$tag" export --path artifacts
       ;;
     pipeline)
-      mise exec -- dagger api call -m .dagger/ci pipeline --source "$source_dir" --platform "$platform" --target "$target" --tag "$tag" export --path artifacts
+      mise exec -- dagger --progress logs -v api call -m .dagger/ci pipeline --source "$source_dir" --platform "$platform" --target "$target" --tag "$tag" export --path artifacts
       ;;
     *) echo "Unknown job: $job (expected test, clippy, build, or pipeline)" >&2; exit 2 ;;
   esac

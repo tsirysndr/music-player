@@ -40,7 +40,7 @@ jobs:
       - name: Set up Dagger
         uses: ./.github/actions/setup-dagger
       - name: Typecheck, test, build web UI and Storybook
-        run: dagger api call -m .dagger/ci web-check --source . export --path artifacts/webui
+        run: dagger --progress logs -v api call -m .dagger/ci web-check --source . export --path artifacts/webui
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

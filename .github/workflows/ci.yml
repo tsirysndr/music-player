@@ -17,7 +17,7 @@ jobs:
       - name: Set up Dagger
         uses: ./.github/actions/setup-dagger
       - name: Run workspace tests with coverage
-        run: dagger api call -m .dagger/ci rust-coverage --source . export --path artifacts/lcov.info
+        run: dagger --progress logs -v api call -m .dagger/ci rust-coverage --source . export --path artifacts/lcov.info
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4

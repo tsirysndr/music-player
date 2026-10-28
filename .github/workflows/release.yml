@@ -37,7 +37,7 @@ jobs:
 
       - name: Build and package Linux binary
         run: >-
-          dagger api call -m .dagger/ci linux-release
+          dagger --progress logs -v api call -m .dagger/ci linux-release
           --source ./release-source
           --target "${{ matrix.target }}"
           --version "$RELEASE_VERSION"
@@ -57,7 +57,7 @@ jobs:
             args+=(--files "${file#artifacts/release/}")
           done
           ((${#args[@]} > 0)) || { echo "No release assets found" >&2; exit 1; }
-          dagger api call -m .dagger/modules/github-assets upload \
+          dagger --progress logs -v api call -m .dagger/modules/github-assets upload \
             --assets artifacts/release "${args[@]}" --repository "$GITHUB_REPOSITORY" \
             --tag "$RELEASE_VERSION" --token env:GH_TOKEN --clobber \
             --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB-$TARGET"

@@ -54,14 +54,14 @@ stampControl version arch = replace "@VERSION@" version >>> replace "@DEB_ARCH@"
 stampSpec :: String -> String -> String -> String
 stampSpec version arch = replace "@VERSION@" (replace "-" "~" version) >>> replace "@RPM_ARCH@" arch
 
-packageDesktop :: Client -> String -> String -> String -> Container -> Directory -> Aff Directory
-packageDesktop client version arch binaryDir built output = do
+packageDesktop :: Client -> String -> String -> String -> Directory -> Container -> Directory -> Aff Directory
+packageDesktop client version arch binaryDir source built output = do
   let staged = stageDesktop binaryDir built
       root = C.directory "/stage" staged
       debArch = if arch == "x86_64" then "amd64" else "arm64"
       debName = "music-player_" <> version <> "_" <> debArch <> ".deb"
-  control <- F.contents (C.file "dist/debian-control.in" built)
-  spec <- F.contents (C.file "dist/music-player.spec.in" built)
+  control <- F.contents (D.file "dist/debian-control.in" source)
+  spec <- F.contents (D.file "dist/music-player.spec.in" source)
   deb <- Deb.build client
     { root: D.withNewFile "DEBIAN/control" (stampControl version debArch control) root
     , name: debName
@@ -95,5 +95,5 @@ linux client input = do
       stagedArchive = built # C.withExec [ "install", "-D", "-m", "0755", binaryDir <> "/" <> binary, "/archive/" <> binary ]
   archive <- TarGz.create client { source: C.directory "/archive" stagedArchive, name: asset, members: [ binary ] }
   output <- withChecksum client asset archive (Q.directory client)
-  if input.desktop then packageDesktop client (metadataVersion input.version) settings.arch binaryDir built output
+  if input.desktop then packageDesktop client (metadataVersion input.version) settings.arch binaryDir input.source built output
   else pure output

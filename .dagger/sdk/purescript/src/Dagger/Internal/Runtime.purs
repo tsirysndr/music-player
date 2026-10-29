@@ -27,7 +27,7 @@ newtype Argument = Argument { name :: String, typeName :: String, value :: Aff J
 type Config = { port :: Int, token :: String, timeoutMs :: Int }
 
 defaultConfig :: Config
-defaultConfig = { port: 0, token: "", timeoutMs: 300000 }
+defaultConfig = { port: 0, token: "", timeoutMs: 0 }
 
 foreign import connect :: Effect Session
 foreign import connectWith :: Config -> Effect Session

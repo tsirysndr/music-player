@@ -1,3 +1,5 @@
+import { request as httpRequest } from "node:http";
+
 const sessions = new WeakMap();
 const namePattern = /^[_A-Za-z][_0-9A-Za-z]*$/;
 function validType(value) {
@@ -20,7 +22,7 @@ export const connectWith = config => () => {
   if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65535)
     throw new Error("Dagger session port must be an integer between 1 and 65535");
   if (typeof config.token !== "string" || !config.token) throw new Error("Dagger session token is required");
-  if (!Number.isInteger(config.timeoutMs) || config.timeoutMs <= 0) throw new Error("Dagger request timeout must be a positive integer");
+  if (!Number.isInteger(config.timeoutMs) || config.timeoutMs < 0 || config.timeoutMs > 2147483647) throw new Error("Dagger request timeout must be an integer from 0 to 2147483647 (0 disables the deadline)");
   const session = Object.freeze({});
   sessions.set(session, { ...config });
   return session;
@@ -29,7 +31,7 @@ export const connect = () => {
   const port = process.env.DAGGER_SESSION_PORT, token = process.env.DAGGER_SESSION_TOKEN;
   if (!port || !token) throw new Error("No Dagger session. Run your program with `dagger api with-session` (DAGGER_SESSION_PORT and DAGGER_SESSION_TOKEN are required).");
   if (!/^\d+$/.test(port)) throw new Error("Invalid DAGGER_SESSION_PORT");
-  return connectWith({ port: Number(port), token, timeoutMs: 300000 })();
+  return connectWith({ port: Number(port), token, timeoutMs: 0 })();
 };
 // User values always travel as GraphQL variables, including enums and input objects.
 export function buildQuery(steps) {
@@ -68,15 +70,29 @@ function request(session, document, project, onError, onSuccess) {
   let cancelled = false;
   const config = sessions.get(session);
   if (!config) { onError(new Error("Invalid Dagger session"))(); return () => {}; }
-  const timer = setTimeout(() => controller.abort(new Error("Dagger request timed out")), config.timeoutMs);
+  // Builds may legitimately take hours. Only impose a deadline when requested.
+  const timer = config.timeoutMs === 0 ? null : setTimeout(
+    () => controller.abort(new Error(`Dagger request timed out after ${config.timeoutMs}ms`)), config.timeoutMs);
   (async () => {
-    const response = await fetch(`http://127.0.0.1:${config.port}/query`, {
-      method: "POST", redirect: "error",
-      headers: { "Content-Type": "application/json", Authorization: `Basic ${Buffer.from(`${config.token}:`).toString("base64")}` },
-      body: JSON.stringify(document), signal: controller.signal,
+    // Native HTTP avoids fetch/Undici's independent headers timeout. The CLI
+    // owns the session lifetime; Aff cancellation still aborts the socket.
+    const response = await new Promise((resolve, reject) => {
+      const req = httpRequest({
+        hostname: "127.0.0.1", port: config.port, path: "/query",
+        method: "POST", agent: false, signal: controller.signal,
+        headers: { "Content-Type": "application/json", Authorization: `Basic ${Buffer.from(`${config.token}:`).toString("base64")}` },
+      }, resolve);
+      req.on("error", reject);
+      req.end(JSON.stringify(document));
     });
-    if (!response.ok) throw new Error(`Dagger HTTP error ${response.status}`);
-    const body = await response.json();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      response.destroy();
+      throw new Error(`Dagger HTTP error ${response.statusCode}`);
+    }
+    response.setEncoding("utf8");
+    let text = "";
+    for await (const chunk of response) text += chunk;
+    const body = JSON.parse(text);
     if (body.errors?.length) {
       const error = new Error(body.errors.map(e => e.message).join("\n"));
       error.name = body.errors.some(e => e.extensions?._type === "EXEC_ERROR") ? "DaggerExecError" : "DaggerGraphQLError";
@@ -86,7 +102,7 @@ function request(session, document, project, onError, onSuccess) {
     }
     if (!Object.hasOwn(body, "data")) throw new Error("Dagger response has no data");
     return project(body.data);
-  })().then(value => { if (!cancelled) onSuccess(value)(); }, err => { if (!cancelled) onError(err)(); }).finally(() => clearTimeout(timer));
+  })().then(value => { if (!cancelled) onSuccess(value)(); }, err => { if (!cancelled) onError(controller.signal.aborted ? controller.signal.reason : err)(); }).finally(() => clearTimeout(timer));
   return () => { cancelled = true; clearTimeout(timer); controller.abort(); };
 }
 export const requestImpl = session => steps => onError => onSuccess => () => {

@@ -144,7 +144,10 @@ not install modules or generate `Dagger.HelloGleam`.
 For standalone pipelines, use `Dagger.withConnection` under `dagger api with-session` to read
 `DAGGER_SESSION_PORT` and `DAGGER_SESSION_TOKEN`. The CLI owns the session; the SDK
 attaches to it. For an existing session you can also use
-`Dagger.connectWith { port, token, timeoutMs }`.
+`Dagger.connectWith { port, token, timeoutMs }`. Requests have no deadline by
+default (`timeoutMs: 0`) because a query can execute a full build. Set a positive
+`timeoutMs` to opt into a request deadline. Cancellation still aborts in-flight
+requests; the CLI and CI job control the overall build lifetime.
 
 ## The client API
 

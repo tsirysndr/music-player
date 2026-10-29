@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 name = "music-player-desktop"
 repository = "https://github.com/tsirysndr/music-player"
-version = "0.4.6"
+version = "0.4.7"
 
 [[bin]]
 name = "music-player-desktop"

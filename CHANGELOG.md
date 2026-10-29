@@ -8,6 +8,34 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 This file starts at 0.2.1. For earlier releases see the
 [git tags](https://github.com/tsirysndr/music-player/tags).
 
+## [0.4.7] — 2026-10-29
+
+### Added
+
+- An immersive album Cover Flow view in the Slint desktop app. Press `c` to
+  open it with all other app UI hidden, browse with the arrow keys or scroll,
+  and press Enter or click a cover to open album details. Escape exits the view.
+- Live album search inside Cover Flow: `/` focuses a search field that filters
+  album titles and artists as you type, ignoring case. Use `↑` / `↓` to select
+  a match and Enter to open it. Escape clears search before exiting Cover Flow.
+
+### Changed
+
+- Cover Flow preserves motion velocity between navigation inputs and uses the
+  display's animation clock for smooth transitions. Trackpad movements accumulate
+  before advancing an album, avoiding skips from tiny scroll events.
+- Cached cover projections render each cover and its fading reflection together,
+  removing strip seams and reducing rendering work with a bounded image cache.
+- CI reuses Dagger modules for packaging, publishing, and Codecov uploads, with
+  verbose Dagger logs.
+
+### Fixed
+
+- Cover reflections follow their covers' angled bottom edges with a parallel,
+  consistent gap.
+- Cover Flow restores keyboard focus after search and on repeated opening and
+  closing. Album search continues receiving artwork updates as covers load.
+
 ## [0.4.6] — 2026-10-27
 
 ### Fixed
@@ -994,6 +1022,7 @@ outright. See the README for setup.
 Stack modernization: the Rockbox playback engine, SQLite FTS5 search, a ratatui
 TUI and a Tauri 2 desktop app.
 
+[0.4.7]: https://github.com/tsirysndr/music-player/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/tsirysndr/music-player/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/tsirysndr/music-player/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/tsirysndr/music-player/compare/v0.4.3...v0.4.4

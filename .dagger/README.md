@@ -8,9 +8,9 @@ can run CI without a sibling checkout or a published SDK package.
 
 ## Reusable release modules
 
-Four standalone modules are available under [`modules/`](modules/README.md):
+Five standalone modules are available under [`modules/`](modules/README.md):
 `linux-packaging` (deb/rpm), `archive` (tar.gz/SHA-256), `gemfury`, and
-`github-assets`. `CI.Release` reuses their shared PureScript implementations.
+`github-assets`, and `codecov` (coverage uploads). `CI.Release` reuses their shared PureScript implementations.
 Linux workflows call the upload modules directly with Dagger Secrets, publishing
 only the exported `artifacts/release` directory. Desktop metadata still comes
 from the existing `dist/` templates; the standalone packaging script remains
@@ -80,8 +80,9 @@ container boundary.
 
 GitHub workflows retain their triggers, release selection, matrices, permissions,
 and overwrite behavior. Native macOS/Windows compilation, macOS app signing/DMGs, and
-FlakeHub publishing stay on their original runners. Codecov,
-SARIF and Cachix retain their existing upload steps. Linux GitHub and Gemfury
+FlakeHub publishing stay on their original runners.
+SARIF and Cachix retain their existing upload steps. Rust and web UI coverage
+uploads share the standalone Codecov module and remain non-blocking. Linux GitHub and Gemfury
 credentials are passed to the upload modules as Secrets.
 
 Release workflows check out pipeline tooling at `github.workflow_sha` and build

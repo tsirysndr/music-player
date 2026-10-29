@@ -1,0 +1,6 @@
+name = "codecov"
+engineVersion = "v1.0.0-beta.21"
+include = ["src/**", "dagger-sdk/**", "spago.yaml", "spago.lock", "package.json", "../../lib/**", "../../ci/dagger-sdk/**"]
+
+[runtime]
+source = "../../sdk/purescript"

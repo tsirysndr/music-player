@@ -1,6 +1,6 @@
-# Reusable release modules
+# Reusable CI modules
 
-These four Dagger modules accept built files, staged directories and explicit
+These five Dagger modules accept built files, staged directories and explicit
 metadata. They do not require Music Player source, run Cargo, download a Music Player
 release, or assume Music Player package names.
 
@@ -9,6 +9,7 @@ release, or assume Music Player package names.
 | `linux-packaging` | `deb`, `rpm` | Debian root → `.deb` File; RPM sources + spec → Directory of RPMs |
 | `archive` | `tar-gz`, `sha256` | Directory → `.tar.gz` File; File → SHA-256 sidecar File |
 | `gemfury` | `upload` | Package directory, explicit filenames, account and Secret → upload report |
+| `codecov` | `upload` | Coverage File, repository, commit, branch and Secret → upload report |
 | `github-assets` | `upload` | Asset directory, explicit filenames, repository, tag and Secret → upload report |
 
 The PureScript implementations live in `../lib/src/Release`. Standalone modules
@@ -116,3 +117,27 @@ refreshes module lockfiles if their dependencies changed. The workflow runs thes
 same checks. Graph tests cover generic packaging arguments, literal archive
 members and filenames, path validation, credential injection and upload cache
 keys. These checks do not establish end-to-end package or upload success.
+
+## Codecov
+
+Rust and web UI workflows reuse `codecov upload`. The module installs pinned
+`codecov-cli==11.3.2` and uploads only the supplied LCOV file. It needs no source
+checkout: report discovery, plugins, and source-dependent file fixes are disabled.
+The working directory is `/src`, matching the coverage-producing containers.
+
+```sh
+mise exec -- dagger api call -m .dagger/modules/codecov upload \
+  --report artifacts/lcov.info --repository owner/repository \
+  --commit "$COMMIT_SHA" --branch "$BRANCH" --token env:CODECOV_TOKEN \
+  --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB"
+```
+
+`--pull-request` defaults to empty; `--flags` defaults to an empty array. The web
+UI caller passes `--flags webui`. Workflows pass the PR head SHA and branch for
+pull requests, or the triggering SHA and branch for pushes. Each upload attempt
+has a distinct cache key. The module fails on upload errors; both workflows keep
+uploads advisory with `continue-on-error: true`, matching the previous action's
+non-blocking behavior. Credentials are supplied as Dagger Secrets.
+
+See the [Codecov CLI documentation](https://docs.codecov.com/docs/the-codecov-cli)
+for the upload command and token environment variable.

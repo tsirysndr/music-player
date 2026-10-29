@@ -11,6 +11,7 @@ import * as Tar from '../output/Release.TarGz/index.js';
 import * as Sha from '../output/Release.Sha256/index.js';
 import * as Fury from '../output/Release.Gemfury/index.js';
 import * as Github from '../output/Release.GithubAssets/index.js';
+import * as Codecov from '../output/Release.Codecov/index.js';
 
 const client = connectWith({ port: 1, token: 'test', timeoutMs: 1 })();
 const dir = Q.directory(client);
@@ -57,4 +58,20 @@ test('upload graphs inject Secret values and never expand user paths', async () 
     await assert.rejects(run(Fury.uploadGraph(client)({packages: dir, files: ['pkg.deb'], account, runId: 'test-run', token})));
   }
   await assert.rejects(run(Github.uploadGraph(client)({assets: dir, files: [], repository: 'owner/repo', tag: 'v1', token, runId: 'test-run', clobber: false})), /required/);
+});
+
+test('Codecov uploads an explicit report with metadata, secret and cache key', async () => {
+  const opts = {report: file, repository: 'owner/repo', commit: 'a'.repeat(40), branch: 'feature/$HOME', token, runId: '123-2-tests', pullRequest: '42', flags: ['webui', 'with spaces']};
+  const graph = await run(Codecov.uploadGraph(client)(opts));
+  assert.deepEqual((await commands(graph)).at(-1), ['codecovcli', 'upload-process', '--disable-search', '--disable-file-fixes', '--plugin', 'noop', '--fail-on-error', '--git-service', 'github', '--file', '/coverage/lcov.info', '--slug', opts.repository, '--sha', opts.commit, '--branch', opts.branch, '--name', opts.runId, '--pr', '42', '--flag', 'webui', '--flag', 'with spaces']);
+  assert.equal(await arg(graph.steps.find(s => s.name === 'withSecretVariable'), 'name'), 'CODECOV_TOKEN');
+  assert.equal(await arg(graph.steps.find(s => s.name === 'withEnvVariable'), 'value'), opts.runId);
+  assert.equal(graph.steps.filter(s => s.name === 'withFile').length, 1);
+  assert.equal(graph.steps.at(-1).args.some(a => a.name === 'expand'), false);
+  const push = await run(Codecov.uploadGraph(client)({...opts, pullRequest: '', flags: []}));
+  const cmd = (await commands(push)).at(-1);
+  assert.ok(!cmd.includes('--pr') && !cmd.includes('--flag'));
+  for (const key of ['repository', 'commit', 'branch', 'runId']) {
+    await assert.rejects(run(Codecov.uploadGraph(client)({...opts, [key]: ''})), /required/);
+  }
 });

@@ -20,7 +20,16 @@ jobs:
         run: dagger --progress logs -v api call -m .dagger/ci rust-coverage --source . export --path artifacts/lcov.info
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: artifacts/lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          COVERAGE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          COVERAGE_BRANCH: ${{ github.head_ref || github.ref_name }}
+          COVERAGE_PR: ${{ github.event.pull_request.number || '' }}
+        run: |
+          dagger --progress logs -v api call -m .dagger/modules/codecov upload \
+            --report artifacts/lcov.info \
+            --repository "$GITHUB_REPOSITORY" --commit "$COVERAGE_COMMIT" \
+            --branch "$COVERAGE_BRANCH" --pull-request "$COVERAGE_PR" \
+            --token env:CODECOV_TOKEN \
+            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB"

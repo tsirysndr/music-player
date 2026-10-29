@@ -24,3 +24,7 @@ name = "gemfury"
 [sdks.purescript.scopes.".dagger/modules/github-assets"]
 is-module = true
 name = "github-assets"
+
+[sdks.purescript.scopes.".dagger/modules/codecov"]
+is-module = true
+name = "codecov"

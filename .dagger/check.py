@@ -13,6 +13,7 @@ expected = {
     'archive': {'tarGz', 'sha256'},
     'gemfury': {'upload'},
     'github-assets': {'upload'},
+    'codecov': {'upload'},
 }
 for name, exports in expected.items():
     module = root / '.dagger/modules' / name

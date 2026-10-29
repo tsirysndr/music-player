@@ -41,6 +41,10 @@
 </p>
 
 <p style="margin-top: 20px; margin-bottom: 50px;">
+<img src="./coverflow.png" width="100%" />
+</p>
+
+<p style="margin-top: 20px; margin-bottom: 50px;">
 <img src="./preview-tui.png" width="100%" />
 </p>
 

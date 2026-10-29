@@ -7,6 +7,7 @@
 //! thread_local; the tokio worker in rpc.rs pushes plain data across via
 //! upgrade_in_event_loop.
 
+mod cover_flow;
 mod daemon;
 mod extensions;
 mod likes;
@@ -1498,6 +1499,9 @@ fn main() -> Result<(), slint::PlatformError> {
 
     setup_backend();
     let app = AppWindow::new()?;
+    app.on_filter_cover_albums(cover_flow::filter_albums);
+    let cover_projections = RefCell::new(cover_flow::ProjectionCache::default());
+    app.on_project_cover(move |art, turn| cover_projections.borrow_mut().project(art, turn));
     // Open at the full layout — wide enough that the VFD, the panel icon
     // buttons and the volume knob are all on screen — instead of whatever
     // size the backend picks.

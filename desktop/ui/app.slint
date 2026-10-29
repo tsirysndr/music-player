@@ -13,6 +13,7 @@ import {
     ExtensionItem, ExtensionRow,
     StatItem, StatRow, StatCard, ClockHeatmap, HeatCell, BarChart, RankChart, ChartBar} from "components.slint";
 import { Icons } from "icons.slint";
+import { CoverFlow } from "cover-flow.slint";
 
 export { Theme }
 
@@ -27,6 +28,10 @@ export component AppWindow inherits Window {
 
     // ── Library data ────────────────────────────────────────────────────────
     in-out property <[AlbumItem]> albums: [];
+    in-out property <bool> show-cover-flow: false;
+    property <int> cover-flow-selection: 0;
+    pure callback filter-cover-albums([AlbumItem], string) -> [AlbumItem];
+    pure callback project-cover(image, float) -> image;
     in-out property <[ArtistItem]> artists: [];
     in-out property <[TrackItem]> tracks: [];
     in-out property <[TrackItem]> liked: [];
@@ -450,11 +455,19 @@ export component AppWindow inherits Window {
     changed show-confirm-delete => { root.reclaim-focus(); }
     changed show-help => { root.reclaim-focus(); }
     changed show-audio => { root.reclaim-focus(); }
+    changed show-cover-flow => {
+        if (root.show-cover-flow) { cover-flow.focus(); }
+        else { root.reclaim-focus(); }
+    }
 
     /// Give the keyboard back to the main scope, unless another overlay is
     /// still open — closing one of two stacked overlays must not steal focus
     /// from the one underneath.
     function reclaim-focus() {
+        if (root.show-cover-flow) {
+            cover-flow.focus();
+            return;
+        }
         if (!root.show-playlist-form
             && !root.show-server-form
             && !root.show-add-station
@@ -627,6 +640,11 @@ export component AppWindow inherits Window {
         width: 0;
         height: 0;
         key-released(event) => {
+            if (root.show-cover-flow) { return accept; }
+            if (event.text == "c") {
+                root.show-cover-flow = true;
+                return accept;
+            }
             if (event.text == "/") {
                 root.open-palette();
                 return accept;
@@ -660,6 +678,7 @@ export component AppWindow inherits Window {
             reject
         }
         key-pressed(event) => {
+            if (event.text == "c") { return accept; }
             // '/', 'r' and '?' are handled on release (so the keystroke cannot
             // leak into the palette input) — swallow their press here.
             if (event.text == "/" || event.text == "r" || event.text == "?"
@@ -4812,9 +4831,37 @@ export component AppWindow inherits Window {
                 HelpRow { keys: "+ / -"; label: "Volume up / down"; }
                 HelpRow { keys: "m"; label: "Mute / unmute"; }
                 HelpRow { keys: "f"; label: "Fullscreen player (while playing)"; }
+                HelpRow { keys: "c"; label: "Cover Flow (← / → to browse)"; }
                 HelpRow { keys: "esc"; label: "Close dialog / go back"; }
                 HelpRow { keys: "?"; label: "Show this help"; }
             }
+        }
+    }
+
+    // Last, opaque layer: no library chrome, player, or dialogs show through.
+    cover-flow := CoverFlow {
+        visible: root.show-cover-flow;
+        width: 100%; height: 100%;
+        albums: root.albums;
+        loading: root.library-loading;
+        selection <=> root.cover-flow-selection;
+        filter-albums(albums, query) => { root.filter-cover-albums(albums, query) }
+        project-cover(art, turn) => { root.project-cover(art, turn) }
+        close => { root.show-cover-flow = false; }
+        open(album) => {
+            root.show-full-player = false;
+            root.show-help = false;
+            root.show-audio = false;
+            root.show-artist = false;
+            root.current-tab = 0;
+            root.detail-album = album;
+            root.detail-meta = "";
+            root.detail-label = "";
+            root.detail-tracks = [];
+            root.detail-loading = true;
+            root.show-detail = true;
+            root.show-cover-flow = false;
+            root.open-album(album.id);
         }
     }
 }

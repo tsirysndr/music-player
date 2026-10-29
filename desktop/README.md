@@ -96,10 +96,23 @@ UIs (neon accents).
 | `q`         | Show / hide the play queue    |
 | `b`         | Show / hide the sidebar       |
 | `f`         | Fullscreen player (while playing) |
+| `c`         | Open immersive album Cover Flow |
+| `←` / `→`   | Browse albums in Cover Flow (also scroll) |
+| `Home` / `End` | First / last album in Cover Flow |
 | `↑` / `↓`   | Navigate search results       |
 | `enter`     | Play selection                |
 | `esc`       | Close dialog / go back        |
 | `?`         | Show the shortcut help        |
+
+Cover Flow fills the app window and hides the rest of the interface. Press
+`Enter` or click a cover to open that album's details; `Esc` returns to the
+previous view. Albums without artwork display a placeholder.
+
+Within Cover Flow, `/` focuses a live album search. Matches include album titles
+and artists, ignoring case. Use `↑` / `↓` to browse matches and `Enter` to open
+one. `Esc` clears the search and returns to browsing; press it again to exit.
+Trackpad scrolling accumulates movement before advancing a cover, and motion
+retains its velocity when you browse quickly instead of restarting each time.
 
 ## Build
 

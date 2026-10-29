@@ -1,0 +1,225 @@
+import { AlbumItem } from "components.slint";
+import { Icons } from "icons.slint";
+
+export component CoverFlow inherits Rectangle {
+    in property <[AlbumItem]> albums;
+    in property <bool> loading;
+    in-out property <int> selection: 0;
+    callback close();
+    callback open(AlbumItem);
+    pure callback filter-albums([AlbumItem], string) -> [AlbumItem];
+    pure callback project-cover(image, float) -> image;
+    property <string> query;
+    property <bool> searching: false;
+    property <[AlbumItem]> matches: root.query == "" ? root.albums : root.filter-albums(root.albums, root.query);
+    property <bool> animating: false;
+    property <float> destination: 0;
+    property <float> origin: 0;
+    property <float> initial-velocity: 0;
+    property <duration> started;
+    property <float> elapsed: root.animating ? min((animation-tick() - root.started) / 1s, 1) : 0;
+    property <float> decay: exp(-16 * root.elapsed);
+    property <float> momentum: root.initial-velocity + 16 * (root.origin - root.destination);
+    out property <float> position: root.animating && root.elapsed < 1
+        ? root.destination + (root.origin - root.destination + root.momentum * root.elapsed) * root.decay
+        : root.destination;
+    property <float> velocity: root.animating && root.elapsed < 1
+        ? (root.initial-velocity - 16 * root.momentum * root.elapsed) * root.decay : 0;
+    property <length> scroll-distance: 0px;
+    // Evaluate the exact critically damped spring at the display's animation
+    // clock, not fixed timer steps. Dropped frames cannot slow the animation.
+    // Retargeting captures both position and velocity without restarting ease.
+    motion-stop := Timer {
+        interval: 1s;
+        running: false;
+        triggered => { root.animating = false; self.stop(); }
+    }
+    function retarget(position: float, velocity: float) {
+        root.origin = position;
+        root.initial-velocity = velocity;
+        root.destination = root.selection;
+        root.started = animation-tick();
+        root.animating = true;
+        motion-stop.restart();
+    }
+    function settle() {
+        root.animating = false;
+        root.destination = root.selection;
+        motion-stop.stop();
+    }
+    changed selection => {
+        // Home/End should not fly through an entire large library.
+        if (!root.visible || abs(root.selection - root.position) > 6) {
+            root.settle();
+        } else {
+            root.retarget(root.position, root.velocity);
+        }
+    }
+    changed visible => {
+        root.settle();
+        root.scroll-distance = 0px;
+        if (!root.visible) { root.searching = false; root.query = ""; }
+    }
+    property <length> cover-size: min(self.height * 0.48, self.width * 0.32, 380px);
+    background: #08080b;
+    clip: true;
+    forward-focus: keys;
+    changed matches => {
+        root.selection = clamp(root.selection, 0, max(0, root.matches.length - 1));
+        if (root.position > max(0, root.matches.length - 1)) {
+            root.settle();
+        }
+    }
+    function start-search() {
+        root.searching = true;
+        search-input.focus();
+    }
+    function stop-search() {
+        root.searching = false;
+        root.query = "";
+        root.selection = 0;
+        root.settle();
+        keys.focus();
+    }
+
+    function move(delta: int) {
+        root.selection = clamp(root.selection + delta, 0, max(0, root.matches.length - 1));
+    }
+    function activate() {
+        if (root.matches.length > 0) { root.open(root.matches[root.selection]); }
+    }
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape) { root.close(); }
+            else if (event.text == Key.LeftArrow) { root.move(-1); }
+            else if (event.text == Key.RightArrow) { root.move(1); }
+            else if (event.text == Key.Home) { root.selection = 0; }
+            else if (event.text == Key.End) { root.selection = max(0, root.matches.length - 1); }
+            else if (event.text == Key.Return) { root.activate(); }
+            accept
+        }
+        key-released(event) => {
+            if (event.text == "c") { root.close(); }
+            else if (event.text == "/") { root.start-search(); }
+            accept
+        }
+    }
+    TouchArea {
+        scroll-event(event) => {
+            // Use the dominant axis; trackpads emit many tiny diagonal events.
+            root.scroll-distance += abs(event.delta-x) > abs(event.delta-y) ? event.delta-x : event.delta-y;
+            if (abs(root.scroll-distance) >= 80px) {
+                root.move(root.scroll-distance > 0px ? -1 : 1);
+                root.scroll-distance = 0px;
+            }
+            scroll-reset.restart();
+            accept
+        }
+    }
+    scroll-reset := Timer {
+        interval: 180ms;
+        running: false;
+        triggered => { root.scroll-distance = 0px; self.stop(); }
+    }
+    // Paint from the outside inward so the central sleeve is always on top.
+    for offset in [-4, 4, -3, 3, -2, 2, -1, 1, 0] : slot := Rectangle {
+        property <int> index: round(root.position) + offset;
+        property <float> distance: self.index - root.position;
+        property <float> depth: self.distance * self.distance;
+        property <float> turn: (self.distance < 0 ? -1 : 1) * self.depth / (0.35 + self.depth);
+        property <length> size: root.cover-size * (1 - 0.20 * self.depth / (1 + self.depth));
+        x: root.width / 2 + self.turn * root.cover-size * 0.67
+            + (self.distance - self.turn) * root.cover-size * 0.24 - self.width / 2;
+        y: root.height * 0.43 - self.size / 2;
+        width: self.size * (1 - 0.58 * abs(self.turn));
+        height: self.size;
+        opacity: clamp(4.5 - abs(self.distance), 0, 1);
+        if index >= 0 && index < root.matches.length : Rectangle {
+            width: 100%; height: 100%;
+            // One cached texture includes both the projected cover and its
+            // aligned reflection; no animated clip strips or subpixel seams.
+            Image {
+                source: root.project-cover(root.matches[slot.index].art, slot.turn);
+                x: 0px; y: 0px;
+                width: slot.width;
+                height: slot.size * 1.5;
+                image-fit: fill;
+            }
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.selection = slot.index; root.activate(); }
+            }
+        }
+    }
+    Rectangle {
+        visible: root.searching;
+        x: (root.width - self.width) / 2;
+        y: 38px;
+        width: min(520px, root.width - 80px);
+        height: 48px;
+        border-radius: 12px;
+        background: #1c1c23;
+        border-width: 1px;
+        border-color: #555565;
+        Image {
+            x: 16px; y: 15px; width: 18px; height: 18px;
+            source: Icons.search; colorize: #b8b8c2;
+        }
+        search-keys := FocusScope {
+            x: 46px; y: 0px; width: parent.width - 62px; height: 48px;
+            capture-key-pressed(event) => {
+                if (event.text == Key.Escape) { root.stop-search(); return accept; }
+                if (event.text == Key.DownArrow) { root.move(1); return accept; }
+                if (event.text == Key.UpArrow) { root.move(-1); return accept; }
+                reject
+            }
+            search-input := TextInput {
+                width: 100%; height: 100%;
+                text <=> root.query;
+                single-line: true;
+                color: #ffffff;
+                font-size: 16px;
+                vertical-alignment: center;
+                edited => {
+                    root.selection = 0;
+                    root.settle();
+                    root.scroll-distance = 0px;
+                }
+                accepted => { root.activate(); }
+            }
+            if root.query == "" : Text {
+                width: 100%; height: 100%;
+                text: "Search albums or artists…";
+                color: #858590;
+                font-size: 16px;
+                vertical-alignment: center;
+            }
+        }
+    }
+    VerticalLayout {
+        x: 40px; y: root.height - 144px;
+        width: root.width - 80px; height: 92px;
+        spacing: 8px;
+        Text {
+            text: root.matches.length > 0 ? root.matches[root.selection].title
+                : root.query != "" ? "No matching albums" : root.loading ? "Loading albums…" : "No albums in this library";
+            color: #ffffff; font-size: 23px; font-weight: 600;
+            horizontal-alignment: center; overflow: elide;
+        }
+        Text {
+            text: root.matches.length > 0 ? root.matches[root.selection].artist : "";
+            color: #b8b8c2; font-size: 15px;
+            horizontal-alignment: center; overflow: elide;
+        }
+        Text {
+            text: root.matches.length > 0 ? (root.selection + 1) + " / " + root.matches.length : "";
+            color: #747480; font-size: 12px; horizontal-alignment: center;
+        }
+    }
+    Text {
+        y: root.height - 34px; width: 100%; height: 20px;
+        text: root.searching ? "↑ ↓  Browse matches     Enter  Open album     Esc  Clear search"
+            : "← →  Browse     /  Search albums     Enter / click  Open album     Esc  Exit";
+        color: #858590; font-size: 12px; horizontal-alignment: center;
+    }
+}

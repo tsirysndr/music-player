@@ -11470,9 +11470,9 @@ dependencies = [
 
 [[package]]
 name = "rockbox-dsp"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab05af6f64abc044e0d3204c7979794a7ef865487d712c577f6003816ac7d71f"
+checksum = "c7aa54c0e49e9089549511fbad928641bfcfa3150bc9739a0dfa4d98544692a5"
 dependencies = [
  "cc",
 ]
@@ -11488,9 +11488,9 @@ dependencies = [
 
 [[package]]
 name = "rockbox-playback"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "085ee921368f4b5e5329bf34e2e0d58af743e229823d26ae058859f7510e0cd5"
+checksum = "21c1a1cfeee1e849b5f71699636a731ff04c61b7edbc5624b1f6af9528a884ee"
 dependencies = [
  "cpal",
  "quick-xml 0.37.5",

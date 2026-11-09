@@ -738,11 +738,10 @@ Playback isn't limited to the machine running the daemon — from the web UI or 
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tsirysndr/music-player&type=Date" />
 </picture>
 
-## CI with Dagger and PureScript
+## CI with FluentCI and PureScript
 
-Linux tests, coverage, Clippy, web builds, releases, and Nix checks run through
-PureScript modules in [`.dagger/`](.dagger/README.md), using Dagger
-**1.0.0-beta.21**. Run the same pipelines locally with `mise exec -- dagger`.
-The guide covers commands, artifacts, caches, and the native platform jobs that
-remain in GitHub Actions. The vendored PureScript SDK is an unofficial personal
-experiment.
+GitHub workflows install `fluentci-io/setup-fluentci@next` and use published
+setup modules plus the project-specific PureScript component in
+[`.fluentci/`](.fluentci/README.md). Run the same jobs locally with
+`fluentci run ci <job>`. The native Windows release remains an exception because
+FluentCI's setup action does not support Windows.

@@ -19,9 +19,15 @@ jobs:
       - uses: "actions/checkout@v4"
         with:
           ref: "${{ (inputs.tag != null) && format('refs/tags/{0}', inputs.tag) || '' }}"
-      - uses: "DeterminateSystems/nix-installer-action@main"
-      - uses: "DeterminateSystems/flakehub-push@main"
-        with:
-          visibility: "public"
-          name: "tsirysndr/music-player"
-          tag: "${{ inputs.tag }}"
+      - uses: fluentci-io/setup-fluentci@next
+      - name: Install Determinate Nix
+        shell: bash
+        run: fluentci run setup-determinate-nix setup --sudo --trusted-users '["runner"]' --extra-conf '["experimental-features = nix-command flakes"]' | node .fluentci/github-env.mjs
+      - name: Install FlakeHub publisher
+        shell: bash
+        run: fluentci run setup-flakehub-push setup | node .fluentci/github-env.mjs
+      - name: Publish flake
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: fluentci run nix-publish flakehub --project . --run-dir "$RUNNER_TEMP/flakehub-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" --name tsirysndr/music-player --version "$RELEASE_TAG" --visibility public

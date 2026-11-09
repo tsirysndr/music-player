@@ -1,0 +1,23 @@
+name: FluentCI integration pipeline
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
+      - name: Set up Rust
+        run: fluentci run setup-rust setup --toolchain 1.98.0 --components llvm-tools-preview,clippy | node .fluentci/github-env.mjs
+      - run: fluentci run ci dependencies
+      - name: Integration tests and release build
+        run: fluentci run ci integration --target x86_64-unknown-linux-gnu
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration-and-build
+          path: artifacts/
+          if-no-files-found: error

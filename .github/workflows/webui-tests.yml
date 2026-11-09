@@ -9,21 +9,17 @@ on:
     paths:
       - "webui/musicplayer/**"
       - ".github/workflows/webui-tests.yml"
-      - ".github/actions/setup-dagger/**"
-      - ".dagger/**"
-      - "mise.toml"
-      - "dagger.toml"
-      - "dagger.lock"
+      - ".github/actions/fluentci-toolchain/**"
+      - ".fluentci/**"
+      - "fluentci.toml"
   pull_request:
     branches: ["master"]
     paths:
       - "webui/musicplayer/**"
       - ".github/workflows/webui-tests.yml"
-      - ".github/actions/setup-dagger/**"
-      - ".dagger/**"
-      - "mise.toml"
-      - "dagger.toml"
-      - "dagger.lock"
+      - ".github/actions/fluentci-toolchain/**"
+      - ".fluentci/**"
+      - "fluentci.toml"
   workflow_dispatch:
 
 # A new push supersedes whatever was running for the same ref.
@@ -37,22 +33,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Dagger
-        uses: ./.github/actions/setup-dagger
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
       - name: Typecheck, test, build web UI and Storybook
-        run: dagger --progress logs -v api call -m .dagger/ci web-check --source . export --path artifacts/webui
-
+        run: fluentci run ci web-check
+      - name: Set up Codecov
+        run: fluentci run setup-codecov setup | node .fluentci/github-env.mjs
       - name: Upload coverage to Codecov
         continue-on-error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           COVERAGE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-          COVERAGE_BRANCH: ${{ github.head_ref || github.ref_name }}
-          COVERAGE_PR: ${{ github.event.pull_request.number || '' }}
-        run: |
-          dagger --progress logs -v api call -m .dagger/modules/codecov upload \
-            --report artifacts/webui/coverage/lcov.info \
-            --repository "$GITHUB_REPOSITORY" --commit "$COVERAGE_COMMIT" \
-            --branch "$COVERAGE_BRANCH" --pull-request "$COVERAGE_PR" \
-            --token env:CODECOV_TOKEN \
-            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB" --flags webui
+        run: fluentci run ci codecov --report artifacts/webui/coverage/lcov.info --commit "$COVERAGE_COMMIT" --flag webui

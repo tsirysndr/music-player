@@ -23,64 +23,37 @@ jobs:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
 
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.workflow_sha }}
+      - uses: actions/checkout@v4
+        with:
           ref: ${{ inputs.tag || github.ref }}
-
+          path: release-source
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
+      - name: Set up Rust
+        run: fluentci run setup-rust setup --toolchain 1.98.0 --targets "${{ matrix.target }}" | node .fluentci/github-env.mjs
+      - run: fluentci run ci dependencies
       - name: Set release version
-        run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV
         env:
           TAG_INPUT: ${{ inputs.tag }}
-
-      - name: Vendor DuckDB
-        # `libduckdb-sys` resolves `-l static=duckdb_static` when its own crate
-        # compiles, and Cargo gives no way to order another crate's build script
-        # ahead of that — so the libraries must be on disk before cargo runs at
-        # all. The target, not the host, decides the archive: a macOS runner is
-        # arm64 and still builds x86_64-apple-darwin. See scripts/fetch-duckdb.sh.
-        run: ./scripts/fetch-duckdb.sh --target ${{ matrix.target }}
-
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Install Rust 1.98.0
-        run: |
-          rustup toolchain install 1.98.0 --profile minimal
-          rustup default 1.98.0
-          rustup target add ${{ matrix.target }}
-
+        run: fluentci run ci release-version --tag "$TAG_INPUT"
       - uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.local/share/fluentci/rust/1.98.0/cargo/registry
+            ~/.local/share/fluentci/rust/1.98.0/cargo/git
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install dependencies
-        run: brew install protobuf
-
-      - name: Build webui
-        run: |
-          cd webui/musicplayer
-          bun install
-          bun run build
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Package binary
-        run: |
-          ASSET=music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
-          tar czvf $ASSET.tar.gz -C target/${{ matrix.target }}/release music-player
-          shasum -a 256 $ASSET.tar.gz > $ASSET.tar.gz.sha256
-
+            release-source/target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cli-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build and package release
+        run: fluentci run ci release --source ./release-source --target "${{ matrix.target }}" --version "$RELEASE_VERSION" --desktop=false
       - name: Upload release assets
-        run: |
-          gh release upload ${{ env.RELEASE_VERSION }} \
-            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
-            music-player_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 \
-            --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: fluentci run ci github-assets --directory artifacts/release --tag "$RELEASE_VERSION"

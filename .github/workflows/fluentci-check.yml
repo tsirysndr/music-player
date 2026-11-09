@@ -1,0 +1,20 @@
+name: FluentCI module checks
+on:
+  push:
+    paths: ['.fluentci/**', '.github/**', 'fluentci.toml']
+  pull_request:
+    paths: ['.fluentci/**', '.github/**', 'fluentci.toml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
+      - name: Set up Go for actionlint
+        run: fluentci run setup-go setup --version 1.26.2 | node .fluentci/github-env.mjs
+      - name: Compile the component and run checks
+        run: fluentci run ci check

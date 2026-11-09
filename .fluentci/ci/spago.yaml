@@ -1,0 +1,22 @@
+package:
+  name: music-player-ci
+  dependencies:
+    - strings
+    - argonaut-core
+    - aff
+    - arrays
+    - console
+    - effect
+    - foldable-traversable
+    - exceptions
+    - either
+    - fluentci
+    - maybe
+    - prelude
+    - tuples
+workspace:
+  packageSet:
+    registry: 81.11.0
+  extraPackages:
+    fluentci:
+      path: .sdk/purescript

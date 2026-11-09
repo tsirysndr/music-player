@@ -1,0 +1,10 @@
+[[steps]]
+name = "check"
+command = "fluentci run ci check"
+
+[[modules]]
+name = "ci"
+runtime = "component"
+version = "0.1.0"
+path = ".fluentci/ci"
+sdk = "purescript"

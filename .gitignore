@@ -40,6 +40,14 @@ cargo/
 # Dagger CI outputs
 /artifacts/
 /release-source/
+.fluentci/**/.sdk/
+.fluentci/**/.spago/
+.fluentci/**/output/
+.fluentci/**/dist/
 .dagger/**/.spago/
 .dagger/**/output/
 .dagger/**/node_modules/
+
+# FluentCI generated dependency bindings
+.fluentci/**/.fluentci/
+.fluentci/**/fluentci_modules/

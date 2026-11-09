@@ -18,12 +18,14 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Dagger
-        uses: ./.github/actions/setup-dagger
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
+      - name: Set up Rust
+        run: fluentci run setup-rust setup --toolchain 1.98.0 --components llvm-tools-preview,clippy | node .fluentci/github-env.mjs
+      - run: fluentci run ci dependencies
       - name: Analyze with Clippy
-        run: dagger --progress logs -v api call -m .dagger/ci clippy --source . export --path artifacts/rust-clippy-results.sarif
+        run: fluentci run ci clippy
         continue-on-error: true
-
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:

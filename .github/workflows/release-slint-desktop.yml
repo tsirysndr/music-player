@@ -30,155 +30,41 @@ jobs:
             os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
+    defaults:
+      run:
+        shell: bash
     steps:
-      # Always build the ref the workflow runs on (the selected branch for a
-      # manual dispatch, the tag for a release event). Checking out the INPUT
-      # tag would rebuild that tag's tree — which may predate the desktop
-      # crate entirely; the tag input only selects which release to upload to.
       - uses: actions/checkout@v4
-
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
+      - name: Set up Rust
+        run: fluentci run setup-rust setup --toolchain 1.98.0 --targets "${{ matrix.target }}" | node .fluentci/github-env.mjs
+      - run: fluentci run ci dependencies
       - name: Set release version
-        run: echo "RELEASE_VERSION=${TAG_INPUT:-${GITHUB_REF#refs/*/}}" >> $GITHUB_ENV
         env:
           TAG_INPUT: ${{ inputs.tag }}
-
-      - name: Set up Dagger (Linux)
-        if: runner.os == 'Linux'
-        uses: ./.github/actions/setup-dagger
-
-      - name: Build and package Linux desktop
-        if: runner.os == 'Linux'
-        run: >-
-          dagger --progress logs -v api call -m .dagger/ci linux-release
-          --source . --target "${{ matrix.target }}"
-          --version "$RELEASE_VERSION" --desktop
-          export --path artifacts/release
-
-      - name: Vendor DuckDB (macOS)
-        if: runner.os == 'macOS'
-        run: ./scripts/fetch-duckdb.sh --target "${{ matrix.target }}"
-
-      - uses: oven-sh/setup-bun@v2
-        if: runner.os == 'macOS'
-
-      - name: Install Rust 1.98.0 (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          rustup toolchain install 1.98.0 --profile minimal
-          rustup default 1.98.0
-          rustup target add "${{ matrix.target }}"
-
+        run: fluentci run ci release-version --tag "$TAG_INPUT"
       - uses: actions/cache@v4
-        if: runner.os == 'macOS'
         with:
           path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.local/share/fluentci/rust/1.98.0/cargo/registry
+            ~/.local/share/fluentci/rust/1.98.0/cargo/git
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-slint-desktop-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: brew install protobuf
-
-      - name: Build webui (macOS)
-        if: runner.os == 'macOS'
-        working-directory: webui/musicplayer
-        run: |
-          bun install
-          bun run build
-
-      - name: Build desktop (macOS)
-        if: runner.os == 'macOS'
-        run: cargo build --release --target "${{ matrix.target }}" -p music-player -p music-player-desktop
-
-      # Ships an ad-hoc signed `Music Player.app`. The asset names are kept
-      # byte-identical to the ones earlier releases used so that
-      # `gh release upload --clobber` overwrites the broken downloads rather
-      # than leaving them alongside the new ones. COPYFILE_DISABLE keeps macOS
-      # tar from injecting ._AppleDouble files into the signed bundle.
-      - name: Package macOS app bundle
-        if: runner.os == 'macOS'
-        run: |
-          ./dist/package-macos.sh all "${{ env.RELEASE_VERSION }}" \
-            "target/${{ matrix.target }}/release"
-
-          ASSET=music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}
-          COPYFILE_DISABLE=1 tar czvf $ASSET.tar.gz -C dist/build "macos/Music Player.app"
-          shasum -a 256 $ASSET.tar.gz > $ASSET.tar.gz.sha256
-
-          DMG=Music_Player_${{ env.RELEASE_VERSION }}_${{ matrix.mac_arch }}.dmg
-          mv "dist/build/Music Player.dmg" "$DMG"
-          shasum -a 256 $DMG > $DMG.sha256
-
-      - name: Upload macOS archive
-        if: runner.os == 'macOS'
-        run: |
-          gh release upload ${{ env.RELEASE_VERSION }} \
-            music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz \
-            music-player-desktop_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 \
-            --clobber
+            release-source/target/
+          key: ${{ runner.os }}-${{ matrix.target }}-desktop-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build and package release
+        run: fluentci run ci release --source . --target "${{ matrix.target }}" --version "$RELEASE_VERSION" --desktop=true
+      - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: fluentci run ci github-assets --directory artifacts/release --tag "$RELEASE_VERSION"
 
-      - name: Upload macOS disk image
-        if: runner.os == 'macOS'
-        run: |
-          DMG=Music_Player_${{ env.RELEASE_VERSION }}_${{ matrix.mac_arch }}.dmg
-          gh release upload ${{ env.RELEASE_VERSION }} "$DMG" "$DMG.sha256" --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Linux release assets with Dagger
+      - name: Set up Gemfury transport
         if: runner.os == 'Linux'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET: ${{ matrix.target }}
-        run: |
-          set -euo pipefail
-          shopt -s globstar nullglob
-          args=()
-          for file in artifacts/release/**/*; do
-            [[ -f "$file" ]] || continue
-            args+=(--files "${file#artifacts/release/}")
-          done
-          ((${#args[@]} > 0)) || { echo "No release assets found" >&2; exit 1; }
-          dagger --progress logs -v api call -m .dagger/modules/github-assets upload \
-            --assets artifacts/release "${args[@]}" --repository "$GITHUB_REPOSITORY" \
-            --tag "$RELEASE_VERSION" --token env:GH_TOKEN --clobber \
-            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB-$TARGET"
-
-      - name: Check Gemfury secrets
-        if: runner.os == 'Linux'
-        id: gemfury
-        env:
-          FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
-          FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
-        run: |
-          if [ -n "$FURY_TOKEN" ] && [ -n "$FURY_ACCOUNT" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Gemfury secrets not set; skipping package upload"
-          fi
-
+        run: fluentci run setup-gemfury setup --sudo | node .fluentci/github-env.mjs
       - name: Push Debian and RPM packages to Gemfury
-        if: runner.os == 'Linux' && steps.gemfury.outputs.available == 'true'
-        shell: bash
+        if: runner.os == 'Linux'
         env:
           FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
           FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          args=()
-          for file in artifacts/release/dist/*.deb artifacts/release/dist/*.rpm; do
-            args+=(--files "${file#artifacts/release/}")
-          done
-          ((${#args[@]} > 0)) || { echo "No packages found" >&2; exit 1; }
-          dagger --progress logs -v api call -m .dagger/modules/gemfury upload \
-            --packages artifacts/release "${args[@]}" --account "$FURY_ACCOUNT" \
-            --token env:FURY_TOKEN \
-            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB-${{ matrix.target }}"
+        run: fluentci run ci gemfury-directory --directory artifacts/release/dist

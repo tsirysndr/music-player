@@ -1,0 +1,27 @@
+name: FluentCI PureScript toolchain
+description: Install the tools needed to compile the local native Wasm component.
+runs:
+  using: composite
+  steps:
+    - name: Set up Node
+      shell: bash
+      run: fluentci run setup-node setup --version 24.11.1 | node .fluentci/github-env.mjs
+    - name: Set up Bun
+      shell: bash
+      run: fluentci run setup-bun setup --version 1.4.3 | node .fluentci/github-env.mjs
+    - name: Set up PureScript and Spago
+      shell: bash
+      run: >-
+        fluentci run setup-purescript setup --version 0.15.16
+        --node-version 24.11.1 --bun-version 1.4.3 --spago-version 1.0.5
+        | node .fluentci/github-env.mjs
+    - name: Prepare SDK workspace
+      shell: bash
+      run: mkdir -p "$RUNNER_TEMP/fluentci-sdk"
+    - name: Generate the SDK bundled with FluentCI
+      shell: bash
+      working-directory: ${{ runner.temp }}/fluentci-sdk
+      run: fluentci init ci --sdk purescript --runtime component
+    - name: Install generated SDK beside the local component
+      shell: bash
+      run: cp -R "$RUNNER_TEMP/fluentci-sdk/.fluentci/ci/.sdk" "$GITHUB_WORKSPACE/.fluentci/ci/"

@@ -14,22 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Dagger
-        uses: ./.github/actions/setup-dagger
+      - uses: fluentci-io/setup-fluentci@next
+      - uses: ./.github/actions/fluentci-toolchain
+      - name: Set up Rust
+        run: fluentci run setup-rust setup --toolchain 1.98.0 --components llvm-tools-preview,clippy | node .fluentci/github-env.mjs
+      - run: fluentci run ci dependencies
       - name: Run workspace tests with coverage
-        run: dagger --progress logs -v api call -m .dagger/ci rust-coverage --source . export --path artifacts/lcov.info
-
+        run: fluentci run ci coverage
+      - name: Set up Codecov
+        run: fluentci run setup-codecov setup | node .fluentci/github-env.mjs
       - name: Upload to Codecov
         continue-on-error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           COVERAGE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-          COVERAGE_BRANCH: ${{ github.head_ref || github.ref_name }}
-          COVERAGE_PR: ${{ github.event.pull_request.number || '' }}
-        run: |
-          dagger --progress logs -v api call -m .dagger/modules/codecov upload \
-            --report artifacts/lcov.info \
-            --repository "$GITHUB_REPOSITORY" --commit "$COVERAGE_COMMIT" \
-            --branch "$COVERAGE_BRANCH" --pull-request "$COVERAGE_PR" \
-            --token env:CODECOV_TOKEN \
-            --run-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$GITHUB_JOB"
+        run: fluentci run ci codecov --report artifacts/lcov.info --commit "$COVERAGE_COMMIT" --flag ""

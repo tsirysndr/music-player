@@ -12,5 +12,8 @@
   "scripts": {
     "build": "node build.mjs"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=24.12.0"
+  }
 }

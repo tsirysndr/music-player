@@ -87,10 +87,6 @@ test('coverage commit and flags reach Codecov as literal argv', () => {
   assert.deepEqual(commands(calls)[0], ['codecovcli', 'upload-process', '--fail-on-error', '--disable-search', '-f', 'coverage/lcov.info', '-C', 'abc123', '-F', 'webui']);
 });
 
-test('environment expansion is literal, single-pass and supports braces', () => {
-  fixture({ TARGET: 'value with spaces; $(touch bad) $UNCHANGED', RUN: '42' });
-  assert.equal(support.expand('prefix-${TARGET}-$RUN')(), 'prefix-value with spaces; $(touch bad) $UNCHANGED-42');
-});
 
 test('GitHub asset upload rejects empty directories and passes filenames literally', () => {
   fixture(); assert.throws(() => ci.githubAssets({ directory: 'dist', tag: 'v1' })(), /No release assets/);

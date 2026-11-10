@@ -88,35 +88,6 @@ validVersion value =
     Just first -> first >= '0' && first <= '9' && A.all (\c ->
       (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || A.elem c [ '.', '+', '~', '-' ]) characters
 
--- Interpolate environment references as literal argv, never shell code.
--- Values are expanded once, so a dollar sign inside a value stays literal.
-expand :: String -> Effect String
-expand value = case A.uncons (S.split (S.Pattern "$") value) of
-  Nothing -> pure value
-  Just parts -> do
-    rest <- traverse segment parts.tail
-    pure (parts.head <> S.joinWith "" rest)
-  where
-  segment text = if S.take 1 text == "{" then
-    case A.uncons (S.split (S.Pattern "}") (S.drop 1 text)) of
-      Nothing -> throw "Invalid environment reference"
-      Just parts -> do
-        resolved <- env parts.head ""
-        pure (resolved <> S.joinWith "}" parts.tail)
-    else do
-      let parts = A.span (\c -> (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_') (CU.toCharArray text)
-      if A.null parts.init then pure ("$" <> text) else do
-        resolved <- env (CU.fromCharArray parts.init) ""
-        pure (resolved <> CU.fromCharArray parts.rest)
-
--- | Run an existing container graph through the installed Dagger CLI.
--- | @param directory Directory in which relative module/source paths resolve.
--- | @param arguments Literal Dagger argv; $NAME references read host variables.
-dagger :: { directory :: String, arguments :: Array String } -> Effect Unit
-dagger args = do
-  argv <- traverse expand args.arguments
-  runIn args.directory [ [ "dagger" ] <> argv ]
-
 -- | Upload all release files, creating the release when absent.
 -- | @param directory Release artifact directory.
 -- | @param tag Release tag.
